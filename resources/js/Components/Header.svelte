@@ -2,7 +2,6 @@
   import { fly } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
   import { clickOutside } from '../Components/helper';
-  import DarkModeToggle from './DarkModeToggle.svelte'; 
 
   let user = $page.props.user;
  
@@ -12,7 +11,7 @@
   export let group; 
 
   const menuLinks = [
-    { href: '/home', label: 'Beranda', group: 'home', show : true },  
+    { href: '/dashboard', label: 'Dashboard', group: 'dashboard', show : true },  
     { href: '/profile', label: 'Profile', group: 'profile', show : user ? true : false },
   ];
  
@@ -27,57 +26,32 @@
   }
 </script>
 
-<header class="bg-white/80 dark:bg-gray-900 dark:border-b dark:border-gray-700  backdrop-blur-md fixed w-full z-50 shadow-sm" 
+<header class="fixed inset-x-0 top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl" 
   in:fly={{ y: -20, duration: 1000, delay: 200 }}>
   <nav
-    class=" mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between"
+    class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between"
   >
-    <a href="/" use:inertia class="flex items-center space-x-2 sm:space-x-3">
- 
-      <span class="text-xl sm:text-2xl font-bold gradient-text">Nara</span>
-    </a>
-    <div class="active"></div>
-    
-    <!-- Desktop Menu -->
-    <div class="hidden md:flex  lg:space-x-4">
-      {#each menuLinks.filter((item) => item.show) as item}
-        <a 
-          use:inertia 
-          href={item.href} 
-          class="nav-link dark:text-gray-200 dark:hover:dark:text-gray-100 dark:hover:bg-gray-800 {item.group === group ? 'active dark:bg-gray-800' : ''}"
-        >
-          {item.label}
-        </a>
-      {/each}
-    </div>
-    
-    <div class="flex items-center">
-      <DarkModeToggle />
-      <div class="relative hidden md:block mx-2">
-        <div class="relative">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            aria-hidden="true"
-            data-slot="icon"
-            class="h-5 w-5 text-gray-400 absolute left-3 top-2.5"
-            ><path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-            ></path></svg
-          ><input
-            type="text"
-            placeholder="Search..."
-            class="w-64 pl-10 pr-4 py-2 rounded-lg dark:bg-gray-800 bg-gray-100 focus:bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 border border-gray-200 dark:border-gray-700"
-          />
-        </div>
+    <div class="flex items-center gap-6">
+      <a href="/" use:inertia class="flex items-center gap-2">
+        <span class="text-xl sm:text-2xl font-bold gradient-text">Nara</span>
+      </a>
+
+      <!-- Desktop Menu -->
+      <div class="hidden md:flex items-center gap-3">
+        {#each menuLinks.filter((item) => item.show) as item}
+          <a 
+            use:inertia 
+            href={item.href} 
+            class="nav-link dark:text-gray-200 dark:hover:text-white dark:hover:bg-gray-800 {item.group === group ? 'active dark:bg-gray-800' : ''}"
+          >
+            {item.label}
+          </a>
+        {/each}
       </div>
-      
-      <!-- Auth Buttons -->
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Auth Buttons / User Menu -->
       <div class="hidden sm:flex items-center space-x-3 dark:text-gray-300">
         {#if user && user.id}
           <div class="relative" use:clickOutside on:click_outside={() => isUserMenuOpen = false}>
@@ -99,8 +73,7 @@
                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 dark:bg-gray-800 dark:text-gray-300"
                 transition:fly={{ y: -10, duration: 200 }}
               >
-              <a href="/profile/{user.username}" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
-               
+                <a href="/profile/{user.username}" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
                 <a href="/profile" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Edit Profile</a>
                 <a href="/settings" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
                 <button 
@@ -117,7 +90,7 @@
           <a href="/register" class="btn-primary text-sm">Daftar</a>
         {/if}
       </div>
-      
+
       <!-- Mobile Menu Button -->
       <button
         class="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"

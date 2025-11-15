@@ -65,7 +65,7 @@ class Autenticate {
       // Set cookie with 60-day expiration and redirect to home
       response
          .cookie("auth_id", token, 1000 * 60 * 60 * 24 * 60)
-         .redirect("/home");
+         .redirect("/dashboard");
    }
 
    /**

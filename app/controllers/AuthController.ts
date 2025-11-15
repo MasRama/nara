@@ -67,7 +67,7 @@ import { randomUUID } from "crypto";
 class AuthController {
    public async registerPage(request : Request, response: Response) {
       if (request.cookies.auth_id) {
-         return response.redirect("/home");
+         return response.redirect("/dashboard");
       }
 
       return response.inertia("auth/register");
@@ -106,7 +106,7 @@ class AuthController {
          .offset((page - 1) * 10)
          .limit(10);
       
-      return response.inertia("home", { 
+      return response.inertia("dashboard", { 
          users, 
          total:   0,
          page,
@@ -131,7 +131,7 @@ class AuthController {
          .whereIn('id', ids)
          .delete();
       
-      return response.redirect("/home");
+      return response.redirect("/dashboard");
    }
 
    public async profilePage(request : Request, response: Response) { 
@@ -425,10 +425,10 @@ Link ini akan kadaluarsa dalam 24 jam.`,
          });
       } catch (error) {
          console.log(error);
-         return response.redirect("/home");
+         return response.redirect("/dashboard");
       }
 
-      return response.redirect("/home");
+      return response.redirect("/dashboard");
    }
 
    public async verifyPage(request : Request, response: Response) {
@@ -453,7 +453,7 @@ Link ini akan kadaluarsa dalam 24 jam.`,
             .delete();
       }
 
-      return response.redirect("/home?verified=true");
+      return response.redirect("/dashboard?verified=true");
    }
 
    public async logout(request : Request, response: Response) {
