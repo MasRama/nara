@@ -74,6 +74,7 @@ Route.post("/reset-password", AuthController.resetPassword);
  * DELETE /users           - Delete users (admin only)
  */
 Route.get("/dashboard", [Auth], AuthController.homePage);
+Route.get("/users", [Auth], AuthController.usersPage);
 Route.get("/profile", [Auth], AuthController.profilePage);
 Route.post("/change-profile", [Auth], AuthController.changeProfile);
 Route.post("/change-password", [Auth], AuthController.changePassword);

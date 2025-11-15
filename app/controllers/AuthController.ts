@@ -115,6 +115,44 @@ class AuthController {
       });
    }
 
+   public async usersPage(request : Request, response: Response) {
+      const page = parseInt(request.query.page as string) || 1;
+      const search = request.query.search as string || "";
+      const filter = request.query.filter as string || "all";
+
+      let query = DB.from("users").select("*");
+
+      if (search) {
+         query = query.where(function() {
+            this.where('name', 'like', `%${search}%`)
+                .orWhere('email', 'like', `%${search}%`)
+                .orWhere('phone', 'like', `%${search}%`);
+         });
+      }
+
+      if (filter === 'verified') {
+         query = query.where('is_verified', true);
+      } else if (filter === 'unverified') {
+         query = query.where('is_verified', false);
+      }
+
+      const countQuery = query.clone();
+      const total = await countQuery.count('* as count').first();
+
+      const users = await query
+         .orderBy('created_at', 'desc')
+         .offset((page - 1) * 10)
+         .limit(10);
+
+      return response.inertia("users", {
+         users,
+         total: 0,
+         page,
+         search,
+         filter,
+      });
+   }
+
    public async createUser(request : Request, response: Response) {
       if (!request.user.is_admin) {
          return response.status(403).json({ message: "Unauthorized" });

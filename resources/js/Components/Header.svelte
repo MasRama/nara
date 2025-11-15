@@ -12,6 +12,7 @@
 
   const menuLinks = [
     { href: '/dashboard', label: 'Dashboard', group: 'dashboard', show : true },  
+    { href: '/users', label: 'Users', group: 'users', show : user && user.is_admin ? true : false },
     { href: '/profile', label: 'Profile', group: 'profile', show : user ? true : false },
   ];
  
