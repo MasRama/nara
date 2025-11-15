@@ -77,6 +77,9 @@ Route.post("/change-profile", [Auth], AuthController.changeProfile);
 Route.post("/change-password", [Auth], AuthController.changePassword);
 Route.delete("/users", [Auth], AuthController.deleteUsers);
 
+// Avatar upload endpoint (local storage)
+Route.post("/assets/avatar", [Auth], AssetController.uploadAsset);
+
 /**
  * Static Asset Handling Routes
  * 

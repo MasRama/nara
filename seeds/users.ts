@@ -14,6 +14,7 @@ export async function seed(knex: Knex): Promise<void> {
 			name: "Nara",
 			email: "nara@ramaren.com",
 			phone: null,
+			avatar: null,
 			is_verified: false,
 			membership_date: null,
 			is_admin: false,

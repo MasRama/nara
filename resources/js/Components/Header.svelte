@@ -59,8 +59,16 @@
               class="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg dark:hover:bg-gray-800"
               on:click={() => isUserMenuOpen = !isUserMenuOpen}
             >
-              <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                <span class="text-primary-700 font-medium">{user.name[0].toUpperCase()}</span>
+              <div class="w-8 h-8 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center">
+                {#if user.avatar}
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    class="w-full h-full object-cover"
+                  />
+                {:else}
+                  <span class="text-primary-700 font-medium">{user.name[0].toUpperCase()}</span>
+                {/if}
               </div>
               <span class="font-medium">{user.name}</span>
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

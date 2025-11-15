@@ -11,7 +11,7 @@ export default async (request : Request,response : Response) => {
 
        if(session)
        {
-           const user = await DB.from("users").where("id",session.user_id).select(["id","name","email","phone","is_admin","is_verified"]).first();
+           const user = await DB.from("users").where("id",session.user_id).select(["id","name","email","phone","avatar","is_admin","is_verified"]).first();
             
            
            request.user = user;

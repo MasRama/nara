@@ -28,9 +28,11 @@
             previewUrl = response.data + "?v=" + Date.now();
           }, 500);
           user.avatar = response.data + "?v=" + Date.now();
+          Toast("Avatar berhasil diupload", "success");
         })
         .catch((error) => {
           isLoading = false;
+          Toast("Gagal mengupload avatar", "error");
         });
     }
   }

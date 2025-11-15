@@ -3,7 +3,6 @@ import { Response, Request } from "../../type";
 import fs from "fs";
 import sharp from "sharp";  
 import DB from "../services/DB";
-import { getPublicUrl, uploadBuffer } from "app/services/S3";
 
 
 
@@ -57,15 +56,18 @@ class Controller {
                                 })
                                 .toBuffer();
 
-                            // Upload directly to S3/Wasabi
-                            const s3Key = `/assets/${fileName}`; 
+                            // Ensure local upload directory exists
+                            const uploadDir = "public/uploads/avatars";
+                            await fs.promises.mkdir(uploadDir, { recursive: true });
 
-                             await uploadBuffer(s3Key, processedBuffer, 'image/webp', 'public, max-age=31536000');
+                            // Save processed image buffer to local filesystem
+                            const localPath = `${uploadDir}/${fileName}`;
+                            await fs.promises.writeFile(localPath, processedBuffer);
 
-                            // Get public URL from S3 service
-                            const publicUrl = getPublicUrl(s3Key);
+                            // Build public URL for the saved file
+                            const publicUrl = `/public/uploads/avatars/${fileName}`;
 
-                            // Save to assets table with S3 URL
+                            // Save to assets table with local file reference
                             const result = {
                                 id,
                                 type: 'image',
@@ -74,13 +76,22 @@ class Controller {
                                 name: fileName,
                                 size: processedBuffer.length,
                                 user_id: request.user.id,
-                                s3_key: s3Key, // Store S3 key for future reference
+                                s3_key: localPath,
                                 created_at: Date.now(),
                                 updated_at: Date.now()
-                            }
+                            };
                             await DB.from("assets").insert(result);
 
-                            response.json(result);
+                            // Update user avatar in users table
+                            await DB.from("users")
+                                .where("id", request.user.id)
+                                .update({
+                                    avatar: publicUrl,
+                                    updated_at: Date.now()
+                                });
+
+                            // Return just the public URL string for simpler client usage
+                            response.json(publicUrl);
                         } catch (err) {
                             console.error('Error processing and uploading image:', err);
                             response.status(500).send("Error processing and uploading image");
@@ -148,7 +159,7 @@ class Controller {
     public async publicFolder(request: Request, response: Response) {
         // List of allowed file extensions for security
         const allowedExtensions = [
-            '.ico', '.png', '.jpeg', '.jpg', '.gif', '.svg',
+            '.ico', '.png', '.jpeg', '.jpg', '.gif', '.svg', '.webp',
             '.txt', '.pdf', '.css', '.js',
             '.woff', '.woff2', '.ttf', '.eot',
             '.mp4', '.webm', '.mp3', '.wav'
