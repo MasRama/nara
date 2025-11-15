@@ -11,7 +11,7 @@
   export let group; 
 
   const menuLinks = [
-    { href: '/dashboard', label: 'Dashboard', group: 'dashboard', show : true },  
+    { href: '/dashboard', label: 'Overview', group: 'dashboard', show : true },  
     { href: '/users', label: 'Users', group: 'users', show : user && user.is_admin ? true : false },
     { href: '/profile', label: 'Profile', group: 'profile', show : user ? true : false },
   ];
@@ -41,13 +41,15 @@
         </div>
       </a>
 
-      <!-- Desktop Menu -->
-      <div class="hidden md:flex items-center gap-3">
+      <!-- Desktop Menu - pill style, dengan active state netral -->
+      <div class="hidden md:flex items-center gap-3 text-xs font-medium">
         {#each menuLinks.filter((item) => item.show) as item}
           <a 
             use:inertia 
             href={item.href} 
-            class="nav-link dark:text-gray-200 dark:hover:text-white dark:hover:bg-gray-800 {item.group === group ? 'active dark:bg-gray-800' : ''}"
+            class="inline-flex items-center rounded-full px-3 py-1.5 transition-colors border {item.group === group 
+              ? 'border-slate-600 bg-slate-900/80 text-slate-50' 
+              : 'border-transparent text-slate-300 hover:text-slate-50 hover:bg-slate-900/70'}"
           >
             {item.label}
           </a>
@@ -56,49 +58,28 @@
     </div>
 
     <div class="flex items-center gap-3">
-      <!-- Auth Buttons / User Menu -->
-      <div class="hidden sm:flex items-center space-x-3 dark:text-gray-300">
+      <!-- Auth Buttons - saat login hanya Logout di ujung kanan -->
+      <div class="hidden sm:flex items-center gap-2 text-xs font-medium dark:text-gray-300">
         {#if user && user.id}
-          <div class="relative" use:clickOutside on:click_outside={() => isUserMenuOpen = false}>
-            <button 
-              class="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg dark:hover:bg-gray-800"
-              on:click={() => isUserMenuOpen = !isUserMenuOpen}
-            >
-              <div class="w-8 h-8 rounded-full overflow-hidden bg-primary-100 flex items-center justify-center">
-                {#if user.avatar}
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    class="w-full h-full object-cover"
-                  />
-                {:else}
-                  <span class="text-primary-700 font-medium">{user.name[0].toUpperCase()}</span>
-                {/if}
-              </div>
-              <span class="font-medium">{user.name}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-              </svg>
-            </button>
-
-            {#if isUserMenuOpen}
-              <div 
-                class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 dark:bg-gray-800 dark:text-gray-300"
-                transition:fly={{ y: -10, duration: 200 }}
-              >
-                <a href="/profile" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
-                <button 
-                  on:click={handleLogout}
-                  class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  Logout
-                </button>
-              </div>
-            {/if}
-          </div>
+          <button 
+            on:click={handleLogout}
+            class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
+          >
+            Logout
+          </button>
         {:else}
-          <a href="/login" class="btn-secondary text-sm">Masuk</a>
-          <a href="/register" class="btn-primary text-sm">Daftar</a>
+          <a
+            href="/login"
+            class="inline-flex items-center rounded-full px-3 py-1.5 text-slate-300 hover:text-slate-50 hover:bg-slate-900/70 transition-colors"
+          >
+            Masuk
+          </a>
+          <a
+            href="/register"
+            class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
+          >
+            Daftar
+          </a>
         {/if}
       </div>
 
