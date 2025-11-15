@@ -65,16 +65,20 @@ Route.post("/reset-password", AuthController.resetPassword);
  * Protected Routes
  * These routes require authentication
  * ------------------------------------------------
- * GET   /home - User dashboard
- * GET   /profile - User profile
- * POST  /change-profile - Update profile
- * POST  /change-password - Change password
- * DELETE /users - Delete users (admin only)
+ * GET    /dashboard       - User dashboard
+ * GET    /profile         - User profile
+ * POST   /change-profile  - Update profile
+ * POST   /change-password - Change password
+ * POST   /users           - Create user (admin only)
+ * PUT    /users/:id       - Update user (admin only)
+ * DELETE /users           - Delete users (admin only)
  */
 Route.get("/dashboard", [Auth], AuthController.homePage);
 Route.get("/profile", [Auth], AuthController.profilePage);
 Route.post("/change-profile", [Auth], AuthController.changeProfile);
 Route.post("/change-password", [Auth], AuthController.changePassword);
+Route.post("/users", [Auth], AuthController.createUser);
+Route.put("/users/:id", [Auth], AuthController.updateUser);
 Route.delete("/users", [Auth], AuthController.deleteUsers);
 
 // Avatar upload endpoint (local storage)

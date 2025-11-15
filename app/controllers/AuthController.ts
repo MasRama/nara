@@ -115,23 +115,106 @@ class AuthController {
       });
    }
 
-   public async deleteUsers(request : Request, response: Response) {
-      const { ids } = request.body;
-      
-      if (!Array.isArray(ids)) {
-         return response.status(400).json({ error: 'Invalid request format' });
-      }
-      
-      // Only allow admin to delete users
+   public async createUser(request : Request, response: Response) {
       if (!request.user.is_admin) {
-         return response.status(403).json({ error: 'Unauthorized' });
+         return response.status(403).json({ message: "Unauthorized" });
+      }
+
+      const data = await request.json();
+
+      if (!data.name || !data.email) {
+         return response.status(400).json({ message: "Name and email are required" });
+      }
+
+      const now = dayjs().valueOf();
+
+      const user = {
+         id: randomUUID(),
+         name: data.name,
+         email: (data.email as string).toLowerCase(),
+         phone: data.phone || null,
+         is_admin: !!data.is_admin,
+         is_verified: !!data.is_verified,
+         password: await Authenticate.hash(data.password || data.email),
+         created_at: now,
+         updated_at: now,
+      };
+
+      try {
+         await DB.table("users").insert(user);
+         return response.json({ message: "User created", user });
+      } catch (error: any) {
+         if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return response.status(400).json({ message: "Email already used" });
+         }
+         return response.status(500).json({ message: "Failed to create user" });
+      }
+   }
+
+   public async updateUser(request : Request, response: Response) {
+      if (!request.user.is_admin) {
+         return response.status(403).json({ message: "Unauthorized" });
+      }
+
+      const id = request.params.id;
+      const data = await request.json();
+
+      if (!id) {
+         return response.status(400).json({ message: "User id is required" });
+      }
+
+      const payload: any = {
+         name: data.name,
+         email: data.email ? (data.email as string).toLowerCase() : undefined,
+         phone: data.phone ?? null,
+         is_admin: !!data.is_admin,
+         is_verified: !!data.is_verified,
+      };
+
+      if (data.password) {
+         payload.password = await Authenticate.hash(data.password);
+      }
+
+      Object.keys(payload).forEach((key) => {
+         if (payload[key] === undefined) {
+            delete payload[key];
+         }
+      });
+
+      if (Object.keys(payload).length === 0) {
+         return response.status(400).json({ message: "No data to update" });
+      }
+
+      payload.updated_at = dayjs().valueOf();
+
+      try {
+         await DB.from("users").where("id", id).update(payload);
+         const user = await DB.from("users").where("id", id).first();
+         return response.json({ message: "User updated", user });
+      } catch (error: any) {
+         if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return response.status(400).json({ message: "Email already used" });
+         }
+         return response.status(500).json({ message: "Failed to update user" });
+      }
+   }
+
+   public async deleteUsers(request : Request, response: Response) {
+      const { ids } = await request.json();
+      
+      if (!Array.isArray(ids) || ids.length === 0) {
+         return response.status(400).json({ message: "Invalid request format" });
       }
       
-      await DB.from("users")
-         .whereIn('id', ids)
+      if (!request.user.is_admin) {
+         return response.status(403).json({ message: "Unauthorized" });
+      }
+      
+      const deleted = await DB.from("users")
+         .whereIn("id", ids)
          .delete();
       
-      return response.redirect("/dashboard");
+      return response.json({ message: "Users deleted", deleted });
    }
 
    public async profilePage(request : Request, response: Response) { 

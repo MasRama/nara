@@ -17,7 +17,7 @@ export async function seed(knex: Knex): Promise<void> {
 			avatar: null,
 			is_verified: false,
 			membership_date: null,
-			is_admin: false,
+			is_admin: true,
 			password: password,
 			remember_me_token: null,
 			created_at: dayjs().valueOf(),
