@@ -1,0 +1,50 @@
+{
+  "name": "nara",
+  "version": "1.0.9",
+  "description": "Nara is a high-performance TypeScript web framework combining HyperExpress, Svelte 5, and Inertia.js for building modern full-stack applications with a SPA-first architecture.",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "clear && rm -rf dist && rm -rf build && npx concurrently 'vite'  'sleep 1 && npx nodemon --legacy-watch'",
+    "build": "mkdir dist && mkdir dist/views && cp -rf resources/views/* dist/views && vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build && cp -rf resources/views/partials build/dist/views"
+  },
+  "author": "Maulana Shalihin",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.906.0",
+    "@aws-sdk/s3-request-presigner": "^3.906.0",
+    "@inertiajs/svelte": "^2.2.10",
+    "@tailwindcss/typography": "^0.5.16",
+    "@types/uuid": "^10.0.0",
+    "axios": "^1.7.7",
+    "better-sqlite3": "^12.4.1",
+    "concurrently": "^9.0.1",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5", 
+    "googleapis": "^144.0.0",
+    "hashids": "^2.3.0",
+    "hyper-express": "^6.17.2",
+    "ioredis": "^5.4.1",
+    "knex": "^3.1.0",
+    "nodemailer": "^6.9.15",
+    "sharp": "^0.34.4",
+    "uuid": "^13.0.0",
+    "uuidv7": "^1.0.2"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^4.0.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.7.9",
+    "autoprefixer": "^10.4.20",
+    "nodemon": "^3.1.7",
+    "svelte": "^5.41.3",
+    "svelte-loader": "^3.2.4",
+    "tailwindcss": "^3.4.14",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}
