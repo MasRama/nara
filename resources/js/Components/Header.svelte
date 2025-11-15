@@ -34,7 +34,11 @@
   >
     <div class="flex items-center gap-6">
       <a href="/" use:inertia class="flex items-center gap-2">
-        <span class="text-xl sm:text-2xl font-bold gradient-text">Nara</span>
+        <img src="/public/nara.png" alt="Nara logo" class="h-7 w-7 rounded-lg object-cover" />
+        <div class="flex flex-col leading-tight">
+          <span class="text-sm font-semibold tracking-tight text-slate-50">Nara</span>
+          <span class="text-[10px] uppercase tracking-[0.22em] text-slate-500">TypeScript framework</span>
+        </div>
       </a>
 
       <!-- Desktop Menu -->
@@ -82,9 +86,7 @@
                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 dark:bg-gray-800 dark:text-gray-300"
                 transition:fly={{ y: -10, duration: 200 }}
               >
-                <a href="/profile/{user.username}" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
-                <a href="/profile" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Edit Profile</a>
-                <a href="/settings" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Settings</a>
+                <a href="/profile" use:inertia class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">Profile</a>
                 <button 
                   on:click={handleLogout}
                   class="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"

@@ -1,6 +1,6 @@
 <!-- landing.svelte -->
 <script>
-  import { inertia } from '@inertiajs/svelte'
+  import { inertia, page } from '@inertiajs/svelte'
   import { fly } from 'svelte/transition'
 
   let highlights = [
@@ -17,6 +17,8 @@
       description: 'Struktur project dirancang supaya enak di-drive pakai AI coding assistant.'
     }
   ]
+
+  let user = $page.props.user
 </script>
 
 <header class="fixed inset-x-0 top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl">
@@ -44,20 +46,30 @@
       >
         GitHub
       </a>
-      <a
-        href="/login"
-        use:inertia
-        class="inline-flex items-center rounded-full px-3 py-1.5 text-slate-300 hover:text-slate-50 hover:bg-slate-900/70 transition-colors"
-      >
-        Masuk
-      </a>
-      <a
-        href="/register"
-        use:inertia
-        class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
-      >
-        Mulai gratis
-      </a>
+      {#if user && user.id}
+        <a
+          href="/dashboard"
+          use:inertia
+          class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
+        >
+          Dashboard
+        </a>
+      {:else}
+        <a
+          href="/login"
+          use:inertia
+          class="inline-flex items-center rounded-full px-3 py-1.5 text-slate-300 hover:text-slate-50 hover:bg-slate-900/70 transition-colors"
+        >
+          Masuk
+        </a>
+        <a
+          href="/register"
+          use:inertia
+          class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
+        >
+          Mulai gratis
+        </a>
+      {/if}
     </div>
   </div>
 </header>
