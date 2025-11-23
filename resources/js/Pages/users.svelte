@@ -215,8 +215,9 @@
 
         <form class="space-y-4" on:submit|preventDefault={submitUserForm}>
           <div class="space-y-1">
-            <label class="block text-xs font-medium text-slate-400">Nama</label>
+            <label for="user-name" class="block text-xs font-medium text-slate-400">Nama</label>
             <input
+              id="user-name"
               class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               type="text"
               bind:value={form.name}
@@ -225,8 +226,9 @@
           </div>
 
           <div class="space-y-1">
-            <label class="block text-xs font-medium text-slate-400">Email</label>
+            <label for="user-email" class="block text-xs font-medium text-slate-400">Email</label>
             <input
+              id="user-email"
               class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               type="email"
               bind:value={form.email}
@@ -235,8 +237,9 @@
           </div>
 
           <div class="space-y-1">
-            <label class="block text-xs font-medium text-slate-400">No. HP</label>
+            <label for="user-phone" class="block text-xs font-medium text-slate-400">No. HP</label>
             <input
+              id="user-phone"
               class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               type="text"
               bind:value={form.phone}
@@ -264,10 +267,11 @@
           </div>
 
           <div class="space-y-1">
-            <label class="block text-xs font-medium text-slate-400">
+            <label for="user-password" class="block text-xs font-medium text-slate-400">
               {mode === 'create' ? 'Password (opsional, default pakai email)' : 'Password baru (opsional)'}
             </label>
             <input
+              id="user-password"
               class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               type="password"
               bind:value={form.password}

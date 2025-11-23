@@ -6,7 +6,6 @@
   import { Toast } from '../Components/helper';
 
   export let users = [];
-  export let total;
   export let search = '';
   export let filter = 'all';
   export let pageCurrent;
