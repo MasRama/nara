@@ -1,5 +1,6 @@
 import { getPublicUrl, getSignedUploadUrl } from "app/services/S3";
-import { Request, Response } from "../../type"; 
+import { Request, Response } from "../../type";
+import Logger from "../services/Logger"; 
 
 class S3Controller {
   /**
@@ -40,7 +41,7 @@ class S3Controller {
         },
       });
     } catch (error) {
-      console.error("Error generating signed URL:", error);
+      Logger.error('Error generating signed URL', error as Error);
       return response.status(500).json({
         success: false,
         message: "Failed to generate signed URL",
@@ -81,7 +82,7 @@ class S3Controller {
         },
       });
     } catch (error) {
-      console.error("Error getting public URL:", error);
+      Logger.error('Error getting public URL', error as Error);
       return response.status(500).json({
         success: false,
         message: "Failed to get public URL",
@@ -106,7 +107,7 @@ class S3Controller {
         },
       });
     } catch (error) {
-      console.error("S3 health check failed:", error);
+      Logger.error('S3 health check failed', error as Error);
       return response.status(500).json({
         success: false,
         message: "S3 service health check failed",

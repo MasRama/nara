@@ -7,6 +7,7 @@ require("dotenv").config();
 import config from "../../knexfile";
 import Database from 'better-sqlite3';
 import type * as BetterSqlite3 from 'better-sqlite3';
+import Logger from "./Logger";
 
 // Use a default connection if DB_CONNECTION is not set
 const connectionType = process.env.DB_CONNECTION || 'development';
@@ -64,7 +65,7 @@ const SQLiteService = {
       // Execute the statement and return the first row
       return stmt.get(...parameters);
     } catch (error) {
-      console.error('SQLite get error:', error);
+      Logger.error('SQLite get error', error as Error);
       throw error;
     }
   },
@@ -90,7 +91,7 @@ const SQLiteService = {
       // Execute the statement and return all rows
       return stmt.all(...parameters);
     } catch (error) {
-      console.error('SQLite all error:', error);
+      Logger.error('SQLite all error', error as Error);
       throw error;
     }
   },
@@ -116,7 +117,7 @@ const SQLiteService = {
       // Execute the statement
       return stmt.run(...parameters);
     } catch (error) {
-      console.error('SQLite run error:', error);
+      Logger.error('SQLite run error', error as Error);
       throw error;
     }
   },
@@ -182,7 +183,7 @@ const SQLiteService = {
 
       return SQLiteService.all(sql, [safeLang, q, limit, offset]);
     } catch (error) {
-      console.error('SQLite searchArticlesFTS error:', error);
+      Logger.error('SQLite searchArticlesFTS error', error as Error);
       throw error;
     }
   },
@@ -279,7 +280,7 @@ const SQLiteService = {
         `);
       });
     } catch (error) {
-      console.error('SQLite reindexArticlesFTS error:', error);
+      Logger.error('SQLite reindexArticlesFTS error', error as Error);
       throw error;
     }
   }

@@ -3,6 +3,7 @@ import { Response, Request } from "../../type";
 import fs from "fs";
 import sharp from "sharp";  
 import DB from "../services/DB";
+import Logger from "../services/Logger";
 
 
 
@@ -96,7 +97,7 @@ class Controller {
                             // Return just the public URL string for simpler client usage
                             response.json(publicUrl);
                         } catch (err) {
-                            console.error('Error processing and uploading image:', err);
+                            Logger.error('Error processing and uploading image', err as Error);
                             response.status(500).send("Error processing and uploading image");
                         }
                     });
@@ -108,7 +109,7 @@ class Controller {
             }
 
         } catch (error) {
-            console.error("Error uploading asset:", error);
+            Logger.error('Error uploading asset', error as Error);
             return response.status(500).send("Internal server error");
         }
     }
@@ -148,7 +149,7 @@ class Controller {
 
             return response.status(404).send("File not found");
         } catch (error) {
-            console.error("Error serving dist file:", error);
+            Logger.error('Error serving dist file', error as Error);
             return response.status(500).send("Internal server error");
         }
     }

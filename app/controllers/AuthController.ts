@@ -632,7 +632,7 @@ ${process.env.APP_URL}/verify/${token}
 Link ini akan kadaluarsa dalam 24 jam.`,
          });
       } catch (error) {
-         console.log(error);
+         Logger.error('Failed to send verification email', error as Error);
          return response.redirect("/dashboard");
       }
 
