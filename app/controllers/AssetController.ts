@@ -80,7 +80,7 @@ class Controller {
                                 name: fileName,
                                 size: processedBuffer.length,
                                 user_id: userId,
-                                s3_key: localPath,
+                                local_path: localPath,
                                 created_at: Date.now(),
                                 updated_at: Date.now()
                             };

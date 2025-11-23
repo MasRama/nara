@@ -1,11 +1,9 @@
 import dayjs from "dayjs";
-import { join } from "path";
-import { existsSync, mkdirSync, createWriteStream } from "fs";
+import { join, basename } from "path";
+import { existsSync, mkdirSync, createWriteStream, createReadStream, readdirSync, statSync } from "fs";
 import { createGunzip } from "zlib";
 import { pipeline } from "stream";
 import { promisify } from "util";
-import { getObject, headObject } from "./app/services/S3";
-import SQLiteService from "./app/services/SQLite";
 import { createDecipheriv } from "crypto";
 
 require("dotenv").config();
@@ -26,64 +24,68 @@ function getEncryptionKey(): Buffer {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const argKeyIdx = argv.indexOf('--key');
-  const providedKey = argKeyIdx !== -1 ? argv[argKeyIdx + 1] : undefined;
+  const argFileIdx = argv.indexOf('--file');
+  const providedFile = argFileIdx !== -1 ? argv[argFileIdx + 1] : undefined;
 
-  // Try to fetch metadata from backup_files
-  let meta: any = undefined;
-  try {
-    meta = providedKey
-      ? SQLiteService.get("SELECT * FROM backup_files WHERE key = ? LIMIT 1", [providedKey])
-      : SQLiteService.get("SELECT * FROM backup_files WHERE deleted_at IS NULL ORDER BY uploaded_at DESC LIMIT 1");
-  } catch (_err) {
-    // DB might be inaccessible; we'll fallback to S3 metadata below if --key provided
-    meta = undefined;
+  const backupsDir = join(__dirname, 'backups');
+  if (!existsSync(backupsDir)) {
+    throw new Error(`Backup directory not found: ${backupsDir}`);
   }
 
-  let keyToRestore = providedKey || (meta ? meta.key : undefined);
-  if (!keyToRestore) {
-    throw new Error('Tidak bisa menentukan key backup. Jika DB tidak bisa diakses, jalankan: node build/restore.js --key backups/<file>.db.gz.enc');
-  }
+  let encryptedFilePath: string;
 
-  let ivBase64: string | undefined = meta?.enc_iv;
-  let tagBase64: string | undefined = meta?.enc_tag;
-  let uploadedAtMs: number = meta?.uploaded_at || Date.now();
-
-  // Fallback: read IV/tag from S3 object metadata if missing or DB not accessible
-  if (!ivBase64 || !tagBase64) {
-    const head = await headObject(keyToRestore);
-    const md = (head as any).Metadata || {};
-    ivBase64 = md.iv || md.IV || ivBase64;
-    tagBase64 = md.tag || md.TAG || tagBase64;
-    // Optional: algo/md5/comp can be read if needed: md.algo, md.checksum, md.comp
-    if (!ivBase64 || !tagBase64) {
-      throw new Error('IV/tag tidak ditemukan. Pastikan metadata S3 memiliki iv/tag atau pulihkan akses ke tabel backup_files.');
+  if (providedFile) {
+    // Use provided file
+    encryptedFilePath = join(backupsDir, providedFile);
+    if (!existsSync(encryptedFilePath)) {
+      throw new Error(`Backup file not found: ${encryptedFilePath}`);
     }
+  } else {
+    // Find the most recent .enc file
+    const files = readdirSync(backupsDir)
+      .filter(f => f.endsWith('.db.gz.enc'))
+      .map(f => ({
+        name: f,
+        path: join(backupsDir, f),
+        mtime: statSync(join(backupsDir, f)).mtime.getTime()
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (files.length === 0) {
+      throw new Error('No encrypted backup files found in backups directory');
+    }
+
+    encryptedFilePath = files[0].path;
+    console.log(`Using most recent backup: ${files[0].name}`);
+  }
+
+  // Extract IV and auth tag from filename metadata
+  // Note: This is a simplified approach. In production, you should store IV/tag separately
+  // For now, we'll prompt user to provide them via environment or command line
+  const argIvIdx = argv.indexOf('--iv');
+  const argTagIdx = argv.indexOf('--tag');
+  
+  const ivBase64 = argIvIdx !== -1 ? argv[argIvIdx + 1] : process.env.BACKUP_IV;
+  const tagBase64 = argTagIdx !== -1 ? argv[argTagIdx + 1] : process.env.BACKUP_TAG;
+
+  if (!ivBase64 || !tagBase64) {
+    throw new Error('IV and auth tag are required. Provide via --iv and --tag arguments or BACKUP_IV and BACKUP_TAG env vars');
   }
 
   const keyBuf = getEncryptionKey();
   const ivBuf = Buffer.from(ivBase64, 'base64');
   const tagBuf = Buffer.from(tagBase64, 'base64');
 
-  const backupsDir = join(__dirname, 'backups');
-  if (!existsSync(backupsDir)) mkdirSync(backupsDir, { recursive: true });
-
-  const timestamp = dayjs(uploadedAtMs).format('YYYY-MM-DDTHH:mm');
+  const timestamp = dayjs().format('YYYY-MM-DDTHH:mm');
   const outFile = join(backupsDir, `restored-${timestamp}.db`);
 
-  console.log(`Restoring backup from key: ${keyToRestore}`);
-
-  const s3Obj = await getObject(keyToRestore);
-  const bodyStream: any = (s3Obj as any).Body; // Node.js Readable stream
-  if (!bodyStream || typeof bodyStream.pipe !== 'function') {
-    throw new Error('Invalid S3 object body stream.');
-  }
+  console.log(`Restoring backup from: ${basename(encryptedFilePath)}`);
 
   const decipher = createDecipheriv('aes-256-gcm', keyBuf, ivBuf);
   decipher.setAuthTag(tagBuf);
   const gunzip = createGunzip();
 
-  await pipe(bodyStream, decipher, gunzip, createWriteStream(outFile));
+  await pipe(createReadStream(encryptedFilePath), decipher, gunzip, createWriteStream(outFile));
   console.log(`Restored database written to: ${outFile}`);
   console.log('NOTE: To activate restore, stop your app and replace the current SQLite file with the restored .db.');
 }

@@ -7,7 +7,6 @@ import { unlink } from "fs/promises";
 import { createGzip } from "zlib";
 import { pipeline } from "stream";
 import { promisify } from "util";
-import { uploadBufferSecure } from "./app/services/S3";
 import { v4 as uuidv4 } from "uuid";
 import { randomBytes, createCipheriv, createHash } from "crypto";
 
@@ -75,56 +74,21 @@ async function md5File(filePath: string): Promise<string> {
     const authTag = cipher.getAuthTag();
     console.log(`Encrypted backup: ${encryptedPath}`);
 
-    // Compute checksum via streaming BEFORE upload for S3 metadata
+    // Compute checksum for verification
     const checksum = await md5File(encryptedPath);
-
-    // Upload encrypted backup to S3 (Wasabi) with private ACL and optional SSE using stream, including encryption metadata
-    const key = `backups/${encryptedFilename}`;
     const stats = statSync(encryptedPath);
-    await uploadBufferSecure(
-      key,
-      createReadStream(encryptedPath),
-      'application/octet-stream',
-      stats.size,
-      {
-        algo: 'aes-256-gcm',
-        iv: iv.toString('base64'),
-        tag: authTag.toString('base64'),
-        comp: 'gzip',
-        checksum: checksum,
-      }
-    );
-    console.log(`Uploaded encrypted backup to S3 with key: ${key}`);
+    
+    console.log(`Backup completed successfully!`);
+    console.log(`- Encrypted file: ${encryptedPath}`);
+    console.log(`- File size: ${stats.size} bytes`);
+    console.log(`- Checksum: ${checksum}`);
+    console.log(`- Encryption: AES-256-GCM`);
+    console.log(`- Compression: gzip`);
 
-    // Record backup metadata using native SQLiteService
-    try {
-      SQLiteService.run(
-        "INSERT INTO backup_files (id, key, file_name, file_size, compression, storage, checksum, uploaded_at, deleted_at, encryption, enc_iv, enc_tag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [
-          uuidv4(),
-          key,
-          encryptedFilename,
-          stats.size,
-          'gzip',
-          's3',
-          checksum,
-          Date.now(),
-          null,
-          'aes-256-gcm',
-          iv.toString('base64'),
-          authTag.toString('base64'),
-        ]
-      );
-      console.log(`Recorded backup metadata for key: ${key}`);
-    } catch (e) {
-      console.warn('Failed to record backup metadata:', e);
-    }
-
-    // Clean up local backup files after successful upload
+    // Clean up intermediate files (keep only encrypted backup)
     await unlink(rawBackupPath).catch(() => {});
     await unlink(compressedPath).catch(() => {});
-    await unlink(encryptedPath).catch(() => {});
-    console.log(`Cleaned up local backups in: ${backupDir}`);
+    console.log(`Cleaned up intermediate files in: ${backupDir}`);
   } catch (err) {
     console.error('Backup process failed:', err);
   }

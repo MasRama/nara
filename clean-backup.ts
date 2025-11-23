@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import SQLiteService from "./app/services/SQLite";
-import { exists, deleteObject } from "./app/services/S3";
+import { join } from "path";
+import { existsSync, readdirSync, statSync, unlinkSync } from "fs";
 
 require("dotenv").config();
 
@@ -8,19 +8,34 @@ require("dotenv").config();
 const RETENTION_DAYS = Number(process.env.BACKUP_RETENTION_DAYS || 30);
 
 async function main() {
+  const backupsDir = join(__dirname, 'backups');
+  
+  if (!existsSync(backupsDir)) {
+    console.log("Backup directory tidak ditemukan.");
+    return;
+  }
+
   const now = Date.now();
   const thresholdMs = now - RETENTION_DAYS * 24 * 60 * 60 * 1000;
   const thresholdStr = dayjs(thresholdMs).format("YYYY-MM-DDTHH:mm");
 
   console.log(`Menjalankan clean-backup: hapus backup sebelum ${thresholdStr} (>${RETENTION_DAYS} hari)`);
 
-  // Ambil daftar backup yang belum dihapus dan lebih tua dari threshold
-  const rows = SQLiteService.all(
-    "SELECT id, key, uploaded_at FROM backup_files WHERE deleted_at IS NULL AND uploaded_at < ? ORDER BY uploaded_at ASC",
-    [thresholdMs]
-  ) as Array<{ id: string; key: string; uploaded_at: number }>;
+  // Ambil daftar file backup yang lebih tua dari threshold
+  const files = readdirSync(backupsDir)
+    .filter(f => f.endsWith('.db.gz.enc'))
+    .map(f => {
+      const filePath = join(backupsDir, f);
+      const stats = statSync(filePath);
+      return {
+        name: f,
+        path: filePath,
+        mtime: stats.mtime.getTime()
+      };
+    })
+    .filter(f => f.mtime < thresholdMs);
 
-  if (!rows || rows.length === 0) {
+  if (files.length === 0) {
     console.log("Tidak ada backup yang perlu dihapus.");
     return;
   }
@@ -28,27 +43,14 @@ async function main() {
   let success = 0;
   let failed = 0;
 
-  for (const row of rows) {
-    const ts = dayjs(row.uploaded_at).format("YYYY-MM-DDTHH:mm");
+  for (const file of files) {
+    const ts = dayjs(file.mtime).format("YYYY-MM-DDTHH:mm");
     try {
-      // Cek apakah objek masih ada; jika tidak ada, tetap tandai metadata sebagai deleted
-      const present = await exists(row.key);
-      if (present) {
-        await deleteObject(row.key);
-        console.log(`S3: Berhasil menghapus objek: ${row.key}`);
-      } else {
-        console.warn(`S3: Objek tidak ditemukan, menandai metadata sebagai deleted: ${row.key}`);
-      }
-
-      // Update metadata: set deleted_at
-      SQLiteService.run(
-        "UPDATE backup_files SET deleted_at = ? WHERE id = ?",
-        [Date.now(), row.id]
-      );
-      console.log(`DB: Menandai backup (uploaded ${ts}) sebagai deleted`);
+      unlinkSync(file.path);
+      console.log(`Berhasil menghapus backup: ${file.name} (created: ${ts})`);
       success++;
     } catch (err) {
-      console.error(`Gagal menghapus backup ${row.key}:`, err);
+      console.error(`Gagal menghapus backup ${file.name}:`, err);
       failed++;
     }
   }
