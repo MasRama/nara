@@ -2,6 +2,12 @@
 // Boots the HTTP server, wires middlewares & routes,
 // loads environment variables, and configures HTTPS for local development.
 
+// Load environment variables first
+require("dotenv").config();
+
+// Logger service for structured logging
+import Logger from "./app/services/Logger";
+
 // Inertia middleware: integrates Inertia.js responses for SSR-like pages
 import inertia from "./app/middlewares/inertia";
 
@@ -33,9 +39,6 @@ if(process.env.HAS_CERTIFICATE === 'true') {
 
 // Create the HyperExpress server with the above options
 const webserver = new HyperExpress.Server(option);
- 
-// Load environment variables from .env into process.env
-require("dotenv").config();
 
 // Global middlewares
 webserver.use(cors()); // Enable CORS for cross-origin requests
@@ -50,28 +53,73 @@ const PORT = parseInt(process.env.PORT) || 5555;
  
 // Global error handler (runs for unhandled errors in requests)
 webserver.set_error_handler((req, res, error: any) => {
-   console.log(error); // Log error for visibility
+   // Log error with context
+   Logger.error('Request error', {
+      err: error,
+      path: req.path,
+      method: req.method,
+      statusCode: error.statusCode || 500,
+      userAgent: req.headers['user-agent'],
+   });
 
-   // Example: handle SQLite-specific errors with 500 status
-   if (error.code == "SQLITE_ERROR") {
-      res.status(500);
-   }
+   // Determine status code
+   const statusCode = error.statusCode || (error.code === "SQLITE_ERROR" ? 500 : 500);
+   res.status(statusCode);
 
-   // Return error details in JSON (useful during development)
-   res.json(error);
+   // Return appropriate error response based on environment
+   const isDevelopment = process.env.NODE_ENV === 'development';
+   res.json({
+      success: false,
+      message: isDevelopment ? error.message : 'Internal Server Error',
+      ...(isDevelopment && { 
+         error: error.message,
+         stack: error.stack,
+         code: error.code 
+      })
+   });
 });
 
 // Start the server and log the local URL
 webserver
    .listen(PORT)
    .then(() => {
-      console.log(`Server is running at http://localhost:${PORT}`);
+      Logger.info('Server started successfully', {
+         port: PORT,
+         env: process.env.NODE_ENV || 'development',
+         nodeVersion: process.version,
+         hasHttps: process.env.HAS_CERTIFICATE === 'true',
+      });
+      console.log(`\n🚀 Server is running at http://localhost:${PORT}\n`);
    })
-   // Consider logging or handling startup errors here
-   .catch((err: any) => {});
+   .catch((err: any) => {
+      Logger.fatal('Failed to start server', err);
+      process.exit(1);
+   });
 
 // Graceful shutdown: handle SIGTERM (e.g., Docker/K8s stop)
-process.on("SIGTERM", () => {
-   console.info("SIGTERM signal received.");
+process.on("SIGTERM", async () => {
+   Logger.info("SIGTERM signal received, shutting down gracefully");
+   await Logger.flush();
    process.exit(0);
+});
+
+// Handle SIGINT (Ctrl+C)
+process.on("SIGINT", async () => {
+   Logger.info("SIGINT signal received, shutting down gracefully");
+   await Logger.flush();
+   process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", async (error: Error) => {
+   Logger.fatal("Uncaught exception", error);
+   await Logger.flush();
+   process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", async (reason: any) => {
+   Logger.fatal("Unhandled promise rejection", { reason });
+   await Logger.flush();
+   process.exit(1);
 });

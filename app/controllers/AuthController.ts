@@ -61,6 +61,7 @@ import { redirectParamsURL } from "../services/GoogleAuth";
 import axios from "axios"; 
 import dayjs from "dayjs";
 import Mailer from "../services/Mailer";
+import Logger from "../services/Logger";
 import { Response, Request } from "../../type"; 
 import { randomUUID } from "crypto";
 
@@ -245,12 +246,24 @@ class AuthController {
       }
       
       if (!request.user.is_admin) {
+         Logger.logSecurity('Unauthorized delete attempt', {
+            userId: request.user.id,
+            attemptedIds: ids,
+            ip: request.ip
+         });
          return response.status(403).json({ message: "Unauthorized" });
       }
       
       const deleted = await DB.from("users")
          .whereIn("id", ids)
          .delete();
+      
+      Logger.warn('Users deleted by admin', {
+         adminId: request.user.id,
+         deletedIds: ids,
+         count: deleted,
+         ip: request.ip
+      });
       
       return response.json({ message: "Users deleted", deleted });
    }
@@ -289,7 +302,19 @@ class AuthController {
             .update({
                password: await Authenticate.hash(data.new_password),
             });
+         
+         Logger.logAuth('password_changed', {
+            userId: request.user.id,
+            email: request.user.email,
+            ip: request.ip
+         });
+
+         return response.json({ message: "Password berhasil diubah" });
       } else {
+         Logger.logSecurity('Password change failed - invalid current password', {
+            userId: request.user.id,
+            ip: request.ip
+         });
          return response
             .status(400)
             .json({ message: "Password lama tidak cocok" });
@@ -458,64 +483,114 @@ This link will expire in 24 hours.
 
          await DB.table("users").insert(user);
 
+         Logger.logAuth('google_registration_success', {
+            userId: user.id,
+            email: user.email,
+            ip: request.ip
+         });
+
          return Authenticate.process(user, request, response);
       }
    }
 
    public async processLogin(request : Request, response: Response) {
-      let body = await request.json();
+      const data = await request.json();
+      const identifier = data.email || data.phone;
 
-      let { email, password, phone } = body;
+      Logger.info('Login attempt', { 
+         identifier: data.email ? data.email.toLowerCase() : data.phone,
+         type: data.email ? 'email' : 'phone',
+         ip: request.ip,
+         userAgent: request.headers['user-agent']
+      });
 
       let user;
 
-      if (email && email.includes("@")) {
-         user = await DB.from("users").where("email", email).first();
-      } else if (phone) {
-         user = await DB.from("users").where("phone", phone).first();
+      if (data.email) {
+         user = await DB.from("users")
+            .where("email", data.email.toLowerCase())
+            .first();
+      } else if (data.phone) {
+         user = await DB.from("users").where("phone", data.phone).first();
       }
 
-      if (user) {
-         const password_match = await Authenticate.compare(
-            password,
-            user.password
-         );
+      if (!user) {
+         Logger.logSecurity('Login failed - user not found', {
+            identifier,
+            ip: request.ip
+         });
+         return response
+            .cookie("error", "Email atau password salah", 1000 * 60 * 5)
+            .redirect("/login");
+      }
 
-         if (password_match) {
-            return Authenticate.process(user, request, response);
-         } else {
-            return response
-                .cookie("error", "Maaf, Password salah",3000) 
-               .redirect("/login");
-         }
+      const password_match = await Authenticate.compare(
+         data.password,
+         user.password
+      );
+
+      if (password_match) {
+         Logger.logAuth('login_success', {
+            userId: user.id,
+            email: user.email,
+            ip: request.ip
+         });
+         return Authenticate.process(user, request, response);
       } else {
-         return response 
-            .cookie("error", "Email/No.HP tidak terdaftar",3000)
+         Logger.logSecurity('Login failed - invalid password', {
+            userId: user.id,
+            email: user.email,
+            ip: request.ip
+         });
+         return response
+            .cookie("error", "Email atau password salah", 1000 * 60 * 5)
             .redirect("/login");
       }
    }
 
    public async processRegister(request : Request, response: Response) {
-      let { email, password, name } = await request.json();
+      const data = await request.json();
 
-      email = email.toLowerCase();
+      Logger.info('Registration attempt', {
+         email: data.email.toLowerCase(),
+         name: data.name,
+         ip: request.ip
+      });
+
+      const id = randomUUID();
 
       try {
-         const user = {
-            email: email,
-            id: randomUUID(),
-            name,
-            password: await Authenticate.hash(password),
-         };
+         await DB.table("users").insert({
+            id: id,
+            name: data.name,
+            email: data.email.toLowerCase(),
+            phone: data.phone,
+            password: await Authenticate.hash(data.password),
+            created_at: dayjs().valueOf(),
+            updated_at: dayjs().valueOf(),
+         });
 
-         const id = await DB.table("users").insert(user);
+         const user = await DB.from("users").where("id", id).first();
+
+         Logger.logAuth('registration_success', {
+            userId: user.id,
+            email: user.email,
+            ip: request.ip
+         });
 
          return Authenticate.process(user, request, response);
-      } catch (error) {
-         console.log(error);
-         return response
-            .cookie("error", "Maaf, Email sudah terdaftar",3000)
-            .redirect("/register");
+      } catch (error: any) {
+         if (error.code == "SQLITE_CONSTRAINT_UNIQUE") {
+            Logger.logSecurity('Registration failed - duplicate email', {
+               email: data.email.toLowerCase(),
+               ip: request.ip
+            });
+            return response
+               .cookie("error", "Email sudah terdaftar", 1000 * 60 * 5)
+               .redirect("/register");
+         }
+         Logger.error('Registration failed', error);
+         throw error;
       }
    }
 
