@@ -43,13 +43,15 @@ const webserver = new HyperExpress.Server(option);
 // Global middlewares
 webserver.use(cors()); // Enable CORS for cross-origin requests
 
+// @ts-expect-error - Type compatibility issue between HyperExpress and extended Response interface
+// The middleware works correctly at runtime, adding view/inertia/flash methods to Response
 webserver.use(inertia()); // Enable Inertia middleware for SSR-like responses
 
 // Mount application routes
 webserver.use(Web); 
 
 // Resolve server port from environment or default to 5555
-const PORT = parseInt(process.env.PORT) || 5555;
+const PORT = parseInt(process.env.PORT || '5555');
  
 // Global error handler (runs for unhandled errors in requests)
 webserver.set_error_handler((req, res, error: any) => {

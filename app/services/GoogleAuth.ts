@@ -18,11 +18,11 @@
  * - access_type: Set to 'offline' to receive a refresh token
  * - prompt: Set to 'consent' to always show the consent screen
  */
-export function redirectParamsURL()
+export function redirectParamsURL(): string
 {
     return    new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+        client_id: process.env.GOOGLE_CLIENT_ID || '',
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI || '',
         scope: [
           'https://www.googleapis.com/auth/userinfo.email',
           'https://www.googleapis.com/auth/userinfo.profile',

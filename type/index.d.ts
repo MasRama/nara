@@ -26,8 +26,9 @@ export interface Response extends HyperResponse {
 
 /**
  * Extended Request interface with user and shared data
+ * Note: user is optional because not all routes require authentication
  */
 export interface Request extends HyperRequest {
-    user: User;
+    user?: User;
     share?: Record<string, any>;
 }

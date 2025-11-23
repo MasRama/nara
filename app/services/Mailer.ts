@@ -10,7 +10,7 @@ const nodemailer = require("nodemailer");
  * Cache object to store multiple mailer instances
  * Used to prevent creating duplicate transporter instances for the same credentials
  */
-const instace = {};
+const instace: Record<string, any> = {};
 
 /**
  * Default mail transporter instance
@@ -35,7 +35,7 @@ const transporter = nodemailer.createTransport({
  * @param {string} config.pass - Gmail account password or app-specific password
  * @returns {Object} Configured nodemailer transporter instance
  */
-transporter.config = ({ user, pass }) => {
+transporter.config = ({ user, pass }: { user: string; pass: string }) => {
   if(instace[user]) {
     return instace[user];
   } else {

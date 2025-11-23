@@ -18,11 +18,14 @@ class Controller {
      */
 
     public async uploadAsset(request: Request, response: Response) {
+        if (!request.user) {
+            return response.status(401).json({ message: "Unauthorized" });
+        }
+
+        // Store user reference for use in nested callbacks
+        const userId = request.user.id;
+
         try { 
-
-        
-     
-
             let isValidFile = true;
 
             await request.multipart(async (field: any) => {
@@ -75,7 +78,7 @@ class Controller {
                                 mime_type: 'image/webp',
                                 name: fileName,
                                 size: processedBuffer.length,
-                                user_id: request.user.id,
+                                user_id: userId,
                                 s3_key: localPath,
                                 created_at: Date.now(),
                                 updated_at: Date.now()
@@ -84,7 +87,7 @@ class Controller {
 
                             // Update user avatar in users table
                             await DB.from("users")
-                                .where("id", request.user.id)
+                                .where("id", userId)
                                 .update({
                                     avatar: publicUrl,
                                     updated_at: Date.now()

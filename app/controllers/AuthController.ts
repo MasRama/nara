@@ -155,7 +155,7 @@ class AuthController {
    }
 
    public async createUser(request : Request, response: Response) {
-      if (!request.user.is_admin) {
+      if (!request.user || !request.user.is_admin) {
          return response.status(403).json({ message: "Unauthorized" });
       }
 
@@ -191,7 +191,7 @@ class AuthController {
    }
 
    public async updateUser(request : Request, response: Response) {
-      if (!request.user.is_admin) {
+      if (!request.user || !request.user.is_admin) {
          return response.status(403).json({ message: "Unauthorized" });
       }
 
@@ -245,9 +245,9 @@ class AuthController {
          return response.status(400).json({ message: "Invalid request format" });
       }
       
-      if (!request.user.is_admin) {
+      if (!request.user || !request.user.is_admin) {
          Logger.logSecurity('Unauthorized delete attempt', {
-            userId: request.user.id,
+            userId: request.user?.id,
             attemptedIds: ids,
             ip: request.ip
          });
@@ -273,6 +273,10 @@ class AuthController {
    }
 
    public async changeProfile(request : Request, response: Response) {
+      if (!request.user) {
+         return response.status(401).json({ message: "Unauthorized" });
+      }
+
       const data = await request.json();
 
       await DB.from("users").where("id", request.user.id).update({
@@ -285,6 +289,10 @@ class AuthController {
    }
 
    public async changePassword(request : Request, response: Response) {
+      if (!request.user) {
+         return response.status(401).json({ message: "Unauthorized" });
+      }
+
       const data = await request.json();
 
       const user = await DB.from("users")
@@ -430,7 +438,7 @@ This link will expire in 24 hours.
       return response.inertia("auth/login");
    }
 
-   public async redirect(request : Request, response) {
+   public async redirect(request : Request, response: Response) {
       const params = redirectParamsURL();
 
       const googleLoginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
@@ -595,6 +603,10 @@ This link will expire in 24 hours.
    }
 
    public async verify(request : Request, response: Response) {
+      if (!request.user) {
+         return response.status(401).json({ message: "Unauthorized" });
+      }
+
       const token = randomUUID();
 
       // Delete any existing verification tokens for this user
@@ -628,6 +640,10 @@ Link ini akan kadaluarsa dalam 24 jam.`,
    }
 
    public async verifyPage(request : Request, response: Response) {
+      if (!request.user) {
+         return response.status(401).json({ message: "Unauthorized" });
+      }
+
       const { id } = request.params;
 
       const verificationToken = await DB.from("email_verification_tokens")

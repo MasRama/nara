@@ -1,11 +1,10 @@
- 
 import { view } from "../services/View"; 
+import { Request, Response } from "../../type";
 
 let pkg = {version : "1.0.0"};
- 
 
 const inertia = () => {
-   return (req, res, next) => { 
+   return (req: Request, res: Response, next: () => void) => { 
       res.inertia = async (component, inertiaProps = {}, viewProps = {}) => {
          
          const url = `//${req.get("host")}${req.originalUrl}`;

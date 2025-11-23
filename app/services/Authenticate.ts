@@ -53,7 +53,7 @@ class Autenticate {
     * 3. Sets a session cookie
     * 4. Redirects to the home page
     */
-   async process(user, request: Request, response: Response) {
+   async process(user: any, request: Request, response: Response) {
       const token = randomUUID();
 
       await DB.table("sessions").insert({
