@@ -5,6 +5,12 @@ production.sqlite3
 dev.sqlite3
 public/uploads
 
+# AI
+.windsurf
+.trae
+.augment
+.cursor   
+
 # Logs
 logs/
 *.log
