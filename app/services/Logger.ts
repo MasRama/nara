@@ -91,7 +91,7 @@ const transport = pino.transport({
         translateTime: 'HH:MM:ss',
         ignore: 'pid,hostname',
         singleLine: false,
-        messageFormat: '{levelLabel} - {msg}',
+        messageFormat: '{msg}',
       },
     }] : []),
 
