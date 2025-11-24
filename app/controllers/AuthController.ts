@@ -76,6 +76,13 @@ import {
    ForgotPasswordSchema,
    ResetPasswordSchema,
 } from "../validators";
+import { 
+   AUTH, 
+   PAGINATION, 
+   ERROR_MESSAGES, 
+   SUCCESS_MESSAGES,
+   getEnv,
+} from "../config";
 
 class AuthController {
    public async registerPage(request : Request, response: Response) {
@@ -116,8 +123,8 @@ class AuthController {
       // Get paginated results
       const users = await query
          .orderBy('created_at', 'desc')
-         .offset((page - 1) * 10)
-         .limit(10);
+         .offset((page - 1) * PAGINATION.DEFAULT_PAGE_SIZE)
+         .limit(PAGINATION.DEFAULT_PAGE_SIZE);
       
       return response.inertia("dashboard", { 
          users, 
@@ -154,8 +161,8 @@ class AuthController {
 
       const users = await query
          .orderBy('created_at', 'desc')
-         .offset((page - 1) * 10)
-         .limit(10);
+         .offset((page - 1) * PAGINATION.DEFAULT_PAGE_SIZE)
+         .limit(PAGINATION.DEFAULT_PAGE_SIZE);
 
       return response.inertia("users", {
          users,
@@ -407,7 +414,7 @@ class AuthController {
       await DB.from("password_reset_tokens").insert({
          email: user.email,
          token: token,
-         expires_at: dayjs().add(24, 'hours').toDate()
+         expires_at: dayjs().add(AUTH.TOKEN_EXPIRY_HOURS, 'hours').toDate()
       });
 
       try {
@@ -545,7 +552,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
             ip: request.ip
          });
          return response
-            .cookie("error", "Email atau password salah", 1000 * 60 * 5)
+            .cookie("error", ERROR_MESSAGES.INVALID_CREDENTIALS, AUTH.ERROR_COOKIE_EXPIRY_MS)
             .redirect("/login");
       }
 
@@ -568,7 +575,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
             ip: request.ip
          });
          return response
-            .cookie("error", "Email atau password salah", 1000 * 60 * 5)
+            .cookie("error", ERROR_MESSAGES.INVALID_CREDENTIALS, AUTH.ERROR_COOKIE_EXPIRY_MS)
             .redirect("/login");
       }
    }
@@ -613,7 +620,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
                ip: request.ip
             });
             return response
-               .cookie("error", "Email sudah terdaftar", 1000 * 60 * 5)
+               .cookie("error", ERROR_MESSAGES.EMAIL_EXISTS, AUTH.ERROR_COOKIE_EXPIRY_MS)
                .redirect("/register");
          }
          Logger.error('Registration failed', error);
@@ -637,7 +644,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       await DB.from("email_verification_tokens").insert({
          user_id: request.user.id,
          token: token,
-         expires_at: dayjs().add(24, 'hours').toDate()
+         expires_at: dayjs().add(AUTH.TOKEN_EXPIRY_HOURS, 'hours').toDate()
       });
 
       try {

@@ -2,11 +2,22 @@
 // Boots the HTTP server, wires middlewares & routes,
 // loads environment variables, and configures HTTPS for local development.
 
-// Load environment variables first
-require("dotenv").config();
+// Load and validate environment variables first
+import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "./app/config";
+const env = initEnv();
 
 // Logger service for structured logging
 import Logger from "./app/services/Logger";
+
+// Log environment summary and warnings
+const envSummary = getEnvSummary(env);
+const featureWarnings = checkFeatureConfig(env);
+
+if (featureWarnings.length > 0) {
+  console.log('\n⚠️  Optional features not configured:');
+  featureWarnings.forEach(w => console.log(`   - ${w}`));
+  console.log('');
+}
 
 // Inertia middleware: integrates Inertia.js responses for SSR-like pages
 import inertia from "./app/middlewares/inertia";
@@ -25,16 +36,15 @@ import path from 'path';
  
 // Base server options: request body limit and TLS placeholders
 const option = {
-  max_body_length: 10 * 1024 * 1024, // 10MB request body limit
-  key_file_name : "", // HTTPS private key file path (set when PROTOCOL='https')
-  cert_file_name : "", // HTTPS certificate file path (set when PROTOCOL='https')
+  max_body_length: SERVER.MAX_BODY_SIZE,
+  key_file_name : "",
+  cert_file_name : "",
 };
 
-// Enable HTTPS when PROTOCOL='https' using local dev certificates
 // Enable HTTPS when HAS_CERTIFICATE='true' using local dev certificates
-if(process.env.HAS_CERTIFICATE === 'true') {
-  option.key_file_name = path.join(process.cwd(), 'localhost+1-key.pem'); // private key
-  option.cert_file_name = path.join(process.cwd(), 'localhost+1.pem');     // certificate
+if (env.HAS_CERTIFICATE === 'true') {
+  option.key_file_name = path.join(process.cwd(), 'localhost+1-key.pem');
+  option.cert_file_name = path.join(process.cwd(), 'localhost+1.pem');
 }
 
 // Create the HyperExpress server with the above options
@@ -50,8 +60,8 @@ webserver.use(inertia()); // Enable Inertia middleware for SSR-like responses
 // Mount application routes
 webserver.use(Web); 
 
-// Resolve server port from environment or default to 5555
-const PORT = parseInt(process.env.PORT || '5555');
+// Use validated port from environment
+const PORT = env.PORT;
  
 // Global error handler (runs for unhandled errors in requests)
 webserver.set_error_handler((req, res, error: any) => {
@@ -69,7 +79,7 @@ webserver.set_error_handler((req, res, error: any) => {
    res.status(statusCode);
 
    // Return appropriate error response based on environment
-   const isDevelopment = process.env.NODE_ENV === 'development';
+   const isDevelopment = env.NODE_ENV === 'development';
    res.json({
       success: false,
       message: isDevelopment ? error.message : 'Internal Server Error',
@@ -86,12 +96,11 @@ webserver
    .listen(PORT)
    .then(() => {
       Logger.info('Server started successfully', {
-         port: PORT,
-         env: process.env.NODE_ENV || 'development',
+         ...envSummary,
          nodeVersion: process.version,
-         hasHttps: process.env.HAS_CERTIFICATE === 'true',
       });
-      console.log(`\n🚀 Server is running at http://localhost:${PORT}\n`);
+      const protocol = env.HAS_CERTIFICATE === 'true' ? 'https' : 'http';
+      console.log(`\n🚀 Server is running at ${protocol}://localhost:${PORT}\n`);
    })
    .catch((err: any) => {
       Logger.fatal('Failed to start server', err);
