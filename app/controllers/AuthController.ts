@@ -64,6 +64,18 @@ import Mailer from "../services/Mailer";
 import Logger from "../services/Logger";
 import { Response, Request } from "../../type"; 
 import { randomUUID } from "crypto";
+import { 
+   validateOrFail,
+   LoginSchema,
+   RegisterSchema,
+   CreateUserSchema,
+   UpdateUserSchema,
+   DeleteUsersSchema,
+   ChangeProfileSchema,
+   ChangePasswordSchema,
+   ForgotPasswordSchema,
+   ResetPasswordSchema,
+} from "../validators";
 
 class AuthController {
    public async registerPage(request : Request, response: Response) {
@@ -109,7 +121,7 @@ class AuthController {
       
       return response.inertia("dashboard", { 
          users, 
-         total:   0,
+         total: Number((total as any)?.count) || 0,
          page,
          search,
          filter
@@ -147,7 +159,7 @@ class AuthController {
 
       return response.inertia("users", {
          users,
-         total: 0,
+         total: Number((total as any)?.count) || 0,
          page,
          search,
          filter,
@@ -159,21 +171,19 @@ class AuthController {
          return response.status(403).json({ message: "Unauthorized" });
       }
 
-      const data = await request.json();
-
-      if (!data.name || !data.email) {
-         return response.status(400).json({ message: "Name and email are required" });
-      }
+      const rawData = await request.json();
+      const data = await validateOrFail(CreateUserSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
 
       const now = dayjs().valueOf();
 
       const user = {
          id: randomUUID(),
          name: data.name,
-         email: (data.email as string).toLowerCase(),
+         email: data.email, // Already lowercased by schema
          phone: data.phone || null,
-         is_admin: !!data.is_admin,
-         is_verified: !!data.is_verified,
+         is_admin: data.is_admin,
+         is_verified: data.is_verified,
          password: await Authenticate.hash(data.password || data.email),
          created_at: now,
          updated_at: now,
@@ -181,12 +191,13 @@ class AuthController {
 
       try {
          await DB.table("users").insert(user);
-         return response.json({ message: "User created", user });
+         return response.json({ success: true, message: "User created", user });
       } catch (error: any) {
          if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-            return response.status(400).json({ message: "Email already used" });
+            return response.status(400).json({ success: false, message: "Email sudah digunakan" });
          }
-         return response.status(500).json({ message: "Failed to create user" });
+         Logger.error('Failed to create user', error);
+         return response.status(500).json({ success: false, message: "Gagal membuat user" });
       }
    }
 
@@ -196,76 +207,63 @@ class AuthController {
       }
 
       const id = request.params.id;
-      const data = await request.json();
-
       if (!id) {
-         return response.status(400).json({ message: "User id is required" });
+         return response.status(400).json({ success: false, message: "User ID wajib diisi" });
       }
 
-      const payload: any = {
-         name: data.name,
-         email: data.email ? (data.email as string).toLowerCase() : undefined,
-         phone: data.phone ?? null,
-         is_admin: !!data.is_admin,
-         is_verified: !!data.is_verified,
-      };
+      const rawData = await request.json();
+      const data = await validateOrFail(UpdateUserSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
 
-      if (data.password) {
-         payload.password = await Authenticate.hash(data.password);
-      }
+      const payload: Record<string, any> = {};
 
-      Object.keys(payload).forEach((key) => {
-         if (payload[key] === undefined) {
-            delete payload[key];
-         }
-      });
-
-      if (Object.keys(payload).length === 0) {
-         return response.status(400).json({ message: "No data to update" });
-      }
+      if (data.name !== undefined) payload.name = data.name;
+      if (data.email !== undefined) payload.email = data.email; // Already lowercased
+      if (data.phone !== undefined) payload.phone = data.phone;
+      if (data.is_admin !== undefined) payload.is_admin = data.is_admin;
+      if (data.is_verified !== undefined) payload.is_verified = data.is_verified;
+      if (data.password) payload.password = await Authenticate.hash(data.password);
 
       payload.updated_at = dayjs().valueOf();
 
       try {
          await DB.from("users").where("id", id).update(payload);
          const user = await DB.from("users").where("id", id).first();
-         return response.json({ message: "User updated", user });
+         return response.json({ success: true, message: "User berhasil diupdate", user });
       } catch (error: any) {
          if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-            return response.status(400).json({ message: "Email already used" });
+            return response.status(400).json({ success: false, message: "Email sudah digunakan" });
          }
-         return response.status(500).json({ message: "Failed to update user" });
+         Logger.error('Failed to update user', error);
+         return response.status(500).json({ success: false, message: "Gagal mengupdate user" });
       }
    }
 
    public async deleteUsers(request : Request, response: Response) {
-      const { ids } = await request.json();
-      
-      if (!Array.isArray(ids) || ids.length === 0) {
-         return response.status(400).json({ message: "Invalid request format" });
-      }
-      
       if (!request.user || !request.user.is_admin) {
          Logger.logSecurity('Unauthorized delete attempt', {
             userId: request.user?.id,
-            attemptedIds: ids,
             ip: request.ip
          });
-         return response.status(403).json({ message: "Unauthorized" });
+         return response.status(403).json({ success: false, message: "Unauthorized" });
       }
+
+      const rawData = await request.json();
+      const data = await validateOrFail(DeleteUsersSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
       
       const deleted = await DB.from("users")
-         .whereIn("id", ids)
+         .whereIn("id", data.ids)
          .delete();
       
       Logger.warn('Users deleted by admin', {
          adminId: request.user.id,
-         deletedIds: ids,
+         deletedIds: data.ids,
          count: deleted,
          ip: request.ip
       });
       
-      return response.json({ message: "Users deleted", deleted });
+      return response.json({ success: true, message: "Users berhasil dihapus", deleted });
    }
 
    public async profilePage(request : Request, response: Response) { 
@@ -274,26 +272,31 @@ class AuthController {
 
    public async changeProfile(request : Request, response: Response) {
       if (!request.user) {
-         return response.status(401).json({ message: "Unauthorized" });
+         return response.status(401).json({ success: false, message: "Unauthorized" });
       }
 
-      const data = await request.json();
+      const rawData = await request.json();
+      const data = await validateOrFail(ChangeProfileSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
 
       await DB.from("users").where("id", request.user.id).update({
          name: data.name,
-         email: data.email.toLowerCase(),
+         email: data.email, // Already lowercased by schema
          phone: data.phone,
+         updated_at: dayjs().valueOf(),
       });
 
-      return response.json({ message: "Your profile has been updated" });
+      return response.json({ success: true, message: "Profil berhasil diupdate" });
    }
 
    public async changePassword(request : Request, response: Response) {
       if (!request.user) {
-         return response.status(401).json({ message: "Unauthorized" });
+         return response.status(401).json({ success: false, message: "Unauthorized" });
       }
 
-      const data = await request.json();
+      const rawData = await request.json();
+      const data = await validateOrFail(ChangePasswordSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
 
       const user = await DB.from("users")
          .where("id", request.user.id)
@@ -309,6 +312,7 @@ class AuthController {
             .where("id", request.user.id)
             .update({
                password: await Authenticate.hash(data.new_password),
+               updated_at: dayjs().valueOf(),
             });
          
          Logger.logAuth('password_changed', {
@@ -317,7 +321,7 @@ class AuthController {
             ip: request.ip
          });
 
-         return response.json({ message: "Password berhasil diubah" });
+         return response.json({ success: true, message: "Password berhasil diubah" });
       } else {
          Logger.logSecurity('Password change failed - invalid current password', {
             userId: request.user.id,
@@ -325,7 +329,7 @@ class AuthController {
          });
          return response
             .status(400)
-            .json({ message: "Password lama tidak cocok" });
+            .json({ success: false, message: "Password lama tidak cocok" });
       }
    }
 
@@ -348,15 +352,17 @@ class AuthController {
    }
 
    public async resetPassword(request : Request, response: Response) {
-      const { id, password } = await request.json();
+      const rawData = await request.json();
+      const data = await validateOrFail(ResetPasswordSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
 
       const token = await DB.from("password_reset_tokens")
-         .where("token", id)
+         .where("token", data.id)
          .where("expires_at", ">", new Date())
          .first();
 
       if (!token) {
-         return response.status(404).send("Link tidak valid atau sudah kadaluarsa");
+         return response.status(404).json({ success: false, message: "Link tidak valid atau sudah kadaluarsa" });
       }
 
       const user = await DB.from("users")
@@ -365,29 +371,34 @@ class AuthController {
 
       await DB.from("users")
          .where("id", user.id)
-         .update({ password: await Authenticate.hash(password) });
+         .update({ 
+            password: await Authenticate.hash(data.password),
+            updated_at: dayjs().valueOf(),
+         });
 
       // Delete the used token
       await DB.from("password_reset_tokens")
-         .where("token", id)
+         .where("token", data.id)
          .delete();
 
       return Authenticate.process(user, request, response);
    }
 
    public async sendResetPassword(request : Request, response: Response) {
-      let { email, phone } = await request.json();
+      const rawData = await request.json();
+      const data = await validateOrFail(ForgotPasswordSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
  
       let user;
 
-      if (email && email.includes("@")) {
-         user = await DB.from("users").where("email", email).first();
-      } else if (phone) {
-         user = await DB.from("users").where("phone", phone).first();
+      if (data.email) {
+         user = await DB.from("users").where("email", data.email).first();
+      } else if (data.phone) {
+         user = await DB.from("users").where("phone", data.phone).first();
       }
 
       if (!user) {
-         return response.status(404).send("Email tidak terdaftar");
+         return response.status(404).json({ success: false, message: "Email atau nomor telepon tidak terdaftar" });
       }
 
       const token = randomUUID();
@@ -400,38 +411,41 @@ class AuthController {
       });
 
       try {
-         await Mailer.sendMail({
-            from: process.env.USER_MAILER,
-            to: email,
-            subject: "Reset Password",
-            text: `You have requested a password reset. If this was you, please click the following link:
-      
-        ${process.env.APP_URL}/reset-password/${token}
-        
-        If you did not request a password reset, please ignore this email.
-        
-        This link will expire in 24 hours.
-              `,
-         });
-      } catch (error) {}
-
-      try {
-         if (user.phone)
-            await axios.post("https://api.dripsender.id/send", {
-               api_key: "DRIPSENDER_API_KEY",
-               phone: user.phone,
-               text: `You have requested a password reset. If this was you, please click the following link:
+         if (user.email) {
+            await Mailer.sendMail({
+               from: process.env.USER_MAILER,
+               to: user.email,
+               subject: "Reset Password",
+               text: `Anda telah meminta reset password. Jika ini adalah Anda, silakan klik link berikut:
       
 ${process.env.APP_URL}/reset-password/${token}
-          
-If you did not request a password reset, please ignore this message.
-
-This link will expire in 24 hours.
-                `,
+        
+Jika Anda tidak meminta reset password, abaikan email ini.
+        
+Link ini akan kadaluarsa dalam 24 jam.`,
             });
-      } catch (error) {}
+         }
+      } catch (error) {
+         Logger.error('Failed to send reset password email', error as Error);
+      }
 
-      return response.send("OK")
+      try {
+         if (user.phone) {
+            await axios.post("https://api.dripsender.id/send", {
+               api_key: process.env.DRIPSENDER_API_KEY || "DRIPSENDER_API_KEY",
+               phone: user.phone,
+               text: `Anda telah meminta reset password. Klik link berikut:
+
+${process.env.APP_URL}/reset-password/${token}
+          
+Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
+            });
+         }
+      } catch (error) {
+         Logger.error('Failed to send reset password SMS', error as Error);
+      }
+
+      return response.json({ success: true, message: "Link reset password telah dikirim" });
    }
 
    public async loginPage(request : Request, response: Response) {
@@ -502,11 +516,14 @@ This link will expire in 24 hours.
    }
 
    public async processLogin(request : Request, response: Response) {
-      const data = await request.json();
+      const rawData = await request.json();
+      const data = await validateOrFail(LoginSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
+
       const identifier = data.email || data.phone;
 
       Logger.info('Login attempt', { 
-         identifier: data.email ? data.email.toLowerCase() : data.phone,
+         identifier: data.email || data.phone,
          type: data.email ? 'email' : 'phone',
          ip: request.ip,
          userAgent: request.headers['user-agent']
@@ -516,7 +533,7 @@ This link will expire in 24 hours.
 
       if (data.email) {
          user = await DB.from("users")
-            .where("email", data.email.toLowerCase())
+            .where("email", data.email) // Already lowercased by schema
             .first();
       } else if (data.phone) {
          user = await DB.from("users").where("phone", data.phone).first();
@@ -557,10 +574,12 @@ This link will expire in 24 hours.
    }
 
    public async processRegister(request : Request, response: Response) {
-      const data = await request.json();
+      const rawData = await request.json();
+      const data = await validateOrFail(RegisterSchema, rawData, response);
+      if (!data) return; // Validation failed, response already sent
 
       Logger.info('Registration attempt', {
-         email: data.email.toLowerCase(),
+         email: data.email, // Already lowercased by schema
          name: data.name,
          ip: request.ip
       });
@@ -571,7 +590,7 @@ This link will expire in 24 hours.
          await DB.table("users").insert({
             id: id,
             name: data.name,
-            email: data.email.toLowerCase(),
+            email: data.email, // Already lowercased by schema
             phone: data.phone,
             password: await Authenticate.hash(data.password),
             created_at: dayjs().valueOf(),
@@ -590,7 +609,7 @@ This link will expire in 24 hours.
       } catch (error: any) {
          if (error.code == "SQLITE_CONSTRAINT_UNIQUE") {
             Logger.logSecurity('Registration failed - duplicate email', {
-               email: data.email.toLowerCase(),
+               email: data.email,
                ip: request.ip
             });
             return response
