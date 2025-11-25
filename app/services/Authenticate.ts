@@ -6,13 +6,31 @@
 
 import DB from "@services/DB"; 
 import { Request, Response } from "@type";
-import { randomUUID, pbkdf2Sync, randomBytes } from "crypto";
+import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from "crypto";
 
 // PBKDF2 configuration
 const ITERATIONS = 100000;
 const KEYLEN = 64;
 const DIGEST = 'sha512';
 const SALT_SIZE = 16;
+
+// Session cookie configuration
+const SESSION_COOKIE_NAME = 'auth_id';
+const SESSION_EXPIRY_MS = 1000 * 60 * 60 * 24 * 60; // 60 days
+
+/**
+ * Secure cookie options
+ * - httpOnly: Prevents JavaScript access (XSS protection)
+ * - secure: Only send over HTTPS (in production)
+ * - sameSite: Prevents CSRF attacks
+ * - path: Cookie valid for entire site
+ */
+const getSecureCookieOptions = () => ({
+   httpOnly: true,
+   secure: process.env.NODE_ENV === 'production',
+   sameSite: 'lax' as const,
+   path: '/',
+});
 
 /**
  * Authentication class providing core authentication functionality
@@ -31,14 +49,24 @@ class Autenticate {
 
    /**
     * Compares a plain text password with a hashed password
+    * Uses timing-safe comparison to prevent timing attacks
     * @param {string} password - The plain text password to verify
     * @param {string} storedHash - The stored password hash with salt (format: salt:hash)
     * @returns {boolean} True if passwords match, false otherwise
     */
    async compare(password: string, storedHash: string) {
       const [salt, hash] = storedHash.split(':');
+      if (!salt || !hash) return false;
+      
       const newHash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
-      return hash === newHash;
+      
+      // Use timing-safe comparison to prevent timing attacks
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const newHashBuffer = Buffer.from(newHash, 'hex');
+      
+      if (hashBuffer.length !== newHashBuffer.length) return false;
+      
+      return timingSafeEqual(hashBuffer, newHashBuffer);
    }
 
    /**
@@ -50,7 +78,7 @@ class Autenticate {
     * @description
     * 1. Generates a unique session token
     * 2. Creates a session record in the database
-    * 3. Sets a session cookie
+    * 3. Sets a secure session cookie with HttpOnly, Secure, SameSite flags
     * 4. Redirects to the home page
     */
    async process(user: any, request: Request, response: Response) {
@@ -62,9 +90,12 @@ class Autenticate {
          user_agent: request.headers["user-agent"],
       });
 
-      // Set cookie with 60-day expiration and redirect to home
+      // Set secure cookie with proper security flags
+      // HttpOnly: Prevents XSS attacks from stealing session
+      // Secure: Only sent over HTTPS in production
+      // SameSite: Prevents CSRF attacks
       response
-         .cookie("auth_id", token, 1000 * 60 * 60 * 24 * 60)
+         .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
          .redirect("/dashboard");
    }
 
@@ -75,13 +106,16 @@ class Autenticate {
     * 
     * @description
     * 1. Deletes the session from the database
-    * 2. Clears the session cookie
+    * 2. Clears the session cookie with same security options
     * 3. Redirects to the login page
     */
    async logout(request: Request, response: Response) {
-      await DB.from("sessions").where("id", request.cookies.auth_id).delete();
+      await DB.from("sessions").where("id", request.cookies[SESSION_COOKIE_NAME]).delete();
 
-      response.cookie("auth_id", "", 0).redirect("/login");
+      // Clear cookie with same options to ensure proper deletion
+      response
+         .cookie(SESSION_COOKIE_NAME, "", 0, getSecureCookieOptions())
+         .redirect("/login");
    }
 }
 

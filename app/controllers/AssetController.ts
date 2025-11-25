@@ -1,6 +1,7 @@
 import { uuidv7 } from "uuidv7";
 import { Response, Request } from "@type";
 import fs from "fs";
+import path from "path";
 import sharp from "sharp";  
 import DB from "@services/DB";
 import Logger from "@services/Logger";
@@ -169,26 +170,57 @@ class Controller {
             '.mp4', '.webm', '.mp3', '.wav'
         ];
 
-        // Clean and construct the file path
-        const path =  request.path.replace("/", "").replaceAll("%20", " ");
+        // Get the requested path and decode URL encoding
+        const requestedPath = decodeURIComponent(request.path);
+
+        // Security: Remove leading slash and normalize
+        const relativePath = requestedPath.replace(/^\/+/, '');
+
+        // Security: Check for path traversal attempts BEFORE any path operations
+        // Block any path containing .. or encoded variants
+        if (relativePath.includes('..') || 
+            relativePath.includes('%2e') || 
+            relativePath.includes('%2E') ||
+            relativePath.includes('\0')) {
+            Logger.logSecurity('Path traversal attempt blocked', {
+                requestedPath,
+                ip: request.ip
+            });
+            return response.status(403).send('Access denied');
+        }
 
         // Check if the path has any extension
-        if (!path.includes('.')) {
+        if (!relativePath.includes('.')) {
             return response.status(404).send('Page not found');
         }
 
         // Security check: validate file extension
-        if (!allowedExtensions.some(ext => path.toLowerCase().endsWith(ext))) {
+        if (!allowedExtensions.some(ext => relativePath.toLowerCase().endsWith(ext))) {
             return response.status(403).send('File type not allowed');
         }
 
+        // Resolve the absolute path and verify it's within public directory
+        const publicDir = path.resolve(process.cwd(), 'public');
+        const resolvedPath = path.resolve(process.cwd(), relativePath);
+
+        // Security: Ensure the resolved path is within the public directory
+        if (!resolvedPath.startsWith(publicDir)) {
+            Logger.logSecurity('Path traversal attempt blocked (resolved path escape)', {
+                requestedPath,
+                resolvedPath,
+                publicDir,
+                ip: request.ip
+            });
+            return response.status(403).send('Access denied');
+        }
+
         // Check if file exists
-        if (!fs.existsSync(path)) {
+        if (!fs.existsSync(resolvedPath)) {
             return response.status(404).send('File not found');
         }
 
         // Serve the file
-        return response.download(path);
+        return response.download(resolvedPath);
     }
 }
 
