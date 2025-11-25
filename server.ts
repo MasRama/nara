@@ -107,30 +107,79 @@ webserver
       process.exit(1);
    });
 
+// Graceful shutdown configuration
+const SHUTDOWN_TIMEOUT_MS = 10000; // 10 seconds max wait for connections to drain
+let isShuttingDown = false;
+
+/**
+ * Graceful shutdown handler
+ * 
+ * Properly closes the server and drains existing connections before exit.
+ * This prevents in-flight requests from being dropped during deploy/restart.
+ * 
+ * @param signal - The signal that triggered shutdown (SIGTERM, SIGINT, etc.)
+ * @param exitCode - Exit code to use (0 for normal, 1 for error)
+ */
+async function gracefulShutdown(signal: string, exitCode: number = 0): Promise<void> {
+   // Prevent multiple shutdown attempts
+   if (isShuttingDown) {
+      Logger.warn('Shutdown already in progress, ignoring signal', { signal });
+      return;
+   }
+   isShuttingDown = true;
+
+   Logger.info(`${signal} received, starting graceful shutdown...`);
+   console.log(`\n⏳ Shutting down gracefully (max ${SHUTDOWN_TIMEOUT_MS / 1000}s)...`);
+
+   // Set a hard timeout to force exit if graceful shutdown takes too long
+   const forceExitTimeout = setTimeout(() => {
+      Logger.error('Graceful shutdown timeout exceeded, forcing exit');
+      console.log('❌ Shutdown timeout exceeded, forcing exit');
+      process.exit(exitCode || 1);
+   }, SHUTDOWN_TIMEOUT_MS);
+
+   try {
+      // Step 1: Stop accepting new connections
+      Logger.info('Closing server (stop accepting new connections)...');
+      await webserver.close();
+      Logger.info('Server closed successfully');
+
+      // Step 2: Close database connections
+      Logger.info('Closing database connections...');
+      const DB = (await import("@services/DB")).default;
+      await DB.destroy();
+      Logger.info('Database connections closed');
+
+      // Step 3: Flush logs
+      Logger.info('Flushing logs...');
+      await Logger.flush();
+
+      // Clear the force exit timeout
+      clearTimeout(forceExitTimeout);
+
+      console.log('✅ Graceful shutdown complete');
+      process.exit(exitCode);
+   } catch (error) {
+      Logger.error('Error during graceful shutdown', error as Error);
+      clearTimeout(forceExitTimeout);
+      process.exit(exitCode || 1);
+   }
+}
+
 // Graceful shutdown: handle SIGTERM (e.g., Docker/K8s stop)
-process.on("SIGTERM", async () => {
-   Logger.info("SIGTERM signal received, shutting down gracefully");
-   await Logger.flush();
-   process.exit(0);
-});
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM", 0));
 
 // Handle SIGINT (Ctrl+C)
-process.on("SIGINT", async () => {
-   Logger.info("SIGINT signal received, shutting down gracefully");
-   await Logger.flush();
-   process.exit(0);
-});
+process.on("SIGINT", () => gracefulShutdown("SIGINT", 0));
 
 // Handle uncaught exceptions
 process.on("uncaughtException", async (error: Error) => {
    Logger.fatal("Uncaught exception", error);
-   await Logger.flush();
-   process.exit(1);
+   await gracefulShutdown("uncaughtException", 1);
 });
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", async (reason: any) => {
    Logger.fatal("Unhandled promise rejection", { reason });
-   await Logger.flush();
-   process.exit(1);
+   await gracefulShutdown("unhandledRejection", 1);
 });
