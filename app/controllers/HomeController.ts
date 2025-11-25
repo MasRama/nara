@@ -1,5 +1,5 @@
-import { Response, Request } from "../../type"; 
-import DB from "../services/DB";
+import { Response, Request } from "@type"; 
+import DB from "@services/DB";
 
 class Controller {
     

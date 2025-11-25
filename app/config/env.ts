@@ -25,13 +25,13 @@ const EnvSchema = z.object({
   // Logging
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
   
-  // Google OAuth (optional)
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_REDIRECT_URI: z.string().url().optional(),
+  // Google OAuth (optional) - empty string allowed
+  GOOGLE_CLIENT_ID: z.string().optional().or(z.literal('')),
+  GOOGLE_CLIENT_SECRET: z.string().optional().or(z.literal('')),
+  GOOGLE_REDIRECT_URI: z.string().url().optional().or(z.literal('')),
   
-  // Mailer (optional)
-  USER_MAILER: z.string().email().optional(),
+  // Mailer (optional) - empty string or valid email
+  USER_MAILER: z.string().email().optional().or(z.literal('')),
   PASS_MAILER: z.string().optional(),
   
   // SMS Provider (optional)
@@ -82,12 +82,12 @@ export function validateEnv(): Env {
 export function checkFeatureConfig(env: Env) {
   const warnings: string[] = [];
   
-  // Check Google OAuth
+  // Check Google OAuth (empty string counts as not configured)
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     warnings.push('Google OAuth not configured (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)');
   }
   
-  // Check Mailer
+  // Check Mailer (empty string counts as not configured)
   if (!env.USER_MAILER || !env.PASS_MAILER) {
     warnings.push('Email service not configured (USER_MAILER, PASS_MAILER)');
   }

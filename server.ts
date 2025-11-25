@@ -3,11 +3,11 @@
 // loads environment variables, and configures HTTPS for local development.
 
 // Load and validate environment variables first
-import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "./app/config";
+import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "@config";
 const env = initEnv();
 
 // Logger service for structured logging
-import Logger from "./app/services/Logger";
+import Logger from "@services/Logger";
 
 // Log environment summary and warnings
 const envSummary = getEnvSummary(env);
@@ -15,15 +15,15 @@ const featureWarnings = checkFeatureConfig(env);
 
 if (featureWarnings.length > 0) {
   console.log('\n⚠️  Optional features not configured:');
-  featureWarnings.forEach(w => console.log(`   - ${w}`));
+  featureWarnings.forEach((w: string) => console.log(`   - ${w}`));
   console.log('');
 }
 
 // Inertia middleware: integrates Inertia.js responses for SSR-like pages
-import inertia from "./app/middlewares/inertia";
+import inertia from "@middlewares/inertia";
 
 // Application routes definition (all app endpoints)
-import Web from "./routes/web";
+import Web from "@routes/web";
 
 // HyperExpress: high-performance HTTP server framework
 import HyperExpress from "hyper-express";

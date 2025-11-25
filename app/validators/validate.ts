@@ -5,7 +5,7 @@
  * Returns formatted error messages for invalid data.
  */
 import { z, ZodError, ZodSchema } from 'zod';
-import { Response } from '../../type';
+import { Response } from '@type';
 
 /**
  * Validation result type

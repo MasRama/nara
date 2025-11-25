@@ -4,10 +4,10 @@
  * for optimal performance without an ORM or query builder layer.
  */
 require("dotenv").config();
-import config from "../../knexfile";
+import config from "@root/knexfile";
 import Database from 'better-sqlite3';
 import type * as BetterSqlite3 from 'better-sqlite3';
-import Logger from "./Logger";
+import Logger from "@services/Logger";
 
 // Use a default connection if DB_CONNECTION is not set
 const connectionType = process.env.DB_CONNECTION || 'development';

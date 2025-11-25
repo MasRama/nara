@@ -55,14 +55,14 @@
  * - `response.inertia(view, props)` renders views in `resources/js/Pages` using Inertia.
  * - `Authenticate.process(user, request, response)` should set cookies/session and perform appropriate redirect.
  */
-import DB from "../services/DB";
-import Authenticate from "../services/Authenticate";
-import { redirectParamsURL } from "../services/GoogleAuth";
+import DB from "@services/DB";
+import Authenticate from "@services/Authenticate";
+import { redirectParamsURL } from "@services/GoogleAuth";
 import axios from "axios"; 
 import dayjs from "dayjs";
-import Mailer from "../services/Mailer";
-import Logger from "../services/Logger";
-import { Response, Request } from "../../type"; 
+import Mailer from "@services/Mailer";
+import Logger from "@services/Logger";
+import { Response, Request } from "@type"; 
 import { randomUUID } from "crypto";
 import { 
    validateOrFail,
@@ -75,14 +75,14 @@ import {
    ChangePasswordSchema,
    ForgotPasswordSchema,
    ResetPasswordSchema,
-} from "../validators";
+} from "@validators";
 import { 
    AUTH, 
    PAGINATION, 
    ERROR_MESSAGES, 
    SUCCESS_MESSAGES,
    getEnv,
-} from "../config";
+} from "@config";
 
 class AuthController {
    public async registerPage(request : Request, response: Response) {

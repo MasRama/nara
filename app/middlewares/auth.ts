@@ -1,7 +1,5 @@
- 
-import DB
-from "../services/DB";
-import { Request, Response } from "../../type";
+import DB from "@services/DB";
+import { Request, Response } from "@type";
 
 export default async (request : Request,response : Response) => {
      

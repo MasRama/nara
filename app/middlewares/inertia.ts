@@ -1,5 +1,5 @@
-import { view } from "../services/View"; 
-import { Request, Response } from "../../type";
+import { view } from "@services/View"; 
+import { Request, Response } from "@type";
 
 let pkg = {version : "1.0.0"};
 

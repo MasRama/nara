@@ -1,9 +1,9 @@
 import { uuidv7 } from "uuidv7";
-import { Response, Request } from "../../type";
+import { Response, Request } from "@type";
 import fs from "fs";
 import sharp from "sharp";  
-import DB from "../services/DB";
-import Logger from "../services/Logger";
+import DB from "@services/DB";
+import Logger from "@services/Logger";
 
 
 

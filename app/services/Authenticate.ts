@@ -4,8 +4,8 @@
  * session management, and login/logout functionality.
  */
 
-import DB from "./DB"; 
-import { Request, Response } from "../../type";
+import DB from "@services/DB"; 
+import { Request, Response } from "@type";
 import { randomUUID, pbkdf2Sync, randomBytes } from "crypto";
 
 // PBKDF2 configuration

@@ -48,10 +48,19 @@
     "baseUrl": ".",
     /* Path aliases to support absolute imports from project root */
     "paths": {
-      "app/*": ["app/*"],
-      "routes/*": ["routes/*"],
-      "resources/*": ["resources/*"],
-      "type/*": ["type/*"]
+      "@/*": ["app/*"],
+      "@controllers/*": ["app/controllers/*"],
+      "@services/*": ["app/services/*"],
+      "@middlewares/*": ["app/middlewares/*"],
+      "@validators/*": ["app/validators/*"],
+      "@validators": ["app/validators/index.ts"],
+      "@config/*": ["app/config/*"],
+      "@config": ["app/config/index.ts"],
+      "@routes/*": ["routes/*"],
+      "@resources/*": ["resources/*"],
+      "@type/*": ["type/*"],
+      "@type": ["type/index.d.ts"],
+      "@root/*": ["./*"]
     }
   }, 
   /* Files to include in compilation */
