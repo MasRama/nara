@@ -9,6 +9,9 @@ const env = initEnv();
 // Logger service for structured logging
 import Logger from "@services/Logger";
 
+// Core error classes for type-safe error handling
+import { HttpError, ValidationError, isHttpError } from "@core";
+
 // Log environment summary and warnings
 const envSummary = getEnvSummary(env);
 const featureWarnings = checkFeatureConfig(env);
@@ -53,9 +56,10 @@ const webserver = new HyperExpress.Server(option);
 // Global middlewares
 webserver.use(cors()); // Enable CORS for cross-origin requests
 
-// @ts-expect-error - Type compatibility issue between HyperExpress and extended Response interface
-// The middleware works correctly at runtime, adding view/inertia/flash methods to Response
-webserver.use(inertia()); // Enable Inertia middleware for SSR-like responses
+// Enable Inertia middleware for SSR-like responses
+// Note: Type cast needed due to HyperExpress middleware signature differences
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+webserver.use(inertia() as any);
 
 // Mount application routes
 webserver.use(Web); 
@@ -64,30 +68,62 @@ webserver.use(Web);
 const PORT = env.PORT;
  
 // Global error handler (runs for unhandled errors in requests)
-webserver.set_error_handler((req, res, error: any) => {
-   // Log error with context
-   Logger.error('Request error', {
-      err: error,
+webserver.set_error_handler((req, res, error: unknown) => {
+   const isDevelopment = env.NODE_ENV === 'development';
+
+   // Handle known HttpError types
+   if (isHttpError(error)) {
+      Logger.warn('HTTP error', {
+         name: error.name,
+         message: error.message,
+         statusCode: error.statusCode,
+         code: error.code,
+         path: req.path,
+         method: req.method,
+      });
+
+      res.status(error.statusCode);
+
+      // Special handling for ValidationError
+      if (error instanceof ValidationError) {
+         return res.json({
+            success: false,
+            message: error.message,
+            code: error.code,
+            errors: error.errors,
+         });
+      }
+
+      return res.json({
+         success: false,
+         message: error.message,
+         code: error.code,
+         ...(isDevelopment && { stack: error.stack }),
+      });
+   }
+
+   // Handle unknown errors
+   const err = error as Error;
+   const statusCode = (error as { statusCode?: number }).statusCode || 
+                      ((error as { code?: string }).code === "SQLITE_ERROR" ? 500 : 500);
+
+   Logger.error('Unhandled request error', {
+      err: err,
       path: req.path,
       method: req.method,
-      statusCode: error.statusCode || 500,
+      statusCode,
       userAgent: req.headers['user-agent'],
    });
 
-   // Determine status code
-   const statusCode = error.statusCode || (error.code === "SQLITE_ERROR" ? 500 : 500);
    res.status(statusCode);
-
-   // Return appropriate error response based on environment
-   const isDevelopment = env.NODE_ENV === 'development';
    res.json({
       success: false,
-      message: isDevelopment ? error.message : 'Internal Server Error',
+      message: isDevelopment ? err.message : 'Internal Server Error',
       ...(isDevelopment && { 
-         error: error.message,
-         stack: error.stack,
-         code: error.code 
-      })
+         error: err.message,
+         stack: err.stack,
+         code: (error as { code?: string }).code,
+      }),
    });
 });
 

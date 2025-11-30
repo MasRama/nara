@@ -1,3 +1,4 @@
+import 'tsconfig-paths/register';
 import type { Knex } from "knex"; 
 
 // Update with your config settings.

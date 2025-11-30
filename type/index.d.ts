@@ -1,34 +1,25 @@
-import { Request as HyperRequest, Response as HyperResponse } from "hyper-express";
+/**
+ * Nara Type Definitions
+ * 
+ * This file provides backward compatibility with existing code.
+ * New code should import from '@core' instead.
+ * 
+ * @deprecated Import from '@core' instead:
+ * import type { NaraRequest, NaraResponse, User } from '@core';
+ */
+
+// Re-export core types for backward compatibility
+export type { User, NaraRequest, NaraResponse } from '../app/core/types';
+
+// Aliases for backward compatibility
+import type { NaraRequest, NaraResponse } from '../app/core/types';
 
 /**
- * User interface for authenticated requests
+ * @deprecated Use NaraRequest from '@core' instead
  */
-export interface User {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    avatar?: string;
-    is_admin: boolean;
-    is_verified: boolean;
-    created_at?: number;
-    updated_at?: number;
-}
+export type Request = NaraRequest;
 
 /**
- * Extended Response interface with custom methods
+ * @deprecated Use NaraResponse from '@core' instead
  */
-export interface Response extends HyperResponse {
-    view(view: string, data?: Record<string, any>): void;
-    inertia(view: string, data?: Record<string, any>): void;
-    flash(message: string, data: any): Response;
-}
-
-/**
- * Extended Request interface with user and shared data
- * Note: user is optional because not all routes require authentication
- */
-export interface Request extends HyperRequest {
-    user?: User;
-    share?: Record<string, any>;
-}
+export type Response = NaraResponse;

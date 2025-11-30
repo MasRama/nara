@@ -49,6 +49,8 @@
     /* Path aliases to support absolute imports from project root */
     "paths": {
       "@/*": ["app/*"],
+      "@core": ["app/core/index.ts"],
+      "@core/*": ["app/core/*"],
       "@controllers/*": ["app/controllers/*"],
       "@services/*": ["app/services/*"],
       "@middlewares/*": ["app/middlewares/*"],
