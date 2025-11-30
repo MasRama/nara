@@ -5,7 +5,10 @@
   "main": "server.ts",
   "scripts": {
     "dev": "clear && rm -rf dist && rm -rf build && npx concurrently 'vite'  'sleep 1 && npx nodemon --legacy-watch'",
-    "build": "mkdir dist && mkdir dist/views && cp -rf resources/views/* dist/views && vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build && cp -rf resources/views/partials build/dist/views"
+    "build": "mkdir dist && mkdir dist/views && cp -rf resources/views/* dist/views && vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build && cp -rf resources/views/partials build/dist/views",
+    "test": "echo 'No test framework configured. Install vitest or jest to run tests.'",
+    "lint": "npx tsc --noEmit",
+    "typecheck": "npx tsc --noEmit"
   },
   "author": "Maulana Shalihin",
   "license": "ISC",

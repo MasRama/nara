@@ -46,12 +46,34 @@ function printHelp(commands: Array<{ name: string; description: string }>) {
   
   // Group commands
   const makeCommands = commands.filter(cmd => cmd.name.startsWith('make:'));
-  const otherCommands = commands.filter(cmd => !cmd.name.startsWith('make:'));
+  const dbCommands = commands.filter(cmd => cmd.name.startsWith('db:'));
+  const devCommands = commands.filter(cmd => ['test', 'lint', 'typecheck', 'doctor'].includes(cmd.name));
+  const otherCommands = commands.filter(cmd => 
+    !cmd.name.startsWith('make:') && 
+    !cmd.name.startsWith('db:') && 
+    !['test', 'lint', 'typecheck', 'doctor'].includes(cmd.name)
+  );
   
   if (makeCommands.length > 0) {
-    console.log(`\n  ${c.green}${c.bright}make${c.reset}`);
+    console.log(`\n  ${c.green}${c.bright}make${c.reset} ${c.dim}(scaffolding)${c.reset}`);
     for (const cmd of makeCommands) {
-      const cmdName = cmd.name.padEnd(20);
+      const cmdName = cmd.name.padEnd(22);
+      console.log(`    ${c.cyan}${cmdName}${c.reset} ${c.dim}${cmd.description}${c.reset}`);
+    }
+  }
+  
+  if (dbCommands.length > 0) {
+    console.log(`\n  ${c.green}${c.bright}db${c.reset} ${c.dim}(database)${c.reset}`);
+    for (const cmd of dbCommands) {
+      const cmdName = cmd.name.padEnd(22);
+      console.log(`    ${c.cyan}${cmdName}${c.reset} ${c.dim}${cmd.description}${c.reset}`);
+    }
+  }
+  
+  if (devCommands.length > 0) {
+    console.log(`\n  ${c.green}${c.bright}dev${c.reset} ${c.dim}(development)${c.reset}`);
+    for (const cmd of devCommands) {
+      const cmdName = cmd.name.padEnd(22);
       console.log(`    ${c.cyan}${cmdName}${c.reset} ${c.dim}${cmd.description}${c.reset}`);
     }
   }
@@ -59,17 +81,18 @@ function printHelp(commands: Array<{ name: string; description: string }>) {
   if (otherCommands.length > 0) {
     console.log(`\n  ${c.green}${c.bright}other${c.reset}`);
     for (const cmd of otherCommands) {
-      const cmdName = cmd.name.padEnd(20);
+      const cmdName = cmd.name.padEnd(22);
       console.log(`    ${c.cyan}${cmdName}${c.reset} ${c.dim}${cmd.description}${c.reset}`);
     }
   }
   
   console.log(`\n${c.yellow}${c.bright}Examples:${c.reset}`);
-  console.log(`  ${c.dim}node nara make:controller User${c.reset}`);
-  console.log(`  ${c.dim}node nara make:service Payment${c.reset}`);
-  console.log(`  ${c.dim}node nara make:middleware RateLimit${c.reset}`);
-  console.log(`  ${c.dim}node nara make:validator CreatePost${c.reset}`);
-  console.log(`  ${c.dim}node nara make:migration create_posts_table${c.reset}`);
+  console.log(`  ${c.dim}node nara make:resource Post        ${c.reset}${c.dim}# Create controller, validator, routes${c.reset}`);
+  console.log(`  ${c.dim}node nara make:controller User      ${c.reset}${c.dim}# Create a controller${c.reset}`);
+  console.log(`  ${c.dim}node nara db:migrate                ${c.reset}${c.dim}# Run migrations${c.reset}`);
+  console.log(`  ${c.dim}node nara db:migrate --env=production${c.reset}`);
+  console.log(`  ${c.dim}node nara doctor                    ${c.reset}${c.dim}# Check project health${c.reset}`);
+  console.log(`  ${c.dim}node nara lint                      ${c.reset}${c.dim}# Run linting & type check${c.reset}`);
   console.log();
 }
 
