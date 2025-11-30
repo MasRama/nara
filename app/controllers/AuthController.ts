@@ -59,6 +59,7 @@ import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
 import { redirectParamsURL } from "@services/GoogleAuth";
 import LoginThrottle from "@services/LoginThrottle";
+import { paginate } from "@services/Paginator";
 import axios from "axios"; 
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
@@ -88,7 +89,6 @@ import {
 } from "@validators";
 import { 
    AUTH, 
-   PAGINATION, 
    ERROR_MESSAGES, 
    SUCCESS_MESSAGES,
    getEnv,
@@ -126,20 +126,12 @@ class AuthController {
          query = query.where('is_verified', false);
       }
       
-      // Get total count
-      const countQuery = query.clone();
-      const total = await countQuery.count('* as count').first();
-      
-      // Get paginated results
-      const users = await query
-         .orderBy('created_at', 'desc')
-         .offset((page - 1) * PAGINATION.DEFAULT_PAGE_SIZE)
-         .limit(PAGINATION.DEFAULT_PAGE_SIZE);
+      // Paginate results
+      const result = await paginate(query.orderBy('created_at', 'desc'), { page });
       
       return response.inertia("dashboard", { 
-         users, 
-         total: Number((total as any)?.count) || 0,
-         page,
+         users: result.data, 
+         ...result.meta,
          search,
          filter
       });
@@ -166,18 +158,12 @@ class AuthController {
          query = query.where('is_verified', false);
       }
 
-      const countQuery = query.clone();
-      const total = await countQuery.count('* as count').first();
-
-      const users = await query
-         .orderBy('created_at', 'desc')
-         .offset((page - 1) * PAGINATION.DEFAULT_PAGE_SIZE)
-         .limit(PAGINATION.DEFAULT_PAGE_SIZE);
+      // Paginate results
+      const result = await paginate(query.orderBy('created_at', 'desc'), { page });
 
       return response.inertia("users", {
-         users,
-         total: Number((total as any)?.count) || 0,
-         page,
+         users: result.data,
+         ...result.meta,
          search,
          filter,
       });
