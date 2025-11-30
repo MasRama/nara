@@ -4,9 +4,22 @@
  * Core framework components for building type-safe web applications.
  * 
  * @example
+ * // Bootstrap application
+ * import { createApp } from '@core';
+ * import routes from '@routes/web';
+ * 
+ * const app = createApp({ routes });
+ * app.start();
+ * 
+ * @example
+ * // Use router and errors
  * import { createRouter, HttpError, NotFoundError } from '@core';
  * import type { NaraRequest, NaraResponse, NaraMiddleware, NaraHandler } from '@core';
  */
+
+// App
+export { NaraApp, createApp } from './App';
+export type { AppOptions } from './App';
 
 // Types
 export type {
