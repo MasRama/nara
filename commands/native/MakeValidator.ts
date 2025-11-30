@@ -6,7 +6,7 @@ const c = colors;
 class MakeValidator {
    public args: string[] = [];
    public commandName = "make:validator";
-   public description = "Create a new Zod validation schema";
+   public description = "Create a new validation function";
 
    public run() {
       if (this.args.length < 2) {
@@ -41,53 +41,76 @@ class MakeValidator {
 
    getTemplate(schemaName: string, typeName: string, name: string) {
       return `/**
- * ${name} Validation Schema
+ * ${name} Validation
  * 
- * Zod schema for ${name.toLowerCase()} validation.
+ * Simple validation function for ${name.toLowerCase()}.
+ * No external dependencies - just plain TypeScript.
  */
-import { z } from 'zod';
+import { ValidationResult, isString, isEmail, isPhone, isBoolean, isObject } from './validate';
+
+/**
+ * ${typeName}
+ * 
+ * Type definition for ${name.toLowerCase()} data.
+ */
+export interface ${typeName} {
+  // Add your fields here
+  // Example fields:
+  // name: string;
+  // email: string;
+  // phone?: string | null;
+  // is_active?: boolean;
+}
 
 /**
  * ${schemaName}
  * 
- * Validation schema for ${name.toLowerCase()} data.
+ * Validation function for ${name.toLowerCase()} data.
  */
-export const ${schemaName} = z.object({
-  // Add your fields here
-  // Example fields:
+export function ${schemaName}(data: unknown): ValidationResult<${typeName}> {
+  const errors: Record<string, string[]> = {};
+  
+  if (!isObject(data)) {
+    return { success: false, errors: { _root: ['Data harus berupa object'] } };
+  }
+
+  const { /* destructure fields here */ } = data as Record<string, unknown>;
+
+  // Add your validation logic here
+  // Example validations:
   
   // Required string
-  // name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  // if (!isString(name) || name.trim().length < 2) {
+  //   errors.name = ['Nama minimal 2 karakter'];
+  // }
   
-  // Required email (auto-lowercase)
-  // email: z.string().email('Format email tidak valid').transform(val => val.toLowerCase()),
+  // Required email
+  // if (!isEmail(email)) {
+  //   errors.email = ['Format email tidak valid'];
+  // }
   
-  // Optional string
-  // description: z.string().optional(),
-  
-  // Optional nullable
-  // phone: z.string().optional().nullable(),
-  
-  // Boolean with default
-  // is_active: z.boolean().optional().default(false),
-  
-  // Number
-  // price: z.number().positive('Harga harus positif'),
-  
-  // Enum
-  // status: z.enum(['draft', 'published', 'archived']),
-  
-  // Array
-  // tags: z.array(z.string()).optional().default([]),
-  
-  // UUID
-  // category_id: z.string().uuid('Format ID tidak valid'),
-});
+  // Optional phone
+  // if (phone !== undefined && phone !== null && phone !== '') {
+  //   if (!isPhone(phone)) {
+  //     errors.phone = ['Format nomor telepon tidak valid'];
+  //   }
+  // }
 
-/**
- * Type inference from schema
- */
-export type ${typeName} = z.infer<typeof ${schemaName}>;
+  if (Object.keys(errors).length > 0) {
+    return { success: false, errors };
+  }
+
+  return {
+    success: true,
+    data: {
+      // Return validated data here
+      // name: String(name).trim(),
+      // email: String(email).toLowerCase(),
+      // phone: phone ? String(phone) : null,
+      // is_active: isBoolean(is_active) ? is_active : false,
+    } as ${typeName}
+  };
+}
 `;
    }
 }

@@ -3,50 +3,44 @@
  * 
  * Validates required environment variables on application startup.
  * Provides typed access to environment configuration.
+ * No external dependencies - just plain TypeScript.
  */
-import { z } from 'zod';
 import { SERVER, DATABASE, LOGGING } from './constants';
 
 // ============================================
-// Environment Schema
+// Type Definitions
 // ============================================
 
-const EnvSchema = z.object({
+export interface Env {
   // Server
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_PORT),
-  VITE_PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_VITE_PORT),
-  APP_URL: z.string().url().default(`http://localhost:${SERVER.DEFAULT_PORT}`),
-  HAS_CERTIFICATE: z.enum(['true', 'false']).default('false'),
+  NODE_ENV: 'development' | 'production' | 'test';
+  PORT: number;
+  VITE_PORT: number;
+  APP_URL: string;
+  HAS_CERTIFICATE: 'true' | 'false';
   
   // Database
-  DB_CONNECTION: z.string().default(DATABASE.DEFAULT_CONNECTION),
+  DB_CONNECTION: string;
   
   // Logging
-  LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
+  LOG_LEVEL: typeof LOGGING.LEVELS[number];
   
-  // Google OAuth (optional) - empty string allowed
-  GOOGLE_CLIENT_ID: z.string().optional().or(z.literal('')),
-  GOOGLE_CLIENT_SECRET: z.string().optional().or(z.literal('')),
-  GOOGLE_REDIRECT_URI: z.string().url().optional().or(z.literal('')),
+  // Google OAuth (optional)
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  GOOGLE_REDIRECT_URI?: string;
   
-  // Mailer (optional) - empty string or valid email
-  USER_MAILER: z.string().email().optional().or(z.literal('')),
-  PASS_MAILER: z.string().optional(),
+  // Mailer (optional)
+  USER_MAILER?: string;
+  PASS_MAILER?: string;
   
   // SMS Provider (optional)
-  DRIPSENDER_API_KEY: z.string().optional(),
+  DRIPSENDER_API_KEY?: string;
   
   // Backup (optional)
-  BACKUP_ENCRYPTION_KEY: z.string().min(32).optional(),
-  BACKUP_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
-});
-
-// ============================================
-// Type Exports
-// ============================================
-
-export type Env = z.infer<typeof EnvSchema>;
+  BACKUP_ENCRYPTION_KEY?: string;
+  BACKUP_RETENTION_DAYS: number;
+}
 
 // ============================================
 // Validation Function
@@ -58,22 +52,70 @@ export type Env = z.infer<typeof EnvSchema>;
  * @throws Error if validation fails
  */
 export function validateEnv(): Env {
-  const result = EnvSchema.safeParse(process.env);
-  
-  if (!result.success) {
-    const errors = result.error.issues.map(issue => {
-      const path = issue.path.join('.');
-      return `  - ${path}: ${issue.message}`;
-    });
-    
+  const errors: string[] = [];
+  const env = process.env;
+
+  // Validate NODE_ENV
+  const validNodeEnvs = ['development', 'production', 'test'] as const;
+  const nodeEnv = env.NODE_ENV || 'development';
+  if (!validNodeEnvs.includes(nodeEnv as any)) {
+    errors.push(`  - NODE_ENV: Must be one of ${validNodeEnvs.join(', ')}`);
+  }
+
+  // Validate PORT
+  const port = parseInt(env.PORT || String(SERVER.DEFAULT_PORT), 10);
+  if (isNaN(port) || port <= 0) {
+    errors.push('  - PORT: Must be a positive number');
+  }
+
+  // Validate VITE_PORT
+  const vitePort = parseInt(env.VITE_PORT || String(SERVER.DEFAULT_VITE_PORT), 10);
+  if (isNaN(vitePort) || vitePort <= 0) {
+    errors.push('  - VITE_PORT: Must be a positive number');
+  }
+
+  // Validate LOG_LEVEL
+  const logLevel = env.LOG_LEVEL || 'info';
+  if (!LOGGING.LEVELS.includes(logLevel as any)) {
+    errors.push(`  - LOG_LEVEL: Must be one of ${LOGGING.LEVELS.join(', ')}`);
+  }
+
+  // Validate HAS_CERTIFICATE
+  const hasCert = env.HAS_CERTIFICATE || 'false';
+  if (hasCert !== 'true' && hasCert !== 'false') {
+    errors.push('  - HAS_CERTIFICATE: Must be "true" or "false"');
+  }
+
+  // Validate BACKUP_RETENTION_DAYS
+  const backupDays = parseInt(env.BACKUP_RETENTION_DAYS || '30', 10);
+  if (isNaN(backupDays) || backupDays <= 0) {
+    errors.push('  - BACKUP_RETENTION_DAYS: Must be a positive number');
+  }
+
+  if (errors.length > 0) {
     console.error('\n❌ Environment validation failed:\n');
     console.error(errors.join('\n'));
     console.error('\nPlease check your .env file and ensure all required variables are set.\n');
-    
     process.exit(1);
   }
-  
-  return result.data;
+
+  return {
+    NODE_ENV: nodeEnv as 'development' | 'production' | 'test',
+    PORT: port,
+    VITE_PORT: vitePort,
+    APP_URL: env.APP_URL || `http://localhost:${port}`,
+    HAS_CERTIFICATE: hasCert as 'true' | 'false',
+    DB_CONNECTION: env.DB_CONNECTION || DATABASE.DEFAULT_CONNECTION,
+    LOG_LEVEL: logLevel as typeof LOGGING.LEVELS[number],
+    GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID || undefined,
+    GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET || undefined,
+    GOOGLE_REDIRECT_URI: env.GOOGLE_REDIRECT_URI || undefined,
+    USER_MAILER: env.USER_MAILER || undefined,
+    PASS_MAILER: env.PASS_MAILER || undefined,
+    DRIPSENDER_API_KEY: env.DRIPSENDER_API_KEY || undefined,
+    BACKUP_ENCRYPTION_KEY: env.BACKUP_ENCRYPTION_KEY || undefined,
+    BACKUP_RETENTION_DAYS: backupDays,
+  };
 }
 
 /**

@@ -31,16 +31,41 @@ import DB from "../../services/DB";
 
 ---
 
-## ✅ Zod Validation
+## ✅ Simple Validation
 
-**WAJIB** validasi semua input dengan Zod.
+**WAJIB** validasi semua input dengan validation functions.
 
 ```typescript
-// Schema di app/validators/schemas.ts
-export const MySchema = z.object({
-  name: z.string().min(2, 'Nama minimal 2 karakter'),
-  email: z.string().email('Format email tidak valid').transform(val => val.toLowerCase()),
-});
+// Validator di app/validators/schemas.ts
+export function MySchema(data: unknown): ValidationResult<MyInput> {
+  const errors: Record<string, string[]> = {};
+  
+  if (!isObject(data)) {
+    return { success: false, errors: { _root: ['Data harus berupa object'] } };
+  }
+
+  const { name, email } = data as Record<string, unknown>;
+
+  if (!isString(name) || name.trim().length < 2) {
+    errors.name = ['Nama minimal 2 karakter'];
+  }
+
+  if (!isEmail(email)) {
+    errors.email = ['Format email tidak valid'];
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { success: false, errors };
+  }
+
+  return {
+    success: true,
+    data: {
+      name: String(name).trim(),
+      email: String(email).toLowerCase(),
+    }
+  };
+}
 
 // Penggunaan di Controller
 const rawData = await request.json();
@@ -48,7 +73,7 @@ const data = await validateOrFail(MySchema, rawData, response);
 if (!data) return; // Response sudah dikirim jika gagal
 ```
 
-**Common Schemas:** `EmailSchema`, `PasswordSchema`, `NameSchema`, `PhoneSchema`, `UUIDSchema`
+**Helper Functions:** `isString`, `isEmail`, `isPhone`, `isUUID`, `isNumber`, `isBoolean`, `isArray`, `isObject`
 
 ---
 

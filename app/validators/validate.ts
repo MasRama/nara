@@ -1,10 +1,9 @@
 /**
  * Validation Helper
  * 
- * Utility function to validate request data using Zod schemas.
+ * Simple validation utilities without external dependencies.
  * Returns formatted error messages for invalid data.
  */
-import { z, ZodError, ZodSchema } from 'zod';
 import { Response } from '@type';
 
 /**
@@ -15,32 +14,9 @@ export type ValidationResult<T> =
   | { success: false; errors: Record<string, string[]> };
 
 /**
- * Validate data against a Zod schema
- * @param schema - Zod schema to validate against
- * @param data - Data to validate
- * @returns Validation result with parsed data or errors
+ * Validator function type
  */
-export function validate<T>(schema: ZodSchema<T>, data: unknown): ValidationResult<T> {
-  try {
-    const parsed = schema.parse(data);
-    return { success: true, data: parsed };
-  } catch (error) {
-    if (error instanceof ZodError) {
-      const errors: Record<string, string[]> = {};
-      
-      for (const issue of error.issues) {
-        const path = issue.path.join('.') || '_root';
-        if (!errors[path]) {
-          errors[path] = [];
-        }
-        errors[path].push(issue.message);
-      }
-      
-      return { success: false, errors };
-    }
-    throw error;
-  }
-}
+export type Validator<T> = (data: unknown) => ValidationResult<T>;
 
 /**
  * Format validation errors into a single message string
@@ -78,17 +54,17 @@ export function sendValidationError(response: Response, errors: Record<string, s
 /**
  * Validate and return data or send error response
  * Helper that combines validation and error response
- * @param schema - Zod schema
+ * @param validator - Validator function
  * @param data - Data to validate
  * @param response - Response object for error handling
  * @returns Parsed data or null if validation failed (response already sent)
  */
 export async function validateOrFail<T>(
-  schema: ZodSchema<T>,
+  validator: Validator<T>,
   data: unknown,
   response: Response
 ): Promise<T | null> {
-  const result = validate(schema, data);
+  const result = validator(data);
   
   if (!result.success) {
     sendValidationError(response, result.errors);
@@ -96,4 +72,70 @@ export async function validateOrFail<T>(
   }
   
   return result.data;
+}
+
+// ============================================
+// Validation Helpers
+// ============================================
+
+/**
+ * Check if value is a non-empty string
+ */
+export function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+/**
+ * Check if value is a valid email
+ */
+export function isEmail(value: unknown): boolean {
+  if (!isString(value)) return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(value);
+}
+
+/**
+ * Check if value is a valid phone number
+ */
+export function isPhone(value: unknown): boolean {
+  if (!isString(value)) return false;
+  const phoneRegex = /^[0-9+\-\s()]+$/;
+  return phoneRegex.test(value) && value.length >= 10 && value.length <= 20;
+}
+
+/**
+ * Check if value is a valid UUID
+ */
+export function isUUID(value: unknown): boolean {
+  if (!isString(value)) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
+/**
+ * Check if value is a number
+ */
+export function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && !isNaN(value);
+}
+
+/**
+ * Check if value is a boolean
+ */
+export function isBoolean(value: unknown): value is boolean {
+  return typeof value === 'boolean';
+}
+
+/**
+ * Check if value is an array
+ */
+export function isArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+/**
+ * Check if value is an object
+ */
+export function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

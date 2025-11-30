@@ -1,16 +1,29 @@
 /**
  * Validators Module
  * 
- * Re-exports all validation schemas and utilities.
+ * Re-exports all validation functions and utilities.
+ * No external dependencies - just plain TypeScript.
  */
 
 // Validation utilities
-export { validate, validateOrFail, formatErrors, sendValidationError } from './validate';
-export type { ValidationResult } from './validate';
+export { 
+  validateOrFail, 
+  formatErrors, 
+  sendValidationError,
+  isString,
+  isEmail,
+  isPhone,
+  isUUID,
+  isNumber,
+  isBoolean,
+  isArray,
+  isObject,
+} from './validate';
+export type { ValidationResult, Validator } from './validate';
 
-// All schemas
+// All validators
 export {
-  // Common
+  // Common (simple check functions)
   EmailSchema,
   PasswordSchema,
   PhoneSchema,

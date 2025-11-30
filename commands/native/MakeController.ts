@@ -94,7 +94,7 @@ class ${className} {
     }
 
     const rawData = await request.json();
-    // TODO: Add validation schema
+    // TODO: Add validation function
     // const data = await validateOrFail(Create${className.replace('Controller', '')}Schema, rawData, response);
     // if (!data) return;
 
@@ -140,7 +140,7 @@ class ${className} {
 
     const { id } = request.params;
     const rawData = await request.json();
-    // TODO: Add validation schema
+    // TODO: Add validation function
     // const data = await validateOrFail(Update${className.replace('Controller', '')}Schema, rawData, response);
     // if (!data) return;
 
