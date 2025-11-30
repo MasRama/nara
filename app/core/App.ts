@@ -21,6 +21,9 @@ import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "@config";
 import type { Env } from "@config";
 import Logger from "@services/Logger";
 import inertia from "@middlewares/inertia";
+import { securityHeaders } from "@middlewares/securityHeaders";
+import { requestLogger } from "@middlewares/requestLogger";
+import { rateLimit } from "@middlewares/rateLimit";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import type { NaraRequest, NaraResponse } from "./types";
 
@@ -52,6 +55,24 @@ export interface AppOptions {
   inertia?: boolean;
 
   /**
+   * Enable security headers middleware (HSTS, X-Frame-Options, etc.).
+   * @default true
+   */
+  securityHeaders?: boolean;
+
+  /**
+   * Enable request logging middleware.
+   * @default true
+   */
+  requestLogging?: boolean;
+
+  /**
+   * Enable rate limiting middleware.
+   * @default false (opt-in)
+   */
+  rateLimit?: boolean;
+
+  /**
    * Application routes (HyperExpress.Router).
    * Can also be mounted later via app.mount()
    */
@@ -81,6 +102,9 @@ const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler">> = {
   https: false,
   cors: true,
   inertia: true,
+  securityHeaders: true,
+  requestLogging: true,
+  rateLimit: false, // Opt-in
   shutdownTimeout: 10000,
 };
 
@@ -170,11 +194,29 @@ export class NaraApp {
   }
 
   /**
-   * Apply default middlewares (CORS, Inertia)
+   * Apply default middlewares (Security Headers, Request Logging, CORS, Rate Limit, Inertia)
    */
   private applyDefaultMiddlewares(): void {
+    // Security headers should be first to ensure all responses have them
+    if (this.options.securityHeaders) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.server.use(securityHeaders() as any);
+    }
+
+    // Request logging early to capture all requests
+    if (this.options.requestLogging) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.server.use(requestLogger() as any);
+    }
+
     if (this.options.cors) {
       this.server.use(cors());
+    }
+
+    // Rate limiting after CORS but before route handlers
+    if (this.options.rateLimit) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.server.use(rateLimit() as any);
     }
 
     if (this.options.inertia) {

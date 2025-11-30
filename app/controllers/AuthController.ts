@@ -58,6 +58,7 @@
 import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
 import { redirectParamsURL } from "@services/GoogleAuth";
+import LoginThrottle from "@services/LoginThrottle";
 import axios from "axios"; 
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
@@ -527,7 +528,25 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       const data = await validateOrFail(LoginSchema, rawData, response);
       if (!data) return; // Validation failed, response already sent
 
-      const identifier = data.email || data.phone;
+      const identifier = data.email || data.phone || '';
+      const ip = request.ip || 'unknown';
+
+      // Check if locked out due to too many failed attempts
+      if (LoginThrottle.isLockedOut(identifier, ip)) {
+         const remainingMs = LoginThrottle.getRemainingLockoutTime(identifier, ip);
+         const remainingMinutes = Math.ceil(remainingMs / 60000);
+         
+         Logger.logSecurity('Login blocked - account locked', {
+            identifier,
+            ip,
+            remainingMinutes,
+         });
+         
+         return response
+            .status(429)
+            .cookie("error", `Terlalu banyak percobaan login. Coba lagi dalam ${remainingMinutes} menit.`, AUTH.ERROR_COOKIE_EXPIRY_MS)
+            .redirect("/login");
+      }
 
       Logger.info('Login attempt', { 
          identifier: data.email || data.phone,
@@ -547,12 +566,21 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       }
 
       if (!user) {
+         // Record failed attempt even for non-existent users (prevent enumeration)
+         const throttleResult = LoginThrottle.recordFailedAttempt(identifier, ip);
+         
          Logger.logSecurity('Login failed - user not found', {
             identifier,
-            ip: request.ip
+            ip,
+            remainingAttempts: throttleResult.remainingAttempts,
          });
+         
+         const errorMsg = throttleResult.isLocked
+            ? `Terlalu banyak percobaan login. Coba lagi dalam ${Math.ceil(throttleResult.lockoutMs / 60000)} menit.`
+            : ERROR_MESSAGES.INVALID_CREDENTIALS;
+         
          return response
-            .cookie("error", ERROR_MESSAGES.INVALID_CREDENTIALS, AUTH.ERROR_COOKIE_EXPIRY_MS)
+            .cookie("error", errorMsg, AUTH.ERROR_COOKIE_EXPIRY_MS)
             .redirect("/login");
       }
 
@@ -562,6 +590,9 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       );
 
       if (password_match) {
+         // Clear failed attempts on successful login
+         LoginThrottle.clearAttempts(identifier, ip);
+         
          Logger.logAuth('login_success', {
             userId: user.id,
             email: user.email,
@@ -569,13 +600,22 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
          });
          return Authenticate.process(user, request, response);
       } else {
+         // Record failed attempt
+         const throttleResult = LoginThrottle.recordFailedAttempt(identifier, ip);
+         
          Logger.logSecurity('Login failed - invalid password', {
             userId: user.id,
             email: user.email,
-            ip: request.ip
+            ip: request.ip,
+            remainingAttempts: throttleResult.remainingAttempts,
          });
+         
+         const errorMsg = throttleResult.isLocked
+            ? `Terlalu banyak percobaan login. Coba lagi dalam ${Math.ceil(throttleResult.lockoutMs / 60000)} menit.`
+            : ERROR_MESSAGES.INVALID_CREDENTIALS;
+         
          return response
-            .cookie("error", ERROR_MESSAGES.INVALID_CREDENTIALS, AUTH.ERROR_COOKIE_EXPIRY_MS)
+            .cookie("error", errorMsg, AUTH.ERROR_COOKIE_EXPIRY_MS)
             .redirect("/login");
       }
    }

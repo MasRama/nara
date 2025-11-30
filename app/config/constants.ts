@@ -114,11 +114,11 @@ export const CACHE = {
 } as const;
 
 // ============================================
-// Rate Limiting (for future use)
+// Rate Limiting
 // ============================================
 
 export const RATE_LIMIT = {
-  /** Maximum requests per window */
+  /** Maximum requests per window (general) */
   MAX_REQUESTS: 100,
   
   /** Window duration in milliseconds (15 minutes) */
@@ -129,6 +129,39 @@ export const RATE_LIMIT = {
   
   /** Login lockout duration in milliseconds (15 minutes) */
   LOGIN_LOCKOUT_MS: 15 * 60 * 1000,
+  
+  /** API rate limit (requests per minute) */
+  API_MAX_REQUESTS: 60,
+  
+  /** API rate limit window (1 minute) */
+  API_WINDOW_MS: 60 * 1000,
+  
+  /** Strict rate limit for sensitive endpoints */
+  STRICT_MAX_REQUESTS: 10,
+  
+  /** Strict rate limit window (1 minute) */
+  STRICT_WINDOW_MS: 60 * 1000,
+} as const;
+
+// ============================================
+// Security Headers
+// ============================================
+
+export const SECURITY = {
+  /** HSTS max-age in seconds (1 year) */
+  HSTS_MAX_AGE: 365 * 24 * 60 * 60,
+  
+  /** CSRF token length in bytes */
+  CSRF_TOKEN_LENGTH: 32,
+  
+  /** CSRF cookie max age in seconds (24 hours) */
+  CSRF_COOKIE_MAX_AGE: 24 * 60 * 60,
+  
+  /** CSRF cookie name */
+  CSRF_COOKIE_NAME: 'csrf_token',
+  
+  /** CSRF header name */
+  CSRF_HEADER_NAME: 'X-CSRF-Token',
 } as const;
 
 // ============================================

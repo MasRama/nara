@@ -66,5 +66,14 @@
     }
   }, 
   /* Files to include in compilation */
-  "include": ["./*.ts","./type/index.d.ts","commands","migrations","seeds"], 
-}
+  "include": [
+    "./*.ts",
+    "./type/index.d.ts",
+    "commands",
+    "migrations",
+    "seeds",
+    "app",
+    "routes",
+    "resources"
+  ], 
+ }
