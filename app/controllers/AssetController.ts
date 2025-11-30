@@ -1,5 +1,6 @@
 import { uuidv7 } from "uuidv7";
 import { Response, Request } from "@type";
+import { jsonUnauthorized, jsonError, jsonServerError } from "@core";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";  
@@ -21,7 +22,7 @@ class Controller {
 
     public async uploadAsset(request: Request, response: Response) {
         if (!request.user) {
-            return response.status(401).json({ message: "Unauthorized" });
+            return jsonUnauthorized(response);
         }
 
         // Store user reference for use in nested callbacks
@@ -106,12 +107,12 @@ class Controller {
             });
 
             if (!isValidFile) {
-                return response.status(400).send("Invalid file type. Only images are allowed.");
+                return jsonError(response, "Invalid file type. Only images are allowed.", 400, "INVALID_FILE_TYPE");
             }
 
         } catch (error) {
             Logger.error('Error uploading asset', error as Error);
-            return response.status(500).send("Internal server error");
+            return jsonServerError(response, "Internal server error");
         }
     }
 

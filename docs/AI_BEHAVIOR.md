@@ -128,15 +128,38 @@ class MyController {
 
 ## 📤 Response Format
 
-```typescript
-// Success
-{ success: true, message: "...", data: {...}, meta: { total, page } }
+**WAJIB** gunakan response helpers dari `@core`.
 
-// Error
-{ success: false, message: "...", errors?: { field: ["error"] } }
+```typescript
+import { 
+  jsonSuccess, jsonError, jsonPaginated, jsonCreated,
+  jsonUnauthorized, jsonForbidden, jsonNotFound, jsonValidationError 
+} from "@core";
+
+// Success dengan data
+return jsonSuccess(res, 'User found', { user });
+
+// Success dengan pagination
+return jsonPaginated(res, 'Users retrieved', users, { total: 100, page: 1, limit: 10 });
+
+// Created (201)
+return jsonCreated(res, 'User created', { user });
+
+// Error responses
+return jsonUnauthorized(res, 'Invalid credentials');
+return jsonForbidden(res, 'Admin access required');
+return jsonNotFound(res, 'User not found');
+return jsonValidationError(res, 'Validation failed', { email: ['Invalid email'] });
+return jsonError(res, 'Custom error', 400, 'CUSTOM_CODE');
 ```
 
-**Status Codes:** 400 (validation), 401 (unauthorized), 403 (forbidden), 404 (not found), 500 (server error)
+**Response Structure:**
+```typescript
+// Success: { success: true, message, data?, meta? }
+// Error: { success: false, message, code?, errors? }
+```
+
+**Status Codes:** 200 (ok), 201 (created), 400 (bad request), 401 (unauthorized), 403 (forbidden), 404 (not found), 422 (validation), 500 (server error)
 
 ---
 

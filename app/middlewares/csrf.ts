@@ -33,9 +33,9 @@
  */
 
 import { randomBytes } from "crypto";
-import { HTTP_STATUS } from "@config";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse, NaraMiddleware } from "@core";
+import { jsonForbidden } from "@core";
 
 /**
  * CSRF configuration options
@@ -173,11 +173,7 @@ export function csrf(options: CSRFOptions = {}): NaraMiddleware {
         userId: req.user?.id,
       });
       
-      return res.status(HTTP_STATUS.FORBIDDEN).json({
-        success: false,
-        message: errorMessage,
-        code: 'CSRF_INVALID',
-      });
+      return jsonForbidden(res, errorMessage);
     }
     
     return next();

@@ -5,6 +5,7 @@
  * Returns formatted error messages for invalid data.
  */
 import { Response } from '@type';
+import { jsonValidationError } from '@core';
 
 /**
  * Validation result type
@@ -39,16 +40,12 @@ export function formatErrors(errors: Record<string, string[]>): string {
 
 /**
  * Send validation error response
- * @param response - HyperExpress response object
+ * @param response - Response object
  * @param errors - Validation errors
- * @returns Response with 400 status and error details
+ * @returns Response with 422 status and error details
  */
 export function sendValidationError(response: Response, errors: Record<string, string[]>) {
-  return response.status(400).json({
-    success: false,
-    message: 'Validation failed',
-    errors,
-  });
+  return jsonValidationError(response as any, 'Validation failed', errors);
 }
 
 /**

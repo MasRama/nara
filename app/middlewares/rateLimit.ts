@@ -25,9 +25,10 @@
  * Route.post('/api/upload', rateLimit({ maxRequests: 5, windowMs: 60000 }), uploadHandler);
  */
 
-import { RATE_LIMIT, HTTP_STATUS, ERROR_MESSAGES } from "@config";
+import { RATE_LIMIT } from "@config";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse, NaraMiddleware } from "@core/types";
+import { jsonError } from "@core";
 
 /**
  * Rate limit entry for tracking requests
@@ -197,11 +198,7 @@ export function rateLimit(options: RateLimitOptions = {}): NaraMiddleware {
         res.setHeader('Retry-After', String(Math.ceil(resetMs / 1000)));
       }
       
-      return res.status(HTTP_STATUS.TOO_MANY_REQUESTS).json({
-        success: false,
-        message,
-        retryAfter: Math.ceil(resetMs / 1000),
-      });
+      return jsonError(res, message, 429, 'TOO_MANY_REQUESTS');
     }
     
     // Record this request

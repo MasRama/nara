@@ -10,7 +10,7 @@
     "lint": "npx tsc --noEmit",
     "typecheck": "npx tsc --noEmit"
   },
-  "author": "Maulana Shalihin",
+  "author": "MasRama",
   "license": "ISC",
   "dependencies": {
     "@inertiajs/svelte": "^2.2.10",

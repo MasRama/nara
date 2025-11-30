@@ -63,7 +63,16 @@ import axios from "axios";
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
 import Logger from "@services/Logger";
-import { Response, Request } from "@type"; 
+import { Response, Request } from "@type";
+import { 
+   jsonSuccess, 
+   jsonCreated, 
+   jsonError, 
+   jsonUnauthorized, 
+   jsonForbidden, 
+   jsonNotFound,
+   jsonServerError 
+} from "@core"; 
 import { randomUUID } from "crypto";
 import { 
    validateOrFail,
@@ -176,7 +185,7 @@ class AuthController {
 
    public async createUser(request : Request, response: Response) {
       if (!request.user || !request.user.is_admin) {
-         return response.status(403).json({ message: "Unauthorized" });
+         return jsonForbidden(response, "Unauthorized");
       }
 
       const rawData = await request.json();
@@ -199,24 +208,24 @@ class AuthController {
 
       try {
          await DB.table("users").insert(user);
-         return response.json({ success: true, message: "User created", user });
+         return jsonCreated(response, "User created", { user });
       } catch (error: any) {
          if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-            return response.status(400).json({ success: false, message: "Email sudah digunakan" });
+            return jsonError(response, "Email sudah digunakan", 400, "DUPLICATE_EMAIL");
          }
          Logger.error('Failed to create user', error);
-         return response.status(500).json({ success: false, message: "Gagal membuat user" });
+         return jsonServerError(response, "Gagal membuat user");
       }
    }
 
    public async updateUser(request : Request, response: Response) {
       if (!request.user || !request.user.is_admin) {
-         return response.status(403).json({ message: "Unauthorized" });
+         return jsonForbidden(response, "Unauthorized");
       }
 
       const id = request.params.id;
       if (!id) {
-         return response.status(400).json({ success: false, message: "User ID wajib diisi" });
+         return jsonError(response, "User ID wajib diisi", 400, "MISSING_ID");
       }
 
       const rawData = await request.json();
@@ -237,13 +246,13 @@ class AuthController {
       try {
          await DB.from("users").where("id", id).update(payload);
          const user = await DB.from("users").where("id", id).first();
-         return response.json({ success: true, message: "User berhasil diupdate", user });
+         return jsonSuccess(response, "User berhasil diupdate", { user });
       } catch (error: any) {
          if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
-            return response.status(400).json({ success: false, message: "Email sudah digunakan" });
+            return jsonError(response, "Email sudah digunakan", 400, "DUPLICATE_EMAIL");
          }
          Logger.error('Failed to update user', error);
-         return response.status(500).json({ success: false, message: "Gagal mengupdate user" });
+         return jsonServerError(response, "Gagal mengupdate user");
       }
    }
 
@@ -253,7 +262,7 @@ class AuthController {
             userId: request.user?.id,
             ip: request.ip
          });
-         return response.status(403).json({ success: false, message: "Unauthorized" });
+         return jsonForbidden(response, "Unauthorized");
       }
 
       const rawData = await request.json();
@@ -271,7 +280,7 @@ class AuthController {
          ip: request.ip
       });
       
-      return response.json({ success: true, message: "Users berhasil dihapus", deleted });
+      return jsonSuccess(response, "Users berhasil dihapus", { deleted });
    }
 
    public async profilePage(request : Request, response: Response) { 
@@ -280,7 +289,7 @@ class AuthController {
 
    public async changeProfile(request : Request, response: Response) {
       if (!request.user) {
-         return response.status(401).json({ success: false, message: "Unauthorized" });
+         return jsonUnauthorized(response);
       }
 
       const rawData = await request.json();
@@ -294,12 +303,12 @@ class AuthController {
          updated_at: dayjs().valueOf(),
       });
 
-      return response.json({ success: true, message: "Profil berhasil diupdate" });
+      return jsonSuccess(response, "Profil berhasil diupdate");
    }
 
    public async changePassword(request : Request, response: Response) {
       if (!request.user) {
-         return response.status(401).json({ success: false, message: "Unauthorized" });
+         return jsonUnauthorized(response);
       }
 
       const rawData = await request.json();
@@ -329,15 +338,13 @@ class AuthController {
             ip: request.ip
          });
 
-         return response.json({ success: true, message: "Password berhasil diubah" });
+         return jsonSuccess(response, "Password berhasil diubah");
       } else {
          Logger.logSecurity('Password change failed - invalid current password', {
             userId: request.user.id,
             ip: request.ip
          });
-         return response
-            .status(400)
-            .json({ success: false, message: "Password lama tidak cocok" });
+         return jsonError(response, "Password lama tidak cocok", 400, "INVALID_PASSWORD");
       }
    }
 
@@ -370,7 +377,7 @@ class AuthController {
          .first();
 
       if (!token) {
-         return response.status(404).json({ success: false, message: "Link tidak valid atau sudah kadaluarsa" });
+         return jsonNotFound(response, "Link tidak valid atau sudah kadaluarsa");
       }
 
       const user = await DB.from("users")
@@ -406,7 +413,7 @@ class AuthController {
       }
 
       if (!user) {
-         return response.status(404).json({ success: false, message: "Email atau nomor telepon tidak terdaftar" });
+         return jsonNotFound(response, "Email atau nomor telepon tidak terdaftar");
       }
 
       const token = randomUUID();
@@ -453,7 +460,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
          Logger.error('Failed to send reset password SMS', error as Error);
       }
 
-      return response.json({ success: true, message: "Link reset password telah dikirim" });
+      return jsonSuccess(response, "Link reset password telah dikirim");
    }
 
    public async loginPage(request : Request, response: Response) {
@@ -670,7 +677,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
 
    public async verify(request : Request, response: Response) {
       if (!request.user) {
-         return response.status(401).json({ message: "Unauthorized" });
+         return jsonUnauthorized(response);
       }
 
       const token = randomUUID();
@@ -707,7 +714,7 @@ Link ini akan kadaluarsa dalam 24 jam.`,
 
    public async verifyPage(request : Request, response: Response) {
       if (!request.user) {
-         return response.status(401).json({ message: "Unauthorized" });
+         return jsonUnauthorized(response);
       }
 
       const { id } = request.params;

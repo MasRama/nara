@@ -25,6 +25,7 @@ import { securityHeaders } from "@middlewares/securityHeaders";
 import { requestLogger } from "@middlewares/requestLogger";
 import { rateLimit } from "@middlewares/rateLimit";
 import { HttpError, ValidationError, isHttpError } from "./errors";
+import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
 
 /**
@@ -252,24 +253,21 @@ export class NaraApp {
           method: req.method,
         });
 
-        res.status(error.statusCode);
-
         // Special handling for ValidationError
         if (error instanceof ValidationError) {
-          return res.json({
-            success: false,
-            message: error.message,
-            code: error.code,
-            errors: error.errors,
-          });
+          return jsonValidationError(
+            res as NaraResponse,
+            error.message,
+            error.errors
+          );
         }
 
-        return res.json({
-          success: false,
-          message: error.message,
-          code: error.code,
-          ...(isDevelopment && { stack: error.stack }),
-        });
+        return jsonError(
+          res as NaraResponse,
+          error.message,
+          error.statusCode,
+          error.code
+        );
       }
 
       // Handle unknown errors
@@ -286,16 +284,12 @@ export class NaraApp {
         userAgent: req.headers["user-agent"],
       });
 
-      res.status(statusCode);
-      res.json({
-        success: false,
-        message: isDevelopment ? err.message : "Internal Server Error",
-        ...(isDevelopment && {
-          error: err.message,
-          stack: err.stack,
-          code: (error as { code?: string }).code,
-        }),
-      });
+      return jsonError(
+        res as NaraResponse,
+        isDevelopment ? err.message : "Internal Server Error",
+        statusCode,
+        (error as { code?: string }).code
+      );
     });
   }
 
