@@ -1,11 +1,11 @@
 {
   "name": "nara",
-  "version": "1.0.9",
+  "version": "1.0.11",
   "description": "Nara is a high-performance TypeScript web framework combining HyperExpress, Svelte 5, and Inertia.js for building modern full-stack applications with a SPA-first architecture.",
   "main": "server.ts",
   "scripts": {
     "dev": "clear && rm -rf dist && rm -rf build && npx concurrently 'vite'  'sleep 1 && npx nodemon --legacy-watch'",
-    "build": "mkdir dist && mkdir dist/views && cp -rf resources/views/* dist/views && vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build && cp -rf resources/views/partials build/dist/views",
+    "build": "mkdir -p dist/views && cp -rf resources/views/* dist/views && vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build",
     "test": "echo 'No test framework configured. Install vitest or jest to run tests.'",
     "lint": "npx tsc --noEmit",
     "typecheck": "npx tsc --noEmit"
