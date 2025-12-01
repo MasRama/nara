@@ -36,7 +36,8 @@
       "@config": ["app/config/index.ts"],
       "@routes/*": ["routes/*"],
       "@resources/*": ["resources/*"],
-      "@root/*": ["./*"]
+      "@root/*": ["./*"],
+      "@root/knexfile": ["./knexfile.ts"]
     }
   },
   "include": [

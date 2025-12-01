@@ -1,8 +1,22 @@
 node_modules
-# Keep environment variables out of version control
-.env 
-production.sqlite3
+
+# Environment files (keep .env.example only)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# SQLite databases
+database/*.sqlite3
+database/*.sqlite
 dev.sqlite3
+production.sqlite3
+
+# Build artifacts
+/build
+/dist
+
+# Uploads
 public/uploads
 
 # AI
@@ -19,5 +33,5 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# task
+# Task
 todo.md

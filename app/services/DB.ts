@@ -4,8 +4,8 @@
  * It supports multiple database connections based on different stages (development, production, etc.).
  */
 
-import config from "@root/knexfile";
 require("dotenv").config();
+import config from "@root/knexfile";
 import DBInstance from "knex";
 import { Knex } from "knex";
 

@@ -166,6 +166,9 @@ export function getEnv(): Env {
  * Call this at application startup
  */
 export function initEnv(): Env {
-  require('dotenv').config();
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const envFile = nodeEnv === 'production' ? '.env.production' : '.env';
+  
+  require('dotenv').config({ path: envFile });
   return getEnv();
 }

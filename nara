@@ -26,7 +26,7 @@ var fs = require("fs");
         }else if(natives[0].includes("ts")){
      
           
-            exec("npx ts-node ./commands/index.ts "+args.join(" "), (err, stdout, stderr)=>{   
+            exec("npx ts-node -r tsconfig-paths/register ./commands/index.ts "+args.join(" "), (err, stdout, stderr)=>{   
                 if(err)
                 {
                     console.log(err);

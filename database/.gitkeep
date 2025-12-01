@@ -1,0 +1,2 @@
+# This file ensures the database directory exists in git
+# SQLite database files (*.sqlite3) are gitignored
