@@ -1,4 +1,4 @@
-import { uuidv7 } from "uuidv7";
+import { v7 as uuidv7 } from "uuid";
 import type { NaraRequest, NaraResponse } from "@core";
 import { BaseController, jsonError, jsonServerError } from "@core";
 import fs from "fs";
