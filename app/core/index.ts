@@ -21,6 +21,10 @@
 export { NaraApp, createApp } from './App';
 export type { AppOptions } from './App';
 
+// Base Controller
+export { BaseController } from './BaseController';
+export type { AuthenticatedRequest, AdminRequest, PaginationParams } from './BaseController';
+
 // Types
 export type {
   User,

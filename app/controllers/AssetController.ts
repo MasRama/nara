@@ -1,6 +1,6 @@
 import { uuidv7 } from "uuidv7";
-import { Response, Request } from "@type";
-import { jsonUnauthorized, jsonError, jsonServerError } from "@core";
+import type { NaraRequest, NaraResponse } from "@core";
+import { BaseController, jsonError, jsonServerError } from "@core";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";  
@@ -12,7 +12,7 @@ import Logger from "@services/Logger";
 // Cache object to store file contents in memory
 let cache: { [key: string]: Buffer } = {};
 
-class Controller {
+class Controller extends BaseController {
     /**
      * Serves assets from the dist folder (compiled assets)
      * - Handles CSS and JS files with proper content types
@@ -20,10 +20,8 @@ class Controller {
      * - Sets appropriate cache headers for browser caching
      */
 
-    public async uploadAsset(request: Request, response: Response) {
-        if (!request.user) {
-            return jsonUnauthorized(response);
-        }
+    public async uploadAsset(request: NaraRequest, response: NaraResponse) {
+        this.requireAuth(request);
 
         // Store user reference for use in nested callbacks
         const userId = request.user.id;
@@ -116,7 +114,7 @@ class Controller {
         }
     }
 
-    public async distFolder(request: Request, response: Response) {
+    public async distFolder(request: NaraRequest, response: NaraResponse) {
         const file = request.params.file;
 
         try {
@@ -162,7 +160,7 @@ class Controller {
      * - Prevents directory traversal attacks
      * - Handles various file types (images, fonts, documents, etc.)
      */
-    public async publicFolder(request: Request, response: Response) {
+    public async publicFolder(request: NaraRequest, response: NaraResponse) {
         // List of allowed file extensions for security
         const allowedExtensions = [
             '.ico', '.png', '.jpeg', '.jpg', '.gif', '.svg', '.webp',

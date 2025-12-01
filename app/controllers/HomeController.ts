@@ -1,9 +1,10 @@
-import { Response, Request } from "@type"; 
+import type { NaraRequest, NaraResponse } from "@core";
+import { BaseController } from "@core";
 import DB from "@services/DB";
 
-class Controller {
+class Controller extends BaseController {
     
-    public async index (request : Request,response : Response) { 
+    public async index(request: NaraRequest, response: NaraResponse) { 
         let user: any = {};
 
         if (request.cookies.auth_id) {

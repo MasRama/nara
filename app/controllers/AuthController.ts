@@ -64,19 +64,17 @@ import axios from "axios";
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
 import Logger from "@services/Logger";
-import { Response, Request } from "@type";
+import type { NaraRequest, NaraResponse } from "@core";
 import { 
+   BaseController,
    jsonSuccess, 
    jsonCreated, 
    jsonError, 
-   jsonUnauthorized, 
-   jsonForbidden, 
    jsonNotFound,
    jsonServerError 
 } from "@core"; 
 import { randomUUID } from "crypto";
 import { 
-   validateOrFail,
    LoginSchema,
    RegisterSchema,
    CreateUserSchema,
@@ -94,8 +92,8 @@ import {
    getEnv,
 } from "@config";
 
-class AuthController {
-   public async registerPage(request : Request, response: Response) {
+class AuthController extends BaseController {
+   public async registerPage(request: NaraRequest, response: NaraResponse) {
       if (request.cookies.auth_id) {
          return response.redirect("/dashboard");
       }
@@ -103,7 +101,7 @@ class AuthController {
       return response.inertia("auth/register");
    }
 
-   public async homePage(request : Request, response: Response) {
+   public async homePage(request: NaraRequest, response: NaraResponse) {
       const page = parseInt(request.query.page as string) || 1;
       const search = request.query.search as string || "";
       const filter = request.query.filter as string || "all";
@@ -137,7 +135,7 @@ class AuthController {
       });
    }
 
-   public async usersPage(request : Request, response: Response) {
+   public async usersPage(request: NaraRequest, response: NaraResponse) {
       const page = parseInt(request.query.page as string) || 1;
       const search = request.query.search as string || "";
       const filter = request.query.filter as string || "all";
@@ -169,14 +167,9 @@ class AuthController {
       });
    }
 
-   public async createUser(request : Request, response: Response) {
-      if (!request.user || !request.user.is_admin) {
-         return jsonForbidden(response, "Unauthorized");
-      }
-
-      const rawData = await request.json();
-      const data = await validateOrFail(CreateUserSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async createUser(request: NaraRequest, response: NaraResponse) {
+      this.requireAdmin(request);
+      const data = await this.getBody(request, CreateUserSchema);
 
       const now = dayjs().valueOf();
 
@@ -204,19 +197,10 @@ class AuthController {
       }
    }
 
-   public async updateUser(request : Request, response: Response) {
-      if (!request.user || !request.user.is_admin) {
-         return jsonForbidden(response, "Unauthorized");
-      }
-
-      const id = request.params.id;
-      if (!id) {
-         return jsonError(response, "User ID wajib diisi", 400, "MISSING_ID");
-      }
-
-      const rawData = await request.json();
-      const data = await validateOrFail(UpdateUserSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async updateUser(request: NaraRequest, response: NaraResponse) {
+      this.requireAdmin(request);
+      const id = this.getRequiredParam(request, 'id');
+      const data = await this.getBody(request, UpdateUserSchema);
 
       const payload: Record<string, any> = {};
 
@@ -242,18 +226,9 @@ class AuthController {
       }
    }
 
-   public async deleteUsers(request : Request, response: Response) {
-      if (!request.user || !request.user.is_admin) {
-         Logger.logSecurity('Unauthorized delete attempt', {
-            userId: request.user?.id,
-            ip: request.ip
-         });
-         return jsonForbidden(response, "Unauthorized");
-      }
-
-      const rawData = await request.json();
-      const data = await validateOrFail(DeleteUsersSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async deleteUsers(request: NaraRequest, response: NaraResponse) {
+      this.requireAdmin(request);
+      const data = await this.getBody(request, DeleteUsersSchema);
       
       const deleted = await DB.from("users")
          .whereIn("id", data.ids)
@@ -269,18 +244,13 @@ class AuthController {
       return jsonSuccess(response, "Users berhasil dihapus", { deleted });
    }
 
-   public async profilePage(request : Request, response: Response) { 
+   public async profilePage(request: NaraRequest, response: NaraResponse) { 
       return response.inertia("profile");
    }
 
-   public async changeProfile(request : Request, response: Response) {
-      if (!request.user) {
-         return jsonUnauthorized(response);
-      }
-
-      const rawData = await request.json();
-      const data = await validateOrFail(ChangeProfileSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async changeProfile(request: NaraRequest, response: NaraResponse) {
+      this.requireAuth(request);
+      const data = await this.getBody(request, ChangeProfileSchema);
 
       await DB.from("users").where("id", request.user.id).update({
          name: data.name,
@@ -292,14 +262,9 @@ class AuthController {
       return jsonSuccess(response, "Profil berhasil diupdate");
    }
 
-   public async changePassword(request : Request, response: Response) {
-      if (!request.user) {
-         return jsonUnauthorized(response);
-      }
-
-      const rawData = await request.json();
-      const data = await validateOrFail(ChangePasswordSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async changePassword(request: NaraRequest, response: NaraResponse) {
+      this.requireAuth(request);
+      const data = await this.getBody(request, ChangePasswordSchema);
 
       const user = await DB.from("users")
          .where("id", request.user.id)
@@ -334,10 +299,10 @@ class AuthController {
       }
    }
 
-   public async forgotPasswordPage(request : Request, response: Response) {
+   public async forgotPasswordPage(request: NaraRequest, response: NaraResponse) {
       return response.inertia("auth/forgot-password");
    }
-   public async resetPasswordPage(request : Request, response: Response) {
+   public async resetPasswordPage(request: NaraRequest, response: NaraResponse) {
       const id = request.params.id;
 
       const token = await DB.from("password_reset_tokens")
@@ -352,10 +317,8 @@ class AuthController {
       return response.inertia("auth/reset-password", { id: request.params.id });
    }
 
-   public async resetPassword(request : Request, response: Response) {
-      const rawData = await request.json();
-      const data = await validateOrFail(ResetPasswordSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async resetPassword(request: NaraRequest, response: NaraResponse) {
+      const data = await this.getBody(request, ResetPasswordSchema);
 
       const token = await DB.from("password_reset_tokens")
          .where("token", data.id)
@@ -385,10 +348,8 @@ class AuthController {
       return Authenticate.process(user, request, response);
    }
 
-   public async sendResetPassword(request : Request, response: Response) {
-      const rawData = await request.json();
-      const data = await validateOrFail(ForgotPasswordSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async sendResetPassword(request: NaraRequest, response: NaraResponse) {
+      const data = await this.getBody(request, ForgotPasswordSchema);
  
       let user;
 
@@ -449,11 +410,11 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       return jsonSuccess(response, "Link reset password telah dikirim");
    }
 
-   public async loginPage(request : Request, response: Response) {
+   public async loginPage(request: NaraRequest, response: NaraResponse) {
       return response.inertia("auth/login");
    }
 
-   public async redirect(request : Request, response: Response) {
+   public async redirect(request: NaraRequest, response: NaraResponse) {
       const params = redirectParamsURL();
 
       const googleLoginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
@@ -461,7 +422,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       return response.redirect(googleLoginUrl);
    }
 
-   public async googleCallback(request : Request, response: Response) {
+   public async googleCallback(request: NaraRequest, response: NaraResponse) {
       const { code } = request.query;
 
       const { data } = await axios({
@@ -516,10 +477,8 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       }
    }
 
-   public async processLogin(request : Request, response: Response) {
-      const rawData = await request.json();
-      const data = await validateOrFail(LoginSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async processLogin(request: NaraRequest, response: NaraResponse) {
+      const data = await this.getBody(request, LoginSchema);
 
       const identifier = data.email || data.phone || '';
       const ip = request.ip || 'unknown';
@@ -613,10 +572,8 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       }
    }
 
-   public async processRegister(request : Request, response: Response) {
-      const rawData = await request.json();
-      const data = await validateOrFail(RegisterSchema, rawData, response);
-      if (!data) return; // Validation failed, response already sent
+   public async processRegister(request: NaraRequest, response: NaraResponse) {
+      const data = await this.getBody(request, RegisterSchema);
 
       Logger.info('Registration attempt', {
          email: data.email, // Already lowercased by schema
@@ -661,10 +618,8 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
       }
    }
 
-   public async verify(request : Request, response: Response) {
-      if (!request.user) {
-         return jsonUnauthorized(response);
-      }
+   public async verify(request: NaraRequest, response: NaraResponse) {
+      this.requireAuth(request);
 
       const token = randomUUID();
 
@@ -698,10 +653,8 @@ Link ini akan kadaluarsa dalam 24 jam.`,
       return response.redirect("/dashboard");
    }
 
-   public async verifyPage(request : Request, response: Response) {
-      if (!request.user) {
-         return jsonUnauthorized(response);
-      }
+   public async verifyPage(request: NaraRequest, response: NaraResponse) {
+      this.requireAuth(request);
 
       const { id } = request.params;
 
@@ -727,7 +680,7 @@ Link ini akan kadaluarsa dalam 24 jam.`,
       return response.redirect("/dashboard?verified=true");
    }
 
-   public async logout(request : Request, response: Response) {
+   public async logout(request: NaraRequest, response: NaraResponse) {
       if (request.cookies.auth_id) {
          await Authenticate.logout(request, response);
       }
