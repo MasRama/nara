@@ -36,14 +36,11 @@
       "@config": ["app/config/index.ts"],
       "@routes/*": ["routes/*"],
       "@resources/*": ["resources/*"],
-      "@type/*": ["type/*"],
-      "@type": ["type/index.d.ts"],
       "@root/*": ["./*"]
     }
   },
   "include": [
     "./*.ts",
-    "./type/index.d.ts",
     "commands",
     "migrations",
     "seeds",

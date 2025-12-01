@@ -1,5 +1,5 @@
 import { view } from "@services/View"; 
-import { Request, Response } from "@type";
+import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 
 let pkg = {version : "1.0.0"};
 

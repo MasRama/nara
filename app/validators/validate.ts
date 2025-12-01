@@ -4,7 +4,7 @@
  * Simple validation utilities without external dependencies.
  * Returns formatted error messages for invalid data.
  */
-import { Response } from '@type';
+import type { NaraResponse as Response } from '@core';
 import { jsonValidationError } from '@core';
 
 /**

@@ -1,5 +1,5 @@
 import DB from "@services/DB";
-import { Request, Response } from "@type";
+import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 
 /**
  * Authentication Middleware

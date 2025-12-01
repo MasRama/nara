@@ -5,7 +5,7 @@
  */
 
 import DB from "@services/DB"; 
-import { Request, Response } from "@type";
+import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from "crypto";
 
 // PBKDF2 configuration

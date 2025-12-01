@@ -30,13 +30,6 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
   
-  // Mailer (optional)
-  USER_MAILER?: string;
-  PASS_MAILER?: string;
-  
-  // SMS Provider (optional)
-  DRIPSENDER_API_KEY?: string;
-  
   // Backup (optional)
   BACKUP_ENCRYPTION_KEY?: string;
   BACKUP_RETENTION_DAYS: number;
@@ -110,9 +103,6 @@ export function validateEnv(): Env {
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID || undefined,
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET || undefined,
     GOOGLE_REDIRECT_URI: env.GOOGLE_REDIRECT_URI || undefined,
-    USER_MAILER: env.USER_MAILER || undefined,
-    PASS_MAILER: env.PASS_MAILER || undefined,
-    DRIPSENDER_API_KEY: env.DRIPSENDER_API_KEY || undefined,
     BACKUP_ENCRYPTION_KEY: env.BACKUP_ENCRYPTION_KEY || undefined,
     BACKUP_RETENTION_DAYS: backupDays,
   };
@@ -127,16 +117,6 @@ export function checkFeatureConfig(env: Env) {
   // Check Google OAuth (empty string counts as not configured)
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     warnings.push('Google OAuth not configured (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)');
-  }
-  
-  // Check Mailer (empty string counts as not configured)
-  if (!env.USER_MAILER || !env.PASS_MAILER) {
-    warnings.push('Email service not configured (USER_MAILER, PASS_MAILER)');
-  }
-  
-  // Check SMS
-  if (!env.DRIPSENDER_API_KEY) {
-    warnings.push('SMS service not configured (DRIPSENDER_API_KEY)');
   }
   
   // Check Backup
@@ -160,8 +140,6 @@ export function getEnvSummary(env: Env) {
     hasHttps: env.HAS_CERTIFICATE === 'true',
     features: {
       googleOAuth: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
-      email: !!(env.USER_MAILER && env.PASS_MAILER),
-      sms: !!env.DRIPSENDER_API_KEY,
       backup: !!env.BACKUP_ENCRYPTION_KEY,
     },
   };
