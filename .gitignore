@@ -9,6 +9,10 @@ node_modules
 # SQLite databases
 database/*.sqlite3
 database/*.sqlite
+database/*.sqlite3-shm
+database/*.sqlite3-wal
+database/*.sqlite-shm
+database/*.sqlite-wal
 dev.sqlite3
 production.sqlite3
 

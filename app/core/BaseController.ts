@@ -55,6 +55,19 @@ export interface PaginationParams {
  * All controllers should extend this class to reduce boilerplate.
  */
 export abstract class BaseController {
+  constructor() {
+    // Auto-bind all methods to preserve 'this' context when passed as route callbacks
+    const prototype = Object.getPrototypeOf(this);
+    const propertyNames = Object.getOwnPropertyNames(prototype);
+    
+    for (const name of propertyNames) {
+      const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+      if (name !== 'constructor' && descriptor && typeof descriptor.value === 'function') {
+        (this as any)[name] = (this as any)[name].bind(this);
+      }
+    }
+  }
+
   /**
    * Require authenticated user
    * 
