@@ -1,7 +1,7 @@
 <script>
   import axios from "axios";
   import Header from "../Components/Header.svelte";
-  import { Toast } from "../Components/helper";
+  import { api, Toast } from "../Components/helper";
   export let user;
 
   let current_password;
@@ -39,43 +39,32 @@
  
   async function changeProfile() {
     isLoading = true;
-    try {
-      const response = await axios.post("/change-profile", user);
-      Toast("Profile updated", "success");
-    } catch (error) {
-      if (error.response.data.code == "SQLITE_CONSTRAINT_UNIQUE") {
-        Toast("username atau email sudah digunakan", "error");
-      } else {
-        Toast(error.response.data.code, "error");
-      }
-    }
+    await api(() => axios.post("/change-profile", user));
     isLoading = false;
   }
 
   async function changePassword() {
     if (new_password != confirm_password) {
-      Toast("Password not match", "error");
+      Toast("Password tidak cocok", "error");
       return;
     }
 
     if (!current_password || !new_password || !confirm_password) {
-      Toast("Please fill all fields", "error");
+      Toast("Mohon isi semua field", "error");
       return;
     }
 
     isLoading = true;
-    try {
-      const response = await axios.post("/change-password", {
-        current_password,
-        new_password,
-        confirm_password,
-      });
-      Toast(response.data.message);
+    const result = await api(() => axios.post("/change-password", {
+      current_password,
+      new_password,
+      confirm_password,
+    }));
+
+    if (result.success) {
       current_password = "";
       new_password = "";
       confirm_password = "";
-    } catch (error) {
-      Toast(error.response.data.message, "error");
     }
     isLoading = false;
   }

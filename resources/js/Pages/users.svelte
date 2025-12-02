@@ -3,7 +3,7 @@
   import { page, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import axios from 'axios';
-  import { Toast } from '../Components/helper';
+  import { api, Toast } from '../Components/helper';
 
   export let users = [];
 
@@ -67,29 +67,22 @@
 
     isSubmitting = true;
 
-    try {
-      const payload = {
-        name: form.name,
-        email: form.email,
-        phone: form.phone || null,
-        is_admin: form.is_admin,
-        is_verified: form.is_verified,
-        password: form.password || undefined
-      };
+    const payload = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone || null,
+      is_admin: form.is_admin,
+      is_verified: form.is_verified,
+      password: form.password || undefined
+    };
 
-      if (mode === 'create') {
-        await axios.post('/users', payload);
-        Toast('User berhasil dibuat', 'success');
-      } else {
-        await axios.put(`/users/${form.id}`, payload);
-        Toast('User berhasil diupdate', 'success');
-      }
+    const result = mode === 'create'
+      ? await api(() => axios.post('/users', payload))
+      : await api(() => axios.put(`/users/${form.id}`, payload));
 
+    if (result.success) {
       closeUserModal();
       router.visit('/users', { preserveScroll: true, preserveState: true });
-    } catch (error) {
-      const message = error?.response?.data?.message || 'Terjadi kesalahan, coba lagi';
-      Toast(message, 'error');
     }
 
     isSubmitting = false;
@@ -102,13 +95,10 @@
 
     isSubmitting = true;
 
-    try {
-      await axios.delete('/users', { data: { ids: [id] } });
-      Toast('User berhasil dihapus', 'success');
+    const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));
+
+    if (result.success) {
       router.visit('/users', { preserveScroll: true, preserveState: true });
-    } catch (error) {
-      const message = error?.response?.data?.message || 'Gagal menghapus user';
-      Toast(message, 'error');
     }
 
     isSubmitting = false;

@@ -128,6 +128,50 @@ export function convertToCSV(objArray, delimiter = ',') {
 }
 
 /**
+ * Standardized API call wrapper that handles JSON responses from backend
+ * Backend format: { success: boolean, message: string, data?: any, code?: string, errors?: object }
+ * 
+ * @param {Function} axiosCall - Axios call function that returns a promise
+ * @param {Object} options - Options for handling the response
+ * @param {boolean} options.showSuccessToast - Show toast on success (default: true)
+ * @param {boolean} options.showErrorToast - Show toast on error (default: true)
+ * @returns {Promise<{success: boolean, message: string, data?: any}>}
+ */
+export async function api(axiosCall, options = {}) {
+    const { showSuccessToast = true, showErrorToast = true } = options;
+    
+    try {
+        const response = await axiosCall();
+        const result = response.data;
+        
+        // Handle standardized response format
+        if (result.success) {
+            if (showSuccessToast && result.message) {
+                Toast(result.message, 'success');
+            }
+            return { success: true, message: result.message, data: result.data };
+        } else {
+            // Backend returned success: false
+            if (showErrorToast && result.message) {
+                Toast(result.message, 'error');
+            }
+            return { success: false, message: result.message, code: result.code, errors: result.errors };
+        }
+    } catch (error) {
+        // Handle axios error (network error or non-2xx status)
+        const message = error?.response?.data?.message || 'Terjadi kesalahan, coba lagi';
+        const code = error?.response?.data?.code;
+        const errors = error?.response?.data?.errors;
+        
+        if (showErrorToast) {
+            Toast(message, 'error');
+        }
+        
+        return { success: false, message, code, errors };
+    }
+}
+
+/**
  * Displays a toast notification message
  * @param {string} text - The message to display
  * @param {string} type - Toast type: 'success', 'error', 'warning', or 'info' (default: "success")
