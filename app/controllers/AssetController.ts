@@ -1,4 +1,4 @@
-import { v7 as uuidv7 } from "uuid";
+import { randomUUID } from "crypto";
 import type { NaraRequest, NaraResponse } from "@core";
 import { BaseController, jsonError, jsonServerError } from "@core";
 import fs from "fs";
@@ -36,7 +36,7 @@ class Controller extends BaseController {
                         return;
                     }
 
-                    const id = uuidv7();
+                    const id = randomUUID();
                     const fileName = `${id}.webp`; 
 
                     // Create a buffer to store the image data
