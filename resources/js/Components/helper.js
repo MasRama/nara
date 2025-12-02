@@ -128,6 +128,24 @@ export function convertToCSV(objArray, delimiter = ',') {
 }
 
 /**
+ * Format validation errors object into a readable string
+ * @param {Object} errors - Validation errors object { field: ["error1", "error2"] }
+ * @returns {string} Formatted error message
+ */
+function formatValidationErrors(errors) {
+    if (!errors || typeof errors !== 'object') return '';
+    
+    const messages = [];
+    for (const [field, fieldErrors] of Object.entries(errors)) {
+        if (Array.isArray(fieldErrors) && fieldErrors.length > 0) {
+            // Use first error message for each field
+            messages.push(`${field}: ${fieldErrors[0]}`);
+        }
+    }
+    return messages.join('; ');
+}
+
+/**
  * Standardized API call wrapper that handles JSON responses from backend
  * Backend format: { success: boolean, message: string, data?: any, code?: string, errors?: object }
  * 
@@ -152,8 +170,11 @@ export async function api(axiosCall, options = {}) {
             return { success: true, message: result.message, data: result.data };
         } else {
             // Backend returned success: false
-            if (showErrorToast && result.message) {
-                Toast(result.message, 'error');
+            if (showErrorToast) {
+                const errorMsg = result.errors 
+                    ? formatValidationErrors(result.errors) || result.message 
+                    : result.message;
+                if (errorMsg) Toast(errorMsg, 'error');
             }
             return { success: false, message: result.message, code: result.code, errors: result.errors };
         }
@@ -164,7 +185,10 @@ export async function api(axiosCall, options = {}) {
         const errors = error?.response?.data?.errors;
         
         if (showErrorToast) {
-            Toast(message, 'error');
+            const errorMsg = errors 
+                ? formatValidationErrors(errors) || message 
+                : message;
+            Toast(errorMsg, 'error');
         }
         
         return { success: false, message, code, errors };
