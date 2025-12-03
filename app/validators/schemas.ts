@@ -66,12 +66,6 @@ export interface ChangeProfileInput {
   phone?: string | null;
 }
 
-export interface PaginationInput {
-  page: number;
-  limit: number;
-  search: string;
-  filter: 'all' | 'verified' | 'unverified';
-}
 
 // ============================================
 // Validator Functions
@@ -497,42 +491,3 @@ export function ChangeProfileSchema(data: unknown): ValidationResult<ChangeProfi
   };
 }
 
-/**
- * Pagination validator
- */
-export function PaginationSchema(data: unknown): ValidationResult<PaginationInput> {
-  if (!isObject(data)) {
-    return {
-      success: true,
-      data: { page: 1, limit: 10, search: '', filter: 'all' }
-    };
-  }
-
-  const { page, limit, search, filter } = data as Record<string, unknown>;
-
-  const parsedPage = Number(page) || 1;
-  const parsedLimit = Math.min(Number(limit) || 10, 100);
-  const parsedSearch = isString(search) ? search : '';
-  const validFilters = ['all', 'verified', 'unverified'] as const;
-  const parsedFilter = validFilters.includes(filter as any) ? (filter as 'all' | 'verified' | 'unverified') : 'all';
-
-  return {
-    success: true,
-    data: {
-      page: Math.max(1, parsedPage),
-      limit: Math.max(1, parsedLimit),
-      search: parsedSearch,
-      filter: parsedFilter,
-    }
-  };
-}
-
-// ============================================
-// Legacy exports for backward compatibility
-// ============================================
-
-export const EmailSchema = (value: unknown) => isEmail(value);
-export const PasswordSchema = (value: unknown) => isString(value) && value.length >= 8 && value.length <= 100;
-export const PhoneSchema = (value: unknown) => value === undefined || value === null || value === '' || isPhone(value);
-export const NameSchema = (value: unknown) => isString(value) && value.trim().length >= 2 && value.length <= 100;
-export const UUIDSchema = (value: unknown) => isUUID(value);

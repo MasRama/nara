@@ -1,18 +1,38 @@
-<script>
+<script lang="ts">
   import { fly } from 'svelte/transition';
   import { page, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import axios from 'axios';
   import { api, Toast } from '../Components/helper';
 
-  export let users = [];
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    is_admin: boolean;
+    is_verified: boolean;
+  }
 
-  const currentUser = $page.props.user;
+  interface UserForm {
+    id: string | null;
+    name: string;
+    email: string;
+    phone: string;
+    is_admin: boolean;
+    is_verified: boolean;
+    password: string;
+  }
 
-  let showUserModal = false;
-  let isSubmitting = false;
-  let mode = 'create';
-  let form = {
+  export let users: User[] = [];
+
+  const currentUser = $page.props.user as User | undefined;
+
+  let showUserModal: boolean = false;
+  let isSubmitting: boolean = false;
+  let mode: 'create' | 'edit' = 'create';
+  let form: UserForm = {
     id: null,
     name: '',
     email: '',
@@ -22,7 +42,7 @@
     password: ''
   };
 
-  function resetForm() {
+  function resetForm(): void {
     form = {
       id: null,
       name: '',
@@ -34,13 +54,13 @@
     };
   }
 
-  function openCreateUser() {
+  function openCreateUser(): void {
     mode = 'create';
     resetForm();
     showUserModal = true;
   }
 
-  function openEditUser(userItem) {
+  function openEditUser(userItem: User): void {
     mode = 'edit';
     form = {
       id: userItem.id,
@@ -54,12 +74,12 @@
     showUserModal = true;
   }
 
-  function closeUserModal() {
+  function closeUserModal(): void {
     showUserModal = false;
     resetForm();
   }
 
-  async function submitUserForm() {
+  async function submitUserForm(): Promise<void> {
     if (!form.name || !form.email) {
       Toast('Nama dan email wajib diisi', 'error');
       return;
@@ -88,7 +108,7 @@
     isSubmitting = false;
   }
 
-  async function deleteUser(id) {
+  async function deleteUser(id: string): Promise<void> {
     if (!confirm('Yakin ingin menghapus user ini?')) {
       return;
     }

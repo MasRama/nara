@@ -12,7 +12,7 @@ import Logger from "@services/Logger";
 // Cache object to store file contents in memory
 let cache: { [key: string]: Buffer } = {};
 
-class Controller extends BaseController {
+class AssetController extends BaseController {
     /**
      * Serves assets from the dist folder (compiled assets)
      * - Handles CSS and JS files with proper content types
@@ -223,4 +223,4 @@ class Controller extends BaseController {
     }
 }
 
-export default new Controller();
+export default new AssetController();

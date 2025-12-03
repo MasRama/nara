@@ -1,21 +1,29 @@
-<script>
+<script lang="ts">
   import axios from "axios";
   import Header from "../Components/Header.svelte";
   import { api, Toast } from "../Components/helper";
-  export let user;
 
-  let current_password;
-  let new_password;
-  let confirm_password;
-  let isLoading = false;
-  let avatarFile;
-  let previewUrl = user.avatar || null;
- 
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    is_admin: boolean;
+    is_verified: boolean;
+  }
 
- 
+  export let user: User;
 
-  function handleAvatarChange(event) {
-    const file = event.target.files[0];
+  let current_password: string = '';
+  let new_password: string = '';
+  let confirm_password: string = '';
+  let isLoading: boolean = false;
+  let previewUrl: string | null = user.avatar || null;
+
+  function handleAvatarChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
@@ -30,20 +38,20 @@
           user.avatar = response.data + "?v=" + Date.now();
           Toast("Avatar berhasil diupload", "success");
         })
-        .catch((error) => {
+        .catch(() => {
           isLoading = false;
           Toast("Gagal mengupload avatar", "error");
         });
     }
   }
- 
-  async function changeProfile() {
+
+  async function changeProfile(): Promise<void> {
     isLoading = true;
     await api(() => axios.post("/change-profile", user));
     isLoading = false;
   }
 
-  async function changePassword() {
+  async function changePassword(): Promise<void> {
     if (new_password != confirm_password) {
       Toast("Password tidak cocok", "error");
       return;

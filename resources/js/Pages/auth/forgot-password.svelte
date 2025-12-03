@@ -1,18 +1,23 @@
-<script>
+<script lang="ts">
     import { inertia, router } from "@inertiajs/svelte";
     import NaraIcon from "../../Components/NaraIcon.svelte";
     import axios from "axios";
 
-    let form = {
+    interface ForgotPasswordForm {
+        email: string;
+        phone: string;
+    }
+
+    let form: ForgotPasswordForm = {
         email: "",
         phone: "",
     };
 
-    let success = false;
-    export let error;
+    let success: boolean = false;
+    export let error: string | undefined;
 
-    function submitForm() {
-        axios.post("/forgot-password", form).then((response) => {
+    function submitForm(): void {
+        axios.post("/forgot-password", form).then(() => {
             success = true;
             form.email = "";
             form.phone = "";

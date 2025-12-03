@@ -23,13 +23,6 @@ export type { ValidationResult, Validator } from './validate';
 
 // All validators
 export {
-  // Common (simple check functions)
-  EmailSchema,
-  PasswordSchema,
-  PhoneSchema,
-  NameSchema,
-  UUIDSchema,
-  
   // Auth
   LoginSchema,
   RegisterSchema,
@@ -42,9 +35,6 @@ export {
   UpdateUserSchema,
   DeleteUsersSchema,
   ChangeProfileSchema,
-  
-  // Pagination
-  PaginationSchema,
 } from './schemas';
 
 // Type exports
@@ -58,5 +48,4 @@ export type {
   UpdateUserInput,
   DeleteUsersInput,
   ChangeProfileInput,
-  PaginationInput,
 } from './schemas';

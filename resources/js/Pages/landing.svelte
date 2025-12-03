@@ -1,9 +1,24 @@
 <!-- landing.svelte -->
-<script>
+<script lang="ts">
   import { inertia, page } from '@inertiajs/svelte'
   import { fly } from 'svelte/transition'
 
-  let highlights = [
+  interface Highlight {
+    title: string;
+    description: string;
+  }
+
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    avatar?: string;
+    is_admin: boolean;
+    is_verified: boolean;
+  }
+
+  let highlights: Highlight[] = [
     {
       title: 'Blazing fast by default',
       description: 'HyperExpress + SQLite tuned for real-world throughput, not benchmarks di README saja.'
@@ -18,7 +33,7 @@
     }
   ]
 
-  let user = $page.props.user
+  let user = $page.props.user as User | undefined
 </script>
 
 <header class="fixed inset-x-0 top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl">

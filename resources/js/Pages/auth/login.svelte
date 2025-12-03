@@ -1,21 +1,22 @@
-<script>
-    import { inertia,router } from '@inertiajs/svelte' 
+<script lang="ts">
+    import { inertia, router } from '@inertiajs/svelte' 
     import NaraIcon from '../../Components/NaraIcon.svelte'; 
+
+    interface LoginForm {
+      email: string;
+      password: string;
+    }
   
-    let form = {
+    let form: LoginForm = {
       email: '',
       password: '',
-      password_confirmation: '',
-      terms: false,
-    }
-    export let error;
-    function submitForm()
-    {
-      
-      router.post("/login", {email:form.email,password:form.password})
     }
 
- 
+    export let error: string | undefined;
+
+    function submitForm(): void {
+      router.post("/login", { email: form.email, password: form.password })
+    }
   </script>
   
   <section class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">

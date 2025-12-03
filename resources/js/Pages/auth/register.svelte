@@ -1,38 +1,41 @@
-<script>
-  import { inertia,router } from '@inertiajs/svelte' 
-    import { password_generator } from '../../Components/helper';
-    import NaraIcon from '../../Components/NaraIcon.svelte';
+<script lang="ts">
+  import { inertia, router } from '@inertiajs/svelte' 
+  import { password_generator } from '../../Components/helper';
+  import NaraIcon from '../../Components/NaraIcon.svelte';
 
-  let form = {
+  interface RegisterForm {
+    email: string;
+    password: string;
+    name: string;
+    phone: string;
+    password_confirmation: string;
+  }
+
+  let form: RegisterForm = {
     email: '',
     password: '',
-    name : '',
-    phone : '',
+    name: '',
+    phone: '',
     password_confirmation: '', 
   }
 
-  export let error;
-  function submitForm()
-  {
-    if(form.password != form.password_confirmation)
-    {
-      alert("Password and konfirmasi password haru sama")
-      return false;
+  export let error: string | undefined;
+
+  function submitForm(): void {
+    if (form.password != form.password_confirmation) {
+      alert("Password and konfirmasi password harus sama")
+      return;
     }
  
     form.phone = form.phone.toString()
-    router.post("/register", form)
+    router.post("/register", form as any)
   }
 
-  function generatePassword()
-  { 
+  function generatePassword(): void { 
     const retVal = password_generator(10); 
     form.password = retVal
     form.password_confirmation = retVal
   }
-
-  
-
 </script>
 
 <section class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">

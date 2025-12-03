@@ -1,31 +1,36 @@
-<script>
+<script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
   import NaraIcon from '../../Components/NaraIcon.svelte'; 
-    import { password_generator } from '../../Components/helper';
+  import { password_generator } from '../../Components/helper';
 
-  export let id;
-  export let error;
+  interface ResetPasswordForm {
+    password: string;
+    password_confirmation: string;
+    id: string;
+  }
 
-  let form = {
+  export let id: string;
+  export let error: string | undefined;
+
+  let form: ResetPasswordForm = {
     password: '',
     password_confirmation: '',
     id
   }
  
-  function generatePassword()
-  { 
+  function generatePassword(): void { 
     const retVal = password_generator(10); 
     form.password = retVal
     form.password_confirmation = retVal
   }
 
-  function submitForm() {
-    if(form.password != form.password_confirmation) {
+  function submitForm(): void {
+    if (form.password != form.password_confirmation) {
       alert("Password dan konfirmasi password harus sama")
-      return false;
+      return;
     }
 
-    router.post(`/reset-password`, form)
+    router.post(`/reset-password`, form as any)
   }
 </script>
 

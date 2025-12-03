@@ -1,11 +1,17 @@
 <!-- home.svelte -->
-<script>
+<script lang="ts">
   import { inertia } from '@inertiajs/svelte'
   import { fly, fade } from 'svelte/transition'
   import { page } from '@inertiajs/svelte'
   import Header from '../Components/Header.svelte'
+
+  interface Feature {
+    title: string;
+    description: string;
+    icon: string;
+  }
   
-  let features = [
+  let features: Feature[] = [
     {
       title: "Powerful Features",
       description: "Built with modern tools for maximum productivity",

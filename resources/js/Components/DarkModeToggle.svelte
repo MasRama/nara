@@ -1,9 +1,9 @@
-<script>
+<script lang="ts">
 import { onMount } from 'svelte';
 
-let darkMode = false;
-let mounted = false;
-export let onchange = (mode) => {};
+let darkMode: boolean = false;
+let mounted: boolean = false;
+export let onchange: (mode: boolean) => void = () => {};
 
 onMount(() => {
     // Check system preference
@@ -24,7 +24,7 @@ onMount(() => {
     }, 100);
 
     // Listen for system preference changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e: MediaQueryListEvent) => {
         if (localStorage.getItem('darkMode') === null) {
             darkMode = e.matches;
             toggleDarkMode();
@@ -32,7 +32,7 @@ onMount(() => {
     });
 });
 
-function toggleDarkMode() {
+function toggleDarkMode(): void {
     darkMode = !darkMode;
     
     if (darkMode) {
@@ -42,10 +42,9 @@ function toggleDarkMode() {
     }
     
     // Save preference to localStorage
-    localStorage.setItem('darkMode', darkMode);
-
+    localStorage.setItem('darkMode', String(darkMode));
     
-    onchange(darkMode)
+    onchange(darkMode);
 }
 </script>
 

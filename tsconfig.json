@@ -46,7 +46,12 @@
     "migrations",
     "seeds",
     "app",
-    "routes",
-    "resources"
+    "routes"
+  ],
+  "exclude": [
+    "resources",
+    "node_modules",
+    "dist",
+    "build"
   ]
 }

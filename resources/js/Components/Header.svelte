@@ -1,28 +1,35 @@
-<script>
+<script lang="ts">
   import { fly } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
   import { clickOutside } from '../Components/helper';
 
-  let user = $page.props.user;
- 
-  let isMenuOpen = false;
-  let isUserMenuOpen = false;
-
-  export let group; 
-
-  const menuLinks = [
-    { href: '/dashboard', label: 'Overview', group: 'dashboard', show : true },  
-    { href: '/users', label: 'Users', group: 'users', show : user && user.is_admin ? true : false },
-    { href: '/profile', label: 'Profile', group: 'profile', show : user ? true : false },
-  ];
- 
-  
-
-  function isActive(path) {
-    return currentPath === path;
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+    is_admin: boolean;
   }
 
-  function handleLogout() {
+  interface MenuLink {
+    href: string;
+    label: string;
+    group: string;
+    show: boolean;
+  }
+
+  let user = $page.props.user as User | undefined;
+ 
+  let isMenuOpen: boolean = false;
+
+  export let group: string; 
+
+  const menuLinks: MenuLink[] = [
+    { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },  
+    { href: '/users', label: 'Users', group: 'users', show: user?.is_admin ?? false },
+    { href: '/profile', label: 'Profile', group: 'profile', show: !!user },
+  ];
+
+  function handleLogout(): void {
     router.post('/logout');
   }
 </script>
