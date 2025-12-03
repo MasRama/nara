@@ -24,41 +24,6 @@ export function clickOutside(node) {
   }
 
 /**
- * Formats and validates a phone number with country code
- * @param {string|number} phone - The phone number to validate
- * @param {string} selected_dial_code - The country dial code (default: "+62")
- * @returns {string} Formatted phone number with country code
- */
-export function validatePhone(phone, selected_dial_code = "+62") {
- 
-    
-    var number = phone.toString().split('-').join(' ').split(' ').join('');
-
-    if (number[0] == '0') {
-    number = number.replace('0', '')
-    }
-
-    if (number.includes(selected_dial_code)) {
-    number = number.replace(selected_dial_code, '')
-    }
-
-    if (number.substring(0, selected_dial_code.length - 1) == selected_dial_code.replace("+",
-        '')) {
-    number = number.replace(selected_dial_code.replace("+", ''), '')
-    }
-
-    number = selected_dial_code.replace("+", '') + number;
-
-
-    return number;
-
-    }
-
- 
-
-   
-
-/**
  * Generates a random password with a mix of letters, numbers and special characters
  * @param {number} pLength - The desired length of the password
  * @returns {string} Generated password
@@ -102,30 +67,6 @@ export function debounce(func, timeout = 300) {
   };
 }
 
-
-/**
- * Converts an array of objects to CSV format
- * @param {Array|string} objArray - Array of objects or JSON string to convert
- * @param {string} delimiter - CSV delimiter character (default: ',')
- * @returns {string} CSV formatted string
- */
-export function convertToCSV(objArray, delimiter = ',') {
-  var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
-  var str = '';
-
-  for (var i = 0; i < array.length; i++) {
-      var line = '';
-      for (var index in array[i]) {
-          if (line != '') line += delimiter
-
-          line += array[i][index];
-      }
-
-      str += line + '\r\n';
-  }
-
-  return str;
-}
 
 /**
  * Format validation errors object into a readable string
