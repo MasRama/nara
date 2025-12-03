@@ -4,7 +4,12 @@
  * Validates required environment variables on application startup.
  * Provides typed access to environment configuration.
  * No external dependencies - just plain TypeScript.
+ * 
+ * Auto-detection: If .env.production exists, it will be loaded automatically
+ * and NODE_ENV will be set to 'production' without needing to prefix commands.
  */
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { SERVER, DATABASE, LOGGING } from './constants';
 
 // ============================================
@@ -164,11 +169,31 @@ export function getEnv(): Env {
 /**
  * Initialize environment validation
  * Call this at application startup
+ * 
+ * Auto-detection logic:
+ * 1. If .env.production exists → load it and set NODE_ENV=production
+ * 2. Otherwise → load .env (development mode)
+ * 
+ * This eliminates the need to prefix commands with NODE_ENV=production
  */
 export function initEnv(): Env {
-  const nodeEnv = process.env.NODE_ENV || 'development';
-  const envFile = nodeEnv === 'production' ? '.env.production' : '.env';
+  const projectRoot = process.cwd();
+  const prodEnvPath = join(projectRoot, '.env.production');
+  const devEnvPath = join(projectRoot, '.env');
   
-  require('dotenv').config({ path: envFile });
+  // Auto-detect: if .env.production exists, use production mode
+  const hasProdEnv = existsSync(prodEnvPath);
+  
+  if (hasProdEnv) {
+    // Load .env.production and force production mode
+    require('dotenv').config({ path: prodEnvPath });
+    process.env.NODE_ENV = 'production';
+  } else {
+    // Load .env for development
+    require('dotenv').config({ path: devEnvPath });
+    // Keep NODE_ENV from .env or default to development
+    process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+  }
+  
   return getEnv();
 }

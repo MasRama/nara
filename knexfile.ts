@@ -1,11 +1,21 @@
 import 'tsconfig-paths/register';
 import type { Knex } from "knex";
 import path from 'path';
+import { existsSync } from 'fs';
 
-// Load env for DB_FILE support
-const nodeEnv = process.env.NODE_ENV || 'development';
-const envFile = nodeEnv === 'production' ? '.env.production' : '.env';
-require('dotenv').config({ path: envFile });
+// Auto-detect: if .env.production exists, use production mode
+const prodEnvPath = path.resolve(process.cwd(), '.env.production');
+const hasProdEnv = existsSync(prodEnvPath);
+
+if (hasProdEnv) {
+  require('dotenv').config({ path: prodEnvPath });
+  process.env.NODE_ENV = 'production';
+} else {
+  require('dotenv').config({ path: '.env' });
+  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+}
+
+const nodeEnv = process.env.NODE_ENV;
 
 // Resolve DB file path (relative to project root)
 const defaultDbFile = nodeEnv === 'production'
