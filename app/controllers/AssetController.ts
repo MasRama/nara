@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import type { NaraRequest, NaraResponse } from "@core";
-import { BaseController, jsonError, jsonServerError } from "@core";
+import { BaseController, jsonError, jsonServerError, jsonSuccess } from "@core";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";  
@@ -94,11 +94,11 @@ class AssetController extends BaseController {
                                     updated_at: Date.now()
                                 });
 
-                            // Return just the public URL string for simpler client usage
-                            response.json(publicUrl);
+                            // Return success response with public URL
+                            jsonSuccess(response, 'Avatar berhasil diupload', { url: publicUrl });
                         } catch (err) {
                             Logger.error('Error processing and uploading image', err as Error);
-                            response.status(500).send("Error processing and uploading image");
+                            jsonServerError(response, 'Gagal memproses dan mengupload gambar');
                         }
                     });
                 }

@@ -24,6 +24,7 @@ import inertia from "@middlewares/inertia";
 import { securityHeaders } from "@middlewares/securityHeaders";
 import { requestLogger } from "@middlewares/requestLogger";
 import { rateLimit } from "@middlewares/rateLimit";
+import { csrf } from "@middlewares/csrf";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
@@ -74,6 +75,13 @@ export interface AppOptions {
   rateLimit?: boolean;
 
   /**
+   * Enable CSRF protection middleware.
+   * Protects POST/PUT/PATCH/DELETE requests using Double Submit Cookie pattern.
+   * @default false (opt-in, see docs/SECURITY.md for details)
+   */
+  csrf?: boolean;
+
+  /**
    * Application routes (HyperExpress.Router).
    * Can also be mounted later via app.mount()
    */
@@ -106,6 +114,7 @@ const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler">> = {
   securityHeaders: true,
   requestLogging: true,
   rateLimit: false, // Opt-in
+  csrf: false, // Opt-in, see docs/SECURITY.md
   shutdownTimeout: 10000,
 };
 
@@ -218,6 +227,12 @@ export class NaraApp {
     if (this.options.rateLimit) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.server.use(rateLimit() as any);
+    }
+
+    // CSRF protection after rate limiting but before route handlers
+    if (this.options.csrf) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.server.use(csrf() as any);
     }
 
     if (this.options.inertia) {

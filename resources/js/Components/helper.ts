@@ -6,6 +6,50 @@ interface ActionReturn {
 }
 
 /**
+ * Get CSRF token from cookie
+ * Used for protecting state-changing requests (POST, PUT, DELETE)
+ * 
+ * @returns CSRF token string or undefined if not found
+ * 
+ * @example
+ * const token = getCSRFToken();
+ * fetch('/api/data', {
+ *   method: 'POST',
+ *   headers: {
+ *     'X-CSRF-Token': token || '',
+ *     'Content-Type': 'application/json',
+ *   },
+ *   body: JSON.stringify(data),
+ * });
+ */
+export function getCSRFToken(): string | undefined {
+  return document.cookie.match(/csrf_token=([^;]+)/)?.[1];
+}
+
+/**
+ * Configure axios instance with CSRF token
+ * Call this once at app initialization to automatically include CSRF token in all requests
+ * 
+ * @param axiosInstance - Axios instance to configure
+ * 
+ * @example
+ * import axios from 'axios';
+ * import { configureAxiosCSRF } from '$lib/helper';
+ * 
+ * configureAxiosCSRF(axios);
+ */
+export function configureAxiosCSRF(axiosInstance: { interceptors: { request: { use: (fn: (config: any) => any) => void } } }): void {
+  axiosInstance.interceptors.request.use((config: any) => {
+    const token = getCSRFToken();
+    if (token && ['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase() || '')) {
+      config.headers = config.headers || {};
+      config.headers['X-CSRF-Token'] = token;
+    }
+    return config;
+  });
+}
+
+/**
  * API response type
  */
 export interface ApiResponse<T = unknown> {
