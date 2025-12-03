@@ -48,8 +48,8 @@
 
     <div class="flex items-center gap-3 text-xs font-medium">
       <a
-        href="/docs"
-        use:inertia
+        href="https://github.com/MasRama/nara#readme"
+        target="_blank"
         class="hidden sm:inline-flex items-center rounded-full px-3 py-1.5 text-slate-300 hover:text-slate-50 hover:bg-slate-900/70 transition-colors"
       >
         Docs

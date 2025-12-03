@@ -1,131 +1,21 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import { page, router } from '@inertiajs/svelte';
+  import { page as inertiaPage } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import axios from 'axios';
-  import { api, Toast } from '../Components/helper';
-
-  interface User {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    avatar?: string;
-    is_admin: boolean;
-    is_verified: boolean;
-  }
-
-  interface UserForm {
-    id: string | null;
-    name: string;
-    email: string;
-    phone: string;
-    is_admin: boolean;
-    is_verified: boolean;
-    password: string;
-  }
+  import type { User } from '../types/user';
 
   export let users: User[] = [];
   export let search: string = '';
   export let filter: string = 'all';
-  export let pageCurrent: number;
+  // Pagination meta from backend
+  export let total: number = 0;
+  export let page: number = 1;
+  export let limit: number = 10;
+  export let totalPages: number = 1;
+  export let hasNext: boolean = false;
+  export let hasPrev: boolean = false;
 
-  const currentUser = $page.props.user as User | undefined;
-
-  let showUserModal: boolean = false;
-  let isSubmitting: boolean = false;
-  let mode: 'create' | 'edit' = 'create';
-  let form: UserForm = {
-    id: null,
-    name: '',
-    email: '',
-    phone: '',
-    is_admin: false,
-    is_verified: false,
-    password: ''
-  };
-
-  function resetForm(): void {
-    form = {
-      id: null,
-      name: '',
-      email: '',
-      phone: '',
-      is_admin: false,
-      is_verified: false,
-      password: ''
-    };
-  }
-
-  function openCreateUser(): void {
-    mode = 'create';
-    resetForm();
-    showUserModal = true;
-  }
-
-  function openEditUser(userItem: User): void {
-    mode = 'edit';
-    form = {
-      id: userItem.id,
-      name: userItem.name || '',
-      email: userItem.email || '',
-      phone: userItem.phone || '',
-      is_admin: !!userItem.is_admin,
-      is_verified: !!userItem.is_verified,
-      password: ''
-    };
-    showUserModal = true;
-  }
-
-  function closeUserModal(): void {
-    showUserModal = false;
-    resetForm();
-  }
-
-  async function submitUserForm(): Promise<void> {
-    if (!form.name || !form.email) {
-      Toast('Nama dan email wajib diisi', 'error');
-      return;
-    }
-
-    isSubmitting = true;
-
-    const payload = {
-      name: form.name,
-      email: form.email,
-      phone: form.phone || null,
-      is_admin: form.is_admin,
-      is_verified: form.is_verified,
-      password: form.password || undefined
-    };
-
-    const result = mode === 'create'
-      ? await api(() => axios.post('/users', payload))
-      : await api(() => axios.put(`/users/${form.id}`, payload));
-
-    if (result.success) {
-      closeUserModal();
-      router.visit('/dashboard', { preserveScroll: true, preserveState: true });
-    }
-
-    isSubmitting = false;
-  }
-
-  async function deleteUser(id: string): Promise<void> {
-    if (!confirm('Yakin ingin menghapus user ini?')) {
-      return;
-    }
-
-    isSubmitting = true;
-
-    const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));
-
-    if (result.success) {
-      router.visit('/dashboard', { preserveScroll: true, preserveState: true });
-    }
-
-    isSubmitting = false;
-  }
+  const currentUser = $inertiaPage.props.user as User | undefined;
 </script>
 
 <Header group="dashboard" />
@@ -142,7 +32,7 @@
           <span
             class="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400"
           >
-            {$page.props.user?.name || 'Nara user'}
+            {$inertiaPage.props.user?.name || 'Nara user'}
           </span>
         </h1>
         <p class="text-base sm:text-lg text-slate-300/90 max-w-xl mb-8">
@@ -161,7 +51,7 @@
           </div>
           <div class="rounded-2xl bg-slate-900/80 border border-slate-800 px-4 py-3">
             <p class="text-[11px] tracking-[0.18em] uppercase text-slate-500 mb-1">Halaman</p>
-            <p class="text-sm font-medium">{pageCurrent || 1}</p>
+            <p class="text-sm font-medium">{page}</p>
           </div>
         </div>
       </div>
@@ -180,17 +70,17 @@
             <div class="flex items-center justify-between rounded-2xl bg-slate-900/80 px-4 py-3 border border-slate-800">
               <div>
                 <p class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Email</p>
-                <p class="text-sm font-medium">{$page.props.user?.email}</p>
+                <p class="text-sm font-medium">{$inertiaPage.props.user?.email}</p>
               </div>
               <span class="rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-300">
-                {($page.props.user?.is_verified ? 'verified' : 'unverified')}
+                {($inertiaPage.props.user?.is_verified ? 'verified' : 'unverified')}
               </span>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div class="rounded-2xl bg-slate-900/70 border border-slate-800 px-3 py-3">
                 <p class="text-[11px] text-slate-500 mb-1">Status</p>
-                <p class="text-sm font-semibold text-slate-50">{($page.props.user?.is_admin ? 'Admin' : 'User')}</p>
+                <p class="text-sm font-semibold text-slate-50">{($inertiaPage.props.user?.is_admin ? 'Admin' : 'User')}</p>
               </div>
               <div class="rounded-2xl bg-slate-900/70 border border-slate-800 px-3 py-3">
                 <p class="text-[11px] text-slate-500 mb-1">Search</p>

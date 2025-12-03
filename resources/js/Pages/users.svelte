@@ -1,86 +1,55 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import { page, router } from '@inertiajs/svelte';
+  import { page as inertiaPage, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
+  import UserModal from '../Components/UserModal.svelte';
+  import Pagination from '../Components/Pagination.svelte';
   import axios from 'axios';
   import { api, Toast } from '../Components/helper';
-
-  interface User {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    avatar?: string;
-    is_admin: boolean;
-    is_verified: boolean;
-  }
-
-  interface UserForm {
-    id: string | null;
-    name: string;
-    email: string;
-    phone: string;
-    is_admin: boolean;
-    is_verified: boolean;
-    password: string;
-  }
+  import type { User, UserForm, PaginationMeta } from '../types/user';
+  import { createEmptyUserForm, userToForm } from '../types/user';
 
   export let users: User[] = [];
+  // Pagination meta from backend
+  export let total: number = 0;
+  export let page: number = 1;
+  export let limit: number = 10;
+  export let totalPages: number = 1;
+  export let hasNext: boolean = false;
+  export let hasPrev: boolean = false;
+  export let search: string = '';
+  export let filter: string = 'all';
 
-  const currentUser = $page.props.user as User | undefined;
+  const currentUser = $inertiaPage.props.user as User | undefined;
+
+  // Build pagination meta object
+  $: paginationMeta = { total, page, limit, totalPages, hasNext, hasPrev } as PaginationMeta;
 
   let showUserModal: boolean = false;
   let isSubmitting: boolean = false;
   let mode: 'create' | 'edit' = 'create';
-  let form: UserForm = {
-    id: null,
-    name: '',
-    email: '',
-    phone: '',
-    is_admin: false,
-    is_verified: false,
-    password: ''
-  };
-
-  function resetForm(): void {
-    form = {
-      id: null,
-      name: '',
-      email: '',
-      phone: '',
-      is_admin: false,
-      is_verified: false,
-      password: ''
-    };
-  }
+  let form: UserForm = createEmptyUserForm();
 
   function openCreateUser(): void {
     mode = 'create';
-    resetForm();
+    form = createEmptyUserForm();
     showUserModal = true;
   }
 
   function openEditUser(userItem: User): void {
     mode = 'edit';
-    form = {
-      id: userItem.id,
-      name: userItem.name || '',
-      email: userItem.email || '',
-      phone: userItem.phone || '',
-      is_admin: !!userItem.is_admin,
-      is_verified: !!userItem.is_verified,
-      password: ''
-    };
+    form = userToForm(userItem);
     showUserModal = true;
   }
 
   function closeUserModal(): void {
     showUserModal = false;
-    resetForm();
+    form = createEmptyUserForm();
   }
 
-  async function submitUserForm(): Promise<void> {
-    if (!form.name || !form.email) {
+  async function handleSubmit(event: CustomEvent<UserForm>): Promise<void> {
+    const formData = event.detail;
+    if (!formData.name || !formData.email) {
       Toast('Nama dan email wajib diisi', 'error');
       return;
     }
@@ -88,17 +57,17 @@
     isSubmitting = true;
 
     const payload = {
-      name: form.name,
-      email: form.email,
-      phone: form.phone || null,
-      is_admin: form.is_admin,
-      is_verified: form.is_verified,
-      password: form.password || undefined
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone || null,
+      is_admin: formData.is_admin,
+      is_verified: formData.is_verified,
+      password: formData.password || undefined
     };
 
     const result = mode === 'create'
       ? await api(() => axios.post('/users', payload))
-      : await api(() => axios.put(`/users/${form.id}`, payload));
+      : await api(() => axios.put(`/users/${formData.id}`, payload));
 
     if (result.success) {
       closeUserModal();
@@ -205,113 +174,16 @@
         </tbody>
       </table>
     </div>
+
+    <Pagination meta={paginationMeta} />
   </div>
 
-  {#if showUserModal}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div class="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-400">
-            {mode === 'create' ? 'Tambah user baru' : 'Edit user'}
-          </h3>
-          <button
-            class="text-slate-400 hover:text-slate-200 text-sm"
-            on:click={closeUserModal}
-            disabled={isSubmitting}
-          >
-            ✕
-          </button>
-        </div>
-
-        <form class="space-y-4" on:submit|preventDefault={submitUserForm}>
-          <div class="space-y-1">
-            <label for="user-name" class="block text-xs font-medium text-slate-400">Nama</label>
-            <input
-              id="user-name"
-              class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              type="text"
-              bind:value={form.name}
-              placeholder="Nama lengkap"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label for="user-email" class="block text-xs font-medium text-slate-400">Email</label>
-            <input
-              id="user-email"
-              class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              type="email"
-              bind:value={form.email}
-              placeholder="Alamat email"
-            />
-          </div>
-
-          <div class="space-y-1">
-            <label for="user-phone" class="block text-xs font-medium text-slate-400">No. HP</label>
-            <input
-              id="user-phone"
-              class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              type="text"
-              bind:value={form.phone}
-              placeholder="Nomor HP (opsional)"
-            />
-          </div>
-
-          <div class="grid grid-cols-2 gap-3 text-xs text-slate-300">
-            <label class="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                class="rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400/60"
-                bind:checked={form.is_admin}
-              />
-              <span>Admin</span>
-            </label>
-            <label class="inline-flex items-center gap-2">
-              <input
-                type="checkbox"
-                class="rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400/60"
-                bind:checked={form.is_verified}
-              />
-              <span>Verified</span>
-            </label>
-          </div>
-
-          <div class="space-y-1">
-            <label for="user-password" class="block text-xs font-medium text-slate-400">
-              {mode === 'create' ? 'Password (opsional, default pakai email)' : 'Password baru (opsional)'}
-            </label>
-            <input
-              id="user-password"
-              class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              type="password"
-              bind:value={form.password}
-              placeholder={mode === 'create' ? 'Kosongkan untuk gunakan email sebagai password' : 'Biarkan kosong jika tidak mengganti password'}
-            />
-          </div>
-
-          <div class="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              class="inline-flex items-center px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-              on:click={closeUserModal}
-              disabled={isSubmitting}
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
-            >
-              {#if isSubmitting}
-                Menyimpan...
-              {:else}
-                {mode === 'create' ? 'Simpan user' : 'Update user'}
-              {/if}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  {/if}
+  <UserModal 
+    show={showUserModal} 
+    {mode} 
+    {form} 
+    {isSubmitting}
+    on:close={closeUserModal}
+    on:submit={handleSubmit}
+  />
 </section>

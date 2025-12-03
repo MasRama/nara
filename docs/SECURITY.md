@@ -357,6 +357,33 @@ const app = createApp({
 });
 ```
 
+### CSRF: Off by Default
+
+**CSRF protection tidak diaktifkan secara default** karena:
+
+1. **API-first approach**: Nara dirancang untuk mendukung API endpoints yang menggunakan token-based auth (Authorization header), di mana CSRF tidak diperlukan.
+
+2. **Inertia.js SPA**: Aplikasi Inertia menggunakan AJAX requests yang sudah dilindungi oleh same-origin policy browser.
+
+3. **Flexibility**: Memungkinkan developer memilih strategi CSRF yang sesuai dengan kebutuhan aplikasi.
+
+**Kapan perlu mengaktifkan CSRF:**
+- Form submissions tradisional (non-AJAX)
+- Aplikasi yang melayani konten dari multiple origins
+- Compliance requirements yang mewajibkan CSRF protection
+
+**Cara mengaktifkan:**
+```typescript
+import { csrf } from "@middlewares/csrf";
+
+// Global (semua POST/PUT/DELETE routes)
+app.use(csrf());
+
+// Per-route (recommended)
+Route.post('/transfer', csrf(), transferHandler);
+Route.post('/settings', csrf(), settingsHandler);
+```
+
 ### Urutan Middleware
 
 1. Security Headers (pertama, untuk semua response)

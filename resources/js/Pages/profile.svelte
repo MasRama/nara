@@ -63,10 +63,11 @@
     }
 
     isLoading = true;
+    // Backend only expects current_password and new_password
+    // confirm_password validation is done client-side above
     const result = await api(() => axios.post("/change-password", {
       current_password,
       new_password,
-      confirm_password,
     }));
 
     if (result.success) {

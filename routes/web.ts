@@ -9,6 +9,7 @@ import AuthController from "@controllers/AuthController";
 import Auth from "@middlewares/auth"
 import HomeController from "@controllers/HomeController";
 import AssetController from "@controllers/AssetController";
+import { strictRateLimit } from "@middlewares/rateLimit";
 
 const Route = createRouter();
 
@@ -33,9 +34,9 @@ Route.get("/", HomeController.index);
  * GET   /google/callback - Google OAuth callback
  */
 Route.get("/login", AuthController.loginPage);
-Route.post("/login", AuthController.processLogin);
+Route.post("/login", strictRateLimit(), AuthController.processLogin);
 Route.get("/register", AuthController.registerPage);
-Route.post("/register", AuthController.processRegister);
+Route.post("/register", strictRateLimit(), AuthController.processRegister);
 Route.post("/logout", AuthController.logout);
 Route.get("/google/redirect", AuthController.redirect);
 Route.get("/google/callback", AuthController.googleCallback);
@@ -50,9 +51,9 @@ Route.get("/google/callback", AuthController.googleCallback);
  * POST  /reset-password - Process password reset
  */
 Route.get("/forgot-password", AuthController.forgotPasswordPage);
-Route.post("/forgot-password", AuthController.sendResetPassword);
+Route.post("/forgot-password", strictRateLimit(), AuthController.sendResetPassword);
 Route.get("/reset-password/:id", AuthController.resetPasswordPage);
-Route.post("/reset-password", AuthController.resetPassword);
+Route.post("/reset-password", strictRateLimit(), AuthController.resetPassword);
 
 /**
  * Protected Routes
@@ -75,8 +76,8 @@ Route.post("/users", [Auth], AuthController.createUser);
 Route.put("/users/:id", [Auth], AuthController.updateUser);
 Route.delete("/users", [Auth], AuthController.deleteUsers);
 
-// Avatar upload endpoint (local storage)
-Route.post("/assets/avatar", [Auth], AssetController.uploadAsset);
+// Avatar upload endpoint (local storage) - rate limited to prevent abuse
+Route.post("/assets/avatar", [Auth, strictRateLimit()], AssetController.uploadAsset);
 
 /**
  * Static Asset Handling Routes

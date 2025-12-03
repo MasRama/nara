@@ -59,7 +59,7 @@ import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
 import { redirectParamsURL } from "@services/GoogleAuth";
 import LoginThrottle from "@services/LoginThrottle";
-import { paginate } from "@services/Paginator";
+import { paginate, parsePaginationQuery } from "@services/Paginator";
 import axios from "axios"; 
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
@@ -102,7 +102,7 @@ class AuthController extends BaseController {
    }
 
    public async homePage(request: NaraRequest, response: NaraResponse) {
-      const page = parseInt(request.query.page as string) || 1;
+      const { page, limit } = parsePaginationQuery(request.query);
       const search = request.query.search as string || "";
       const filter = request.query.filter as string || "all";
       
@@ -125,7 +125,7 @@ class AuthController extends BaseController {
       }
       
       // Paginate results
-      const result = await paginate(query.orderBy('created_at', 'desc'), { page });
+      const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
       
       return response.inertia("dashboard", { 
          users: result.data, 
@@ -136,7 +136,7 @@ class AuthController extends BaseController {
    }
 
    public async usersPage(request: NaraRequest, response: NaraResponse) {
-      const page = parseInt(request.query.page as string) || 1;
+      const { page, limit } = parsePaginationQuery(request.query);
       const search = request.query.search as string || "";
       const filter = request.query.filter as string || "all";
 
@@ -157,7 +157,7 @@ class AuthController extends BaseController {
       }
 
       // Paginate results
-      const result = await paginate(query.orderBy('created_at', 'desc'), { page });
+      const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
 
       return response.inertia("users", {
          users: result.data,
