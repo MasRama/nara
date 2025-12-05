@@ -7,6 +7,8 @@
 
 /**
  * User entity from database
+ * 
+ * NOTE: This should stay in sync with app/core/types.ts User interface
  */
 export interface User {
   id: string;
@@ -16,6 +18,8 @@ export interface User {
   avatar?: string;
   is_admin: boolean;
   is_verified: boolean;
+  created_at?: number;
+  updated_at?: number;
 }
 
 /**

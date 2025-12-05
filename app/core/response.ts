@@ -21,15 +21,14 @@
 
 import type { NaraResponse } from './types';
 
+import { PaginatedMeta } from '@services/Paginator';
+
 /**
  * Pagination metadata for list responses
+ * Re-exported from Paginator for consistency
  */
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages?: number;
-}
+export type PaginationMeta = PaginatedMeta;
+export type { PaginatedMeta };
 
 /**
  * Generic metadata type
@@ -181,10 +180,10 @@ export function jsonPaginated<T = unknown>(
   res: NaraResponse,
   message: string,
   data: T[],
-  meta: PaginationMeta
+  meta: PaginatedMeta
 ): NaraResponse {
-  // Calculate totalPages if not provided
-  const paginationMeta: PaginationMeta = {
+  // PaginatedMeta from Paginator already has all required fields
+  const paginationMeta: PaginatedMeta = {
     ...meta,
     totalPages: meta.totalPages ?? Math.ceil(meta.total / meta.limit),
   };

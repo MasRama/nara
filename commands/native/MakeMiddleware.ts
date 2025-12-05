@@ -41,13 +41,13 @@ class MakeMiddleware {
  * 
  * Middleware for request processing.
  */
-import { Request, Response } from "@type";
+import type { NaraRequest, NaraResponse, NaraMiddleware } from "@core";
 import Logger from "@services/Logger";
 
 /**
  * ${name} middleware handler
  */
-async function ${filename}(request: Request, response: Response) {
+const ${filename}: NaraMiddleware = async (request: NaraRequest, response: NaraResponse) => {
   try {
     // Add your middleware logic here
     // Example: Check headers, validate tokens, rate limiting, etc.
@@ -65,7 +65,7 @@ async function ${filename}(request: Request, response: Response) {
       message: "Internal server error" 
     });
   }
-}
+};
 
 export default ${filename};
 `;

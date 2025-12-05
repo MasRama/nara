@@ -42,21 +42,21 @@ class MakeController {
  * 
  * Controller for ${resourceName} resource.
  */
+import { BaseController, jsonSuccess, jsonPaginated, jsonCreated, jsonNotFound, jsonServerError } from "@core";
+import type { NaraRequest, NaraResponse } from "@core";
 import DB from "@services/DB";
 import Logger from "@services/Logger";
-import { validateOrFail } from "@validators";
+import { paginate } from "@services/Paginator";
 import { PAGINATION, ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
-import { Request, Response } from "@type";
 import { randomUUID } from "crypto";
 import dayjs from "dayjs";
 
-class ${className} {
+class ${className} extends BaseController {
   /**
    * Display a listing of the resource.
    */
-  public async index(request: Request, response: Response) {
-    const page = parseInt(request.query.page as string) || 1;
-    const search = request.query.search as string || "";
+  public async index(request: NaraRequest, response: NaraResponse) {
+    const { page, limit, search } = this.getPaginationParams(request);
 
     let query = DB.from("${resourceName}s").select("*");
 
@@ -66,106 +66,92 @@ class ${className} {
       });
     }
 
-    const countQuery = query.clone();
-    const total = await countQuery.count('* as count').first();
+    const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
 
-    const data = await query
-      .orderBy('created_at', 'desc')
-      .offset((page - 1) * PAGINATION.DEFAULT_PAGE_SIZE)
-      .limit(PAGINATION.DEFAULT_PAGE_SIZE);
-
-    return response.json({
-      success: true,
-      data,
-      meta: {
-        total: Number((total as any)?.count) || 0,
-        page,
-        limit: PAGINATION.DEFAULT_PAGE_SIZE,
-      }
-    });
+    return jsonPaginated(response, SUCCESS_MESSAGES.DATA_RETRIEVED, result.data, result.meta);
   }
 
   /**
    * Store a newly created resource.
    */
-  public async store(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async store(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
-    const rawData = await request.json();
-    // TODO: Add validation function
-    // const data = await validateOrFail(Create${className.replace('Controller', '')}Schema, rawData, response);
-    // if (!data) return;
+    // TODO: Add validation schema
+    // const data = await this.getBody(request, Create${className.replace('Controller', '')}Schema);
+    const data = await request.json();
 
     const now = dayjs().valueOf();
     const record = {
       id: randomUUID(),
-      ...rawData,
+      ...data,
       created_at: now,
       updated_at: now,
     };
 
     try {
       await DB.table("${resourceName}s").insert(record);
-      return response.json({ success: true, message: "Data berhasil dibuat", data: record });
+      Logger.info('${className.replace('Controller', '')} created', { id: record.id, userId: request.user!.id });
+      return jsonCreated(response, SUCCESS_MESSAGES.DATA_CREATED, record);
     } catch (error: any) {
       Logger.error('Failed to create ${resourceName}', error);
-      return response.status(500).json({ success: false, message: "Gagal membuat data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
   /**
    * Display the specified resource.
    */
-  public async show(request: Request, response: Response) {
+  public async show(request: NaraRequest, response: NaraResponse) {
     const { id } = request.params;
 
     const record = await DB.from("${resourceName}s").where("id", id).first();
 
     if (!record) {
-      return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
-    return response.json({ success: true, data: record });
+    return jsonSuccess(response, SUCCESS_MESSAGES.DATA_RETRIEVED, record);
   }
 
   /**
    * Update the specified resource.
    */
-  public async update(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async update(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
     const { id } = request.params;
-    const rawData = await request.json();
-    // TODO: Add validation function
-    // const data = await validateOrFail(Update${className.replace('Controller', '')}Schema, rawData, response);
-    // if (!data) return;
+    
+    // TODO: Add validation schema
+    // const data = await this.getBody(request, Update${className.replace('Controller', '')}Schema);
+    const data = await request.json();
+
+    const existing = await DB.from("${resourceName}s").where("id", id).first();
+    if (!existing) {
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
+    }
 
     const payload = {
-      ...rawData,
+      ...data,
       updated_at: dayjs().valueOf(),
     };
 
     try {
       await DB.from("${resourceName}s").where("id", id).update(payload);
       const record = await DB.from("${resourceName}s").where("id", id).first();
-      return response.json({ success: true, message: "Data berhasil diupdate", data: record });
+      Logger.info('${className.replace('Controller', '')} updated', { id, userId: request.user!.id });
+      return jsonSuccess(response, SUCCESS_MESSAGES.DATA_UPDATED, record);
     } catch (error: any) {
       Logger.error('Failed to update ${resourceName}', error);
-      return response.status(500).json({ success: false, message: "Gagal mengupdate data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
   /**
    * Remove the specified resource.
    */
-  public async destroy(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async destroy(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
     const { id } = request.params;
 
@@ -173,14 +159,14 @@ class ${className} {
       const deleted = await DB.from("${resourceName}s").where("id", id).delete();
       
       if (!deleted) {
-        return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+        return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
       }
 
-      Logger.info('${className.replace('Controller', '')} deleted', { id, userId: request.user.id });
-      return response.json({ success: true, message: "Data berhasil dihapus" });
+      Logger.info('${className.replace('Controller', '')} deleted', { id, userId: request.user!.id });
+      return jsonSuccess(response, SUCCESS_MESSAGES.DATA_DELETED);
     } catch (error: any) {
       Logger.error('Failed to delete ${resourceName}', error);
-      return response.status(500).json({ success: false, message: "Gagal menghapus data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 }

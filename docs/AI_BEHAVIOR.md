@@ -10,23 +10,27 @@ Konvensi **WAJIB** untuk menjaga konsistensi kode.
 
 | Alias | Path |
 |-------|------|
+| `@core` | `app/core/index.ts` |
 | `@controllers/*` | `app/controllers/*` |
+| `@services` | `app/services/index.ts` |
 | `@services/*` | `app/services/*` |
 | `@middlewares/*` | `app/middlewares/*` |
 | `@validators` | `app/validators/index.ts` |
 | `@config` | `app/config/index.ts` |
-| `@type` | `type/index.d.ts` |
 
 ```typescript
 // ✅ Correct
-import DB from "@services/DB";
-import Logger from "@services/Logger";
-import { validateOrFail, LoginSchema } from "@validators";
-import { AUTH, PAGINATION, ERROR_MESSAGES } from "@config";
-import { Request, Response } from "@type";
+import { BaseController, jsonSuccess, jsonPaginated, jsonCreated } from "@core";
+import type { NaraRequest, NaraResponse } from "@core";
+import { DB, Logger } from "@services";
+import { LoginSchema } from "@validators";
+import { AUTH, PAGINATION, ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
 
 // ❌ Wrong - JANGAN relative imports
 import DB from "../../services/DB";
+
+// ❌ Wrong - JANGAN gunakan @type (tidak ada)
+import { Request, Response } from "@type";
 ```
 
 ---
@@ -66,11 +70,17 @@ export function MySchema(data: unknown): ValidationResult<MyInput> {
     }
   };
 }
+```
 
-// Penggunaan di Controller
-const rawData = await request.json();
+**Penggunaan di Controller (WAJIB gunakan BaseController.getBody):**
+```typescript
+// ✅ Correct - gunakan this.getBody() dari BaseController
+const data = await this.getBody(request, MySchema);
+// Throws ValidationError jika gagal, tidak perlu check null
+
+// ❌ Wrong - pattern lama, jangan gunakan
 const data = await validateOrFail(MySchema, rawData, response);
-if (!data) return; // Response sudah dikirim jika gagal
+if (!data) return;
 ```
 
 **Helper Functions:** `isString`, `isEmail`, `isPhone`, `isUUID`, `isNumber`, `isBoolean`, `isArray`, `isObject`
@@ -79,50 +89,65 @@ if (!data) return; // Response sudah dikirim jika gagal
 
 ## 📝 Controller Pattern
 
+**WAJIB** extend `BaseController` untuk semua controller baru.
+
 ```typescript
+import { BaseController, jsonSuccess, jsonPaginated, jsonCreated, jsonNotFound, jsonServerError } from "@core";
+import type { NaraRequest, NaraResponse } from "@core";
 import DB from "@services/DB";
 import Logger from "@services/Logger";
-import { validateOrFail, CreateSchema } from "@validators";
-import { ERROR_MESSAGES, SUCCESS_MESSAGES, PAGINATION } from "@config";
-import { Request, Response } from "@type";
+import { paginate } from "@services/Paginator";
+import { CreateSchema } from "@validators";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
 import { randomUUID } from "crypto";
 import dayjs from "dayjs";
 
-class MyController {
-  public async create(request: Request, response: Response) {
-    // 1. Auth check
-    if (!request.user || !request.user.is_admin) {
-      return response.status(403).json({ success: false, message: "Unauthorized" });
-    }
+class MyController extends BaseController {
+  public async create(request: NaraRequest, response: NaraResponse) {
+    // 1. Auth check - gunakan helper dari BaseController
+    this.requireAuth(request);  // throws AuthError jika tidak login
+    // this.requireAdmin(request);  // untuk admin-only
 
-    // 2. Validate
-    const rawData = await request.json();
-    const data = await validateOrFail(CreateSchema, rawData, response);
-    if (!data) return;
+    // 2. Validate - gunakan this.getBody()
+    const data = await this.getBody(request, CreateSchema);
 
     // 3. Execute
     try {
       const now = dayjs().valueOf();
-      await DB.table("items").insert({ id: randomUUID(), ...data, created_at: now, updated_at: now });
-      return response.json({ success: true, message: SUCCESS_MESSAGES.USER_CREATED });
+      const record = { id: randomUUID(), ...data, created_at: now, updated_at: now };
+      await DB.table("items").insert(record);
+      Logger.info('Item created', { id: record.id, userId: request.user!.id });
+      return jsonCreated(response, SUCCESS_MESSAGES.DATA_CREATED, record);
     } catch (error: any) {
       Logger.error('Create failed', error);
-      return response.status(500).json({ success: false, message: "Gagal membuat data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
-  public async list(request: Request, response: Response) {
-    const page = parseInt(request.query.page as string) || 1;
-    const total = await DB.from("items").count('* as count').first();
-    const data = await DB.from("items")
-      .orderBy('created_at', 'desc')
-      .offset((page - 1) * PAGINATION.DEFAULT_PAGE_SIZE)
-      .limit(PAGINATION.DEFAULT_PAGE_SIZE);
+  public async list(request: NaraRequest, response: NaraResponse) {
+    // Gunakan helper dari BaseController
+    const { page, limit, search } = this.getPaginationParams(request);
+    
+    let query = DB.from("items").select("*");
+    if (search) {
+      query = query.where('name', 'like', `%${search}%`);
+    }
 
-    return response.json({ success: true, data, meta: { total: Number((total as any)?.count) || 0, page } });
+    // Gunakan paginate helper
+    const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
+
+    return jsonPaginated(response, SUCCESS_MESSAGES.DATA_RETRIEVED, result.data, result.meta);
   }
 }
+
+export default new MyController();
 ```
+
+**BaseController Methods:**
+- `this.requireAuth(request)` - throws AuthError jika tidak login
+- `this.requireAdmin(request)` - throws ForbiddenError jika bukan admin
+- `this.getBody(request, Schema)` - validasi dan return data, throws ValidationError
+- `this.getPaginationParams(request)` - return { page, limit, search }
 
 ---
 
@@ -196,9 +221,12 @@ Logger.logSecurity('Unauthorized attempt', { ip });
 ## 🔐 Auth & Database
 
 ```typescript
-// Auth check
+// ✅ Auth check - gunakan BaseController methods
+this.requireAuth(request);   // throws AuthError
+this.requireAdmin(request);  // throws ForbiddenError
+
+// ❌ Wrong - pattern lama, jangan gunakan
 if (!request.user) return response.status(401).json({ success: false, message: "Unauthorized" });
-if (!request.user.is_admin) return response.status(403).json({ success: false, message: "Forbidden" });
 
 // DB queries
 const user = await DB.from("users").where("email", email).first();

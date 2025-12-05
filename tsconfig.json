@@ -28,6 +28,7 @@
       "@core": ["app/core/index.ts"],
       "@core/*": ["app/core/*"],
       "@controllers/*": ["app/controllers/*"],
+      "@services": ["app/services/index.ts"],
       "@services/*": ["app/services/*"],
       "@middlewares/*": ["app/middlewares/*"],
       "@validators/*": ["app/validators/*"],

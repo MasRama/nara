@@ -183,22 +183,22 @@ class MakeResource {
  * 
  * API Controller for ${lowerName} resource.
  */
+import { BaseController, jsonSuccess, jsonPaginated, jsonCreated, jsonNotFound, jsonServerError } from "@core";
+import type { NaraRequest, NaraResponse } from "@core";
 import DB from "@services/DB";
 import Logger from "@services/Logger";
-import { validateOrFail, Create${pascalName}Schema, Update${pascalName}Schema } from "@validators";
-import { PAGINATION, ERROR_MESSAGES } from "@config";
-import { Request, Response } from "@type";
+import { paginate } from "@services/Paginator";
+import { Create${pascalName}Schema, Update${pascalName}Schema } from "@validators";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
 import { randomUUID } from "crypto";
 import dayjs from "dayjs";
 
-class ${className} {
+class ${className} extends BaseController {
   /**
    * Display a listing of the resource.
    */
-  public async index(request: Request, response: Response) {
-    const page = parseInt(request.query.page as string) || 1;
-    const limit = Math.min(parseInt(request.query.limit as string) || PAGINATION.DEFAULT_PAGE_SIZE, PAGINATION.MAX_PAGE_SIZE);
-    const search = request.query.search as string || "";
+  public async index(request: NaraRequest, response: NaraResponse) {
+    const { page, limit, search } = this.getPaginationParams(request);
 
     let query = DB.from("${pluralName}").select("*");
 
@@ -208,52 +208,33 @@ class ${className} {
       });
     }
 
-    const countQuery = query.clone();
-    const total = await countQuery.count('* as count').first();
+    const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
 
-    const data = await query
-      .orderBy('created_at', 'desc')
-      .offset((page - 1) * limit)
-      .limit(limit);
-
-    return response.json({
-      success: true,
-      data,
-      meta: {
-        total: Number((total as any)?.count) || 0,
-        page,
-        limit,
-        totalPages: Math.ceil(Number((total as any)?.count) / limit) || 1,
-      }
-    });
+    return jsonPaginated(response, SUCCESS_MESSAGES.DATA_RETRIEVED, result.data, result.meta);
   }
 
   /**
    * Display the specified resource.
    */
-  public async show(request: Request, response: Response) {
+  public async show(request: NaraRequest, response: NaraResponse) {
     const { id } = request.params;
 
     const record = await DB.from("${pluralName}").where("id", id).first();
 
     if (!record) {
-      return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
-    return response.json({ success: true, data: record });
+    return jsonSuccess(response, SUCCESS_MESSAGES.DATA_RETRIEVED, record);
   }
 
   /**
    * Store a newly created resource.
    */
-  public async store(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async store(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
-    const rawData = await request.json();
-    const data = await validateOrFail(Create${pascalName}Schema, rawData, response);
-    if (!data) return;
+    const data = await this.getBody(request, Create${pascalName}Schema);
 
     const now = dayjs().valueOf();
     const record = {
@@ -265,30 +246,26 @@ class ${className} {
 
     try {
       await DB.table("${pluralName}").insert(record);
-      Logger.info('${pascalName} created', { id: record.id, userId: request.user.id });
-      return response.status(201).json({ success: true, message: "Data berhasil dibuat", data: record });
+      Logger.info('${pascalName} created', { id: record.id, userId: request.user!.id });
+      return jsonCreated(response, SUCCESS_MESSAGES.DATA_CREATED, record);
     } catch (error: any) {
       Logger.error('Failed to create ${lowerName}', error);
-      return response.status(500).json({ success: false, message: "Gagal membuat data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
   /**
    * Update the specified resource.
    */
-  public async update(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async update(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
     const { id } = request.params;
-    const rawData = await request.json();
-    const data = await validateOrFail(Update${pascalName}Schema, rawData, response);
-    if (!data) return;
+    const data = await this.getBody(request, Update${pascalName}Schema);
 
     const existing = await DB.from("${pluralName}").where("id", id).first();
     if (!existing) {
-      return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
     const payload = {
@@ -299,21 +276,19 @@ class ${className} {
     try {
       await DB.from("${pluralName}").where("id", id).update(payload);
       const record = await DB.from("${pluralName}").where("id", id).first();
-      Logger.info('${pascalName} updated', { id, userId: request.user.id });
-      return response.json({ success: true, message: "Data berhasil diupdate", data: record });
+      Logger.info('${pascalName} updated', { id, userId: request.user!.id });
+      return jsonSuccess(response, SUCCESS_MESSAGES.DATA_UPDATED, record);
     } catch (error: any) {
       Logger.error('Failed to update ${lowerName}', error);
-      return response.status(500).json({ success: false, message: "Gagal mengupdate data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
   /**
    * Remove the specified resource.
    */
-  public async destroy(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async destroy(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
     const { id } = request.params;
 
@@ -321,14 +296,14 @@ class ${className} {
       const deleted = await DB.from("${pluralName}").where("id", id).delete();
       
       if (!deleted) {
-        return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+        return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
       }
 
-      Logger.info('${pascalName} deleted', { id, userId: request.user.id });
-      return response.json({ success: true, message: "Data berhasil dihapus" });
+      Logger.info('${pascalName} deleted', { id, userId: request.user!.id });
+      return jsonSuccess(response, SUCCESS_MESSAGES.DATA_DELETED);
     } catch (error: any) {
       Logger.error('Failed to delete ${lowerName}', error);
-      return response.status(500).json({ success: false, message: "Gagal menghapus data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 }
@@ -343,22 +318,22 @@ export default new ${className}();
  * 
  * Controller for ${lowerName} resource with Inertia.js views.
  */
+import { BaseController, jsonSuccess, jsonCreated, jsonNotFound, jsonServerError } from "@core";
+import type { NaraRequest, NaraResponse } from "@core";
 import DB from "@services/DB";
 import Logger from "@services/Logger";
-import { validateOrFail, Create${pascalName}Schema, Update${pascalName}Schema } from "@validators";
-import { PAGINATION, ERROR_MESSAGES } from "@config";
-import { Request, Response } from "@type";
+import { paginate } from "@services/Paginator";
+import { Create${pascalName}Schema, Update${pascalName}Schema } from "@validators";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
 import { randomUUID } from "crypto";
 import dayjs from "dayjs";
 
-class ${className} {
+class ${className} extends BaseController {
   /**
    * Display a listing of the resource.
    */
-  public async index(request: Request, response: Response) {
-    const page = parseInt(request.query.page as string) || 1;
-    const limit = Math.min(parseInt(request.query.limit as string) || PAGINATION.DEFAULT_PAGE_SIZE, PAGINATION.MAX_PAGE_SIZE);
-    const search = request.query.search as string || "";
+  public async index(request: NaraRequest, response: NaraResponse) {
+    const { page, limit, search } = this.getPaginationParams(request);
 
     let query = DB.from("${pluralName}").select("*");
 
@@ -368,74 +343,59 @@ class ${className} {
       });
     }
 
-    const countQuery = query.clone();
-    const total = await countQuery.count('* as count').first();
+    const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
 
-    const data = await query
-      .orderBy('created_at', 'desc')
-      .offset((page - 1) * limit)
-      .limit(limit);
-
-    return (response as any).inertia("${pascalName}/Index", {
-      ${pluralName}: data,
-      meta: {
-        total: Number((total as any)?.count) || 0,
-        page,
-        limit,
-        totalPages: Math.ceil(Number((total as any)?.count) / limit) || 1,
-        search,
-      }
+    return response.inertia("${pascalName}/Index", {
+      ${pluralName}: result.data,
+      ...result.meta,
+      search,
     });
   }
 
   /**
    * Show the form for creating a new resource.
    */
-  public async create(request: Request, response: Response) {
-    return (response as any).inertia("${pascalName}/Create");
+  public async create(request: NaraRequest, response: NaraResponse) {
+    return response.inertia("${pascalName}/Create");
   }
 
   /**
    * Display the specified resource.
    */
-  public async show(request: Request, response: Response) {
+  public async show(request: NaraRequest, response: NaraResponse) {
     const { id } = request.params;
 
     const record = await DB.from("${pluralName}").where("id", id).first();
 
     if (!record) {
-      return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
-    return (response as any).inertia("${pascalName}/Show", { ${lowerName}: record });
+    return response.inertia("${pascalName}/Show", { ${lowerName}: record });
   }
 
   /**
    * Show the form for editing the specified resource.
    */
-  public async edit(request: Request, response: Response) {
+  public async edit(request: NaraRequest, response: NaraResponse) {
     const { id } = request.params;
 
     const record = await DB.from("${pluralName}").where("id", id).first();
 
     if (!record) {
-      return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
-    return (response as any).inertia("${pascalName}/Edit", { ${lowerName}: record });
+    return response.inertia("${pascalName}/Edit", { ${lowerName}: record });
   }
 
   /**
    * Store a newly created resource.
    */
-  public async store(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async store(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
-    const rawData = await request.json();
-    const data = await validateOrFail(Create${pascalName}Schema, rawData, response);
-    if (!data) return;
+    const data = await this.getBody(request, Create${pascalName}Schema);
 
     const now = dayjs().valueOf();
     const record = {
@@ -447,30 +407,26 @@ class ${className} {
 
     try {
       await DB.table("${pluralName}").insert(record);
-      Logger.info('${pascalName} created', { id: record.id, userId: request.user.id });
-      return response.json({ success: true, message: "Data berhasil dibuat", data: record });
+      Logger.info('${pascalName} created', { id: record.id, userId: request.user!.id });
+      return jsonCreated(response, SUCCESS_MESSAGES.DATA_CREATED, record);
     } catch (error: any) {
       Logger.error('Failed to create ${lowerName}', error);
-      return response.status(500).json({ success: false, message: "Gagal membuat data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
   /**
    * Update the specified resource.
    */
-  public async update(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async update(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
     const { id } = request.params;
-    const rawData = await request.json();
-    const data = await validateOrFail(Update${pascalName}Schema, rawData, response);
-    if (!data) return;
+    const data = await this.getBody(request, Update${pascalName}Schema);
 
     const existing = await DB.from("${pluralName}").where("id", id).first();
     if (!existing) {
-      return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+      return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
     const payload = {
@@ -481,21 +437,19 @@ class ${className} {
     try {
       await DB.from("${pluralName}").where("id", id).update(payload);
       const record = await DB.from("${pluralName}").where("id", id).first();
-      Logger.info('${pascalName} updated', { id, userId: request.user.id });
-      return response.json({ success: true, message: "Data berhasil diupdate", data: record });
+      Logger.info('${pascalName} updated', { id, userId: request.user!.id });
+      return jsonSuccess(response, SUCCESS_MESSAGES.DATA_UPDATED, record);
     } catch (error: any) {
       Logger.error('Failed to update ${lowerName}', error);
-      return response.status(500).json({ success: false, message: "Gagal mengupdate data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 
   /**
    * Remove the specified resource.
    */
-  public async destroy(request: Request, response: Response) {
-    if (!request.user) {
-      return response.status(401).json({ success: false, message: "Unauthorized" });
-    }
+  public async destroy(request: NaraRequest, response: NaraResponse) {
+    this.requireAuth(request);
 
     const { id } = request.params;
 
@@ -503,14 +457,14 @@ class ${className} {
       const deleted = await DB.from("${pluralName}").where("id", id).delete();
       
       if (!deleted) {
-        return response.status(404).json({ success: false, message: ERROR_MESSAGES.NOT_FOUND });
+        return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
       }
 
-      Logger.info('${pascalName} deleted', { id, userId: request.user.id });
-      return response.json({ success: true, message: "Data berhasil dihapus" });
+      Logger.info('${pascalName} deleted', { id, userId: request.user!.id });
+      return jsonSuccess(response, SUCCESS_MESSAGES.DATA_DELETED);
     } catch (error: any) {
       Logger.error('Failed to delete ${lowerName}', error);
-      return response.status(500).json({ success: false, message: "Gagal menghapus data" });
+      return jsonServerError(response, ERROR_MESSAGES.SERVER_ERROR);
     }
   }
 }
