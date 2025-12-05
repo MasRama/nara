@@ -2,6 +2,7 @@
     import { inertia, router } from "@inertiajs/svelte";
     import NaraIcon from "../../Components/NaraIcon.svelte";
     import axios from "axios";
+    import { api } from "../../Components/helper";
 
     interface ForgotPasswordForm {
         email: string;
@@ -16,12 +17,14 @@
     let success: boolean = false;
     export let error: string | undefined;
 
-    function submitForm(): void {
-        axios.post("/forgot-password", form).then(() => {
+    async function submitForm(): Promise<void> {
+        const result = await api(() => axios.post("/forgot-password", form));
+        
+        if (result.success) {
             success = true;
             form.email = "";
             form.phone = "";
-        });
+        }
     }
 </script>
 
