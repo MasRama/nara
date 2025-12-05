@@ -5,10 +5,14 @@
  * Routes can use middleware arrays for authentication and authorization.
  */
 import { createRouter } from "@core";
-import AuthController from "@controllers/AuthController"; 
-import Auth from "@middlewares/auth"
+import AuthController from "@controllers/AuthController";
+import UserController from "@controllers/UserController";
+import PasswordController from "@controllers/PasswordController";
+import OAuthController from "@controllers/OAuthController";
+import VerificationController from "@controllers/VerificationController";
 import HomeController from "@controllers/HomeController";
 import AssetController from "@controllers/AssetController";
+import Auth from "@middlewares/auth";
 import { strictRateLimit } from "@middlewares/rateLimit";
 
 const Route = createRouter();
@@ -30,16 +34,22 @@ Route.get("/", HomeController.index);
  * GET   /register - Registration page
  * POST  /register - Process registration
  * POST  /logout - Logout user
- * GET   /google/redirect - Google OAuth redirect
- * GET   /google/callback - Google OAuth callback
  */
 Route.get("/login", AuthController.loginPage);
 Route.post("/login", strictRateLimit(), AuthController.processLogin);
 Route.get("/register", AuthController.registerPage);
 Route.post("/register", strictRateLimit(), AuthController.processRegister);
 Route.post("/logout", AuthController.logout);
-Route.get("/google/redirect", AuthController.redirect);
-Route.get("/google/callback", AuthController.googleCallback);
+
+/**
+ * OAuth Routes
+ * Routes for third-party authentication
+ * ------------------------------------------------
+ * GET   /google/redirect - Google OAuth redirect
+ * GET   /google/callback - Google OAuth callback
+ */
+Route.get("/google/redirect", OAuthController.googleRedirect);
+Route.get("/google/callback", OAuthController.googleCallback);
 
 /**
  * Password Reset Routes
@@ -50,16 +60,26 @@ Route.get("/google/callback", AuthController.googleCallback);
  * GET   /reset-password/:id - Reset password page
  * POST  /reset-password - Process password reset
  */
-Route.get("/forgot-password", AuthController.forgotPasswordPage);
-Route.post("/forgot-password", strictRateLimit(), AuthController.sendResetPassword);
-Route.get("/reset-password/:id", AuthController.resetPasswordPage);
-Route.post("/reset-password", strictRateLimit(), AuthController.resetPassword);
+Route.get("/forgot-password", PasswordController.forgotPasswordPage);
+Route.post("/forgot-password", strictRateLimit(), PasswordController.sendResetPassword);
+Route.get("/reset-password/:id", PasswordController.resetPasswordPage);
+Route.post("/reset-password", strictRateLimit(), PasswordController.resetPassword);
+
+/**
+ * Email Verification Routes
+ * ------------------------------------------------
+ * POST  /verify - Send verification email
+ * GET   /verify/:id - Verify email token
+ */
+Route.post("/verify", [Auth], VerificationController.sendVerification);
+Route.get("/verify/:id", [Auth], VerificationController.verifyEmail);
 
 /**
  * Protected Routes
  * These routes require authentication
  * ------------------------------------------------
  * GET    /dashboard       - User dashboard
+ * GET    /users           - Users management page
  * GET    /profile         - User profile
  * POST   /change-profile  - Update profile
  * POST   /change-password - Change password
@@ -67,14 +87,14 @@ Route.post("/reset-password", strictRateLimit(), AuthController.resetPassword);
  * PUT    /users/:id       - Update user (admin only)
  * DELETE /users           - Delete users (admin only)
  */
-Route.get("/dashboard", [Auth], AuthController.homePage);
-Route.get("/users", [Auth], AuthController.usersPage);
-Route.get("/profile", [Auth], AuthController.profilePage);
-Route.post("/change-profile", [Auth], AuthController.changeProfile);
-Route.post("/change-password", [Auth], AuthController.changePassword);
-Route.post("/users", [Auth], AuthController.createUser);
-Route.put("/users/:id", [Auth], AuthController.updateUser);
-Route.delete("/users", [Auth], AuthController.deleteUsers);
+Route.get("/dashboard", [Auth], UserController.homePage);
+Route.get("/users", [Auth], UserController.usersPage);
+Route.get("/profile", [Auth], UserController.profilePage);
+Route.post("/change-profile", [Auth], UserController.changeProfile);
+Route.post("/change-password", [Auth], PasswordController.changePassword);
+Route.post("/users", [Auth], UserController.createUser);
+Route.put("/users/:id", [Auth], UserController.updateUser);
+Route.delete("/users", [Auth], UserController.deleteUsers);
 
 // Avatar upload endpoint (local storage) - rate limited to prevent abuse
 Route.post("/assets/avatar", [Auth, strictRateLimit()], AssetController.uploadAsset);

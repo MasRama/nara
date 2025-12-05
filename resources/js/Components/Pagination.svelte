@@ -1,6 +1,6 @@
 <script lang="ts">
   import { router } from '@inertiajs/svelte';
-  import type { PaginationMeta } from '../types/user';
+  import type { PaginationMeta } from '../types';
 
   export let meta: PaginationMeta;
   export let preserveState: boolean = true;

@@ -1,7 +1,44 @@
 /**
  * Native SQLite Service using better-sqlite3
+ * 
  * This service provides direct access to the better-sqlite3 database connection
  * for optimal performance without an ORM or query builder layer.
+ * 
+ * ## When to use SQLite (this) vs DB (Knex)
+ * 
+ * ### Use SQLite service for:
+ * - **Performance-critical read operations** - Direct queries are faster
+ * - **Bulk inserts with transactions** - Better control over transactions
+ * - **Raw SQL when Knex is overkill** - Simple queries without builder overhead
+ * - **Prepared statement caching** - Automatic caching for repeated queries
+ * 
+ * ### Use DB (Knex) for:
+ * - **Complex queries with joins** - Query builder is more readable
+ * - **Migrations** - Knex handles schema migrations
+ * - **Type-safe query building** - Better IDE support
+ * - **Cross-database compatibility** - If you might switch databases
+ * 
+ * ## Examples
+ * 
+ * ```typescript
+ * import SQLite from "@services/SQLite";
+ * 
+ * // Get single row
+ * const user = SQLite.get("SELECT * FROM users WHERE id = ?", [userId]);
+ * 
+ * // Get all rows
+ * const users = SQLite.all("SELECT * FROM users WHERE is_admin = ?", [true]);
+ * 
+ * // Insert/Update/Delete
+ * const result = SQLite.run("INSERT INTO logs (message) VALUES (?)", [message]);
+ * console.log(result.lastInsertRowid);
+ * 
+ * // Transaction
+ * SQLite.transaction((db) => {
+ *   db.run("INSERT INTO orders (user_id) VALUES (?)", [userId]);
+ *   db.run("UPDATE inventory SET stock = stock - 1 WHERE id = ?", [itemId]);
+ * });
+ * ```
  */
 require("dotenv").config();
 import config from "@root/knexfile";

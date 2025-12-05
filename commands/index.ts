@@ -7,6 +7,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Read version from package.json
+const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+const VERSION = packageJson.version;
+
 // ANSI color codes
 const colors = {
   reset: '\x1b[0m',
@@ -32,7 +37,7 @@ ${c.cyan}${c.bright}    _   __
 /_/ |_/\__,_/_/   \__,_/   
 ${c.reset}
 ${c.dim}High-performance TypeScript Web Framework${c.reset}
-${c.dim}Version 1.0.9${c.reset}
+${c.dim}Version ${VERSION}${c.reset}
 `);
 }
 

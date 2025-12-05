@@ -6,8 +6,8 @@
   import Pagination from '../Components/Pagination.svelte';
   import axios from 'axios';
   import { api, Toast } from '../Components/helper';
-  import type { User, UserForm, PaginationMeta } from '../types/user';
-  import { createEmptyUserForm, userToForm } from '../types/user';
+  import type { User, UserForm, PaginationMeta } from '../types';
+  import { createEmptyUserForm, userToForm } from '../types';
 
   export let users: User[] = [];
   // Pagination meta from backend

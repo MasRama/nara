@@ -2,7 +2,7 @@
   import { fly } from 'svelte/transition';
   import { page as inertiaPage } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import type { User } from '../types/user';
+  import type { User } from '../types';
 
   export let users: User[] = [];
   export let search: string = '';

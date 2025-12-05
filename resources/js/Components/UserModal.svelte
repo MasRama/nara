@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UserForm } from '../types/user';
+  import type { UserForm } from '../types';
   import { createEventDispatcher } from 'svelte';
 
   export let show: boolean = false;
