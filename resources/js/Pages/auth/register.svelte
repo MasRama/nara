@@ -1,7 +1,21 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte' 
   import { password_generator } from '../../Components/helper';
   import NaraIcon from '../../Components/NaraIcon.svelte';
+
+  onMount(() => {
+      // Apply dark mode from localStorage
+      const savedMode = localStorage.getItem('darkMode');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = savedMode === null ? systemPrefersDark : savedMode === 'true';
+      
+      if (isDark) {
+          document.documentElement.classList.add('dark');
+      } else {
+          document.documentElement.classList.remove('dark');
+      }
+  });
 
   interface RegisterForm {
     email: string;
@@ -38,25 +52,25 @@
   }
 </script>
 
-<section class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">
+<section class="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
   <div class="flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-16 mx-auto min-h-screen">
-      <div  class="flex items-center mb-2 text-2xl font-semibold text-slate-50">
+      <div class="flex items-center mb-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
           <NaraIcon></NaraIcon>
       </div>
-      <div class="mb-6 text-sm text-slate-400">
-          <a href="/" use:inertia class="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200">
+      <div class="mb-6 text-sm text-slate-500 dark:text-slate-400">
+          <a href="/" use:inertia class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
               <span>←</span>
               <span>Kembali ke beranda</span>
           </a>
       </div>
-      <div class="w-full max-w-md rounded-3xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl shadow-[0_24px_80px_rgba(15,23,42,0.8)] md:mt-0 sm:max-w-md xl:p-0">
+      <div class="w-full max-w-md rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl shadow-xl dark:shadow-[0_24px_80px_rgba(15,23,42,0.8)] md:mt-0 sm:max-w-md xl:p-0">
           <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
-              <h1 class="text-xl font-bold leading-tight tracking-tight text-slate-50 md:text-2xl">
+              <h1 class="text-xl font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-50 md:text-2xl">
                   Create and account
               </h1>
               
               {#if error}
-              <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-red-900 dark:text-red-400" role="alert">
+              <div class="p-4 mb-4 text-sm text-red-600 dark:text-red-400 rounded-lg bg-red-50 dark:bg-red-900/50" role="alert">
                  {error}
               </div>
               {/if}
@@ -74,37 +88,37 @@
       Sign up with Google
   </a>
   <div class="relative">
-	      <div class="flex items-center gap-3 text-xs text-slate-500">
-	          <div class="flex-1 border-t border-gray-700/80"></div>
+	      <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-500">
+	          <div class="flex-1 border-t border-gray-300 dark:border-gray-700/80"></div>
 	          <span class="shrink-0">Or sign up with email</span>
-	          <div class="flex-1 border-t border-gray-700/80"></div>
+	          <div class="flex-1 border-t border-gray-300 dark:border-gray-700/80"></div>
 	      </div>
 	  </div>
 </div>
               <form class="space-y-4 md:space-y-6" on:submit|preventDefault={submitForm}>
                   <div>
-                    <label for="name" class="block mb-2 text-sm font-medium text-slate-200">Nama</label>
-                    <input bind:value={form.name} required type="text" name="name" id="name" class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500" placeholder="Rama Ren" >
+                    <label for="name" class="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Nama</label>
+                    <input bind:value={form.name} required type="text" name="name" id="name" class="bg-gray-50 dark:bg-slate-900/70 border border-gray-300 dark:border-slate-700 text-slate-900 dark:text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-400 dark:placeholder-slate-500" placeholder="Rama Ren" >
                 </div>
                 
                  
                 <div>
-                  <label for="email" class="block mb-2 text-sm font-medium text-slate-200">Email</label>
-                  <input bind:value={form.email} required type="text" name="email" id="email" class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500" placeholder="nara@ramaren.com" >
+                  <label for="email" class="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Email</label>
+                  <input bind:value={form.email} required type="text" name="email" id="email" class="bg-gray-50 dark:bg-slate-900/70 border border-gray-300 dark:border-slate-700 text-slate-900 dark:text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-400 dark:placeholder-slate-500" placeholder="nara@ramaren.com" >
               </div> 
                   <div>
-                      <label for="password" class="block mb-2 text-sm font-medium text-slate-200">Password</label>
-                      <input bind:value={form.password} required type="password" name="password" id="password" placeholder="••••••••" class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500" >
-                      <button type="button" on:click="{generatePassword}" class="text-xs text-slate-400">Buat Password</button>
+                      <label for="password" class="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Password</label>
+                      <input bind:value={form.password} required type="password" name="password" id="password" placeholder="••••••••" class="bg-gray-50 dark:bg-slate-900/70 border border-gray-300 dark:border-slate-700 text-slate-900 dark:text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-400 dark:placeholder-slate-500" >
+                      <button type="button" on:click="{generatePassword}" class="text-xs text-slate-500 dark:text-slate-400">Buat Password</button>
                     </div>
                   <div>
-                      <label for="confirm-password" class="block mb-2 text-sm font-medium text-slate-200">Konfirmasi password</label>
-                      <input bind:value={form.password_confirmation} type="password" name="confirm-password" id="confirm-password" placeholder="••••••••" class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500" >
+                      <label for="confirm-password" class="block mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">Konfirmasi password</label>
+                      <input bind:value={form.password_confirmation} type="password" name="confirm-password" id="confirm-password" placeholder="••••••••" class="bg-gray-50 dark:bg-slate-900/70 border border-gray-300 dark:border-slate-700 text-slate-900 dark:text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-400 dark:placeholder-slate-500" >
                   </div>
                
                   <button type="submit" class="w-full text-sm font-medium rounded-full px-5 py-2.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 focus:ring-4 focus:outline-none focus:ring-emerald-300">Buat Akun Baru</button>
-                  <p class="text-sm font-light text-slate-400">
-                      Sudah punya akun? <a href="/login" use:inertia class="font-medium text-emerald-400 hover:underline">Login disini</a>
+                  <p class="text-sm font-light text-slate-500 dark:text-slate-400">
+                      Sudah punya akun? <a href="/login" use:inertia class="font-medium text-emerald-500 dark:text-emerald-400 hover:underline">Login disini</a>
                   </p>
               </form>
           </div>

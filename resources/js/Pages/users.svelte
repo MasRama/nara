@@ -96,17 +96,17 @@
 
 <Header group="users" />
 
-<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">
+<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <p class="text-xs tracking-[0.35em] uppercase text-slate-400 mb-2">
+        <p class="text-xs tracking-[0.35em] uppercase text-slate-500 dark:text-slate-400 mb-2">
           Users
         </p>
         <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-[1.25] mb-2">
           Manajemen User
         </h1>
-        <p class="text-sm text-slate-300/90 max-w-xl">
+        <p class="text-sm text-slate-600 dark:text-slate-300/90 max-w-xl">
           Kelola akun pengguna aplikasi di halaman terpisah dari dashboard utama.
         </p>
       </div>
@@ -121,9 +121,9 @@
       {/if}
     </div>
 
-    <div class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60">
-      <table class="min-w-full text-sm text-slate-200">
-        <thead class="bg-slate-900/90 border-b border-slate-800 text-xs uppercase tracking-[0.16em] text-slate-500">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900/60">
+      <table class="min-w-full text-sm text-slate-700 dark:text-slate-200">
+        <thead class="bg-gray-50 dark:bg-slate-900/90 border-b border-gray-200 dark:border-slate-800 text-xs uppercase tracking-[0.16em] text-slate-500">
           <tr>
             <th class="px-4 py-3 text-left">Nama</th>
             <th class="px-4 py-3 text-left">Email</th>
@@ -137,19 +137,19 @@
         <tbody>
           {#if users && users.length}
             {#each users as userItem}
-              <tr class="border-t border-slate-800/70 hover:bg-slate-800/60">
+              <tr class="border-t border-gray-200 dark:border-slate-800/70 hover:bg-gray-50 dark:hover:bg-slate-800/60">
                 <td class="px-4 py-3 font-medium">{userItem.name}</td>
-                <td class="px-4 py-3 text-slate-300">{userItem.email}</td>
-                <td class="px-4 py-3 text-slate-400">{userItem.phone || '-'}</td>
+                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{userItem.email}</td>
+                <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{userItem.phone || '-'}</td>
                 <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium {userItem.is_verified ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-700/70 text-slate-300'}">
+                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium {userItem.is_verified ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-gray-200 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300'}">
                     {userItem.is_verified ? 'Verified' : 'Pending'}
                   </span>
                 </td>
                 {#if currentUser && currentUser.is_admin}
                   <td class="px-4 py-3 text-right space-x-2">
                     <button
-                      class="inline-flex items-center px-3 py-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-xs text-slate-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       on:click={() => openEditUser(userItem)}
                       disabled={isSubmitting}
                     >
@@ -168,7 +168,7 @@
             {/each}
           {:else}
             <tr>
-              <td colspan={currentUser && currentUser.is_admin ? 5 : 4} class="px-4 py-6 text-center text-slate-500 text-sm">Belum ada data user untuk ditampilkan.</td>
+              <td colspan={currentUser && currentUser.is_admin ? 5 : 4} class="px-4 py-6 text-center text-slate-500 dark:text-slate-500 text-sm">Belum ada data user untuk ditampilkan.</td>
             </tr>
           {/if}
         </tbody>

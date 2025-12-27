@@ -2,6 +2,7 @@
   import { fly } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
   import { clickOutside } from '../Components/helper';
+  import DarkModeToggle from '../Components/DarkModeToggle.svelte';
 
   interface User {
     id: string;
@@ -34,7 +35,7 @@
   }
 </script>
 
-<header class="fixed inset-x-0 top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl" 
+<header class="fixed inset-x-0 top-0 z-40 border-b border-gray-200 dark:border-slate-800/60 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl" 
   in:fly={{ y: -20, duration: 1000, delay: 200 }}>
   <nav
     class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between"
@@ -43,7 +44,7 @@
       <a href="/" use:inertia class="flex items-center gap-2">
         <img src="/public/nara.png" alt="Nara logo" class="h-7 w-7 rounded-lg object-cover" />
         <div class="flex flex-col leading-tight">
-          <span class="text-sm font-semibold tracking-tight text-slate-50">Nara</span>
+          <span class="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-50">Nara</span>
           <span class="text-[10px] uppercase tracking-[0.22em] text-slate-500">TypeScript framework</span>
         </div>
       </a>
@@ -55,8 +56,8 @@
             use:inertia 
             href={item.href} 
             class="inline-flex items-center rounded-full px-3 py-1.5 transition-colors border {item.group === group 
-              ? 'border-slate-600 bg-slate-900/80 text-slate-50' 
-              : 'border-transparent text-slate-300 hover:text-slate-50 hover:bg-slate-900/70'}"
+              ? 'border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-900/80 text-slate-900 dark:text-slate-50' 
+              : 'border-transparent text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-gray-100 dark:hover:bg-slate-900/70'}"
           >
             {item.label}
           </a>
@@ -65,6 +66,7 @@
     </div>
 
     <div class="flex items-center gap-3">
+      <DarkModeToggle />
       <!-- Auth Buttons - saat login hanya Logout di ujung kanan -->
       <div class="hidden sm:flex items-center gap-2 text-xs font-medium dark:text-gray-300">
         {#if user && user.id}
@@ -77,7 +79,7 @@
         {:else}
           <a
             href="/login"
-            class="inline-flex items-center rounded-full px-3 py-1.5 text-slate-300 hover:text-slate-50 hover:bg-slate-900/70 transition-colors"
+            class="inline-flex items-center rounded-full px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-gray-100 dark:hover:bg-slate-900/70 transition-colors"
           >
             Masuk
           </a>
@@ -92,7 +94,7 @@
 
       <!-- Mobile Menu Button -->
       <button
-        class="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"
+        class="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-gray-700"
         on:click={() => isMenuOpen = !isMenuOpen}
         aria-label="Menu"
       >

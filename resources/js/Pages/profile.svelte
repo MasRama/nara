@@ -81,14 +81,14 @@
 
 <Header group="profile" />
 
-<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-50">
+<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 space-y-10">
     <div class="space-y-2">
-      <p class="text-xs tracking-[0.35em] uppercase text-slate-500">Account</p>
-      <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-50">
+      <p class="text-xs tracking-[0.35em] uppercase text-slate-500 dark:text-slate-500">Account</p>
+      <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
         Profil kamu
       </h1>
-      <p class="text-sm text-slate-400 max-w-xl">
+      <p class="text-sm text-slate-600 dark:text-slate-400 max-w-xl">
         Kelola informasi akun dan keamanan password kamu dengan tampilan yang
         konsisten dengan dashboard.
       </p>
@@ -96,7 +96,7 @@
 
     <div class="grid gap-8 lg:grid-cols-[2fr,3fr] items-start">
       <div class="space-y-6">
-        <div class="rounded-3xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7 shadow-[0_24px_80px_rgba(15,23,42,0.8)]">
+        <div class="rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7 shadow-xl dark:shadow-[0_24px_80px_rgba(15,23,42,0.8)]">
           <div class="flex items-center gap-4">
             <div class="relative group">
               <div class="w-20 h-20 rounded-full bg-primary-500/10 border border-primary-500/40 overflow-hidden flex items-center justify-center">
@@ -144,18 +144,18 @@
             </div>
 
             <div class="space-y-1">
-              <h2 class="text-xl font-semibold text-slate-50">
+              <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-50">
                 {user.name}
               </h2>
-              <p class="text-sm text-slate-400">{user.email}</p>
+              <p class="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
               {#if user.phone}
-                <p class="text-xs text-slate-500">{user.phone}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-500">{user.phone}</p>
               {/if}
             </div>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-3 text-xs text-slate-300">
+        <div class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/70 px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
           <p class="flex items-center gap-2">
             <span class="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
             Data profil kamu tersimpan aman di backend Nara. Pastikan email dan
@@ -165,22 +165,22 @@
       </div>
 
       <div class="space-y-6">
-        <div class="rounded-3xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7">
-          <h2 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-400 mb-4">
+        <div class="rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7">
+          <h2 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400 mb-4">
             Informasi pribadi
           </h2>
           <form on:submit|preventDefault={changeProfile} class="space-y-5">
             <div class="space-y-1">
               <label
                 for="name"
-                class="block text-xs font-medium text-slate-400"
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
                 >Nama</label
               >
               <input
                 bind:value={user.name}
                 type="text"
                 id="name"
-                class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
+                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
                 placeholder="Nama lengkap kamu"
               />
             </div>
@@ -188,14 +188,14 @@
             <div class="space-y-1">
               <label
                 for="email"
-                class="block text-xs font-medium text-slate-400"
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
                 >Email</label
               >
               <input
                 bind:value={user.email}
                 type="email"
                 id="email"
-                class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
+                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
                 placeholder="you@example.com"
               />
             </div>
@@ -203,14 +203,14 @@
             <div class="space-y-1">
               <label
                 for="phone"
-                class="block text-xs font-medium text-slate-400"
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
                 >No. HP</label
               >
               <input
                 bind:value={user.phone}
                 type="text"
                 id="phone"
-                class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
+                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
                 placeholder="Nomor HP yang aktif"
               />
             </div>
@@ -250,50 +250,50 @@
           </form>
         </div>
 
-        <div class="rounded-3xl border border-slate-800/80 bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7">
-          <h2 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-400 mb-4">
+        <div class="rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7">
+          <h2 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400 mb-4">
             Ganti password
           </h2>
           <form on:submit|preventDefault={changePassword} class="space-y-5">
             <div class="space-y-1">
               <label
                 for="current_password"
-                class="block text-xs font-medium text-slate-400"
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
                 >Password sekarang</label
               >
               <input
                 bind:value={current_password}
                 type="password"
                 id="current_password"
-                class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
+                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               />
             </div>
 
             <div class="space-y-1">
               <label
                 for="new_password"
-                class="block text-xs font-medium text-slate-400"
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
                 >Password baru</label
               >
               <input
                 bind:value={new_password}
                 type="password"
                 id="new_password"
-                class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
+                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               />
             </div>
 
             <div class="space-y-1">
               <label
                 for="confirm_password"
-                class="block text-xs font-medium text-slate-400"
+                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
                 >Konfirmasi password baru</label
               >
               <input
                 bind:value={confirm_password}
                 type="password"
                 id="confirm_password"
-                class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
+                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
               />
             </div>
 
@@ -301,7 +301,7 @@
               <button
                 type="submit"
                 disabled={isLoading}
-                class="inline-flex items-center px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                class="inline-flex items-center px-4 py-2 rounded-full bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 text-sm font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {#if isLoading}
                   <svg
