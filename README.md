@@ -1,6 +1,6 @@
 # Nara
 
-A high-performance TypeScript web framework combining HyperExpress, Svelte 5, and Inertia.js for building modern full-stack applications. It features a SPA-first architecture, modern frontend tooling, and seamless client–server state management.
+A high-performance TypeScript web framework combining HyperExpress, Svelte 5, and Inertia.js for building modern full-stack applications. Features include type-safe routing, comprehensive security (CSRF, rate limiting, login throttling), structured logging with Pino, graceful shutdown, and a powerful CLI with 21+ commands for scaffolding, database management, and project health checks.
 
 Visit the repository: [https://github.com/MasRama/nara](https://github.com/MasRama/nara)
 
@@ -34,18 +34,57 @@ Visit the repository: [https://github.com/MasRama/nara](https://github.com/MasRa
 
 ## Features
 
-- Fast server-side rendering with `HyperExpress`
-- Modern frontend with `Svelte 5`
-- TypeScript support for better type safety
-- Inertia.js integration for seamless client–server communication
-- Built-in authentication system
-- BetterSQLite3 database with Knex query builder
-- Email support with Nodemailer
-- Google APIs integration
-- Redis caching support
-- Asset bundling with Vite
-- Squirrelly template engine for fast server-side HTML rendering
-- TailwindCSS for styling
+### Core Framework
+- **High-performance server** with `HyperExpress` (258K+ req/sec)
+- **Modern frontend** with `Svelte 5` and `Inertia.js` for SPA-like experience
+- **Type-safe routing** with `NaraRouter` supporting middleware arrays
+- **Application kernel** (`NaraApp`) with graceful shutdown and lifecycle management
+- **TypeScript-first** architecture with strict type safety
+
+### Security
+- **Security headers middleware** (HSTS, X-Frame-Options, CSP, Permissions-Policy)
+- **CSRF protection** using Double Submit Cookie pattern
+- **Rate limiting** with sliding window algorithm (configurable per-route)
+- **Login throttling** to prevent brute force attacks
+- **Session-based authentication** with secure cookie handling
+
+### Database & ORM
+- **BetterSQLite3** with WAL mode (19.9x faster writes)
+- **Knex.js** query builder for migrations and complex queries
+- **Native SQLite** access for high-performance operations
+- **Standardized pagination** helper with metadata
+
+### Developer Experience
+- **21+ CLI commands** for scaffolding and management:
+  - `make:resource` - Generate controller, validator, routes, and pages
+  - `make:controller`, `make:middleware`, `make:service`, `make:validator`
+  - `make:migration`, `make:seeder`, `make:command`
+  - `db:migrate`, `db:rollback`, `db:fresh`, `db:seed`, `db:status`
+  - `doctor` - Project health check
+  - `lint`, `typecheck`, `test`, `generate-types`
+  - `backup`, `restore`, `clean-backup` - Database backup to S3
+- **Structured logging** with Pino (5x faster than Winston)
+  - Log rotation (daily files)
+  - Separate error logs
+  - Sensitive data redaction
+- **Hot reload** with Vite and Nodemon
+
+### Services
+- **Email support** with Nodemailer
+- **Google OAuth** integration
+- **Redis caching** support
+- **S3/Wasabi** file uploads with presigned URLs
+- **Squirrelly** template engine for server-side rendering
+
+### Error Handling
+- **Standardized HTTP error classes** (ValidationError, AuthError, NotFoundError, etc.)
+- **Global error handler** with development/production modes
+- **JSON response helpers** for consistent API responses
+
+### Frontend
+- **Svelte 5** with Inertia.js for seamless client-server state
+- **TailwindCSS** for utility-first styling
+- **Vite** for fast development and optimized builds
 
 ## Performance Benchmark
 
@@ -483,32 +522,66 @@ You can import from the project root without `./`:
 
 ## CLI Commands
 
-### Create Controller
-```bash
-node nara make:controller ControllerName
-```
-Creates a new controller in `app/controllers` with basic CRUD methods.
+Nara provides a powerful CLI with 21+ commands. Run `node nara help` to see all available commands.
 
-Example:
+### Scaffolding Commands
+
 ```bash
+# Create a complete resource (controller, validator, routes, optional pages)
+node nara make:resource Post
+node nara make:resource Post --api          # API-only (no Inertia pages)
+node nara make:resource Post --with-pages   # Include Svelte page skeletons
+
+# Individual generators
 node nara make:controller UserController
-```
-
-### Create Command
-```bash
-node nara make:command CommandName
-```
-Creates a new command in `commands` that can be scheduled with cron jobs.
-
-Example:
-```bash
+node nara make:middleware RoleMiddleware
+node nara make:service PaymentService
+node nara make:validator UserValidator
 node nara make:command SendDailyEmails
+node nara make:migration create_posts_table
+node nara make:seeder UsersSeeder
 ```
 
-Crontab example:
+### Database Commands
+
 ```bash
-# Run every day at midnight
+node nara db:migrate              # Run pending migrations
+node nara db:rollback             # Rollback last batch
+node nara db:fresh                # Drop all tables and re-migrate
+node nara db:seed                 # Run seeders
+node nara db:status               # Show migration status
+```
+
+### Development Commands
+
+```bash
+node nara doctor                  # Check project health and configuration
+node nara lint                    # Run linting
+node nara typecheck               # Run TypeScript type checking
+node nara test                    # Run tests
+node nara generate-types          # Generate TypeScript types from database
+```
+
+### Backup Commands
+
+```bash
+node nara backup                  # Backup database to S3 (encrypted)
+node nara restore                 # Restore latest backup
+node nara restore --key <key>     # Restore specific backup
+node nara clean-backup            # Remove old backups based on retention
+```
+
+### Crontab Examples
+
+```bash
+# Run command every day at midnight
 0 0 * * * cd /path/to/your/app/build && node commands/SendDailyEmails.js
+
+# Daily backup at 01:00
+0 1 * * * cd /path/to/app/build && node backup.js >> /var/log/nara-backup.log 2>&1
+
+# Weekly cleanup on Sunday at 02:00
+0 2 * * 0 cd /path/to/app/build && node clean-backup.js >> /var/log/nara-clean-backup.log 2>&1
 ```
 
 ## Tutorial: Building Your First App
