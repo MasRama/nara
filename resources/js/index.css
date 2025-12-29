@@ -86,4 +86,51 @@
   .dark .side-menu {
     border-color: theme('colors.gray.700');
   }
+
+  /* Theme-aware utility classes */
+  .btn-accent {
+    @apply bg-accent-600 text-white px-4 py-2 rounded-lg hover:bg-accent-700 
+           transition-all duration-300 active:bg-accent-800 
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2;
+  }
+
+  .btn-danger {
+    @apply bg-danger-600 text-white px-4 py-2 rounded-lg hover:bg-danger-700 
+           transition-all duration-300 active:bg-danger-800 
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-danger-500 focus:ring-offset-2;
+  }
+
+  .btn-warning {
+    @apply bg-warning-600 text-white px-4 py-2 rounded-lg hover:bg-warning-700 
+           transition-all duration-300 active:bg-warning-800 
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-warning-500 focus:ring-offset-2;
+  }
+
+  .btn-info {
+    @apply bg-info-600 text-white px-4 py-2 rounded-lg hover:bg-info-700 
+           transition-all duration-300 active:bg-info-800 
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-info-500 focus:ring-offset-2;
+  }
+
+  /* Surface backgrounds */
+  .bg-surface {
+    @apply bg-surface-light dark:bg-surface-dark;
+  }
+
+  .bg-surface-card {
+    @apply bg-surface-card-light dark:bg-surface-card-dark;
+  }
+
+  /* Gradient text utilities */
+  .gradient-text-accent {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-accent-600 to-accent-400;
+  }
+
+  .gradient-text-info {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-info-600 to-info-400;
+  }
 }

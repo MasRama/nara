@@ -56,17 +56,17 @@
 <div class="min-h-screen bg-white dark:bg-black text-slate-900 dark:text-slate-100 flex overflow-hidden">
   
   <!-- Right Panel: Visual (Swapped for Register) -->
-  <div class="hidden lg:flex w-1/2 bg-[#0f0f0f] relative overflow-hidden items-center justify-center order-2 lg:order-1">
+  <div class="hidden lg:flex w-1/2 bg-surface-card-dark relative overflow-hidden items-center justify-center order-2 lg:order-1">
       <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30"></div>
       
       <!-- Abstract blobs -->
-      <div class="absolute top-0 left-0 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-[120px] -translate-y-1/2 -translate-x-1/2"></div>
-      <div class="absolute bottom-0 right-0 w-[600px] h-[600px] bg-emerald-500/10 rounded-full blur-[120px] translate-y-1/2 translate-x-1/2"></div>
+      <div class="absolute top-0 left-0 w-[600px] h-[600px] bg-info-500/20 rounded-full blur-[120px] -translate-y-1/2 -translate-x-1/2"></div>
+      <div class="absolute bottom-0 right-0 w-[600px] h-[600px] bg-primary-500/10 rounded-full blur-[120px] translate-y-1/2 translate-x-1/2"></div>
 
       <div class="relative z-10 max-w-lg text-center p-12">
           <h2 class="text-6xl font-bold tracking-tighter text-white mb-6 leading-[0.9]">
             JOIN THE <br/> 
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-300">REVOLUTION</span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-info-400 to-accent-300">REVOLUTION</span>
           </h2>
           <p class="text-xl text-slate-400 font-serif italic">
             "Build what others can't. Ship when others don't."
@@ -80,10 +80,10 @@
                <div class="w-3 h-3 rounded-full bg-slate-700"></div>
              </div>
              <div class="space-y-2">
-                <div><span class="text-emerald-400">$</span> init user --new</div>
+                <div><span class="text-primary-400">$</span> init user --new</div>
                 <div class="text-slate-500">Creating workspace...</div>
                 <div class="text-slate-500">Allocating resources...</div>
-                <div><span class="text-blue-400">✓</span> User created successfully.</div>
+                <div><span class="text-info-400">✓</span> User created successfully.</div>
              </div>
           </div>
       </div>
@@ -135,14 +135,14 @@
               <div class="space-y-1">
                   <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Full Name</label>
                   <input bind:value={form.name} required type="text" name="name" id="name" 
-                      class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
+                      class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
                       placeholder="Rama Ren" >
               </div>
 
               <div class="space-y-1">
                   <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email</label>
                   <input bind:value={form.email} required type="text" name="email" id="email" 
-                      class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
+                      class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
                       placeholder="nara@example.com" >
               </div> 
 
@@ -151,18 +151,18 @@
                       <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
                       <input bind:value={form.password} required type="password" name="password" id="password" 
                           placeholder="••••••••" 
-                          class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
+                          class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
                   </div>
                   <div class="space-y-1">
                       <label for="confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Confirm</label>
                       <input bind:value={form.password_confirmation} type="password" name="confirm-password" id="confirm-password" 
                           placeholder="••••••••" 
-                          class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
+                          class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
                   </div>
               </div>
 
               <div class="flex justify-end">
-                <button type="button" on:click="{generatePassword}" class="text-xs font-mono text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+                <button type="button" on:click="{generatePassword}" class="text-xs font-mono text-info-400 hover:text-info-300 transition-colors flex items-center gap-1">
                     <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19H12" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     GENERATE SECURE PASSWORD
                 </button>
@@ -171,11 +171,11 @@
               <button type="submit" 
                   class="group w-full relative overflow-hidden rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-lg py-4 transition-transform active:scale-[0.98] mt-4">
                   <span class="relative z-10">CREATE ACCOUNT</span>
-                  <div class="absolute inset-0 bg-blue-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
+                  <div class="absolute inset-0 bg-info-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
               </button>
 
               <p class="text-center text-slate-500 dark:text-slate-400 mt-6">
-                  Already have an account? <a href="/login" use:inertia class="font-bold text-blue-500 dark:text-blue-400 hover:underline">Login</a>
+                  Already have an account? <a href="/login" use:inertia class="font-bold text-info-500 dark:text-info-400 hover:underline">Login</a>
               </p>
           </form>
       </div>

@@ -80,12 +80,12 @@
 
 <Header group="profile" />
 
-<div class="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-emerald-400 selection:text-black">
+<div class="min-h-screen bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-primary-400 selection:text-black">
   
   <!-- Background Effects -->
   <div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl -mr-64 -mt-64"></div>
-    <div class="absolute bottom-0 left-0 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-3xl -ml-96 -mb-96"></div>
+    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-info-500/5 rounded-full blur-3xl -mr-64 -mt-64"></div>
+    <div class="absolute bottom-0 left-0 w-[800px] h-[800px] bg-primary-500/5 rounded-full blur-3xl -ml-96 -mb-96"></div>
   </div>
 
   <section class="relative px-6 sm:px-12 lg:px-24 pt-24 pb-20">
@@ -96,29 +96,29 @@
         
         <!-- Left: Giant Profile Card -->
         <div class="lg:col-span-5" in:fly={{ x: -50, duration: 800 }}>
-          <p class="text-xs font-bold uppercase tracking-[0.3em] text-cyan-600 dark:text-cyan-400 mb-6">
+          <p class="text-xs font-bold uppercase tracking-[0.3em] text-info-600 dark:text-info-400 mb-6">
             Account
           </p>
           <h1 class="text-[8vw] sm:text-[5vw] lg:text-[3.5vw] leading-[0.9] font-bold tracking-tighter mb-8">
             YOUR
-            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-emerald-400">
+            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-info-500 to-primary-400">
               PROFILE
             </span>
           </h1>
 
           <!-- Profile Card -->
           <div class="relative">
-            <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 rounded-3xl blur-xl"></div>
-            <div class="relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 rounded-3xl p-8 overflow-hidden">
+            <div class="absolute -inset-1 bg-gradient-to-r from-info-500/20 to-primary-500/20 rounded-3xl blur-xl"></div>
+            <div class="relative bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 rounded-3xl p-8 overflow-hidden">
               <!-- Decorative -->
-              <div class="absolute top-0 right-0 p-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+              <div class="absolute top-0 right-0 p-32 bg-info-500/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
               
               <div class="relative z-10">
                 <!-- Avatar Section -->
                 <div class="flex items-center gap-6 mb-8">
                   <div class="relative group">
-                    <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 p-0.5">
-                      <div class="w-full h-full rounded-2xl bg-slate-100 dark:bg-[#0f0f0f] overflow-hidden flex items-center justify-center">
+                    <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-info-500 to-primary-500 p-0.5">
+                      <div class="w-full h-full rounded-2xl bg-surface-card-light dark:bg-surface-card-dark overflow-hidden flex items-center justify-center">
                         {#if previewUrl}
                           <img
                             src={previewUrl}
@@ -126,7 +126,7 @@
                             class="w-full h-full object-cover"
                           />
                         {:else}
-                          <span class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-cyan-500 to-emerald-500">
+                          <span class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-info-500 to-primary-500">
                             {user.name.charAt(0).toUpperCase()}
                           </span>
                         {/if}
@@ -157,13 +157,13 @@
                 <!-- Status Badges -->
                 <div class="flex flex-wrap gap-2 mb-6">
                   <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.is_admin 
-                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' 
+                    ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400 border border-accent-500/20' 
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}">
                     {user.is_admin ? 'Administrator' : 'Standard User'}
                   </span>
                   <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.is_verified 
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
-                    : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'}">
+                    ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20' 
+                    : 'bg-warning-500/10 text-warning-600 dark:text-warning-400 border border-warning-500/20'}">
                     {user.is_verified ? 'Verified' : 'Unverified'}
                   </span>
                 </div>
@@ -184,8 +184,8 @@
           <!-- Security Note -->
           <div class="mt-6 p-4 border border-slate-200 dark:border-white/5 rounded-2xl">
             <div class="flex items-start gap-3">
-              <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <div class="w-8 h-8 rounded-full bg-primary-500/10 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-primary-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </div>
@@ -201,14 +201,14 @@
         <div class="lg:col-span-7 space-y-8" in:fly={{ x: 50, duration: 800, delay: 200 }}>
           
           <!-- Personal Info Form -->
-          <div class="relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-cyan-500/30 rounded-3xl p-8 transition-colors duration-500">
+          <div class="relative bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-info-500/30 rounded-3xl p-8 transition-colors duration-500">
             <div class="flex items-center justify-between mb-8">
               <div>
-                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">Settings</span>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-info-600 dark:text-info-400">Settings</span>
                 <h3 class="text-xl font-bold tracking-tight mt-1">Personal Information</h3>
               </div>
-              <div class="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
-                <svg class="w-5 h-5 text-cyan-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <div class="w-10 h-10 rounded-full bg-info-500/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-info-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
                   <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -225,7 +225,7 @@
                     bind:value={user.name}
                     type="text"
                     id="name"
-                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
                     placeholder="Your full name"
                   />
                 </div>
@@ -238,7 +238,7 @@
                     bind:value={user.phone}
                     type="text"
                     id="phone"
-                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
                     placeholder="+62 xxx xxxx xxxx"
                   />
                 </div>
@@ -252,7 +252,7 @@
                   bind:value={user.email}
                   type="email"
                   id="email"
-                  class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                  class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-info-500 focus:ring-2 focus:ring-info-500/20 outline-none transition-all"
                   placeholder="you@example.com"
                 />
               </div>
@@ -274,21 +274,21 @@
                       Save Changes
                     {/if}
                   </span>
-                  <div class="absolute inset-0 bg-cyan-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                  <div class="absolute inset-0 bg-info-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                 </button>
               </div>
             </form>
           </div>
 
           <!-- Password Form -->
-          <div class="relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-orange-500/30 rounded-3xl p-8 transition-colors duration-500">
+          <div class="relative bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-warning-500/30 rounded-3xl p-8 transition-colors duration-500">
             <div class="flex items-center justify-between mb-8">
               <div>
-                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-600 dark:text-orange-400">Security</span>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning-600 dark:text-warning-400">Security</span>
                 <h3 class="text-xl font-bold tracking-tight mt-1">Change Password</h3>
               </div>
-              <div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <div class="w-10 h-10 rounded-full bg-warning-500/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-warning-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -304,7 +304,7 @@
                   bind:value={current_password}
                   type="password"
                   id="current_password"
-                  class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                  class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-warning-500 focus:ring-2 focus:ring-warning-500/20 outline-none transition-all"
                   placeholder="••••••••"
                 />
               </div>
@@ -318,7 +318,7 @@
                     bind:value={new_password}
                     type="password"
                     id="new_password"
-                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-warning-500 focus:ring-2 focus:ring-warning-500/20 outline-none transition-all"
                     placeholder="••••••••"
                   />
                 </div>
@@ -331,7 +331,7 @@
                     bind:value={confirm_password}
                     type="password"
                     id="confirm_password"
-                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-warning-500 focus:ring-2 focus:ring-warning-500/20 outline-none transition-all"
                     placeholder="••••••••"
                   />
                 </div>
@@ -341,7 +341,7 @@
                 <button
                   type="submit"
                   disabled={isLoading}
-                  class="px-6 py-3 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-orange-500 hover:text-orange-500 transition-colors disabled:opacity-50"
+                  class="px-6 py-3 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-warning-500 hover:text-warning-500 transition-colors disabled:opacity-50"
                 >
                   {#if isLoading}
                     <span class="flex items-center gap-2">

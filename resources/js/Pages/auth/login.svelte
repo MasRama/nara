@@ -82,7 +82,7 @@
               <div class="space-y-1">
                   <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email</label>
                   <input bind:value={form.email} required type="text" name="email" id="email" 
-                      class="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
+                      class="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
                       placeholder="nara@example.com" >
               </div>
               
@@ -90,21 +90,21 @@
                   <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
                   <input bind:value={form.password} required type="password" name="password" id="password" 
                       placeholder="••••••••" 
-                      class="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
+                      class="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
               </div>  
 
               <div class="flex items-center justify-end">
-                  <a href="/forgot-password" use:inertia class="text-sm font-medium text-slate-500 hover:text-emerald-500 transition-colors">Forgot password?</a>
+                  <a href="/forgot-password" use:inertia class="text-sm font-medium text-slate-500 hover:text-primary-500 transition-colors">Forgot password?</a>
               </div>
 
               <button type="submit" 
                   class="group w-full relative overflow-hidden rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-lg py-4 transition-transform active:scale-[0.98]">
                   <span class="relative z-10">LOGIN</span>
-                  <div class="absolute inset-0 bg-emerald-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
+                  <div class="absolute inset-0 bg-primary-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
               </button>
 
               <p class="text-center text-slate-500 dark:text-slate-400 mt-6">
-                  Don't have an account? <a href="/register" use:inertia class="font-bold text-emerald-600 dark:text-emerald-400 hover:underline">Sign up</a>
+                  Don't have an account? <a href="/register" use:inertia class="font-bold text-primary-600 dark:text-primary-400 hover:underline">Sign up</a>
               </p>
           </form>
       </div>
@@ -115,17 +115,17 @@
   </div>
 
   <!-- Right Panel: Visual -->
-  <div class="hidden lg:flex w-1/2 bg-[#0f0f0f] relative overflow-hidden items-center justify-center">
+  <div class="hidden lg:flex w-1/2 bg-surface-card-dark relative overflow-hidden items-center justify-center">
       <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-30"></div>
       
       <!-- Abstract blobs -->
-      <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-emerald-500/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-      <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
+      <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-primary-500/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
+      <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent-500/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
 
       <div class="relative z-10 max-w-lg text-center p-12">
           <h2 class="text-6xl font-bold tracking-tighter text-white mb-6 leading-[0.9]">
             PURE <br/> 
-            <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">VELOCITY</span>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-info-300">VELOCITY</span>
           </h2>
           <p class="text-xl text-slate-400 font-serif italic">
             "The only thing faster than Nara is the thought of using it."

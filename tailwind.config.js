@@ -11,6 +11,7 @@ export default {
         serif: ['Playfair Display', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
       },
       colors: {
+        // Primary brand color (Emerald/Green - main theme)
         primary: {
           50: '#ecfdf5',
           100: '#d1fae5',
@@ -24,6 +25,7 @@ export default {
           900: '#064e3b',
           950: '#022c22',
         },
+        // Secondary accent color (Amber/Gold)
         secondary: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -36,7 +38,86 @@ export default {
           800: '#92400e',
           900: '#78350f',
           950: '#451a03',
-        }
+        },
+        // Accent color (Purple - for secondary actions, users page)
+        accent: {
+          50: '#faf5ff',
+          100: '#f3e8ff',
+          200: '#e9d5ff',
+          300: '#d8b4fe',
+          400: '#c084fc',
+          500: '#a855f7',
+          600: '#9333ea',
+          700: '#7c3aed',
+          800: '#6b21a8',
+          900: '#581c87',
+          950: '#3b0764',
+        },
+        // Info color (Cyan - for profile, info states)
+        info: {
+          50: '#ecfeff',
+          100: '#cffafe',
+          200: '#a5f3fc',
+          300: '#67e8f9',
+          400: '#22d3ee',
+          500: '#06b6d4',
+          600: '#0891b2',
+          700: '#0e7490',
+          800: '#155e75',
+          900: '#164e63',
+          950: '#083344',
+        },
+        // Warning color (Orange - for warnings, pending states)
+        warning: {
+          50: '#fff7ed',
+          100: '#ffedd5',
+          200: '#fed7aa',
+          300: '#fdba74',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
+          800: '#9a3412',
+          900: '#7c2d12',
+          950: '#431407',
+        },
+        // Danger color (Red - for errors, delete actions)
+        danger: {
+          50: '#fef2f2',
+          100: '#fee2e2',
+          200: '#fecaca',
+          300: '#fca5a5',
+          400: '#f87171',
+          500: '#ef4444',
+          600: '#dc2626',
+          700: '#b91c1c',
+          800: '#991b1b',
+          900: '#7f1d1d',
+          950: '#450a0a',
+        },
+        // Success color (alias to primary for consistency)
+        success: {
+          50: '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
+          950: '#022c22',
+        },
+        // Surface colors for backgrounds
+        surface: {
+          light: '#f8f8f8',
+          dark: '#0a0a0a',
+          card: {
+            light: '#f1f5f9',  // slate-100
+            dark: '#0f0f0f',
+          }
+        },
       },
       boxShadow: {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
@@ -47,9 +128,9 @@ export default {
             maxWidth: 'none',
             color: 'inherit',
             a: {
-              color: '#10b981',
+              color: 'var(--color-primary-500, #10b981)',
               '&:hover': {
-                color: '#059669',
+                color: 'var(--color-primary-600, #059669)',
               },
             },
             h1: {
