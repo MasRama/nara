@@ -6,8 +6,8 @@
  * - Reset password page and processing
  * - Change password for authenticated users
  */
-import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
+import { User, PasswordResetToken } from "@models";
 import axios from "axios";
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
@@ -41,10 +41,7 @@ class PasswordController extends BaseController {
   public async resetPasswordPage(request: NaraRequest, response: NaraResponse) {
     const id = request.params.id;
 
-    const token = await DB.from("password_reset_tokens")
-      .where("token", id)
-      .where("expires_at", ">", new Date())
-      .first();
+    const token = await PasswordResetToken.findValidToken(id);
 
     if (!token) {
       return response.status(404).send("Link tidak valid atau sudah kadaluarsa");
@@ -59,30 +56,22 @@ class PasswordController extends BaseController {
   public async resetPassword(request: NaraRequest, response: NaraResponse) {
     const data = await this.getBody(request, ResetPasswordSchema);
 
-    const token = await DB.from("password_reset_tokens")
-      .where("token", data.id)
-      .where("expires_at", ">", new Date())
-      .first();
+    const token = await PasswordResetToken.findValidToken(data.id);
 
     if (!token) {
       return jsonNotFound(response, "Link tidak valid atau sudah kadaluarsa");
     }
 
-    const user = await DB.from("users")
-      .where("email", token.email)
-      .first();
+    const user = await User.findByEmail(token.email);
 
-    await DB.from("users")
-      .where("id", user.id)
-      .update({ 
-        password: await Authenticate.hash(data.password),
-        updated_at: dayjs().valueOf(),
-      });
+    if (!user) {
+      return jsonNotFound(response, "User tidak ditemukan");
+    }
+
+    await User.updatePassword(user.id, await Authenticate.hash(data.password));
 
     // Delete the used token
-    await DB.from("password_reset_tokens")
-      .where("token", data.id)
-      .delete();
+    await PasswordResetToken.deleteByToken(data.id);
 
     return Authenticate.process(user, request, response);
   }
@@ -93,13 +82,7 @@ class PasswordController extends BaseController {
   public async sendResetPassword(request: NaraRequest, response: NaraResponse) {
     const data = await this.getBody(request, ForgotPasswordSchema);
 
-    let user;
-
-    if (data.email) {
-      user = await DB.from("users").where("email", data.email).first();
-    } else if (data.phone) {
-      user = await DB.from("users").where("phone", data.phone).first();
-    }
+    const user = await User.findByEmailOrPhone(data.email, data.phone);
 
     if (!user) {
       return jsonNotFound(response, "Email atau nomor telepon tidak terdaftar");
@@ -108,7 +91,7 @@ class PasswordController extends BaseController {
     const token = randomUUID();
 
     // Store token in database with 24-hour expiration
-    await DB.from("password_reset_tokens").insert({
+    await PasswordResetToken.createToken({
       email: user.email,
       token: token,
       expires_at: dayjs().add(AUTH.TOKEN_EXPIRY_HOURS, 'hours').toDate()
@@ -161,9 +144,11 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
     this.requireAuth(request);
     const data = await this.getBody(request, ChangePasswordSchema);
 
-    const user = await DB.from("users")
-      .where("id", request.user.id)
-      .first();
+    const user = await User.findById(request.user.id);
+
+    if (!user) {
+      return jsonError(response, "User tidak ditemukan", 404, "USER_NOT_FOUND");
+    }
 
     const password_match = await Authenticate.compare(
       data.current_password,
@@ -171,12 +156,7 @@ Abaikan jika bukan Anda. Link kadaluarsa dalam 24 jam.`,
     );
 
     if (password_match) {
-      await DB.from("users")
-        .where("id", request.user.id)
-        .update({
-          password: await Authenticate.hash(data.new_password),
-          updated_at: dayjs().valueOf(),
-        });
+      await User.updatePassword(request.user.id, await Authenticate.hash(data.new_password));
 
       Logger.logAuth('password_changed', {
         userId: request.user.id,

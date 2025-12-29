@@ -1,6 +1,6 @@
 import type { NaraRequest, NaraResponse } from "@core";
 import { BaseController } from "@core";
-import DB from "@services/DB";
+import { Session, User } from "@models";
 
 class HomeController extends BaseController {
     
@@ -8,13 +8,10 @@ class HomeController extends BaseController {
         let user: any = {};
 
         if (request.cookies.auth_id) {
-            const session = await DB.from("sessions").where("id", request.cookies.auth_id).first();
+            const session = await Session.findById(request.cookies.auth_id);
 
             if (session) {
-                user = await DB.from("users")
-                    .where("id", session.user_id)
-                    .select(["id","name","email","phone","avatar","is_admin","is_verified"])
-                    .first();
+                user = await User.findById(session.user_id);
             }
         }
 

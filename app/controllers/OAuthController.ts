@@ -5,11 +5,10 @@
  * - Google OAuth redirect
  * - Google OAuth callback
  */
-import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
+import { User } from "@models";
 import { redirectParamsURL } from "@services/GoogleAuth";
 import axios from "axios";
-import dayjs from "dayjs";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
 import { BaseController } from "@core"; 
@@ -55,22 +54,18 @@ class OAuthController extends BaseController {
 
     email = email.toLowerCase();
 
-    const check = await DB.from("users").where("email", email).first();
+    const existingUser = await User.findByEmail(email);
 
-    if (check) {
-      return Authenticate.process(check, request, response);
+    if (existingUser) {
+      return Authenticate.process(existingUser, request, response);
     } else {
-      const user = {
+      const user = await User.create({
         id: randomUUID(),
         email: email,
         password: await Authenticate.hash(email),
         name: name,
         is_verified: verified_email,
-        created_at: dayjs().valueOf(),
-        updated_at: dayjs().valueOf(),
-      };
-
-      await DB.table("users").insert(user);
+      });
 
       Logger.logAuth('google_registration_success', {
         userId: user.id,

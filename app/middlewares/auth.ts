@@ -1,4 +1,4 @@
-import DB from "@services/DB";
+import { Session } from "@models";
 import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 
 /**
@@ -17,19 +17,7 @@ export default async (request: Request, response: Response) => {
    // Single query with JOIN - eliminates N+1 query problem
    // Previously: 2 queries (session + user) per authenticated request
    // Now: 1 query with JOIN
-   const user = await DB.from("sessions")
-      .join("users", "sessions.user_id", "users.id")
-      .where("sessions.id", authId)
-      .select([
-         "users.id",
-         "users.name",
-         "users.email",
-         "users.phone",
-         "users.avatar",
-         "users.is_admin",
-         "users.is_verified"
-      ])
-      .first();
+   const user = await Session.getUserBySessionId(authId);
 
    if (!user) {
       // Session not found or user deleted - clear cookie and redirect

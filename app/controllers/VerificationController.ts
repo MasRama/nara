@@ -5,7 +5,7 @@
  * - Send verification email
  * - Verify email token
  */
-import DB from "@services/DB";
+import { User, EmailVerificationToken } from "@models";
 import dayjs from "dayjs";
 import Mailer from "@services/Mailer";
 import Logger from "@services/Logger";
@@ -24,12 +24,10 @@ class VerificationController extends BaseController {
     const token = randomUUID();
 
     // Delete any existing verification tokens for this user
-    await DB.from("email_verification_tokens")
-      .where("user_id", request.user.id)
-      .delete();
+    await EmailVerificationToken.deleteByUserId(request.user.id);
 
     // Create new verification token
-    await DB.from("email_verification_tokens").insert({
+    await EmailVerificationToken.createToken({
       user_id: request.user.id,
       token: token,
       expires_at: dayjs().add(AUTH.TOKEN_EXPIRY_HOURS, 'hours').toDate()
@@ -61,23 +59,13 @@ Link ini akan kadaluarsa dalam 24 jam.`,
 
     const { id } = request.params;
 
-    const verificationToken = await DB.from("email_verification_tokens")
-      .where({
-        user_id: request.user.id,
-        token: id
-      })
-      .where("expires_at", ">", new Date())
-      .first();
+    const verificationToken = await EmailVerificationToken.findValidToken(request.user.id, id);
 
     if (verificationToken) {
-      await DB.from("users")
-        .where("id", request.user.id)
-        .update({ is_verified: true });
+      await User.verifyEmail(request.user.id);
 
       // Delete the used token
-      await DB.from("email_verification_tokens")
-        .where("id", verificationToken.id)
-        .delete();
+      await EmailVerificationToken.delete(verificationToken.id);
     }
 
     return response.redirect("/dashboard?verified=true");

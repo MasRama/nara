@@ -4,7 +4,7 @@ import { BaseController, jsonError, jsonServerError, jsonSuccess } from "@core";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";  
-import DB from "@services/DB";
+import { Asset, User } from "@models";
 import Logger from "@services/Logger";
 
 
@@ -72,7 +72,7 @@ class AssetController extends BaseController {
                             const publicUrl = `/public/uploads/avatars/${fileName}`;
 
                             // Save to assets table with local file reference
-                            const result = {
+                            await Asset.create({
                                 id,
                                 type: 'image',
                                 url: publicUrl,
@@ -80,19 +80,10 @@ class AssetController extends BaseController {
                                 name: fileName,
                                 size: processedBuffer.length,
                                 user_id: userId,
-                                local_path: localPath,
-                                created_at: Date.now(),
-                                updated_at: Date.now()
-                            };
-                            await DB.from("assets").insert(result);
+                            });
 
                             // Update user avatar in users table
-                            await DB.from("users")
-                                .where("id", userId)
-                                .update({
-                                    avatar: publicUrl,
-                                    updated_at: Date.now()
-                                });
+                            await User.updateAvatar(userId, publicUrl);
 
                             // Return success response with public URL
                             jsonSuccess(response, 'Avatar berhasil diupload', { url: publicUrl });

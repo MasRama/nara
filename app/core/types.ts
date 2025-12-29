@@ -12,10 +12,10 @@ import type { Request as HyperRequest, Response as HyperResponse, MiddlewareNext
  */
 export interface User {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
-  phone?: string;
-  avatar?: string;
+  phone: string | null;
+  avatar: string | null;
   is_admin: boolean;
   is_verified: boolean;
   created_at?: number;

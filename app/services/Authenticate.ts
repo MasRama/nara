@@ -4,7 +4,7 @@
  * session management, and login/logout functionality.
  */
 
-import DB from "@services/DB"; 
+import { Session } from "@models"; 
 import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from "crypto";
 
@@ -84,10 +84,10 @@ class Autenticate {
    async process(user: any, request: Request, response: Response) {
       const token = randomUUID();
 
-      await DB.table("sessions").insert({
+      await Session.createSession({
          id: token,
          user_id: user.id,
-         user_agent: request.headers["user-agent"],
+         user_agent: request.headers["user-agent"] || null,
       });
 
       // Set secure cookie with proper security flags
@@ -110,7 +110,7 @@ class Autenticate {
     * 3. Redirects to the login page
     */
    async logout(request: Request, response: Response) {
-      await DB.from("sessions").where("id", request.cookies[SESSION_COOKIE_NAME]).delete();
+      await Session.delete(request.cookies[SESSION_COOKIE_NAME]);
 
       // Clear cookie with same options to ensure proper deletion
       response

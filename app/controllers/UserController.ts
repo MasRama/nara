@@ -6,10 +6,10 @@
  * - User CRUD operations (admin)
  * - Profile management (authenticated user)
  */
-import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
+import { User } from "@models";
+import DB from "@services/DB";
 import { paginate, parsePaginationQuery } from "@services/Paginator";
-import dayjs from "dayjs";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
 import { 
@@ -114,22 +114,16 @@ class UserController extends BaseController {
     this.requireAdmin(request);
     const data = await this.getBody(request, CreateUserSchema);
 
-    const now = dayjs().valueOf();
-
-    const user = {
-      id: randomUUID(),
-      name: data.name,
-      email: data.email,
-      phone: data.phone || null,
-      is_admin: data.is_admin,
-      is_verified: data.is_verified,
-      password: await Authenticate.hash(data.password || data.email),
-      created_at: now,
-      updated_at: now,
-    };
-
     try {
-      await DB.table("users").insert(user);
+      const user = await User.create({
+        id: randomUUID(),
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        is_admin: data.is_admin,
+        is_verified: data.is_verified,
+        password: await Authenticate.hash(data.password || data.email),
+      });
       return jsonCreated(response, "User created", { user });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -157,11 +151,8 @@ class UserController extends BaseController {
     if (data.is_verified !== undefined) payload.is_verified = data.is_verified;
     if (data.password) payload.password = await Authenticate.hash(data.password);
 
-    payload.updated_at = dayjs().valueOf();
-
     try {
-      await DB.from("users").where("id", id).update(payload);
-      const user = await DB.from("users").where("id", id).first();
+      const user = await User.update(id, payload);
       return jsonSuccess(response, "User berhasil diupdate", { user });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -179,9 +170,7 @@ class UserController extends BaseController {
     this.requireAdmin(request);
     const data = await this.getBody(request, DeleteUsersSchema);
 
-    const deleted = await DB.from("users")
-      .whereIn("id", data.ids)
-      .delete();
+    const deleted = await User.deleteMany(data.ids);
 
     Logger.warn('Users deleted by admin', {
       adminId: request.user.id,
@@ -207,11 +196,10 @@ class UserController extends BaseController {
     this.requireAuth(request);
     const data = await this.getBody(request, ChangeProfileSchema);
 
-    await DB.from("users").where("id", request.user.id).update({
+    await User.update(request.user.id, {
       name: data.name,
       email: data.email,
       phone: data.phone,
-      updated_at: dayjs().valueOf(),
     });
 
     return jsonSuccess(response, "Profil berhasil diupdate");

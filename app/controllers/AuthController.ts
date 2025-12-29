@@ -11,10 +11,9 @@
  * - OAuthController: Google OAuth
  * - VerificationController: Email verification
  */
-import DB from "@services/DB";
 import Authenticate from "@services/Authenticate";
+import { User } from "@models";
 import LoginThrottle from "@services/LoginThrottle";
-import dayjs from "dayjs";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
 import { BaseController } from "@core"; 
@@ -73,15 +72,7 @@ class AuthController extends BaseController {
       userAgent: request.headers['user-agent']
     });
 
-    let user;
-
-    if (data.email) {
-      user = await DB.from("users")
-        .where("email", data.email)
-        .first();
-    } else if (data.phone) {
-      user = await DB.from("users").where("phone", data.phone).first();
-    }
+    const user = await User.findByEmailOrPhone(data.email, data.phone);
 
     if (!user) {
       const throttleResult = LoginThrottle.recordFailedAttempt(identifier, ip);
@@ -150,17 +141,13 @@ class AuthController extends BaseController {
     const id = randomUUID();
 
     try {
-      await DB.table("users").insert({
+      const user = await User.create({
         id: id,
         name: data.name,
         email: data.email,
-        phone: data.phone,
+        phone: data.phone || null,
         password: await Authenticate.hash(data.password),
-        created_at: dayjs().valueOf(),
-        updated_at: dayjs().valueOf(),
       });
-
-      const user = await DB.from("users").where("id", id).first();
 
       Logger.logAuth('registration_success', {
         userId: user.id,
