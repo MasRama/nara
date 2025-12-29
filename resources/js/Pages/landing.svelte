@@ -22,7 +22,7 @@
 
 <svelte:window bind:scrollY bind:innerHeight />
 
-<div class="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-emerald-400 selection:text-black">
+<div class="min-h-screen bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-primary-400 selection:text-black">
   
   <!-- Floating Navigation -->
   <nav 
@@ -56,7 +56,7 @@
       <div in:fly={{ y: 50, duration: 1000, delay: 200 }} class="flex flex-col gap-2">
         <h1 class="text-[13vw] leading-[0.8] font-bold tracking-tighter -ml-[0.05em]">
           PURE
-          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-300 dark:from-emerald-400 dark:to-teal-300">
+          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-primary-300 dark:from-primary-400 dark:to-info-300">
             SPEED
           </span>
         </h1>
@@ -72,7 +72,7 @@
           <div class="flex items-center gap-4" in:fly={{ y: 20, duration: 1000, delay: 800 }}>
             <span class="text-xs uppercase tracking-widest opacity-50">Benchmarks</span>
             <div class="h-px w-12 bg-current opacity-20"></div>
-            <span class="font-mono text-emerald-600 dark:text-emerald-400">258k req/s</span>
+            <span class="font-mono text-primary-600 dark:text-primary-400">258k req/s</span>
           </div>
           
           <div in:fly={{ y: 20, duration: 1000, delay: 1000 }}>
@@ -83,7 +83,7 @@
                 class="group relative inline-flex items-center justify-center px-8 py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-black rounded-full overflow-hidden transition-transform hover:scale-105 active:scale-95"
               >
                 <span class="relative z-10 font-bold tracking-wide">START BUILDING</span>
-                <div class="absolute inset-0 bg-emerald-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
+                <div class="absolute inset-0 bg-primary-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
               </a>
             {/if}
           </div>
@@ -100,11 +100,11 @@
   </header>
 
   <!-- Narrative Section -->
-  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-white dark:bg-[#0f0f0f]">
+  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-white dark:bg-surface-card-dark">
     <div class="max-w-6xl mx-auto">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-20">
         <div>
-          <span class="block text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 mb-8">The Manifesto</span>
+          <span class="block text-xs font-bold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-400 mb-8">The Manifesto</span>
           <h2 class="text-5xl sm:text-6xl font-bold tracking-tighter leading-none mb-12">
             Return to <br/>
             <span class="font-serif italic font-normal text-slate-400">Craftsmanship.</span>
@@ -126,7 +126,7 @@
   <section class="py-24 sm:py-32 border-y border-slate-200 dark:border-white/5 relative overflow-hidden">
     <div class="px-6 sm:px-12 lg:px-24 mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
        <div>
-         <span class="block text-xs font-bold uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 mb-4">The Powerhouse</span>
+         <span class="block text-xs font-bold uppercase tracking-[0.2em] text-primary-600 dark:text-primary-400 mb-4">The Powerhouse</span>
          <h3 class="text-5xl sm:text-7xl font-bold tracking-tighter text-slate-900 dark:text-white">
           ARSENAL
         </h3>
@@ -141,13 +141,13 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         
         <!-- Card 1: HyperExpress -->
-        <div class="group relative h-64 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-emerald-500/50 dark:hover:border-emerald-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-           <div class="absolute top-0 right-0 p-32 bg-emerald-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-64 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-primary-500/50 dark:hover:border-primary-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+           <div class="absolute top-0 right-0 p-32 bg-primary-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors duration-500"></div>
            
            <div class="relative z-10 flex justify-between items-start">
              <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
                <!-- Icon: Lightning -->
-               <svg class="w-6 h-6 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <svg class="w-6 h-6 text-primary-600 dark:text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke-linecap="round" stroke-linejoin="round"/>
                </svg>
              </div>
@@ -163,7 +163,7 @@
                The engine. Raw metal performance, zero compromise.
              </p>
              <div class="w-full h-1 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
-               <div class="h-full bg-emerald-500 w-[98%]"></div>
+               <div class="h-full bg-primary-500 w-[98%]"></div>
              </div>
              <div class="flex justify-between text-[9px] font-mono mt-2 opacity-60">
                 <span>BENCHMARK</span>
@@ -173,13 +173,13 @@
         </div>
 
         <!-- Card 2: Inertia -->
-        <div class="group relative h-64 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-purple-500/50 dark:hover:border-purple-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-           <div class="absolute top-0 right-0 p-32 bg-purple-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-purple-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-64 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-accent-500/50 dark:hover:border-accent-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+           <div class="absolute top-0 right-0 p-32 bg-accent-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-accent-500/10 transition-colors duration-500"></div>
 
            <div class="relative z-10 flex justify-between items-start">
              <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
                <!-- Icon: Layers -->
-               <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <svg class="w-6 h-6 text-accent-600 dark:text-accent-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 17L12 22L22 17" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M2 12L12 17L22 12" stroke-linecap="round" stroke-linejoin="round"/>
@@ -194,20 +194,20 @@
                The bridge. Monolith simplicity, SPA fluidity.
              </p>
              <div class="mt-4 flex gap-2">
-                <span class="text-[10px] border border-purple-500/20 text-purple-600 dark:text-purple-400 px-2 py-1 rounded">No API</span>
-                <span class="text-[10px] border border-purple-500/20 text-purple-600 dark:text-purple-400 px-2 py-1 rounded">Shared Data</span>
+                <span class="text-[10px] border border-accent-500/20 text-accent-600 dark:text-accent-400 px-2 py-1 rounded">No API</span>
+                <span class="text-[10px] border border-accent-500/20 text-accent-600 dark:text-accent-400 px-2 py-1 rounded">Shared Data</span>
              </div>
            </div>
         </div>
 
         <!-- Card 3: Svelte -->
-        <div class="group relative h-64 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-orange-500/50 dark:hover:border-orange-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-           <div class="absolute top-0 right-0 p-32 bg-orange-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-orange-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-64 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-warning-500/50 dark:hover:border-warning-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+           <div class="absolute top-0 right-0 p-32 bg-warning-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-warning-500/10 transition-colors duration-500"></div>
 
            <div class="relative z-10 flex justify-between items-start">
              <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
                <!-- Icon: Code -->
-               <svg class="w-6 h-6 text-orange-600 dark:text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <svg class="w-6 h-6 text-warning-600 dark:text-warning-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M16 18L22 12L16 6" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M8 6L2 12L8 18" stroke-linecap="round" stroke-linejoin="round"/>
                </svg>
@@ -222,11 +222,11 @@
              </p>
              <div class="mt-4 grid grid-cols-2 gap-2 text-[10px] font-mono opacity-60">
                 <div class="flex items-center gap-1">
-                    <div class="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-warning-500"></div>
                     <span>Reactive</span>
                 </div>
                 <div class="flex items-center gap-1">
-                    <div class="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-warning-500"></div>
                     <span>Tiny Bundle</span>
                 </div>
              </div>
@@ -234,13 +234,13 @@
         </div>
 
         <!-- Card 4: Knex -->
-        <div class="group relative h-64 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-red-500/50 dark:hover:border-red-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-           <div class="absolute top-0 right-0 p-32 bg-red-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-red-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-64 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-danger-500/50 dark:hover:border-danger-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+           <div class="absolute top-0 right-0 p-32 bg-danger-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-danger-500/10 transition-colors duration-500"></div>
 
            <div class="relative z-10 flex justify-between items-start">
              <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
                <!-- Icon: Database Cog -->
-               <svg class="w-6 h-6 text-red-600 dark:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <svg class="w-6 h-6 text-danger-600 dark:text-danger-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M21 12V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19H12" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M21 5H3" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M7 19V5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -264,13 +264,13 @@
         </div>
 
         <!-- Card 5: SQLite -->
-        <div class="group relative h-64 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-blue-500/50 dark:hover:border-blue-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-           <div class="absolute top-0 right-0 p-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-64 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-info-500/50 dark:hover:border-info-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+           <div class="absolute top-0 right-0 p-32 bg-info-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-info-500/10 transition-colors duration-500"></div>
 
            <div class="relative z-10 flex justify-between items-start">
              <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
                <!-- Icon: Storage -->
-               <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <svg class="w-6 h-6 text-info-600 dark:text-info-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H5C4.46957 17 3.96086 16.7893 3.58579 16.4142C3.21071 16.0391 3 15.5304 3 15M21 15V9C21 8.46957 20.7893 7.96086 20.4142 7.58579C20.0391 7.21071 19.5304 7 19 7H5C4.46957 7 3.96086 7.21071 3.58579 7.58579C3.21071 7.96086 3 8.46957 3 9V15M21 15C21 14.4696 20.7893 13.9609 20.4142 13.5858C20.0391 13.2107 19.5304 13 19 13H5C4.46957 13 3.96086 13.2107 3.58579 13.5858C3.21071 13.9609 3 14.4696 3 15" stroke-linecap="round" stroke-linejoin="round"/>
                </svg>
              </div>
@@ -283,7 +283,7 @@
                The vault. Zero latency, WAL mode enabled by default.
              </p>
              <div class="mt-4 flex items-center gap-2">
-                 <span class="text-[10px] font-mono bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded">WAL MODE</span>
+                 <span class="text-[10px] font-mono bg-info-500/10 text-info-600 dark:text-info-400 px-2 py-1 rounded">WAL MODE</span>
                  <span class="text-[10px] font-mono opacity-50">Local file</span>
              </div>
            </div>
@@ -322,7 +322,7 @@
 
 
   <!-- Section: The Complete Toolkit (Battery Pack) -->
-  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-white/5">
+  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-white dark:bg-surface-dark border-t border-slate-200 dark:border-white/5">
      <div class="mb-20">
         <h3 class="text-4xl sm:text-6xl font-bold tracking-tighter mb-6">
           BATTERIES INCLUDED.<br/>
@@ -392,7 +392,7 @@
   <!-- Giant Kinetic CTA & Footer -->
   <section class="relative bg-white dark:bg-black text-slate-900 dark:text-white overflow-hidden flex flex-col transition-colors duration-500">
      <!-- Background Effects -->
-     <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(16,185,129,0.15),_transparent_70%)]"></div>
+     <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(var(--color-primary-rgb,16,185,129),0.15),_transparent_70%)]"></div>
      
      <!-- Light Mode Grid -->
      <div class="absolute inset-0 opacity-20 dark:opacity-0 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
@@ -415,11 +415,11 @@
            <div class="flex flex-col sm:flex-row items-center gap-6">
               <a href="/docs" class="group relative px-10 py-5 bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-lg tracking-tight overflow-hidden rounded-full hover:scale-105 transition-transform duration-300">
                  <span class="relative z-10 group-hover:text-white transition-colors duration-300">START BUILDING</span>
-                 <div class="absolute inset-0 bg-emerald-600 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-bottom"></div>
+                 <div class="absolute inset-0 bg-primary-600 transform scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-bottom"></div>
               </a>
               
               <button type="button" class="flex items-center gap-3 px-6 py-4 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 backdrop-blur-sm hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-copy group/cmd" on:click={() => navigator.clipboard.writeText('npm create nara-app@latest')}>
-                 <span class="font-mono text-sm text-emerald-600 dark:text-emerald-400">$ npm create nara-app@latest</span>
+                 <span class="font-mono text-sm text-primary-600 dark:text-primary-400">$ npm create nara-app@latest</span>
                  <svg class="w-4 h-4 text-slate-400 dark:text-white/50 group-hover/cmd:text-slate-600 dark:group-hover/cmd:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 17.9291C8 17.9291 9.77123 18.061 11.0264 16.5985C12.2815 15.1361 11.2314 13.9142 11.2314 13.9142C11.2314 13.9142 10.1558 13.4544 11.2314 11.7275C12.3071 10.0007 14.1534 10.0007 14.1534 10.0007M8 17.9291C8 17.9291 6.57703 16.9234 6.57703 14.9234C6.57703 13.3308 7.37873 12.3925 8 11.9649M8 17.9291C8 18.8465 7.15197 19.3465 6.57703 19.3465C5.71453 19.3465 5 18.632 5 17.7695V6.23047C5 5.36797 5.71453 4.65345 6.57703 4.65345C7.15197 4.65345 8 5.15345 8 6.07085M8 6.07085V11.9649M8 6.07085C8 6.07085 9.77123 5.93895 11.0264 7.4014C12.2815 8.86386 11.2314 10.0858 11.2314 10.0858M14.1534 10.0007L16.2305 13.9142M14.1534 10.0007H19V6.23047C19 5.36797 18.2855 4.65345 17.423 4.65345H14.1534" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
            </div>

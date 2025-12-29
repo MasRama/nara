@@ -23,12 +23,12 @@
 
 <Header group="dashboard" />
 
-<div class="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-emerald-400 selection:text-black">
+<div class="min-h-screen bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-primary-400 selection:text-black">
   
   <!-- Background Effects -->
   <div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-3xl -mr-96 -mt-96"></div>
-    <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-3xl -ml-64 -mb-64"></div>
+    <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-primary-500/5 rounded-full blur-3xl -mr-96 -mt-96"></div>
+    <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-accent-500/5 rounded-full blur-3xl -ml-64 -mb-64"></div>
   </div>
 
   <!-- Hero Section -->
@@ -37,12 +37,12 @@
       
       <!-- Giant Welcome -->
       <div class="mb-16" in:fly={{ y: 50, duration: 800 }}>
-        <p class="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400 mb-6">
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-primary-600 dark:text-primary-400 mb-6">
           {greeting}
         </p>
         <h1 class="text-[8vw] sm:text-[6vw] lg:text-[5vw] leading-[0.9] font-bold tracking-tighter">
           Welcome back,
-          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-300 dark:from-emerald-400 dark:to-cyan-300">
+          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary-500 to-info-300 dark:from-primary-400 dark:to-info-300">
             {$inertiaPage.props.user?.name || 'Commander'}
           </span>
         </h1>
@@ -52,12 +52,12 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-20" in:fly={{ y: 30, duration: 800, delay: 200 }}>
         
         <!-- Card: Total Users -->
-        <div class="group relative h-48 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-emerald-500/50 dark:hover:border-emerald-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-          <div class="absolute top-0 right-0 p-24 bg-emerald-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-emerald-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-48 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-primary-500/50 dark:hover:border-primary-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute top-0 right-0 p-24 bg-primary-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-primary-500/10 transition-colors duration-500"></div>
           
           <div class="relative z-10 flex justify-between items-start">
             <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
-              <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
                 <circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
@@ -74,12 +74,12 @@
         </div>
 
         <!-- Card: Current Page -->
-        <div class="group relative h-48 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-purple-500/50 dark:hover:border-purple-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-          <div class="absolute top-0 right-0 p-24 bg-purple-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-purple-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-48 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-accent-500/50 dark:hover:border-accent-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute top-0 right-0 p-24 bg-accent-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-accent-500/10 transition-colors duration-500"></div>
           
           <div class="relative z-10 flex justify-between items-start">
             <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
-              <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg class="w-5 h-5 text-accent-600 dark:text-accent-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
                 <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -94,12 +94,12 @@
         </div>
 
         <!-- Card: Filter Status -->
-        <div class="group relative h-48 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-orange-500/50 dark:hover:border-orange-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
-          <div class="absolute top-0 right-0 p-24 bg-orange-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-orange-500/10 transition-colors duration-500"></div>
+        <div class="group relative h-48 bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-warning-500/50 dark:hover:border-warning-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute top-0 right-0 p-24 bg-warning-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-warning-500/10 transition-colors duration-500"></div>
           
           <div class="relative z-10 flex justify-between items-start">
             <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
-              <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg class="w-5 h-5 text-warning-600 dark:text-warning-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
@@ -128,7 +128,7 @@
           <div class="relative z-10">
             <p class="text-2xl font-bold tracking-tight mb-1">{$inertiaPage.props.user?.is_admin ? 'Admin' : 'User'}</p>
             <div class="flex items-center gap-2">
-              <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="inline-flex h-2 w-2 rounded-full bg-primary-400 animate-pulse"></span>
               <p class="text-xs opacity-80">{$inertiaPage.props.user?.is_verified ? 'Verified' : 'Unverified'}</p>
             </div>
           </div>
@@ -149,7 +149,7 @@
                   <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">Email Address</p>
                   <p class="text-lg font-medium">{$inertiaPage.props.user?.email}</p>
                 </div>
-                <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full {$inertiaPage.props.user?.is_verified ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'}">
+                <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full {$inertiaPage.props.user?.is_verified ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400' : 'bg-warning-500/10 text-warning-600 dark:text-warning-400'}">
                   {$inertiaPage.props.user?.is_verified ? 'Verified' : 'Pending'}
                 </span>
               </div>
@@ -170,13 +170,13 @@
             <a 
               href="/users" 
               use:inertia
-              class="group relative p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-emerald-500/50 transition-all duration-300 overflow-hidden"
+              class="group relative p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-primary-500/50 transition-all duration-300 overflow-hidden"
             >
-              <div class="absolute inset-0 bg-emerald-500/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+              <div class="absolute inset-0 bg-primary-500/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
               <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
-                  <div class="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <div class="h-10 w-10 bg-primary-500/10 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
                       <circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
                       <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
@@ -195,13 +195,13 @@
             <a 
               href="/profile" 
               use:inertia
-              class="group relative p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-purple-500/50 transition-all duration-300 overflow-hidden"
+              class="group relative p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-accent-500/50 transition-all duration-300 overflow-hidden"
             >
-              <div class="absolute inset-0 bg-purple-500/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+              <div class="absolute inset-0 bg-accent-500/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
               <div class="relative z-10">
                 <div class="flex items-center justify-between mb-4">
-                  <div class="h-10 w-10 bg-purple-500/10 rounded-full flex items-center justify-center">
-                    <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <div class="h-10 w-10 bg-accent-500/10 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-accent-600 dark:text-accent-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
                       <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>

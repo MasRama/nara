@@ -43,8 +43,8 @@
 
 <header 
   class="fixed inset-x-0 top-0 z-50 transition-all duration-500 {scrolled 
-    ? 'bg-white/90 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5' 
-    : 'bg-white/90 dark:bg-[#0a0a0a]/95 backdrop-blur-xl'}"
+    ? 'bg-white/90 dark:bg-surface-dark/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5' 
+    : 'bg-white/90 dark:bg-surface-dark/95 backdrop-blur-xl'}"
 >
   <nav class="px-6 sm:px-12 lg:px-24 py-5 flex items-center justify-between">
     
@@ -56,7 +56,7 @@
         use:inertia 
         class="group flex items-center gap-3"
       >
-        <span class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">
+        <span class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white group-hover:text-primary-500 transition-colors">
           NARA.
         </span>
         <span class="hidden sm:block text-[9px] uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 font-medium">
@@ -72,12 +72,12 @@
             href={item.href} 
             class="relative px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] transition-all duration-300
               {item.group === group 
-                ? 'text-emerald-500' 
+                ? 'text-primary-500' 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}"
           >
             {item.label}
             {#if item.group === group}
-              <span class="absolute bottom-0 left-4 right-4 h-px bg-emerald-500"></span>
+              <span class="absolute bottom-0 left-4 right-4 h-px bg-primary-500"></span>
             {/if}
           </a>
           {#if i < visibleMenuLinks.length - 1}
@@ -90,7 +90,7 @@
     <!-- Right: Actions -->
     <div class="flex items-center gap-4">
       <!-- Current Page Indicator (Mobile) -->
-      <span class="md:hidden text-[10px] uppercase tracking-[0.2em] text-emerald-500 font-medium">
+      <span class="md:hidden text-[10px] uppercase tracking-[0.2em] text-primary-500 font-medium">
         {group}
       </span>
 
@@ -128,14 +128,14 @@
             class="group relative px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform"
           >
             <span class="relative z-10">Register</span>
-            <div class="absolute inset-0 bg-emerald-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <div class="absolute inset-0 bg-primary-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
           </a>
         {/if}
       </div>
 
       <!-- Mobile Menu Button -->
       <button
-        class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 transition-colors text-slate-900 dark:text-white"
+        class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 hover:border-primary-500/50 transition-colors text-slate-900 dark:text-white"
         on:click={() => isMenuOpen = !isMenuOpen}
         aria-label="Menu"
       >
@@ -154,7 +154,7 @@
 {#if isMenuOpen}
 <div  
   transition:fade={{ duration: 200 }}
-  class="fixed inset-0 bg-white dark:bg-[#0a0a0a] z-[9999] md:hidden overflow-y-auto"
+  class="fixed inset-0 bg-white dark:bg-surface-dark z-[9999] md:hidden overflow-y-auto"
   style="top: 0; left: 0; right: 0; bottom: 0;"
 >
   <!-- Close Button -->
@@ -184,8 +184,8 @@
           on:click={() => isMenuOpen = false}
           class="block text-4xl sm:text-5xl font-bold tracking-tighter transition-all duration-300
             {item.group === group 
-              ? 'text-emerald-500' 
-              : 'text-slate-900 dark:text-white hover:text-emerald-500 dark:hover:text-emerald-400 hover:translate-x-2'}"
+              ? 'text-primary-500' 
+              : 'text-slate-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 hover:translate-x-2'}"
           in:fly={{ y: 20, duration: 400, delay: i * 100 }}
         >
           <span class="inline-flex items-center gap-4">
@@ -212,7 +212,7 @@
           <a 
             href="/login" 
             use:inertia
-            class="px-6 py-3 text-sm font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-full hover:border-emerald-500 transition-colors"
+            class="px-6 py-3 text-sm font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-full hover:border-primary-500 transition-colors"
           >
             Login
           </a>
@@ -234,7 +234,7 @@
   </div>
 
   <!-- Background Decoration -->
-  <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
-  <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute bottom-0 left-0 w-48 h-48 bg-accent-500/5 rounded-full blur-3xl pointer-events-none"></div>
 </div>
 {/if}

@@ -79,18 +79,18 @@
                             type="text"
                             name="email"
                             id="email"
-                            class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500"
+                            class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500"
                             placeholder="email@example.com atau 08xxxxxxxxxx"
                             required
                         />
                     </div>
 
-                    <button type="submit" class="w-full text-sm font-medium rounded-full px-5 py-2.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 focus:ring-4 focus:outline-none focus:ring-emerald-300">
+                    <button type="submit" class="w-full text-sm font-medium rounded-full px-5 py-2.5 text-slate-950 bg-primary-400 hover:bg-primary-300 focus:ring-4 focus:outline-none focus:ring-primary-300">
                         Kirim Link Reset Password
                     </button>
 
                     <p class="text-sm font-light text-slate-400">
-                        Ingat password Anda? <a href="/login" use:inertia class="font-medium text-emerald-400 hover:underline">Login disini</a>
+                        Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-400 hover:underline">Login disini</a>
                     </p>
                 </form>
             </div>
