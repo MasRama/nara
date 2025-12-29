@@ -150,12 +150,23 @@ class UserModel extends BaseModel<UserRecord> {
    * Search users by name, email, or phone
    */
   async search(searchTerm: string, filter?: 'all' | 'verified' | 'unverified'): Promise<UserRecord[]> {
-    let query = this.query()
-      .where(function() {
+    return this.buildSearchQuery(searchTerm, filter);
+  }
+
+  /**
+   * Build search query for pagination
+   * Returns a Knex query builder that can be passed to paginate()
+   */
+  buildSearchQuery(searchTerm?: string, filter?: 'all' | 'verified' | 'unverified') {
+    let query = this.query().select("*");
+
+    if (searchTerm) {
+      query = query.where(function() {
         this.where('name', 'like', `%${searchTerm}%`)
           .orWhere('email', 'like', `%${searchTerm}%`)
           .orWhere('phone', 'like', `%${searchTerm}%`);
       });
+    }
 
     if (filter === 'verified') {
       query = query.where('is_verified', true);

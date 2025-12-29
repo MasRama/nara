@@ -11,12 +11,15 @@
 ```typescript
 import { BaseController, jsonSuccess, jsonPaginated } from "@core";
 import type { NaraRequest, NaraResponse } from "@core";
-import { DB, Logger } from "@services";
+import { User, Session, Asset } from "@models";  // ✅ Prefer models
+import { Logger } from "@services";
 import { LoginSchema } from "@validators";
 import { AUTH, ERROR_MESSAGES } from "@config";
 
 // ❌ JANGAN relative imports
 import DB from "../../services/DB";
+// ❌ JANGAN direct DB queries di controllers (gunakan models)
+import DB from "@services/DB";
 ```
 
 ### Response Helpers
@@ -41,25 +44,25 @@ const now = dayjs().valueOf();
 
 ## Backend Patterns
 
-### Controller (WAJIB extend BaseController)
+### Controller (WAJIB extend BaseController + gunakan Models)
 ```typescript
-import { BaseController, jsonSuccess, jsonCreated } from "@core";
+import { BaseController, jsonSuccess, jsonCreated, jsonNotFound, jsonServerError } from "@core";
 import type { NaraRequest, NaraResponse } from "@core";
-import { DB, Logger } from "@services";
-import { CreateSchema } from "@validators";
+import { Item } from "@models";  // ✅ Import model
+import { Logger } from "@services";
+import { paginate } from "@services/Paginator";
+import { CreateItemSchema } from "@validators";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
 import { randomUUID } from "crypto";
-import dayjs from "dayjs";
 
-class MyController extends BaseController {
+class ItemController extends BaseController {
   public async create(request: NaraRequest, response: NaraResponse) {
     this.requireAuth(request);  // throws AuthError
-    const data = await this.getBody(request, CreateSchema);
+    const data = await this.getBody(request, CreateItemSchema);
     
     try {
-      const now = dayjs().valueOf();
-      const record = { id: randomUUID(), ...data, created_at: now, updated_at: now };
-      await DB.table("items").insert(record);
+      // ✅ Gunakan model (timestamps otomatis di BaseModel)
+      const record = await Item.create({ id: randomUUID(), ...data });
       Logger.info('Item created', { id: record.id });
       return jsonCreated(response, SUCCESS_MESSAGES.DATA_CREATED, record);
     } catch (error: any) {
@@ -68,16 +71,23 @@ class MyController extends BaseController {
     }
   }
 
+  public async show(request: NaraRequest, response: NaraResponse) {
+    const { id } = request.params;
+    const item = await Item.findById(id);  // ✅ Model method
+    if (!item) return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
+    return jsonSuccess(response, SUCCESS_MESSAGES.DATA_RETRIEVED, item);
+  }
+
   public async list(request: NaraRequest, response: NaraResponse) {
     const { page, limit, search } = this.getPaginationParams(request);
-    let query = DB.from("items").select("*");
-    if (search) query = query.where('name', 'like', `%${search}%`);
-    const result = await paginate(query.orderBy('created_at', 'desc'), { page, limit });
+    // ✅ Model method yang return query builder untuk pagination
+    const query = Item.buildSearchQuery(search);
+    const result = await paginate(query, { page, limit });
     return jsonPaginated(response, SUCCESS_MESSAGES.DATA_RETRIEVED, result.data, result.meta);
   }
 }
 
-export default new MyController();
+export default new ItemController();
 ```
 
 ### BaseController Methods
@@ -103,14 +113,35 @@ export function MySchema(data: unknown): ValidationResult<MyInput> {
 }
 ```
 
-### Database Queries
+### Models (WAJIB untuk database operations)
 ```typescript
-import { DB } from "@services";
+import { User, Session, Asset } from "@models";
 
+// ✅ GUNAKAN models di controllers
+const user = await User.findById(id);
+const user = await User.findByEmail(email);
+const user = await User.create({ id: randomUUID(), email, password });
+const user = await User.update(id, { name });
+await User.delete(id);
+await User.deleteMany(ids);
+
+// ✅ Query builder untuk pagination
+const query = User.buildSearchQuery(search, filter);
+const result = await paginate(query, { page, limit });
+```
+
+### Direct DB Queries (hanya di Models)
+```typescript
+// ❌ JANGAN di controllers - gunakan models
+import DB from "@services/DB";
 const user = await DB.from("users").where("id", id).first();
-await DB.table("users").insert({ id: randomUUID(), ...data, created_at: dayjs().valueOf() });
-await DB.from("users").where("id", id).update({ name, updated_at: dayjs().valueOf() });
-await DB.from("users").whereIn("id", ids).delete();
+
+// ✅ Direct DB hanya di dalam model class
+class UserModel extends BaseModel<UserRecord> {
+  async customQuery() {
+    return DB.from(this.tableName).where(...).first();
+  }
+}
 ```
 
 ### Logging (WAJIB, bukan console.log)
@@ -181,7 +212,9 @@ router.visit('/dashboard', { preserveScroll: true });
 
 ```bash
 # Scaffolding
-node nara make:resource Post --with-pages  # Full resource
+node nara make:resource Post --with-model  # Full resource + model
+node nara make:resource Post --with-pages  # Full resource + Svelte pages
+node nara make:model Post                  # Model only
 node nara make:controller User             # Controller only
 node nara make:validator Post              # Validator only
 
@@ -199,11 +232,12 @@ node nara lint                             # TypeScript check
 
 ## Quick Reference
 
-- Gunakan path aliases (@core, @services, @validators, @config)
+- Gunakan path aliases (@core, @services, @validators, @config, @models)
 - Controller extends BaseController
+- **Gunakan Models untuk database operations, bukan direct DB queries**
 - Gunakan response helpers (jsonSuccess, jsonError, dll)
 - Gunakan Logger, bukan console.log
-- Timestamps pakai dayjs().valueOf()
+- Timestamps otomatis di BaseModel (tidak perlu manual)
 - Run `npx tsc --noEmit` untuk type check
 - Frontend API calls pakai api() wrapper
 
@@ -214,9 +248,10 @@ node nara lint                             # TypeScript check
 ```
 app/
 ├── config/       → Constants, env (import from @config)
-├── controllers/  → Extend BaseController
+├── controllers/  → Extend BaseController, gunakan Models
 ├── core/         → App, Router, Errors, Response (import from @core)
 ├── middlewares/  → Auth, CSRF, RateLimit
+├── models/       → Database models (import from @models) ⭐ NEW
 ├── services/     → DB, Logger, Mailer (import from @services)
 └── validators/   → Schemas (import from @validators)
 
@@ -225,3 +260,69 @@ resources/js/
 ├── Pages/        → Inertia pages
 └── types/        → Generated types (run generate:types)
 ```
+
+---
+
+## Model Pattern
+
+### Creating a Model
+```bash
+node nara make:model Post
+```
+
+### Model Structure
+```typescript
+// app/models/Post.ts
+import { BaseModel, BaseRecord } from "./BaseModel";
+
+export interface PostRecord extends BaseRecord {
+  id: string;
+  title: string;
+  content: string | null;
+  user_id: string;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CreatePostData {
+  id: string;
+  title: string;
+  content?: string | null;
+  user_id: string;
+}
+
+class PostModel extends BaseModel<PostRecord> {
+  protected tableName = "posts";
+
+  async findByUserId(userId: string): Promise<PostRecord[]> {
+    return this.query().where("user_id", userId);
+  }
+
+  buildSearchQuery(search?: string) {
+    let query = this.query().select("*");
+    if (search) {
+      query = query.where('title', 'like', `%${search}%`);
+    }
+    return query.orderBy('created_at', 'desc');
+  }
+}
+
+export const Post = new PostModel();
+export default Post;
+```
+
+### Export in index.ts
+```typescript
+// app/models/index.ts
+export { Post, PostRecord, CreatePostData } from './Post';
+```
+
+### BaseModel Methods
+| Method | Description |
+|--------|-------------|
+| `findById(id)` | Find by primary key |
+| `findBy(field, value)` | Find by any field |
+| `create(data)` | Insert with auto timestamps |
+| `update(id, data)` | Update with auto updated_at |
+| `delete(id)` | Delete by ID |
+| `query()` | Get Knex query builder |

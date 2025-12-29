@@ -8,7 +8,6 @@
  */
 import Authenticate from "@services/Authenticate";
 import { User } from "@models";
-import DB from "@services/DB";
 import { paginate, parsePaginationQuery } from "@services/Paginator";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
@@ -54,25 +53,7 @@ class UserController extends BaseController {
    * Shared logic for homePage and usersPage
    */
   private buildUserQuery(params: UserQueryParams) {
-    let query = DB.from("users").select("*");
-
-    // Apply search
-    if (params.search) {
-      query = query.where(function() {
-        this.where('name', 'like', `%${params.search}%`)
-            .orWhere('email', 'like', `%${params.search}%`)
-            .orWhere('phone', 'like', `%${params.search}%`);
-      });
-    }
-
-    // Apply filters
-    if (params.filter === 'verified') {
-      query = query.where('is_verified', true);
-    } else if (params.filter === 'unverified') {
-      query = query.where('is_verified', false);
-    }
-
-    return query.orderBy('created_at', 'desc');
+    return User.buildSearchQuery(params.search, params.filter as 'all' | 'verified' | 'unverified');
   }
 
   /**

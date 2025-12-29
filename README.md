@@ -482,6 +482,7 @@ You can import from the project root without `./`:
 
 - `app/` — Core application code
   - `middlewares/` — Custom middleware functions
+  - `models/` — Database models (BaseModel, User, Session, etc.)
   - `services/` — Service layer implementations (DB, Mailer, Redis, View, etc.)
   - `controllers/` — Application controllers
 - `resources/` — Frontend resources
@@ -527,12 +528,14 @@ Nara provides a powerful CLI with 21+ commands. Run `node nara help` to see all 
 ### Scaffolding Commands
 
 ```bash
-# Create a complete resource (controller, validator, routes, optional pages)
+# Create a complete resource (controller, validator, routes, optional pages/model)
 node nara make:resource Post
 node nara make:resource Post --api          # API-only (no Inertia pages)
+node nara make:resource Post --with-model   # Include model class
 node nara make:resource Post --with-pages   # Include Svelte page skeletons
 
 # Individual generators
+node nara make:model Post                   # Database model
 node nara make:controller UserController
 node nara make:middleware RoleMiddleware
 node nara make:service PaymentService
