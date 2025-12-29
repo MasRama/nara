@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fly } from 'svelte/transition';
   import axios from "axios";
   import Header from "../Components/Header.svelte";
   import { api, Toast } from "../Components/helper";
@@ -63,8 +64,6 @@
     }
 
     isLoading = true;
-    // Backend only expects current_password and new_password
-    // confirm_password validation is done client-side above
     const result = await api(() => axios.post("/change-password", {
       current_password,
       new_password,
@@ -81,257 +80,289 @@
 
 <Header group="profile" />
 
-<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 space-y-10">
-    <div class="space-y-2">
-      <p class="text-xs tracking-[0.35em] uppercase text-slate-500 dark:text-slate-500">Account</p>
-      <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-        Profil kamu
-      </h1>
-      <p class="text-sm text-slate-600 dark:text-slate-400 max-w-xl">
-        Kelola informasi akun dan keamanan password kamu dengan tampilan yang
-        konsisten dengan dashboard.
-      </p>
-    </div>
+<div class="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-emerald-400 selection:text-black">
+  
+  <!-- Background Effects -->
+  <div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-cyan-500/5 rounded-full blur-3xl -mr-64 -mt-64"></div>
+    <div class="absolute bottom-0 left-0 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-3xl -ml-96 -mb-96"></div>
+  </div>
 
-    <div class="grid gap-8 lg:grid-cols-[2fr,3fr] items-start">
-      <div class="space-y-6">
-        <div class="rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7 shadow-xl dark:shadow-[0_24px_80px_rgba(15,23,42,0.8)]">
-          <div class="flex items-center gap-4">
-            <div class="relative group">
-              <div class="w-20 h-20 rounded-full bg-primary-500/10 border border-primary-500/40 overflow-hidden flex items-center justify-center">
-                {#if previewUrl}
-                  <img
-                    src={previewUrl}
-                    alt="Profile"
-                    class="w-full h-full object-cover"
-                  />
-                {:else}
-                  <span class="text-2xl font-bold text-primary-300">
-                    {user.name.charAt(0).toUpperCase()}
+  <section class="relative px-6 sm:px-12 lg:px-24 pt-24 pb-20">
+    <div class="max-w-[90rem] mx-auto">
+      
+      <!-- Hero Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 mb-20">
+        
+        <!-- Left: Giant Profile Card -->
+        <div class="lg:col-span-5" in:fly={{ x: -50, duration: 800 }}>
+          <p class="text-xs font-bold uppercase tracking-[0.3em] text-cyan-600 dark:text-cyan-400 mb-6">
+            Account
+          </p>
+          <h1 class="text-[8vw] sm:text-[5vw] lg:text-[3.5vw] leading-[0.9] font-bold tracking-tighter mb-8">
+            YOUR
+            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-emerald-400">
+              PROFILE
+            </span>
+          </h1>
+
+          <!-- Profile Card -->
+          <div class="relative">
+            <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 rounded-3xl blur-xl"></div>
+            <div class="relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 rounded-3xl p-8 overflow-hidden">
+              <!-- Decorative -->
+              <div class="absolute top-0 right-0 p-32 bg-cyan-500/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
+              
+              <div class="relative z-10">
+                <!-- Avatar Section -->
+                <div class="flex items-center gap-6 mb-8">
+                  <div class="relative group">
+                    <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 p-0.5">
+                      <div class="w-full h-full rounded-2xl bg-slate-100 dark:bg-[#0f0f0f] overflow-hidden flex items-center justify-center">
+                        {#if previewUrl}
+                          <img
+                            src={previewUrl}
+                            alt="Profile"
+                            class="w-full h-full object-cover"
+                          />
+                        {:else}
+                          <span class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-cyan-500 to-emerald-500">
+                            {user.name.charAt(0).toUpperCase()}
+                          </span>
+                        {/if}
+                      </div>
+                    </div>
+                    <label
+                      class="absolute -bottom-2 -right-2 w-8 h-8 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform"
+                    >
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="12" cy="13" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        on:change={handleAvatarChange}
+                        class="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <h2 class="text-2xl font-bold tracking-tight mb-1">{user.name}</h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+                  </div>
+                </div>
+
+                <!-- Status Badges -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                  <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.is_admin 
+                    ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20' 
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}">
+                    {user.is_admin ? 'Administrator' : 'Standard User'}
                   </span>
-                {/if}
-              </div>
-              <label
-                class="absolute -bottom-1 -right-1 bg-primary-500 text-white p-1.5 rounded-full cursor-pointer hover:bg-primary-400 transition-colors"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  ></path>
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                  ></path>
-                </svg>
-                <input
-                  type="file"
-                  accept="image/*"
-                  on:change={handleAvatarChange}
-                  class="hidden"
-                />
-              </label>
-            </div>
+                  <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.is_verified 
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                    : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'}">
+                    {user.is_verified ? 'Verified' : 'Unverified'}
+                  </span>
+                </div>
 
-            <div class="space-y-1">
-              <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-50">
-                {user.name}
-              </h2>
-              <p class="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
-              {#if user.phone}
-                <p class="text-xs text-slate-500 dark:text-slate-500">{user.phone}</p>
-              {/if}
+                <!-- Quick Info -->
+                <div class="space-y-3">
+                  <div class="flex items-center gap-3 text-sm">
+                    <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="font-mono text-slate-600 dark:text-slate-300">{user.phone || '—'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Security Note -->
+          <div class="mt-6 p-4 border border-slate-200 dark:border-white/5 rounded-2xl">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Secure Storage</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Your data is encrypted and stored securely on Nara's backend infrastructure.</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900/70 px-4 py-3 text-xs text-slate-600 dark:text-slate-300">
-          <p class="flex items-center gap-2">
-            <span class="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
-            Data profil kamu tersimpan aman di backend Nara. Pastikan email dan
-            nomor HP selalu up to date.
-          </p>
+        <!-- Right: Forms -->
+        <div class="lg:col-span-7 space-y-8" in:fly={{ x: 50, duration: 800, delay: 200 }}>
+          
+          <!-- Personal Info Form -->
+          <div class="relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-cyan-500/30 rounded-3xl p-8 transition-colors duration-500">
+            <div class="flex items-center justify-between mb-8">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">Settings</span>
+                <h3 class="text-xl font-bold tracking-tight mt-1">Personal Information</h3>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-cyan-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+
+            <form on:submit|preventDefault={changeProfile} class="space-y-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                  <label for="name" class="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    Full Name
+                  </label>
+                  <input
+                    bind:value={user.name}
+                    type="text"
+                    id="name"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    placeholder="Your full name"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <label for="phone" class="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    Phone Number
+                  </label>
+                  <input
+                    bind:value={user.phone}
+                    type="text"
+                    id="phone"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                    placeholder="+62 xxx xxxx xxxx"
+                  />
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <label for="email" class="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                  Email Address
+                </label>
+                <input
+                  bind:value={user.email}
+                  type="email"
+                  id="email"
+                  class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div class="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  class="group relative px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform disabled:opacity-50"
+                >
+                  <span class="relative z-10 flex items-center gap-2">
+                    {#if isLoading}
+                      <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    {:else}
+                      Save Changes
+                    {/if}
+                  </span>
+                  <div class="absolute inset-0 bg-cyan-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Password Form -->
+          <div class="relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-orange-500/30 rounded-3xl p-8 transition-colors duration-500">
+            <div class="flex items-center justify-between mb-8">
+              <div>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-orange-600 dark:text-orange-400">Security</span>
+                <h3 class="text-xl font-bold tracking-tight mt-1">Change Password</h3>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+            </div>
+
+            <form on:submit|preventDefault={changePassword} class="space-y-6">
+              <div class="space-y-2">
+                <label for="current_password" class="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                  Current Password
+                </label>
+                <input
+                  bind:value={current_password}
+                  type="password"
+                  id="current_password"
+                  class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                  <label for="new_password" class="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    New Password
+                  </label>
+                  <input
+                    bind:value={new_password}
+                    type="password"
+                    id="new_password"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div class="space-y-2">
+                  <label for="confirm_password" class="block text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    Confirm Password
+                  </label>
+                  <input
+                    bind:value={confirm_password}
+                    type="password"
+                    id="confirm_password"
+                    class="w-full px-4 py-3 rounded-xl bg-white dark:bg-black/50 border border-slate-200 dark:border-slate-700 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 outline-none transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <div class="flex justify-end pt-4">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  class="px-6 py-3 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-orange-500 hover:text-orange-500 transition-colors disabled:opacity-50"
+                >
+                  {#if isLoading}
+                    <span class="flex items-center gap-2">
+                      <svg class="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </span>
+                  {:else}
+                    Update Password
+                  {/if}
+                </button>
+              </div>
+            </form>
+          </div>
+
         </div>
       </div>
 
-      <div class="space-y-6">
-        <div class="rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7">
-          <h2 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400 mb-4">
-            Informasi pribadi
-          </h2>
-          <form on:submit|preventDefault={changeProfile} class="space-y-5">
-            <div class="space-y-1">
-              <label
-                for="name"
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-                >Nama</label
-              >
-              <input
-                bind:value={user.name}
-                type="text"
-                id="name"
-                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-                placeholder="Nama lengkap kamu"
-              />
-            </div>
-
-            <div class="space-y-1">
-              <label
-                for="email"
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-                >Email</label
-              >
-              <input
-                bind:value={user.email}
-                type="email"
-                id="email"
-                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-                placeholder="you@example.com"
-              />
-            </div>
-
-            <div class="space-y-1">
-              <label
-                for="phone"
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-                >No. HP</label
-              >
-              <input
-                bind:value={user.phone}
-                type="text"
-                id="phone"
-                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-                placeholder="Nomor HP yang aktif"
-              />
-            </div>
-
-            <div class="flex justify-end">
-              <button
-                type="submit"
-                disabled={isLoading}
-                class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-sm font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {#if isLoading}
-                  <svg
-                    class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-950"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Menyimpan...
-                {:else}
-                  Simpan perubahan
-                {/if}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <div class="rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7">
-          <h2 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400 mb-4">
-            Ganti password
-          </h2>
-          <form on:submit|preventDefault={changePassword} class="space-y-5">
-            <div class="space-y-1">
-              <label
-                for="current_password"
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-                >Password sekarang</label
-              >
-              <input
-                bind:value={current_password}
-                type="password"
-                id="current_password"
-                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              />
-            </div>
-
-            <div class="space-y-1">
-              <label
-                for="new_password"
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-                >Password baru</label
-              >
-              <input
-                bind:value={new_password}
-                type="password"
-                id="new_password"
-                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              />
-            </div>
-
-            <div class="space-y-1">
-              <label
-                for="confirm_password"
-                class="block text-xs font-medium text-slate-600 dark:text-slate-400"
-                >Konfirmasi password baru</label
-              >
-              <input
-                bind:value={confirm_password}
-                type="password"
-                id="confirm_password"
-                class="w-full px-3 py-2.5 rounded-lg bg-gray-50 dark:bg-slate-900/60 border border-gray-300 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-              />
-            </div>
-
-            <div class="flex justify-end">
-              <button
-                type="submit"
-                disabled={isLoading}
-                class="inline-flex items-center px-4 py-2 rounded-full bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-100 text-sm font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {#if isLoading}
-                  <svg
-                    class="animate-spin -ml-1 mr-2 h-4 w-4 text-slate-100"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Mengupdate...
-                {:else}
-                  Update password
-                {/if}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
     </div>
-  </div>
-</section>
+  </section>
+
+</div>

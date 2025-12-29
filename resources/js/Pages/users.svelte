@@ -10,7 +10,6 @@
   import { createEmptyUserForm, userToForm } from '../types';
 
   export let users: User[] = [];
-  // Pagination meta from backend
   export let total: number = 0;
   export let page: number = 1;
   export let limit: number = 10;
@@ -22,7 +21,6 @@
 
   const currentUser = $inertiaPage.props.user as User | undefined;
 
-  // Build pagination meta object
   $: paginationMeta = { total, page, limit, totalPages, hasNext, hasPrev } as PaginationMeta;
 
   let showUserModal: boolean = false;
@@ -96,87 +94,160 @@
 
 <Header group="users" />
 
-<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <p class="text-xs tracking-[0.35em] uppercase text-slate-500 dark:text-slate-400 mb-2">
-          Users
-        </p>
-        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight leading-[1.25] mb-2">
-          Manajemen User
-        </h1>
-        <p class="text-sm text-slate-600 dark:text-slate-300/90 max-w-xl">
-          Kelola akun pengguna aplikasi di halaman terpisah dari dashboard utama.
-        </p>
-      </div>
-      {#if currentUser && currentUser.is_admin}
-        <button
-          class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-          on:click={openCreateUser}
-          disabled={isSubmitting}
-        >
-          Tambah user
-        </button>
-      {/if}
-    </div>
-
-    <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900/60">
-      <table class="min-w-full text-sm text-slate-700 dark:text-slate-200">
-        <thead class="bg-gray-50 dark:bg-slate-900/90 border-b border-gray-200 dark:border-slate-800 text-xs uppercase tracking-[0.16em] text-slate-500">
-          <tr>
-            <th class="px-4 py-3 text-left">Nama</th>
-            <th class="px-4 py-3 text-left">Email</th>
-            <th class="px-4 py-3 text-left">Phone</th>
-            <th class="px-4 py-3 text-left">Verified</th>
-            {#if currentUser && currentUser.is_admin}
-              <th class="px-4 py-3 text-right">Aksi</th>
-            {/if}
-          </tr>
-        </thead>
-        <tbody>
-          {#if users && users.length}
-            {#each users as userItem}
-              <tr class="border-t border-gray-200 dark:border-slate-800/70 hover:bg-gray-50 dark:hover:bg-slate-800/60">
-                <td class="px-4 py-3 font-medium">{userItem.name}</td>
-                <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{userItem.email}</td>
-                <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{userItem.phone || '-'}</td>
-                <td class="px-4 py-3">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium {userItem.is_verified ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-gray-200 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300'}">
-                    {userItem.is_verified ? 'Verified' : 'Pending'}
-                  </span>
-                </td>
-                {#if currentUser && currentUser.is_admin}
-                  <td class="px-4 py-3 text-right space-x-2">
-                    <button
-                      class="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-200 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-xs text-slate-700 dark:text-slate-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      on:click={() => openEditUser(userItem)}
-                      disabled={isSubmitting}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      class="inline-flex items-center px-3 py-1.5 rounded-full bg-red-500/90 hover:bg-red-400 text-xs text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      on:click={() => deleteUser(userItem.id)}
-                      disabled={isSubmitting}
-                    >
-                      Hapus
-                    </button>
-                  </td>
-                {/if}
-              </tr>
-            {/each}
-          {:else}
-            <tr>
-              <td colspan={currentUser && currentUser.is_admin ? 5 : 4} class="px-4 py-6 text-center text-slate-500 dark:text-slate-500 text-sm">Belum ada data user untuk ditampilkan.</td>
-            </tr>
-          {/if}
-        </tbody>
-      </table>
-    </div>
-
-    <Pagination meta={paginationMeta} />
+<div class="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-emerald-400 selection:text-black">
+  
+  <!-- Background Effects -->
+  <div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute top-0 left-1/2 w-[1000px] h-[1000px] bg-purple-500/5 rounded-full blur-3xl -translate-x-1/2 -mt-[500px]"></div>
   </div>
+
+  <section class="relative px-6 sm:px-12 lg:px-24 pt-24 pb-20">
+    <div class="max-w-[90rem] mx-auto">
+      
+      <!-- Header Section -->
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16" in:fly={{ y: 50, duration: 800 }}>
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.3em] text-purple-600 dark:text-purple-400 mb-6">
+            Management
+          </p>
+          <h1 class="text-[8vw] sm:text-[6vw] lg:text-[4vw] leading-[0.9] font-bold tracking-tighter mb-4">
+            USERS
+          </h1>
+          <p class="text-lg text-slate-500 dark:text-slate-400 max-w-xl font-serif italic">
+            "Control who enters. Manage who stays."
+          </p>
+        </div>
+
+        <div class="flex items-center gap-6">
+          <!-- Stats -->
+          <div class="text-right">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-1">Total</p>
+            <p class="text-3xl font-bold tracking-tight">{total}</p>
+          </div>
+          
+          <div class="h-12 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+          {#if currentUser && currentUser.is_admin}
+            <button
+              class="group relative px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform disabled:opacity-50"
+              on:click={openCreateUser}
+              disabled={isSubmitting}
+            >
+              <span class="relative z-10 flex items-center gap-2">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Add User
+              </span>
+              <div class="absolute inset-0 bg-emerald-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            </button>
+          {/if}
+        </div>
+      </div>
+
+      <!-- Users Grid - Card Based -->
+      <div class="mb-12" in:fly={{ y: 30, duration: 800, delay: 200 }}>
+        {#if users && users.length}
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {#each users as userItem, i}
+              <div 
+                class="group relative bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-purple-500/50 dark:hover:border-purple-500/30 p-6 rounded-2xl transition-all duration-500 overflow-hidden"
+                in:fly={{ y: 20, duration: 400, delay: i * 50 }}
+              >
+                <!-- Hover Glow -->
+                <div class="absolute top-0 right-0 p-20 bg-purple-500/5 rounded-full blur-3xl -mr-10 -mt-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                
+                <div class="relative z-10">
+                  <!-- User Header -->
+                  <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                      <!-- Avatar -->
+                      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+                        {userItem.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 class="font-bold text-lg tracking-tight">{userItem.name}</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{userItem.email}</p>
+                      </div>
+                    </div>
+                    
+                    <!-- Status Badge -->
+                    <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full {userItem.is_verified 
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                      : 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'}">
+                      {userItem.is_verified ? 'Verified' : 'Pending'}
+                    </span>
+                  </div>
+
+                  <!-- User Details -->
+                  <div class="space-y-2 mb-4">
+                    <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <span class="font-mono">{userItem.phone || '—'}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-xs">
+                      <span class="inline-flex h-1.5 w-1.5 rounded-full {userItem.is_admin ? 'bg-purple-500' : 'bg-slate-400'}"></span>
+                      <span class="text-slate-500 dark:text-slate-400">{userItem.is_admin ? 'Administrator' : 'Standard User'}</span>
+                    </div>
+                  </div>
+
+                  <!-- Actions -->
+                  {#if currentUser && currentUser.is_admin}
+                    <div class="flex items-center gap-2 pt-4 border-t border-slate-200 dark:border-white/5">
+                      <button
+                        class="flex-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-purple-500/50 hover:text-purple-500 transition-colors disabled:opacity-50"
+                        on:click={() => openEditUser(userItem)}
+                        disabled={isSubmitting}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-colors disabled:opacity-50"
+                        on:click={() => deleteUser(userItem.id)}
+                        disabled={isSubmitting}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <!-- Empty State -->
+          <div class="text-center py-20 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+            <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <svg class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold mb-2">No Users Yet</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Start by adding your first user to the system.</p>
+            {#if currentUser && currentUser.is_admin}
+              <button
+                class="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full hover:scale-105 transition-transform"
+                on:click={openCreateUser}
+              >
+                Add First User
+              </button>
+            {/if}
+          </div>
+        {/if}
+      </div>
+
+      <!-- Pagination -->
+      <div in:fly={{ y: 20, duration: 600, delay: 400 }}>
+        <Pagination meta={paginationMeta} />
+      </div>
+
+    </div>
+  </section>
 
   <UserModal 
     show={showUserModal} 
@@ -186,4 +257,4 @@
     on:close={closeUserModal}
     on:submit={handleSubmit}
   />
-</section>
+</div>

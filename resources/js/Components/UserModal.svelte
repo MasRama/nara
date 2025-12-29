@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fly, fade, scale } from 'svelte/transition';
+  import { backOut } from 'svelte/easing';
   import type { UserForm } from '../types';
   import { createEventDispatcher } from 'svelte';
 
@@ -19,112 +21,214 @@
   function handleSubmit(): void {
     dispatch('submit', form);
   }
+
+  function handleBackdropClick(e: MouseEvent): void {
+    if (e.target === e.currentTarget) {
+      handleClose();
+    }
+  }
 </script>
 
 {#if show}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-    <div class="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-semibold tracking-[0.18em] uppercase text-slate-400">
-          {mode === 'create' ? 'Tambah user baru' : 'Edit user'}
-        </h3>
-        <button
-          class="text-slate-400 hover:text-slate-200 text-sm"
-          on:click={handleClose}
-          disabled={isSubmitting}
-        >
-          ✕
-        </button>
+  <!-- Backdrop -->
+  <div 
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+    on:click={handleBackdropClick}
+    on:keydown={(e) => e.key === 'Escape' && handleClose()}
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-title"
+    tabindex="-1"
+    transition:fade={{ duration: 300 }}
+  >
+    <!-- Background Blur & Overlay -->
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
+    
+    <!-- Decorative Elements -->
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Modal Container -->
+    <div 
+      class="relative w-full max-w-lg"
+      transition:fly={{ y: 50, duration: 500, easing: backOut }}
+    >
+      <!-- Glowing Border Effect -->
+      <div class="absolute -inset-px bg-gradient-to-br from-purple-500/50 via-transparent to-emerald-500/50 rounded-3xl blur-sm opacity-60"></div>
+      
+      <!-- Modal Content -->
+      <div class="relative bg-white dark:bg-[#0a0a0a] rounded-3xl border border-slate-200 dark:border-white/10 overflow-hidden shadow-2xl">
+        
+        <!-- Header -->
+        <div class="relative px-8 pt-8 pb-6 border-b border-slate-100 dark:border-white/5">
+          <!-- Decorative Line -->
+          <div class="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent"></div>
+          
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-purple-600 dark:text-purple-400 mb-2">
+                {mode === 'create' ? 'New Entry' : 'Edit Entry'}
+              </p>
+              <h3 id="modal-title" class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                {mode === 'create' ? 'Create User' : 'Update User'}
+              </h3>
+            </div>
+            
+            <!-- Close Button -->
+            <button
+              class="group w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-white/10 hover:border-red-500/50 hover:bg-red-500/5 transition-all duration-300"
+              on:click={handleClose}
+              disabled={isSubmitting}
+              aria-label="Close modal"
+            >
+              <svg class="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form class="p-8 space-y-6" on:submit|preventDefault={handleSubmit}>
+          
+          <!-- Name Field -->
+          <div class="group">
+            <label for="user-name" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">
+              Full Name
+            </label>
+            <div class="relative">
+              <input
+                id="user-name"
+                class="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-slate-200 dark:border-white/10 text-lg text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-0 outline-none transition-colors"
+                type="text"
+                bind:value={form.name}
+                placeholder="Enter full name"
+              />
+              <div class="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-500 group-focus-within:w-full transition-all duration-500"></div>
+            </div>
+          </div>
+
+          <!-- Email Field -->
+          <div class="group">
+            <label for="user-email" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">
+              Email Address
+            </label>
+            <div class="relative">
+              <input
+                id="user-email"
+                class="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-slate-200 dark:border-white/10 text-lg text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-0 outline-none transition-colors"
+                type="email"
+                bind:value={form.email}
+                placeholder="user@example.com"
+              />
+            </div>
+          </div>
+
+          <!-- Phone Field -->
+          <div class="group">
+            <label for="user-phone" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">
+              Phone Number
+              <span class="text-slate-400 dark:text-slate-600 font-normal normal-case tracking-normal ml-1">(optional)</span>
+            </label>
+            <div class="relative">
+              <input
+                id="user-phone"
+                class="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-slate-200 dark:border-white/10 text-lg text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-0 outline-none transition-colors font-mono"
+                type="text"
+                bind:value={form.phone}
+                placeholder="+62 xxx xxxx xxxx"
+              />
+            </div>
+          </div>
+
+          <!-- Role & Status Toggles -->
+          <div class="grid grid-cols-2 gap-4 pt-2">
+            <!-- Admin Toggle -->
+            <label class="group relative flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-purple-500/30 cursor-pointer transition-all duration-300 {form.is_admin ? 'bg-purple-500/5 border-purple-500/30' : ''}">
+              <div class="relative">
+                <input
+                  type="checkbox"
+                  class="sr-only peer"
+                  bind:checked={form.is_admin}
+                />
+                <div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-purple-500 transition-colors"></div>
+                <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform peer-checked:translate-x-5 transition-transform"></div>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">Admin</p>
+                <p class="text-[10px] text-slate-400 dark:text-slate-500">Full access</p>
+              </div>
+            </label>
+
+            <!-- Verified Toggle -->
+            <label class="group relative flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-emerald-500/30 cursor-pointer transition-all duration-300 {form.is_verified ? 'bg-emerald-500/5 border-emerald-500/30' : ''}">
+              <div class="relative">
+                <input
+                  type="checkbox"
+                  class="sr-only peer"
+                  bind:checked={form.is_verified}
+                />
+                <div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-emerald-500 transition-colors"></div>
+                <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform peer-checked:translate-x-5 transition-transform"></div>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">Verified</p>
+                <p class="text-[10px] text-slate-400 dark:text-slate-500">Email confirmed</p>
+              </div>
+            </label>
+          </div>
+
+          <!-- Password Field -->
+          <div class="group pt-2">
+            <label for="user-password" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-3">
+              {mode === 'create' ? 'Password' : 'New Password'}
+              <span class="text-slate-400 dark:text-slate-600 font-normal normal-case tracking-normal ml-1">(optional)</span>
+            </label>
+            <div class="relative">
+              <input
+                id="user-password"
+                class="w-full px-0 py-3 bg-transparent border-0 border-b-2 border-slate-200 dark:border-white/10 text-lg text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:border-purple-500 dark:focus:border-purple-400 focus:ring-0 outline-none transition-colors"
+                type="password"
+                bind:value={form.password}
+                placeholder={mode === 'create' ? 'Leave empty to use email' : 'Leave empty to keep current'}
+              />
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center justify-end gap-4 pt-6 border-t border-slate-100 dark:border-white/5">
+            <button
+              type="button"
+              class="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"
+              on:click={handleClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="group relative px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 active:scale-95 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+              disabled={isSubmitting}
+            >
+              <span class="relative z-10 flex items-center gap-2">
+                {#if isSubmitting}
+                  <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                {:else}
+                  {mode === 'create' ? 'Create User' : 'Save Changes'}
+                  <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                {/if}
+              </span>
+              <div class="absolute inset-0 bg-gradient-to-r from-purple-500 to-emerald-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            </button>
+          </div>
+        </form>
       </div>
-
-      <form class="space-y-4" on:submit|preventDefault={handleSubmit}>
-        <div class="space-y-1">
-          <label for="user-name" class="block text-xs font-medium text-slate-400">Nama</label>
-          <input
-            id="user-name"
-            class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-            type="text"
-            bind:value={form.name}
-            placeholder="Nama lengkap"
-          />
-        </div>
-
-        <div class="space-y-1">
-          <label for="user-email" class="block text-xs font-medium text-slate-400">Email</label>
-          <input
-            id="user-email"
-            class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-            type="email"
-            bind:value={form.email}
-            placeholder="Alamat email"
-          />
-        </div>
-
-        <div class="space-y-1">
-          <label for="user-phone" class="block text-xs font-medium text-slate-400">No. HP</label>
-          <input
-            id="user-phone"
-            class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-            type="text"
-            bind:value={form.phone}
-            placeholder="Nomor HP (opsional)"
-          />
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 text-xs text-slate-300">
-          <label class="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              class="rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400/60"
-              bind:checked={form.is_admin}
-            />
-            <span>Admin</span>
-          </label>
-          <label class="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              class="rounded border-slate-600 bg-slate-900 text-emerald-400 focus:ring-emerald-400/60"
-              bind:checked={form.is_verified}
-            />
-            <span>Verified</span>
-          </label>
-        </div>
-
-        <div class="space-y-1">
-          <label for="user-password" class="block text-xs font-medium text-slate-400">
-            {mode === 'create' ? 'Password (opsional, default pakai email)' : 'Password baru (opsional)'}
-          </label>
-          <input
-            id="user-password"
-            class="w-full px-3 py-2.5 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-50 focus:ring-2 focus:ring-emerald-400/40 focus:border-emerald-400 outline-none"
-            type="password"
-            bind:value={form.password}
-            placeholder={mode === 'create' ? 'Kosongkan untuk gunakan email sebagai password' : 'Biarkan kosong jika tidak mengganti password'}
-          />
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            class="inline-flex items-center px-4 py-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-            on:click={handleClose}
-            disabled={isSubmitting}
-          >
-            Batal
-          </button>
-          <button
-            type="submit"
-            class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-medium shadow-sm hover:shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isSubmitting}
-          >
-            {#if isSubmitting}
-              Menyimpan...
-            {:else}
-              {mode === 'create' ? 'Simpan user' : 'Update user'}
-            {/if}
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 {/if}

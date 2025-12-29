@@ -1,13 +1,12 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import { page as inertiaPage } from '@inertiajs/svelte';
+  import { page as inertiaPage, inertia } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import type { User } from '../types';
 
   export let users: User[] = [];
   export let search: string = '';
   export let filter: string = 'all';
-  // Pagination meta from backend
   export let total: number = 0;
   export let page: number = 1;
   export let limit: number = 10;
@@ -16,80 +15,210 @@
   export let hasPrev: boolean = false;
 
   const currentUser = $inertiaPage.props.user as User | undefined;
+
+  // Get current hour for greeting
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 </script>
 
 <Header group="dashboard" />
 
-<section class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-gray-50 via-white to-gray-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-slate-900 dark:text-slate-50">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20">
-    <div class="grid gap-10 lg:grid-cols-[3fr,2fr] items-start">
-      <div in:fly={{ x: -20, duration: 600 }}>
-        <p class="text-xs tracking-[0.35em] uppercase text-slate-500 dark:text-slate-400 mb-4">
-          Dashboard
+<div class="min-h-screen bg-[#f8f8f8] dark:bg-[#0a0a0a] text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-emerald-400 selection:text-black">
+  
+  <!-- Background Effects -->
+  <div class="fixed inset-0 pointer-events-none z-0">
+    <div class="absolute top-0 right-0 w-[800px] h-[800px] bg-emerald-500/5 rounded-full blur-3xl -mr-96 -mt-96"></div>
+    <div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-3xl -ml-64 -mb-64"></div>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="relative px-6 sm:px-12 lg:px-24 pt-24 pb-20">
+    <div class="max-w-[90rem] mx-auto">
+      
+      <!-- Giant Welcome -->
+      <div class="mb-16" in:fly={{ y: 50, duration: 800 }}>
+        <p class="text-xs font-bold uppercase tracking-[0.3em] text-emerald-600 dark:text-emerald-400 mb-6">
+          {greeting}
         </p>
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.25] mb-4">
-          Selamat datang kembali,
-          <span
-            class="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400"
-          >
-            {$inertiaPage.props.user?.name || 'Nara user'}
+        <h1 class="text-[8vw] sm:text-[6vw] lg:text-[5vw] leading-[0.9] font-bold tracking-tighter">
+          Welcome back,
+          <span class="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-300 dark:from-emerald-400 dark:to-cyan-300">
+            {$inertiaPage.props.user?.name || 'Commander'}
           </span>
         </h1>
-        <p class="text-base sm:text-lg text-slate-600 dark:text-slate-300/90 max-w-xl mb-8">
-          Ini adalah ringkasan singkat aktivitas dan data akun kamu. Desain dan nuansanya
-          dibuat senada dengan landing page supaya terasa satu produk yang utuh.
-        </p>
+      </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-xs text-slate-600 dark:text-slate-300/90">
-          <div class="rounded-2xl bg-gray-50 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-800 px-4 py-3">
-            <p class="text-[11px] tracking-[0.18em] uppercase text-slate-500 mb-1">Users</p>
-            <p class="text-lg font-semibold text-slate-900 dark:text-slate-50">{users?.length ?? 0}</p>
+      <!-- Stats Grid - Radical Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-20" in:fly={{ y: 30, duration: 800, delay: 200 }}>
+        
+        <!-- Card: Total Users -->
+        <div class="group relative h-48 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-emerald-500/50 dark:hover:border-emerald-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute top-0 right-0 p-24 bg-emerald-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-emerald-500/10 transition-colors duration-500"></div>
+          
+          <div class="relative z-10 flex justify-between items-start">
+            <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
+              <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-mono opacity-40 uppercase">Users</span>
           </div>
-          <div class="rounded-2xl bg-gray-50 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-800 px-4 py-3">
-            <p class="text-[11px] tracking-[0.18em] uppercase text-slate-500 mb-1">Filter</p>
-            <p class="text-sm font-medium capitalize">{filter}</p>
+
+          <div class="relative z-10">
+            <p class="text-4xl font-bold tracking-tight mb-1">{total || users?.length || 0}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Total registered</p>
           </div>
-          <div class="rounded-2xl bg-gray-50 dark:bg-slate-900/80 border border-gray-200 dark:border-slate-800 px-4 py-3">
-            <p class="text-[11px] tracking-[0.18em] uppercase text-slate-500 mb-1">Halaman</p>
-            <p class="text-sm font-medium">{page}</p>
+        </div>
+
+        <!-- Card: Current Page -->
+        <div class="group relative h-48 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-purple-500/50 dark:hover:border-purple-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute top-0 right-0 p-24 bg-purple-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-purple-500/10 transition-colors duration-500"></div>
+          
+          <div class="relative z-10 flex justify-between items-start">
+            <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
+              <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-mono opacity-40 uppercase">Page</span>
+          </div>
+
+          <div class="relative z-10">
+            <p class="text-4xl font-bold tracking-tight mb-1">{page}<span class="text-lg text-slate-400">/{totalPages}</span></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Current view</p>
+          </div>
+        </div>
+
+        <!-- Card: Filter Status -->
+        <div class="group relative h-48 bg-slate-100 dark:bg-[#0f0f0f] border border-slate-200 dark:border-white/5 hover:border-orange-500/50 dark:hover:border-orange-500/30 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute top-0 right-0 p-24 bg-orange-500/5 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-orange-500/10 transition-colors duration-500"></div>
+          
+          <div class="relative z-10 flex justify-between items-start">
+            <div class="p-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 group-hover:scale-110 transition-transform duration-300">
+              <svg class="w-5 h-5 text-orange-600 dark:text-orange-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-mono opacity-40 uppercase">Filter</span>
+          </div>
+
+          <div class="relative z-10">
+            <p class="text-2xl font-bold tracking-tight mb-1 capitalize">{filter}</p>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Active filter</p>
+          </div>
+        </div>
+
+        <!-- Card: Account Status -->
+        <div class="group relative h-48 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 p-6 flex flex-col justify-between transition-all duration-500 overflow-hidden rounded-2xl">
+          <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+          
+          <div class="relative z-10 flex justify-between items-start">
+            <div class="p-2 bg-white/10 dark:bg-black/5 rounded-lg border border-white/10 dark:border-black/5 group-hover:scale-110 transition-transform duration-300">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-mono opacity-60 uppercase">Status</span>
+          </div>
+
+          <div class="relative z-10">
+            <p class="text-2xl font-bold tracking-tight mb-1">{$inertiaPage.props.user?.is_admin ? 'Admin' : 'User'}</p>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <p class="text-xs opacity-80">{$inertiaPage.props.user?.is_verified ? 'Verified' : 'Unverified'}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="relative" in:fly={{ x: 20, duration: 600, delay: 80 }}>
-        <div class="absolute -inset-1 rounded-3xl bg-gradient-to-tr from-emerald-500/20 via-cyan-500/10 to-transparent blur-2xl"></div>
-        <div class="relative rounded-3xl border border-gray-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/70 backdrop-blur-xl p-6 sm:p-7 shadow-xl dark:shadow-[0_24px_80px_rgba(15,23,42,0.8)]">
-          <div class="flex items-center justify-between mb-4">
-            <span class="text-xs font-medium tracking-[0.18em] uppercase text-slate-500 dark:text-slate-500">Account snapshot</span>
-            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 px-3 py-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-200">
-              ● Active
-            </span>
-          </div>
-
-          <div class="space-y-4 text-xs text-slate-700 dark:text-slate-200/90">
-            <div class="flex items-center justify-between rounded-2xl bg-gray-50 dark:bg-slate-900/80 px-4 py-3 border border-gray-200 dark:border-slate-800">
-              <div>
-                <p class="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500">Email</p>
-                <p class="text-sm font-medium">{$inertiaPage.props.user?.email}</p>
+      <!-- Account Details Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8" in:fly={{ y: 30, duration: 800, delay: 400 }}>
+        
+        <!-- Left: Quick Info -->
+        <div class="lg:col-span-5">
+          <span class="block text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-6">Account Details</span>
+          
+          <div class="space-y-4">
+            <div class="group p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all duration-300">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">Email Address</p>
+                  <p class="text-lg font-medium">{$inertiaPage.props.user?.email}</p>
+                </div>
+                <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full {$inertiaPage.props.user?.is_verified ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'}">
+                  {$inertiaPage.props.user?.is_verified ? 'Verified' : 'Pending'}
+                </span>
               </div>
-              <span class="rounded-full bg-emerald-500/15 px-3 py-1 text-[11px] text-emerald-600 dark:text-emerald-300">
-                {($inertiaPage.props.user?.is_verified ? 'verified' : 'unverified')}
-              </span>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="rounded-2xl bg-gray-50 dark:bg-slate-900/70 border border-gray-200 dark:border-slate-800 px-3 py-3">
-                <p class="text-[11px] text-slate-500 mb-1">Status</p>
-                <p class="text-sm font-semibold text-slate-900 dark:text-slate-50">{($inertiaPage.props.user?.is_admin ? 'Admin' : 'User')}</p>
-              </div>
-              <div class="rounded-2xl bg-gray-50 dark:bg-slate-900/70 border border-gray-200 dark:border-slate-800 px-3 py-3">
-                <p class="text-[11px] text-slate-500 mb-1">Search</p>
-                <p class="text-sm font-semibold text-slate-900 dark:text-slate-50 truncate">{search || '—'}</p>
-              </div>
+            <div class="group p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all duration-300">
+              <p class="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">Search Query</p>
+              <p class="text-lg font-medium font-mono">{search || '—'}</p>
             </div>
           </div>
         </div>
+
+        <!-- Right: Quick Actions -->
+        <div class="lg:col-span-7">
+          <span class="block text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-6">Quick Actions</span>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <a 
+              href="/users" 
+              use:inertia
+              class="group relative p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-emerald-500/50 transition-all duration-300 overflow-hidden"
+            >
+              <div class="absolute inset-0 bg-emerald-500/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+              <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="h-10 w-10 bg-emerald-500/10 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h3 class="text-lg font-bold mb-1">Manage Users</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">View and manage all registered users</p>
+              </div>
+            </a>
+
+            <a 
+              href="/profile" 
+              use:inertia
+              class="group relative p-6 border border-slate-200 dark:border-white/5 rounded-2xl hover:border-purple-500/50 transition-all duration-300 overflow-hidden"
+            >
+              <div class="absolute inset-0 bg-purple-500/5 transform translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
+              <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="h-10 w-10 bg-purple-500/10 rounded-full flex items-center justify-center">
+                    <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <svg class="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h3 class="text-lg font-bold mb-1">Edit Profile</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Update your account information</p>
+              </div>
+            </a>
+          </div>
+        </div>
       </div>
+
     </div>
-  </div>
-</section>
+  </section>
+
+</div>

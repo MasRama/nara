@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
+  import { fly, fade } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
   import { clickOutside } from '../Components/helper';
   import DarkModeToggle from '../Components/DarkModeToggle.svelte';
@@ -18,155 +18,223 @@
     show: boolean;
   }
 
-  let user = $page.props.user as User | undefined;
- 
+  $: user = $page.props.user as User | undefined;
+  let scrollY = 0;
   let isMenuOpen: boolean = false;
 
   export let group: string; 
 
-  const menuLinks: MenuLink[] = [
+  $: scrolled = scrollY > 50;
+
+  $: menuLinks = [
     { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },  
-    { href: '/users', label: 'Users', group: 'users', show: user?.is_admin ?? false },
+    { href: '/users', label: 'Users', group: 'users', show: !!(user?.is_admin) },
     { href: '/profile', label: 'Profile', group: 'profile', show: !!user },
-  ];
+  ] as MenuLink[];
+  
+  $: visibleMenuLinks = menuLinks.filter((item) => item.show);
 
   function handleLogout(): void {
     router.post('/logout');
   }
 </script>
 
-<header class="fixed inset-x-0 top-0 z-40 border-b border-gray-200 dark:border-slate-800/60 bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl" 
-  in:fly={{ y: -20, duration: 1000, delay: 200 }}>
-  <nav
-    class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between"
-  >
-    <div class="flex items-center gap-6">
-      <a href="/" use:inertia class="flex items-center gap-2">
-        <img src="/public/nara.png" alt="Nara logo" class="h-7 w-7 rounded-lg object-cover" />
-        <div class="flex flex-col leading-tight">
-          <span class="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-50">Nara</span>
-          <span class="text-[10px] uppercase tracking-[0.22em] text-slate-500">TypeScript framework</span>
-        </div>
+<svelte:window bind:scrollY />
+
+<header 
+  class="fixed inset-x-0 top-0 z-50 transition-all duration-500 {scrolled 
+    ? 'bg-white/90 dark:bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-slate-200/50 dark:border-white/5' 
+    : 'bg-white/90 dark:bg-[#0a0a0a]/95 backdrop-blur-xl'}"
+>
+  <nav class="px-6 sm:px-12 lg:px-24 py-5 flex items-center justify-between">
+    
+    <!-- Left: Brand + Nav -->
+    <div class="flex items-center gap-10">
+      <!-- Radical Brand -->
+      <a 
+        href="/" 
+        use:inertia 
+        class="group flex items-center gap-3"
+      >
+        <span class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">
+          NARA.
+        </span>
+        <span class="hidden sm:block text-[9px] uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500 font-medium">
+          Dashboard
+        </span>
       </a>
 
-      <!-- Desktop Menu - pill style, dengan active state netral -->
-      <div class="hidden md:flex items-center gap-3 text-xs font-medium">
-        {#each menuLinks.filter((item) => item.show) as item}
+      <!-- Desktop Navigation - Radical Style -->
+      <div class="hidden md:flex items-center gap-1">
+        {#each visibleMenuLinks as item, i}
           <a 
             use:inertia 
             href={item.href} 
-            class="inline-flex items-center rounded-full px-3 py-1.5 transition-colors border {item.group === group 
-              ? 'border-gray-300 dark:border-slate-600 bg-gray-100 dark:bg-slate-900/80 text-slate-900 dark:text-slate-50' 
-              : 'border-transparent text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-gray-100 dark:hover:bg-slate-900/70'}"
+            class="relative px-4 py-2 text-xs font-medium uppercase tracking-[0.15em] transition-all duration-300
+              {item.group === group 
+                ? 'text-emerald-500' 
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}"
           >
             {item.label}
+            {#if item.group === group}
+              <span class="absolute bottom-0 left-4 right-4 h-px bg-emerald-500"></span>
+            {/if}
           </a>
+          {#if i < visibleMenuLinks.length - 1}
+            <span class="w-px h-3 bg-slate-200 dark:bg-slate-700"></span>
+          {/if}
         {/each}
       </div>
     </div>
 
-    <div class="flex items-center gap-3">
+    <!-- Right: Actions -->
+    <div class="flex items-center gap-4">
+      <!-- Current Page Indicator (Mobile) -->
+      <span class="md:hidden text-[10px] uppercase tracking-[0.2em] text-emerald-500 font-medium">
+        {group}
+      </span>
+
+      <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+      
       <DarkModeToggle />
-      <!-- Auth Buttons - saat login hanya Logout di ujung kanan -->
-      <div class="hidden sm:flex items-center gap-2 text-xs font-medium dark:text-gray-300">
+
+      <!-- Auth Actions -->
+      <div class="hidden sm:flex items-center gap-3">
         {#if user && user.id}
-          <button 
-            on:click={handleLogout}
-            class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
-          >
-            Logout
-          </button>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              {user.name}
+            </span>
+            <button 
+              on:click={handleLogout}
+              class="group relative px-5 py-2 text-xs font-bold uppercase tracking-wider overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 hover:border-red-500/50 dark:hover:border-red-500/50 transition-colors"
+            >
+              <span class="relative z-10 text-slate-600 dark:text-slate-300 group-hover:text-red-500 transition-colors">
+                Logout
+              </span>
+            </button>
+          </div>
         {:else}
           <a
             href="/login"
-            class="inline-flex items-center rounded-full px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50 hover:bg-gray-100 dark:hover:bg-slate-900/70 transition-colors"
+            use:inertia
+            class="text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
           >
-            Masuk
+            Login
           </a>
           <a
             href="/register"
-            class="inline-flex items-center rounded-full px-3.5 py-1.5 text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors"
+            use:inertia
+            class="group relative px-5 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform"
           >
-            Daftar
+            <span class="relative z-10">Register</span>
+            <div class="absolute inset-0 bg-emerald-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
           </a>
         {/if}
       </div>
 
       <!-- Mobile Menu Button -->
       <button
-        class="md:hidden p-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+        class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 hover:border-emerald-500/50 transition-colors text-slate-900 dark:text-white"
         on:click={() => isMenuOpen = !isMenuOpen}
         aria-label="Menu"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-6 h-6"
-        >
-          {#if !isMenuOpen}
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
-          />
-          {:else}
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-          {/if}
-        </svg>
+        <div class="flex flex-col gap-1.5 w-4">
+          <span class="block h-px bg-slate-900 dark:bg-white transition-transform duration-300 {isMenuOpen ? 'rotate-45 translate-y-[3.5px]' : ''}"></span>
+          <span class="block h-px bg-slate-900 dark:bg-white transition-opacity duration-300 {isMenuOpen ? 'opacity-0' : ''}"></span>
+          <span class="block h-px bg-slate-900 dark:bg-white transition-transform duration-300 {isMenuOpen ? '-rotate-45 -translate-y-[3.5px]' : ''}"></span>
+        </div>
       </button>
     </div>
   </nav>
   
-  <!-- Mobile Menu -->
-  {#if isMenuOpen}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div  
-    use:clickOutside on:click_outside={() => isMenuOpen = false}
-    class="fixed inset-0 bg-black/20   backdrop-blur-sm z-50 md:hidden {isMenuOpen ? 'block' : 'hidden'}"
-    on:click={() => (isMenuOpen = false)}
+  </header>
+
+<!-- Mobile Menu - Radical Full Screen (Outside header for proper z-index) -->
+{#if isMenuOpen}
+<div  
+  transition:fade={{ duration: 200 }}
+  class="fixed inset-0 bg-white dark:bg-[#0a0a0a] z-[9999] md:hidden overflow-y-auto"
+  style="top: 0; left: 0; right: 0; bottom: 0;"
+>
+  <!-- Close Button -->
+  <button
+    class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white z-10"
+    on:click={() => isMenuOpen = false}
+    aria-label="Close menu"
   >
-    <div
-      class="absolute right-0 top-0 h-screen w-64 bg-white dark:bg-gray-800 shadow-lg"
-      on:click|stopPropagation
-    >
-      <div class="flex flex-col p-4 space-y-4">
-        {#each menuLinks.filter((item) => item.show) as item}
-          <a 
-            href={item.href} 
-            class="mobile-nav-link dark:text-gray-200 dark:hover:bg-gray-700 dark:hover:text-white {item.group === group ? 'active' : ''}"
-          >
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <!-- Brand -->
+  <div class="absolute top-6 left-6 z-10">
+    <span class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white">NARA.</span>
+  </div>
+
+  <!-- Menu Content -->
+  <div class="min-h-screen flex flex-col justify-center px-8 sm:px-12 py-24">
+    <!-- Navigation Links -->
+    <nav class="space-y-6 mb-12">
+      {#each visibleMenuLinks as item, i}
+        <a 
+          href={item.href}
+          use:inertia
+          on:click={() => isMenuOpen = false}
+          class="block text-4xl sm:text-5xl font-bold tracking-tighter transition-all duration-300
+            {item.group === group 
+              ? 'text-emerald-500' 
+              : 'text-slate-900 dark:text-white hover:text-emerald-500 dark:hover:text-emerald-400 hover:translate-x-2'}"
+          in:fly={{ y: 20, duration: 400, delay: i * 100 }}
+        >
+          <span class="inline-flex items-center gap-4">
+            <span class="text-xs font-mono text-slate-400 dark:text-slate-500">0{i + 1}</span>
             {item.label}
+          </span>
+        </a>
+      {/each}
+    </nav>
+
+    <!-- Mobile Auth -->
+    <div class="pt-8 border-t border-slate-200 dark:border-slate-800" in:fly={{ y: 20, duration: 400, delay: 300 }}>
+      {#if user}
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-4">Signed in as</p>
+        <p class="text-lg font-medium text-slate-900 dark:text-white mb-6">{user.name}</p>
+        <button 
+          on:click={handleLogout}
+          class="px-6 py-3 text-sm font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-full hover:border-red-500 hover:text-red-500 transition-colors"
+        >
+          Logout
+        </button>
+      {:else}
+        <div class="flex gap-4">
+          <a 
+            href="/login" 
+            use:inertia
+            class="px-6 py-3 text-sm font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-full hover:border-emerald-500 transition-colors"
+          >
+            Login
           </a>
-        {/each}
-      </div>
-      <div class="px-4 py-3 border-t dark:border-gray-700 border-gray-200">
-        <div class="flex items-center space-x-3">
-          {#if user}
-            <button 
-              class="flex-1 btn-secondary dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700 dark:hover:text-white dark:text-gray-400 text-sm py-2"
-              on:click={handleLogout}
-            >
-              Logout
-            </button>
-          {:else}
-            <a href="/login" class="flex-1 btn-secondary text-sm py-2">Masuk</a>
-            <a href="/register" class="flex-1 btn-primary text-sm py-2">Daftar</a>
-          {/if}
+          <a 
+            href="/register" 
+            use:inertia
+            class="px-6 py-3 text-sm font-bold uppercase tracking-wider bg-slate-900 dark:bg-white text-white dark:text-black rounded-full"
+          >
+            Register
+          </a>
         </div>
-      </div>
+      {/if}
     </div>
   </div>
-  {/if}
-</header>
 
- 
-<br>
-<br>
+  <!-- Decorative -->
+  <div class="absolute bottom-8 left-8 sm:left-12 text-[10px] uppercase tracking-[0.3em] text-slate-300 dark:text-slate-600">
+    NARA Framework
+  </div>
+
+  <!-- Background Decoration -->
+  <div class="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl pointer-events-none"></div>
+</div>
+{/if}
