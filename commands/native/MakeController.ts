@@ -37,6 +37,7 @@ class MakeController {
    }
 
    getTemplate(className: string, resourceName: string) {
+      const modelName = className.replace('Controller', '');
       return `/**
  * ${className}
  * 
@@ -44,12 +45,13 @@ class MakeController {
  */
 import { BaseController, jsonSuccess, jsonPaginated, jsonCreated, jsonNotFound, jsonServerError } from "@core";
 import type { NaraRequest, NaraResponse } from "@core";
+// TODO: Import your model after creating it with: node nara make:model ${modelName}
+// import { ${modelName} } from "@models";
 import DB from "@services/DB";
 import Logger from "@services/Logger";
 import { paginate } from "@services/Paginator";
-import { PAGINATION, ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
+import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "@config";
 import { randomUUID } from "crypto";
-import dayjs from "dayjs";
 
 class ${className} extends BaseController {
   /**
@@ -58,6 +60,8 @@ class ${className} extends BaseController {
   public async index(request: NaraRequest, response: NaraResponse) {
     const { page, limit, search } = this.getPaginationParams(request);
 
+    // TODO: Replace with model query after creating model
+    // const records = await ${modelName}.search(search);
     let query = DB.from("${resourceName}s").select("*");
 
     if (search) {
@@ -78,20 +82,19 @@ class ${className} extends BaseController {
     this.requireAuth(request);
 
     // TODO: Add validation schema
-    // const data = await this.getBody(request, Create${className.replace('Controller', '')}Schema);
+    // const data = await this.getBody(request, Create${modelName}Schema);
     const data = await request.json();
 
-    const now = dayjs().valueOf();
-    const record = {
-      id: randomUUID(),
-      ...data,
-      created_at: now,
-      updated_at: now,
-    };
-
     try {
+      // TODO: Replace with model after creating it
+      // const record = await ${modelName}.create({ id: randomUUID(), ...data });
+      const record = {
+        id: randomUUID(),
+        ...data,
+      };
       await DB.table("${resourceName}s").insert(record);
-      Logger.info('${className.replace('Controller', '')} created', { id: record.id, userId: request.user!.id });
+
+      Logger.info('${modelName} created', { id: record.id, userId: request.user!.id });
       return jsonCreated(response, SUCCESS_MESSAGES.DATA_CREATED, record);
     } catch (error: any) {
       Logger.error('Failed to create ${resourceName}', error);
@@ -105,6 +108,8 @@ class ${className} extends BaseController {
   public async show(request: NaraRequest, response: NaraResponse) {
     const { id } = request.params;
 
+    // TODO: Replace with model after creating it
+    // const record = await ${modelName}.findById(id);
     const record = await DB.from("${resourceName}s").where("id", id).first();
 
     if (!record) {
@@ -123,23 +128,23 @@ class ${className} extends BaseController {
     const { id } = request.params;
     
     // TODO: Add validation schema
-    // const data = await this.getBody(request, Update${className.replace('Controller', '')}Schema);
+    // const data = await this.getBody(request, Update${modelName}Schema);
     const data = await request.json();
 
+    // TODO: Replace with model after creating it
+    // const existing = await ${modelName}.findById(id);
     const existing = await DB.from("${resourceName}s").where("id", id).first();
     if (!existing) {
       return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
     }
 
-    const payload = {
-      ...data,
-      updated_at: dayjs().valueOf(),
-    };
-
     try {
-      await DB.from("${resourceName}s").where("id", id).update(payload);
+      // TODO: Replace with model after creating it
+      // const record = await ${modelName}.update(id, data);
+      await DB.from("${resourceName}s").where("id", id).update(data);
       const record = await DB.from("${resourceName}s").where("id", id).first();
-      Logger.info('${className.replace('Controller', '')} updated', { id, userId: request.user!.id });
+
+      Logger.info('${modelName} updated', { id, userId: request.user!.id });
       return jsonSuccess(response, SUCCESS_MESSAGES.DATA_UPDATED, record);
     } catch (error: any) {
       Logger.error('Failed to update ${resourceName}', error);
@@ -156,13 +161,15 @@ class ${className} extends BaseController {
     const { id } = request.params;
 
     try {
+      // TODO: Replace with model after creating it
+      // const deleted = await ${modelName}.delete(id);
       const deleted = await DB.from("${resourceName}s").where("id", id).delete();
       
       if (!deleted) {
         return jsonNotFound(response, ERROR_MESSAGES.NOT_FOUND);
       }
 
-      Logger.info('${className.replace('Controller', '')} deleted', { id, userId: request.user!.id });
+      Logger.info('${modelName} deleted', { id, userId: request.user!.id });
       return jsonSuccess(response, SUCCESS_MESSAGES.DATA_DELETED);
     } catch (error: any) {
       Logger.error('Failed to delete ${resourceName}', error);

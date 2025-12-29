@@ -7,7 +7,7 @@ const c = colors;
 class MakeResource {
   public args: string[] = [];
   public commandName = "make:resource";
-  public description = "Create a complete resource (controller, validator, routes)";
+  public description = "Create a complete resource (controller, model, validator, routes)";
 
   public async run() {
     if (this.args.length < 2) {
@@ -16,6 +16,7 @@ class MakeResource {
       console.log(`${c.dim}Example: node nara make:resource Post${c.reset}`);
       console.log(`\n${c.yellow}Options:${c.reset}`);
       console.log(`  ${c.dim}--api         Generate API-only routes (no Inertia pages)${c.reset}`);
+      console.log(`  ${c.dim}--with-model  Generate model class${c.reset}`);
       console.log(`  ${c.dim}--with-pages  Generate Svelte+Inertia page skeletons${c.reset}`);
       console.log();
       return;
@@ -23,6 +24,7 @@ class MakeResource {
 
     let name = this.args[1];
     const apiOnly = this.args.includes('--api');
+    const withModel = this.args.includes('--with-model');
     const withPages = this.args.includes('--with-pages');
     
     // Clean up name and ensure proper casing
@@ -35,16 +37,21 @@ class MakeResource {
     printInfo(`Creating resource: ${c.cyan}${pascalName}${c.reset}`);
     console.log();
 
-    // 1. Create Controller
-    const controllerCreated = this.createController(pascalName, lowerName, pluralName, apiOnly);
+    // 1. Create Model (optional)
+    if (withModel) {
+      this.createModel(pascalName, lowerName, pluralName);
+    }
+
+    // 2. Create Controller
+    const controllerCreated = this.createController(pascalName, lowerName, pluralName, apiOnly, withModel);
     
-    // 2. Create Validators
+    // 3. Create Validators
     const validatorCreated = this.createValidators(pascalName, lowerName);
     
-    // 3. Generate Route Snippet
+    // 4. Generate Route Snippet
     this.generateRouteSnippet(pascalName, lowerName, pluralName, apiOnly);
     
-    // 4. Create Svelte Pages (optional)
+    // 5. Create Svelte Pages (optional)
     if (withPages && !apiOnly) {
       this.createSveltePages(pascalName, lowerName, pluralName);
     }
@@ -57,14 +64,44 @@ class MakeResource {
     console.log(`${c.yellow}${c.bright}Next Steps:${c.reset}`);
     console.log(`  ${c.dim}1. Add the route snippet to ${c.cyan}routes/web.ts${c.reset}`);
     console.log(`  ${c.dim}2. Export validators in ${c.cyan}app/validators/index.ts${c.reset}`);
-    console.log(`  ${c.dim}3. Create migration: ${c.cyan}node nara make:migration create_${pluralName}_table${c.reset}`);
+    if (withModel) {
+      console.log(`  ${c.dim}3. Export model in ${c.cyan}app/models/index.ts${c.reset}`);
+      console.log(`  ${c.dim}4. Create migration: ${c.cyan}node nara make:migration create_${pluralName}_table${c.reset}`);
+    } else {
+      console.log(`  ${c.dim}3. Create migration: ${c.cyan}node nara make:migration create_${pluralName}_table${c.reset}`);
+      console.log(`  ${c.dim}4. Create model: ${c.cyan}node nara make:model ${pascalName}${c.reset}`);
+    }
     if (withPages) {
-      console.log(`  ${c.dim}4. Customize Svelte pages in ${c.cyan}resources/js/Pages/${pascalName}/${c.reset}`);
+      console.log(`  ${c.dim}5. Customize Svelte pages in ${c.cyan}resources/js/Pages/${pascalName}/${c.reset}`);
     }
     console.log();
   }
 
-  private createController(pascalName: string, lowerName: string, pluralName: string, apiOnly: boolean): boolean {
+  private createModel(pascalName: string, lowerName: string, pluralName: string): boolean {
+    const filename = pascalName + ".ts";
+    const filepath = "./app/models/" + filename;
+
+    // Ensure models directory exists
+    if (!fs.existsSync("./app/models")) {
+      fs.mkdirSync("./app/models", { recursive: true });
+    }
+
+    if (fs.existsSync(filepath)) {
+      printInfo(`Model already exists: ${c.dim}${filepath}${c.reset}`);
+      return false;
+    }
+
+    fs.writeFileSync(filepath, this.getModelTemplate(pascalName, pluralName));
+    printSuccess(`Created: ${c.cyan}app/models/${filename}${c.reset}`);
+    
+    // Show export hint
+    console.log(`${c.dim}  Add to app/models/index.ts:${c.reset}`);
+    console.log(`${c.dim}    export { ${pascalName}, ${pascalName}Record, Create${pascalName}Data, Update${pascalName}Data } from './${pascalName}';${c.reset}`);
+    
+    return true;
+  }
+
+  private createController(pascalName: string, lowerName: string, pluralName: string, apiOnly: boolean, withModel: boolean = false): boolean {
     const className = pascalName + "Controller";
     const filename = className + ".ts";
     const filepath = "./app/controllers/" + filename;
@@ -795,6 +832,60 @@ export function Update${pascalName}Schema(data: unknown): ValidationResult<Updat
     </div>
   </form>
 </div>
+`;
+  }
+
+  private getModelTemplate(pascalName: string, pluralName: string): string {
+    return `/**
+ * ${pascalName} Model
+ * 
+ * Handles all ${pascalName.toLowerCase()}-related database operations.
+ */
+import { BaseModel, BaseRecord } from "./BaseModel";
+
+/**
+ * ${pascalName} record interface
+ */
+export interface ${pascalName}Record extends BaseRecord {
+  id: string;
+  name: string | null;
+  // TODO: Add more fields based on your database schema
+  created_at: number;
+  updated_at: number;
+}
+
+/**
+ * Data for creating a new ${pascalName.toLowerCase()}
+ */
+export interface Create${pascalName}Data {
+  id: string;
+  name?: string | null;
+  // TODO: Add more fields
+}
+
+/**
+ * Data for updating a ${pascalName.toLowerCase()}
+ */
+export interface Update${pascalName}Data {
+  name?: string | null;
+  // TODO: Add more fields
+}
+
+class ${pascalName}Model extends BaseModel<${pascalName}Record> {
+  protected tableName = "${pluralName}";
+
+  /**
+   * Find ${pascalName.toLowerCase()} by name
+   */
+  async findByName(name: string): Promise<${pascalName}Record | undefined> {
+    return this.query().where("name", name).first();
+  }
+
+  // TODO: Add more custom methods as needed
+}
+
+export const ${pascalName} = new ${pascalName}Model();
+export default ${pascalName};
 `;
   }
 
