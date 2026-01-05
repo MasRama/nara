@@ -30,6 +30,8 @@ public/uploads
 .cursor   
 .windsurfrules
 .vscode
+.zencoder
+.zenflow
 
 # Logs
 logs/
