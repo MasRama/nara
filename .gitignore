@@ -29,6 +29,7 @@ public/uploads
 .augment
 .cursor   
 .windsurfrules
+.vscode
 
 # Logs
 logs/
