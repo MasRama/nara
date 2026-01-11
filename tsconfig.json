@@ -49,10 +49,10 @@
     "migrations",
     "seeds",
     "app",
-    "routes"
+    "routes",
+    "resources/**/*.svelte"
   ],
   "exclude": [
-    "resources",
     "node_modules",
     "dist",
     "build"
