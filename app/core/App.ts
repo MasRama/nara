@@ -270,6 +270,22 @@ export class NaraApp {
 
         // Special handling for ValidationError
         if (error instanceof ValidationError) {
+          // Check if this is an Inertia request
+          const isInertia = req.headers["x-inertia"] === "true";
+
+          if (isInertia) {
+            // For Inertia requests, redirect back with error cookie
+            const referer = req.headers["referer"] || "/";
+            const errorMsg = error.errors
+              ? Object.values(error.errors).flat().join(", ")
+              : error.message;
+
+            return (res as NaraResponse)
+              .cookie("error", errorMsg, 5000)
+              .redirect(referer);
+          }
+
+          // For API requests, return JSON
           return jsonValidationError(
             res as NaraResponse,
             error.message,
