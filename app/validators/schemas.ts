@@ -83,27 +83,30 @@ export function LoginSchema(data: unknown): ValidationResult<LoginInput> {
 
   const { email, phone, password } = data as Record<string, unknown>;
 
+  const trimmedEmail = email ? String(email).trim() : undefined;
+  const trimmedPassword = password ? String(password).trim() : '';
+
   // Email or phone required
-  if (!email && !phone) {
+  if (!trimmedEmail && !phone) {
     errors._root = ['Email atau nomor telepon wajib diisi'];
   }
 
   // Validate email if provided
-  if (email !== undefined && email !== null && email !== '') {
-    if (!isEmail(email)) {
+  if (trimmedEmail !== undefined && trimmedEmail !== null && trimmedEmail !== '') {
+    if (!isEmail(trimmedEmail)) {
       errors.email = ['Format email tidak valid'];
     }
   }
 
   // Validate phone if provided
   if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isString(phone) || phone.length < 10) {
-      errors.phone = ['Nomor telepon minimal 10 digit'];
+    if (!isPhone(phone)) {
+      errors.phone = ['Format nomor telepon tidak valid'];
     }
   }
 
   // Password required
-  if (!isString(password) || password.length === 0) {
+  if (!isString(trimmedPassword) || trimmedPassword.length === 0) {
     errors.password = ['Password wajib diisi'];
   }
 
@@ -114,9 +117,9 @@ export function LoginSchema(data: unknown): ValidationResult<LoginInput> {
   return {
     success: true,
     data: {
-      email: email ? String(email).toLowerCase() : undefined,
+      email: trimmedEmail ? trimmedEmail.toLowerCase() : undefined,
       phone: phone ? String(phone) : undefined,
-      password: String(password),
+      password: String(trimmedPassword),
     }
   };
 }
@@ -133,6 +136,9 @@ export function RegisterSchema(data: unknown): ValidationResult<RegisterInput> {
 
   const { name, email, phone, password } = data as Record<string, unknown>;
 
+  const trimmedEmail = String(email).trim();
+  const trimmedPassword = String(password).trim();
+
   // Name validation
   if (!isString(name) || name.trim().length < 2) {
     errors.name = ['Nama minimal 2 karakter'];
@@ -141,7 +147,7 @@ export function RegisterSchema(data: unknown): ValidationResult<RegisterInput> {
   }
 
   // Email validation
-  if (!isEmail(email)) {
+  if (!isEmail(trimmedEmail)) {
     errors.email = ['Format email tidak valid'];
   }
 
@@ -153,9 +159,9 @@ export function RegisterSchema(data: unknown): ValidationResult<RegisterInput> {
   }
 
   // Password validation
-  if (!isString(password) || password.length < 8) {
+  if (!isString(trimmedPassword) || trimmedPassword.length < 8) {
     errors.password = ['Password minimal 8 karakter'];
-  } else if (password.length > 100) {
+  } else if (trimmedPassword.length > 100) {
     errors.password = ['Password maksimal 100 karakter'];
   }
 
@@ -167,9 +173,9 @@ export function RegisterSchema(data: unknown): ValidationResult<RegisterInput> {
     success: true,
     data: {
       name: String(name).trim(),
-      email: String(email).toLowerCase(),
+      email: trimmedEmail.toLowerCase(),
       phone: phone ? String(phone) : null,
-      password: String(password),
+      password: trimmedPassword,
     }
   };
 }
