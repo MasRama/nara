@@ -6,17 +6,8 @@
   import { fade, fly } from 'svelte/transition';
 
   onMount(() => {
-      // Apply dark mode from localStorage
-      const savedMode = localStorage.getItem('darkMode');
-      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const isDark = savedMode === null ? systemPrefersDark : savedMode === 'true';
-      
-      if (isDark) {
-          document.documentElement.classList.add('dark');
-      } else {
-          document.documentElement.classList.remove('dark');
-      }
-  }); 
+      // Logic for onMount if needed in future
+  });
 
   interface LoginForm {
     email: string;
