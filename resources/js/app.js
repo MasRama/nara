@@ -12,8 +12,10 @@ createInertiaApp({
   },
 })
 
-const isDarkMode = true;
-// Check localStorage or fallback to system preference
+const savedMode = localStorage.getItem('darkMode');
+const isDarkMode = savedMode === null
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+    : savedMode === 'true';
 
 if (isDarkMode) {
   document.documentElement.classList.add('dark');
