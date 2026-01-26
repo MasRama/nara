@@ -115,26 +115,26 @@ Route.post("/assets/avatar", [Auth, strictRateLimit()], AssetController.uploadAs
 Route.get("/assets/:file", AssetController.distFolder);
 
 /**
- * 2. Public Assets (/*) - Catch-all Route
- * Serves static files from the public directory
+ * 2. Public & Storage Assets (/*) - Catch-all Route
+ * Serves static files from public and storage directories
  * - Must be the LAST route in the file
  * - Only serves files with allowed extensions
  * - Returns 404 for paths without extensions
  * - Implements security checks against unauthorized access
- * 
+ *
  * Allowed file types:
- * - Images: .ico, .png, .jpeg, .jpg, .gif, .svg
+ * - Images: .ico, .png, .jpeg, .jpg, .gif, .svg, .webp
  * - Documents: .txt, .pdf
  * - Fonts: .woff, .woff2, .ttf, .eot
  * - Media: .mp4, .webm, .mp3, .wav
  * - Web: .css, .js
- * 
+ *
  * Example URLs:
- * - /images/logo.png
- * - /documents/terms.pdf
- * - /fonts/roboto.woff2
+ * - /public/images/logo.png
+ * - /storage/avatars/user-1.webp
  */
 Route.get("/public/*", AssetController.publicFolder);
+Route.get("/storage/*", AssetController.publicFolder);
 
 // Export the underlying HyperExpress router for mounting to the server
 export default Route.getRouter();

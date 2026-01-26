@@ -29,5 +29,9 @@ export type { PaginatedMeta, PaginatedResult, PaginateOptions } from './Paginato
 // SQLite utilities
 export { default as SQLite } from './SQLite';
 
+// Storage
+export { default as Storage } from './Storage';
+export type { StorageConfig, StoredFile, StoreOptions } from './Storage';
+
 // View rendering
 export { view } from './View';

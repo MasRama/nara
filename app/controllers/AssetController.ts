@@ -6,6 +6,8 @@ import path from "path";
 import sharp from "sharp";  
 import { Asset, User } from "@models";
 import Logger from "@services/Logger";
+import { Storage } from '@services';
+import { UPLOAD } from '@config/constants';
 
 
 
@@ -60,16 +62,15 @@ class AssetController extends BaseController {
                                 })
                                 .toBuffer();
 
-                            // Ensure local upload directory exists
-                            const uploadDir = "public/uploads/avatars";
-                            await fs.promises.mkdir(uploadDir, { recursive: true });
-
-                            // Save processed image buffer to local filesystem
-                            const localPath = `${uploadDir}/${fileName}`;
-                            await fs.promises.writeFile(localPath, processedBuffer);
+                            // Store processed image using Storage service
+                            const storedFile = await Storage.put(processedBuffer, {
+                                directory: UPLOAD.AVATAR_DIR,
+                                name: id,
+                                extension: 'webp'
+                            });
 
                             // Build public URL for the saved file
-                            const publicUrl = `/public/uploads/avatars/${fileName}`;
+                            const publicUrl = storedFile.url;
 
                             // Save to assets table with local file reference
                             await Asset.create({
@@ -168,8 +169,8 @@ class AssetController extends BaseController {
 
         // Security: Check for path traversal attempts BEFORE any path operations
         // Block any path containing .. or encoded variants
-        if (relativePath.includes('..') || 
-            relativePath.includes('%2e') || 
+        if (relativePath.includes('..') ||
+            relativePath.includes('%2e') ||
             relativePath.includes('%2E') ||
             relativePath.includes('\0')) {
             Logger.logSecurity('Path traversal attempt blocked', {
@@ -191,14 +192,16 @@ class AssetController extends BaseController {
 
         // Resolve the absolute path and verify it's within public directory
         const publicDir = path.resolve(process.cwd(), 'public');
+        const storageDir = path.resolve(process.cwd(), 'storage');
         const resolvedPath = path.resolve(process.cwd(), relativePath);
 
-        // Security: Ensure the resolved path is within the public directory
-        if (!resolvedPath.startsWith(publicDir)) {
+        // Security: Ensure the resolved path is within the public or storage directory
+        if (!resolvedPath.startsWith(publicDir) && !resolvedPath.startsWith(storageDir)) {
             Logger.logSecurity('Path traversal attempt blocked (resolved path escape)', {
                 requestedPath,
                 resolvedPath,
                 publicDir,
+                storageDir,
                 ip: request.ip
             });
             return response.status(403).send('Access denied');

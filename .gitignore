@@ -20,8 +20,9 @@ production.sqlite3
 /build
 /dist
 
-# Uploads
+# Uploads & Storage
 public/uploads
+storage/
 
 # AI
 .windsurf

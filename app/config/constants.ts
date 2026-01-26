@@ -92,10 +92,10 @@ export const UPLOAD = {
   ALLOWED_DOC_EXTENSIONS: ['pdf', 'doc', 'docx', 'xls', 'xlsx'],
   
   /** Avatar upload directory */
-  AVATAR_DIR: 'public/uploads/avatars',
-  
+  AVATAR_DIR: 'avatars',
+
   /** General assets directory */
-  ASSETS_DIR: 'public/uploads/assets',
+  ASSETS_DIR: 'assets',
 } as const;
 
 // ============================================

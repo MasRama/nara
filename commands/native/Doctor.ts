@@ -300,7 +300,7 @@ class Doctor {
     const folders = [
       { path: './logs', name: 'Logs' },
       { path: './backups', name: 'Backups' },
-      { path: './public/uploads', name: 'Uploads' },
+      { path: './storage', name: 'Storage' },
     ];
 
     for (const folder of folders) {
