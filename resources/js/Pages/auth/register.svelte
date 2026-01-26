@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { inertia, router } from '@inertiajs/svelte' 
-  import { password_generator } from '../../Components/helper';
+  import { inertia, router } from '@inertiajs/svelte'
+  import { password_generator, Toast } from '../../Components/helper';
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
@@ -34,11 +34,15 @@
     password_confirmation: '', 
   }
 
-  export let error: string | undefined;
+  let { error }: { error?: string } = $props();
+
+  $effect(() => {
+    if (error) Toast(error, 'error');
+  });
 
   function submitForm(): void {
     if (form.password != form.password_confirmation) {
-      alert("Password and konfirmasi password harus sama")
+      Toast("Password dan konfirmasi password harus sama", "error");
       return;
     }
  
@@ -101,12 +105,6 @@
       <div class="max-w-md w-full mx-auto mt-8 lg:mt-0" in:fly={{ y: 20, duration: 800 }}>
           <h1 class="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Create Account.</h1>
           <p class="text-slate-500 dark:text-slate-400 mb-8 text-lg">Start building your legacy.</p>
-
-          {#if error}
-            <div class="p-4 mb-6 text-sm text-red-600 dark:text-red-400 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30" role="alert">
-                {error}
-            </div>
-          {/if}
 
           <!-- Google Signup Button -->
           <div class="flex flex-col space-y-4 mb-8">

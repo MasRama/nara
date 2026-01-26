@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { inertia, router } from '@inertiajs/svelte' 
+  import { inertia, router } from '@inertiajs/svelte'
+  import { Toast } from '../../Components/helper';
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
@@ -27,7 +28,11 @@
     password: '',
   }
 
-  export let error: string | undefined;
+  let { error }: { error?: string } = $props();
+
+  $effect(() => {
+    if (error) Toast(error, 'error');
+  });
 
   function submitForm(): void {
     router.post("/login", { email: form.email, password: form.password })
@@ -48,12 +53,6 @@
       <div class="max-w-md w-full mx-auto" in:fly={{ y: 20, duration: 800 }}>
           <h1 class="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Welcome Back.</h1>
           <p class="text-slate-500 dark:text-slate-400 mb-10 text-lg">Enter your credentials to access the grid.</p>
-
-          {#if error}
-            <div class="p-4 mb-6 text-sm text-red-600 dark:text-red-400 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30" role="alert">
-                {error}
-            </div>
-          {/if}
 
           <!-- Google Login Button -->
           <div class="flex flex-col space-y-4 mb-8">

@@ -2,7 +2,7 @@
   import { inertia, router } from '@inertiajs/svelte'
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
-  import { password_generator } from '../../Components/helper';
+  import { password_generator, Toast } from '../../Components/helper';
 
   interface ResetPasswordForm {
     password: string;
@@ -10,8 +10,11 @@
     id: string;
   }
 
-  export let id: string;
-  export let error: string | undefined;
+  let { id, error }: { id: string, error?: string } = $props();
+
+  $effect(() => {
+    if (error) Toast(error, 'error');
+  });
 
   let form: ResetPasswordForm = {
     password: '',
@@ -27,7 +30,7 @@
 
   function submitForm(): void {
     if (form.password != form.password_confirmation) {
-      alert("Password dan konfirmasi password harus sama")
+      Toast("Password dan konfirmasi password harus sama", "error")
       return;
     }
 
@@ -61,12 +64,6 @@
         <h1 class="text-xl font-bold leading-tight tracking-tight text-slate-50 md:text-2xl">
           Reset Password
         </h1>
-        
-        {#if error}
-        <div class="p-4 mb-4 text-sm text-red-400 rounded-lg bg-red-900/50" role="alert">
-           {error}
-        </div>
-        {/if}
 
         <form class="space-y-4 md:space-y-6" on:submit|preventDefault={submitForm}>
           <div>

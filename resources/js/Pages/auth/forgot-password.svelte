@@ -3,7 +3,7 @@
     import NaraIcon from "../../Components/NaraIcon.svelte";
     import DarkModeToggle from "../../Components/DarkModeToggle.svelte";
     import axios from "axios";
-    import { api } from "../../Components/helper";
+    import { api, Toast } from "../../Components/helper";
 
     interface ForgotPasswordForm {
         email: string;
@@ -15,8 +15,12 @@
         phone: "",
     };
 
-    let success: boolean = false;
-    export let error: string | undefined;
+    let success: boolean = $state(false);
+    let { error }: { error?: string } = $props();
+
+    $effect(() => {
+        if (error) Toast(error, 'error');
+    });
 
     async function submitForm(): Promise<void> {
         const result = await api(() => axios.post("/forgot-password", form));
@@ -55,12 +59,6 @@
                 <h1 class="text-xl font-bold leading-tight tracking-tight text-slate-50 md:text-2xl">
                     Reset Password
                 </h1>
-
-                {#if error}
-                    <div class="p-4 mb-4 text-sm text-red-400 rounded-lg bg-red-900/50" role="alert">
-                        {error}
-                    </div>
-                {/if}
 
                 {#if success}
                     <div class="p-4 mb-4 text-sm text-green-400 rounded-lg bg-green-900/50" role="alert">
