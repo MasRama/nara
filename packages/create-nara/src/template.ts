@@ -80,7 +80,41 @@ export async function setupProject(options: ProjectOptions) {
     fs.mkdirSync(path.join(targetDir, 'uploads'), { recursive: true });
   }
 
-  // 6. Generate package.json (dynamic content)
+  // 6. Modify server.ts to import feature routes
+  const serverPath = path.join(targetDir, 'server.ts');
+  if (fs.existsSync(serverPath)) {
+    let serverContent = fs.readFileSync(serverPath, 'utf8');
+
+    // Add auth routes import and registration
+    if (features.includes('auth')) {
+      // Add import after web routes import
+      serverContent = serverContent.replace(
+        "import { registerRoutes } from './routes/web.js';",
+        "import { registerRoutes } from './routes/web.js';\nimport { registerAuthRoutes } from './routes/auth.js';"
+      );
+      // Add registration before app.start()
+      serverContent = serverContent.replace(
+        'app.start();',
+        'registerAuthRoutes(app);\napp.start();'
+      );
+    }
+
+    // Add upload routes import and registration
+    if (features.includes('uploads')) {
+      serverContent = serverContent.replace(
+        "import { registerRoutes } from './routes/web.js';",
+        "import { registerRoutes } from './routes/web.js';\nimport { registerUploadRoutes } from './routes/uploads.js';"
+      );
+      serverContent = serverContent.replace(
+        'app.start();',
+        'registerUploadRoutes(app);\napp.start();'
+      );
+    }
+
+    fs.writeFileSync(serverPath, serverContent);
+  }
+
+  // 7. Generate package.json (dynamic content)
   const pkg = createPackageJson(projectName, mode, features);
   fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(pkg, null, 2));
 }
