@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
-  import { clickOutside } from '../components/helper';
+  import { clickOutside, Toast } from '../components/helper';
   import DarkModeToggle from '../components/DarkModeToggle.svelte';
 
   interface User {
@@ -22,20 +22,36 @@
   let scrollY = 0;
   let isMenuOpen: boolean = false;
 
-  export let group: string; 
+  export let group: string;
 
   $: scrolled = scrollY > 50;
 
   $: menuLinks = [
-    { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },  
+    { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },
     { href: '/users', label: 'Users', group: 'users', show: !!(user?.is_admin) },
     { href: '/profile', label: 'Profile', group: 'profile', show: !!user },
   ] as MenuLink[];
-  
+
   $: visibleMenuLinks = menuLinks.filter((item) => item.show);
 
-  function handleLogout(): void {
-    router.post('/logout');
+  async function handleLogout(): Promise<void> {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        Toast(result.message || 'Logged out successfully', 'success');
+        router.visit(result.data?.redirect || '/login');
+      } else {
+        Toast(result.message || 'Logout failed', 'error');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error';
+      Toast(errorMessage, 'error');
+    }
   }
 </script>
 

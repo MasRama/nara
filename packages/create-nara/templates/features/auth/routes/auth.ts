@@ -12,12 +12,13 @@ export function registerAuthRoutes(app: NaraApp) {
   app.post('/api/auth/register', async (req, res) => {
     await auth.register(req, res);
   });
+  // Logout is public - just clears the cookie
+  app.post('/api/auth/logout', async (req, res) => {
+    await auth.logout(req, res);
+  });
 
-  // Protected routes (middleware cast needed due to hyper-express typing)
+  // Protected API routes (Bearer token)
   app.get('/api/auth/me', authMiddleware as any, async (req, res) => {
     await auth.me(req, res);
-  });
-  app.post('/api/auth/logout', authMiddleware as any, async (req, res) => {
-    await auth.logout(req, res);
   });
 }
