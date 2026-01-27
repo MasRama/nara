@@ -1,4 +1,4 @@
-import type { FrontendAdapter, AdapterMiddlewareHandler, NaraResponse } from "@nara/core";
+import type { FrontendAdapter, AdapterMiddlewareHandler, NaraResponse } from "@nara-web/core";
 import { inertiaMiddleware, type InertiaConfig } from "./middleware";
 
 /**

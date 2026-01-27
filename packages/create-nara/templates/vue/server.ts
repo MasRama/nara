@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { createApp } from '@nara/core';
-import { vueAdapter } from '@nara/inertia-vue';
+import { createApp } from '@nara-web/core';
+import { vueAdapter } from '@nara-web/inertia-vue';
 import { registerRoutes } from './routes/web.js';
 
 const app = createApp({

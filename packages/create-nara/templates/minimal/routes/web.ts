@@ -1,4 +1,4 @@
-import type { NaraApp } from '@nara/core';
+import type { NaraApp } from '@nara-web/core';
 
 export function registerRoutes(app: NaraApp) {
   app.get('/', (req, res) => {

@@ -1,4 +1,4 @@
-import type { NaraRequest, NaraResponse } from "@nara/core";
+import type { NaraRequest, NaraResponse } from "@nara-web/core";
 export interface InertiaConfig {
     version?: string;
     rootView?: string;

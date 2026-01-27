@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { createApp } from '@nara/core';
-import { svelteAdapter } from '@nara/inertia-svelte';
+import { createApp } from '@nara-web/core';
+import { svelteAdapter } from '@nara-web/inertia-svelte';
 import { registerRoutes } from './routes/web.js';
 
 const app = createApp({

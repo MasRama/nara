@@ -8,7 +8,7 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
-      "@nara/core": ["../core/dist/index.d.ts"]
+      "@nara-web/core": ["../core/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*"]

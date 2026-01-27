@@ -1,5 +1,5 @@
 {
-  "name": "@nara/inertia-vue",
+  "name": "@nara-web/inertia-vue",
   "version": "0.1.0",
   "description": "Vue 3 + Inertia.js adapter for NARA",
   "type": "module",
@@ -31,12 +31,12 @@
     "@inertiajs/vue3": "^2.0.0"
   },
   "peerDependencies": {
-    "@nara/core": "^0.1.0",
+    "@nara-web/core": "^0.1.0",
     "vue": "^3.5.0",
     "vite": "^5.0.0 || ^6.0.0"
   },
   "devDependencies": {
-    "@nara/core": "^0.1.0",
+    "@nara-web/core": "^0.1.0",
     "@vitejs/plugin-vue": "^5.2.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3",

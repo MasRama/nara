@@ -1,4 +1,4 @@
-import type { NaraRequest, NaraResponse } from "@nara/core";
+import type { NaraRequest, NaraResponse } from "@nara-web/core";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 

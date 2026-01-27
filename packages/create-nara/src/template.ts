@@ -53,7 +53,7 @@ function createPackageJson(name: string, mode: string, features: string[]) {
       start: 'node dist/server.js'
     },
     dependencies: {
-      '@nara/core': '^0.1.0',
+      '@nara-web/core': '^0.1.0',
       'dotenv': '^16.4.7'
     },
     devDependencies: {
@@ -64,13 +64,13 @@ function createPackageJson(name: string, mode: string, features: string[]) {
   };
 
   if (mode === 'svelte') {
-    pkg.dependencies['@nara/inertia-svelte'] = '^0.1.0';
+    pkg.dependencies['@nara-web/inertia-svelte'] = '^0.1.0';
     pkg.dependencies['svelte'] = '^5.0.0';
     pkg.devDependencies['vite'] = '^6.0.0';
     pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^5.0.0';
     pkg.devDependencies['concurrently'] = '^9.0.0';
   } else if (mode === 'vue') {
-    pkg.dependencies['@nara/inertia-vue'] = '^0.1.0';
+    pkg.dependencies['@nara-web/inertia-vue'] = '^0.1.0';
     pkg.dependencies['vue'] = '^3.5.0';
     pkg.devDependencies['vite'] = '^6.0.0';
     pkg.devDependencies['@vitejs/plugin-vue'] = '^5.0.0';

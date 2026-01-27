@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { createApp } from '@nara/core';
+import { createApp } from '@nara-web/core';
 import { registerRoutes } from './routes/web.js';
 
 const app = createApp({

@@ -1,4 +1,4 @@
-import type { FrontendAdapter } from "@nara/core";
+import type { FrontendAdapter } from "@nara-web/core";
 import { type InertiaConfig } from "./middleware";
 export interface SvelteAdapterOptions extends InertiaConfig {
 }

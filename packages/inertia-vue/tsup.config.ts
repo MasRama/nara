@@ -5,7 +5,7 @@ export default defineConfig({
   format: ['esm', 'cjs'],
   dts: true,
   clean: true,
-  external: ['vue', '@inertiajs/vue3', '@nara/core', 'vite', '@vitejs/plugin-vue'],
+  external: ['vue', '@inertiajs/vue3', '@nara-web/core', 'vite', '@vitejs/plugin-vue'],
   esbuildOptions(options) {
     options.loader = {
       ...options.loader,
