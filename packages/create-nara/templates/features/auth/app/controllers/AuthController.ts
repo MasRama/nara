@@ -1,5 +1,6 @@
 import { BaseController, jsonSuccess, jsonError, ValidationError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
+import { UserModel } from '../models/User.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -22,15 +23,15 @@ export class AuthController extends BaseController {
       throw new ValidationError({ email: ['Email and password are required'] });
     }
 
-    // TODO: Replace with your actual user lookup
-    // const user = await UserModel.findByEmail(email);
-    // if (!user || !await bcrypt.compare(password, user.password)) {
-    //   throw new ValidationError({ email: ['Invalid credentials'] });
-    // }
+    // Find user by email
+    const user = await UserModel.findByEmail(email);
+    if (!user || !await bcrypt.compare(password, user.password)) {
+      throw new ValidationError({ email: ['Invalid credentials'] });
+    }
 
-    // Example: Generate JWT token with user info
+    // Generate JWT token with user info
     const token = jwt.sign(
-      { userId: 1, email, name: 'Demo User' },
+      { userId: user.id, email: user.email, name: user.name },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_SECONDS }
     );
@@ -39,7 +40,7 @@ export class AuthController extends BaseController {
     res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
 
     return jsonSuccess(res, {
-      user: { id: 1, email, name: 'Demo User' },
+      user: { id: user.id, email: user.email, name: user.name },
       redirect: '/dashboard'
     }, 'Login successful');
   }
@@ -55,15 +56,21 @@ export class AuthController extends BaseController {
       });
     }
 
+    // Check if email already exists
+    const existing = await UserModel.findByEmail(email);
+    if (existing) {
+      throw new ValidationError({ email: ['Email already registered'] });
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // TODO: Replace with your actual user creation
-    // const user = await UserModel.create({ name, email, password: hashedPassword });
+    // Create user in database
+    const [userId] = await UserModel.create({ name, email, password: hashedPassword });
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: 1, email, name },
+      { userId, email, name },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES_SECONDS }
     );
@@ -72,7 +79,7 @@ export class AuthController extends BaseController {
     res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
 
     return jsonSuccess(res, {
-      user: { id: 1, email, name },
+      user: { id: userId, email, name },
       redirect: '/dashboard'
     }, 'Registration successful');
   }
