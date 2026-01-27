@@ -2,20 +2,18 @@
     import { inertia, router } from "@inertiajs/svelte";
     import NaraIcon from "../../components/NaraIcon.svelte";
     import DarkModeToggle from "../../components/DarkModeToggle.svelte";
-    import axios from "axios";
-    import { api, Toast } from "../../components/helper";
+    import { Toast } from "../../components/helper";
 
     interface ForgotPasswordForm {
         email: string;
-        phone: string;
     }
 
     let form: ForgotPasswordForm = {
         email: "",
-        phone: "",
     };
 
     let success: boolean = $state(false);
+    let loading: boolean = $state(false);
     let { error }: { error?: string } = $props();
 
     $effect(() => {
@@ -23,12 +21,29 @@
     });
 
     async function submitForm(): Promise<void> {
-        const result = await api(() => axios.post("/forgot-password", form));
-        
-        if (result.success) {
-            success = true;
-            form.email = "";
-            form.phone = "";
+        loading = true;
+        try {
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: form.email })
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                success = true;
+                form.email = "";
+                Toast(result.message || 'Reset link sent!', 'success');
+            } else {
+                const errorMsg = result.errors
+                    ? Object.values(result.errors).flat().join(', ')
+                    : result.message || 'Failed to send reset link';
+                Toast(errorMsg, 'error');
+            }
+        } catch (err) {
+            Toast('An error occurred. Please try again.', 'error');
+        } finally {
+            loading = false;
         }
     }
 </script>
@@ -62,7 +77,7 @@
 
                 {#if success}
                     <div class="p-4 mb-4 text-sm text-green-400 rounded-lg bg-green-900/50" role="alert">
-                        Link reset password telah dikirim ke email atau nomor telepon Anda.
+                        Password reset link has been sent to your email.
                     </div>
                 {/if}
 
@@ -71,24 +86,24 @@
                     on:submit|preventDefault={submitForm}
                 >
                     <div>
-                        <label for="email" class="block mb-2 text-sm font-medium text-slate-200">Email atau Nomor Telepon</label>
+                        <label for="email" class="block mb-2 text-sm font-medium text-slate-200">Email</label>
                         <input
                             bind:value={form.email}
-                            type="text"
+                            type="email"
                             name="email"
                             id="email"
                             class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500"
-                            placeholder="email@example.com atau 08xxxxxxxxxx"
+                            placeholder="email@example.com"
                             required
                         />
                     </div>
 
-                    <button type="submit" class="w-full text-sm font-medium rounded-full px-5 py-2.5 text-slate-950 bg-primary-400 hover:bg-primary-300 focus:ring-4 focus:outline-none focus:ring-primary-300">
-                        Kirim Link Reset Password
+                    <button type="submit" disabled={loading} class="w-full text-sm font-medium rounded-full px-5 py-2.5 text-slate-950 bg-primary-400 hover:bg-primary-300 focus:ring-4 focus:outline-none focus:ring-primary-300 disabled:opacity-50">
+                        {loading ? 'Sending...' : 'Send Reset Link'}
                     </button>
 
                     <p class="text-sm font-light text-slate-400">
-                        Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-400 hover:underline">Login disini</a>
+                        Remember your password? <a href="/login" use:inertia class="font-medium text-primary-400 hover:underline">Login here</a>
                     </p>
                 </form>
             </div>

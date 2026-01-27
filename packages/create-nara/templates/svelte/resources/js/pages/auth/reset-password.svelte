@@ -6,11 +6,10 @@
 
   interface ResetPasswordForm {
     password: string;
-    password_confirmation: string;
-    id: string;
+    token: string;
   }
 
-  let { id, error }: { id: string, error?: string } = $props();
+  let { token, error }: { token: string, error?: string } = $props();
 
   $effect(() => {
     if (error) Toast(error, 'error');
@@ -18,23 +17,47 @@
 
   let form: ResetPasswordForm = {
     password: '',
-    password_confirmation: '',
-    id
-  }
- 
-  function generatePassword(): void { 
-    const retVal = password_generator(10); 
-    form.password = retVal
-    form.password_confirmation = retVal
+    token
   }
 
-  function submitForm(): void {
-    if (form.password != form.password_confirmation) {
-      Toast("Password dan konfirmasi password harus sama", "error")
+  let password_confirmation = $state('');
+  let loading = $state(false);
+
+  function generatePassword(): void {
+    const retVal = password_generator(10);
+    form.password = retVal
+    password_confirmation = retVal
+  }
+
+  async function submitForm(): Promise<void> {
+    if (form.password !== password_confirmation) {
+      Toast("Password and confirmation must match", "error")
       return;
     }
 
-    router.post(`/reset-password`, form as any)
+    loading = true;
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: form.password, token: form.token })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        Toast(result.message || 'Password reset successful', 'success');
+        router.visit('/login');
+      } else {
+        const errorMsg = result.errors
+          ? Object.values(result.errors).flat().join(', ')
+          : result.message || 'Password reset failed';
+        Toast(errorMsg, 'error');
+      }
+    } catch (err) {
+      Toast('An error occurred. Please try again.', 'error');
+    } finally {
+      loading = false;
+    }
   }
 </script>
 
@@ -67,7 +90,7 @@
 
         <form class="space-y-4 md:space-y-6" on:submit|preventDefault={submitForm}>
           <div>
-            <label for="password" class="block mb-2 text-sm font-medium text-slate-200">Password Baru</label>
+            <label for="password" class="block mb-2 text-sm font-medium text-slate-200">New Password</label>
             <input 
               bind:value={form.password}
               type="password" 
@@ -80,9 +103,9 @@
             <button type="button" on:click={generatePassword} class="text-xs text-slate-400 mt-1">Generate Password</button>
           </div>
           <div>
-            <label for="confirm-password" class="block mb-2 text-sm font-medium text-slate-200">Konfirmasi Password</label>
+            <label for="confirm-password" class="block mb-2 text-sm font-medium text-slate-200">Confirm Password</label>
             <input 
-              bind:value={form.password_confirmation}
+              bind:value={password_confirmation}
               type="password" 
               name="confirm-password" 
               id="confirm-password" 
@@ -97,7 +120,7 @@
           </button>
 
           <p class="text-sm font-light text-slate-400">
-            Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-400 hover:underline">Login disini</a>
+            Remember your password? <a href="/login" use:inertia class="font-medium text-primary-400 hover:underline">Login here</a>
           </p>
         </form>
       </div>

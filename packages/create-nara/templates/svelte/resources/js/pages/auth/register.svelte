@@ -13,38 +13,57 @@
     email: string;
     password: string;
     name: string;
-    phone: string;
-    password_confirmation: string;
   }
 
   let form: RegisterForm = {
     email: '',
     password: '',
     name: '',
-    phone: '',
-    password_confirmation: '', 
   }
 
+  let password_confirmation = $state('');
+  let loading = $state(false);
   let { error }: { error?: string } = $props();
 
   $effect(() => {
     if (error) Toast(error, 'error');
   });
 
-  function submitForm(): void {
-    if (form.password != form.password_confirmation) {
-      Toast("Password dan konfirmasi password harus sama", "error");
+  async function submitForm(): Promise<void> {
+    if (form.password !== password_confirmation) {
+      Toast("Password and confirmation must match", "error");
       return;
     }
- 
-    form.phone = form.phone.toString()
-    router.post("/register", form as any)
+
+    loading = true;
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: form.name, email: form.email, password: form.password })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        Toast(result.message || 'Registration successful', 'success');
+        router.visit(result.data?.redirect || '/dashboard');
+      } else {
+        const errorMsg = result.errors
+          ? Object.values(result.errors).flat().join(', ')
+          : result.message || 'Registration failed';
+        Toast(errorMsg, 'error');
+      }
+    } catch (err) {
+      Toast('An error occurred. Please try again.', 'error');
+    } finally {
+      loading = false;
+    }
   }
 
-  function generatePassword(): void { 
-    const retVal = password_generator(10); 
+  function generatePassword(): void {
+    const retVal = password_generator(10);
     form.password = retVal
-    form.password_confirmation = retVal
+    password_confirmation = retVal
   }
 </script>
 
@@ -144,7 +163,7 @@
                   </div>
                   <div class="space-y-1">
                       <label for="confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Confirm</label>
-                      <input bind:value={form.password_confirmation} type="password" name="confirm-password" id="confirm-password" 
+                      <input bind:value={password_confirmation} type="password" name="confirm-password" id="confirm-password" 
                           placeholder="••••••••" 
                           class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
                   </div>

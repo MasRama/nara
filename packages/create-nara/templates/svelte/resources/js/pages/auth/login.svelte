@@ -19,14 +19,37 @@
     password: '',
   }
 
+  let loading = $state(false);
   let { error }: { error?: string } = $props();
 
   $effect(() => {
     if (error) Toast(error, 'error');
   });
 
-  function submitForm(): void {
-    router.post("/login", { email: form.email, password: form.password })
+  async function submitForm(): Promise<void> {
+    loading = true;
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        Toast(result.message || 'Login successful', 'success');
+        router.visit(result.data?.redirect || '/dashboard');
+      } else {
+        const errorMsg = result.errors
+          ? Object.values(result.errors).flat().join(', ')
+          : result.message || 'Login failed';
+        Toast(errorMsg, 'error');
+      }
+    } catch (err) {
+      Toast('An error occurred. Please try again.', 'error');
+    } finally {
+      loading = false;
+    }
   }
 </script>
 
