@@ -34,9 +34,9 @@
         .then((response) => {
           setTimeout(() => {
             isLoading = false;
-            previewUrl = response.data + "?v=" + Date.now();
+            previewUrl = response.data.data.url + "?v=" + Date.now();
           }, 500);
-          user.avatar = response.data + "?v=" + Date.now();
+          user.avatar = response.data.data.url + "?v=" + Date.now();
           Toast("Avatar berhasil diupload", "success");
         })
         .catch(() => {
