@@ -1,4 +1,4 @@
-import type { FrontendAdapter, AdapterMiddlewareHandler, NaraResponse } from "@nara-web/core";
+import type { FrontendAdapter, NaraMiddleware, NaraResponse } from "@nara-web/core";
 import { inertiaMiddleware, type InertiaConfig } from "./middleware";
 
 /**
@@ -19,8 +19,8 @@ export function svelteAdapter(options: SvelteAdapterOptions = {}): FrontendAdapt
     /**
      * Returns the Inertia middleware handler
      */
-    middleware: (): AdapterMiddlewareHandler => {
-      return inertiaMiddleware(options) as unknown as AdapterMiddlewareHandler;
+    middleware: (): NaraMiddleware => {
+      return inertiaMiddleware(options) as unknown as NaraMiddleware;
     },
 
     /**

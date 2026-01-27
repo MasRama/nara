@@ -80,6 +80,19 @@ function createPackageJson(name: string, mode: string, features: string[]) {
   if (features.includes('db')) {
     pkg.dependencies['knex'] = '^3.1.0';
     pkg.dependencies['better-sqlite3'] = '^11.0.0';
+    pkg.devDependencies['@types/better-sqlite3'] = '^7.6.0';
+  }
+
+  if (features.includes('auth')) {
+    pkg.dependencies['bcrypt'] = '^5.1.0';
+    pkg.dependencies['jsonwebtoken'] = '^9.0.0';
+    pkg.devDependencies['@types/bcrypt'] = '^5.0.0';
+    pkg.devDependencies['@types/jsonwebtoken'] = '^9.0.0';
+  }
+
+  if (features.includes('uploads')) {
+    pkg.dependencies['sharp'] = '^0.33.0';
+    pkg.devDependencies['@types/sharp'] = '^0.32.0';
   }
 
   return pkg;
