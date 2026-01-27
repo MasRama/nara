@@ -17,6 +17,24 @@ export async function setupProject(options) {
     if (fs.existsSync(gitignoreTemplate)) {
         fs.renameSync(gitignoreTemplate, gitignoreDest);
     }
+    // Rename env files (npm doesn't include dotfiles)
+    const envFiles = [
+        { src: 'env.example', dest: '.env.example' },
+        { src: 'env.production.example', dest: '.env.production.example' }
+    ];
+    for (const envFile of envFiles) {
+        const envSrc = path.join(targetDir, envFile.src);
+        const envDest = path.join(targetDir, envFile.dest);
+        if (fs.existsSync(envSrc)) {
+            fs.renameSync(envSrc, envDest);
+        }
+    }
+    // Copy .env.example to .env for development convenience
+    const envExample = path.join(targetDir, '.env.example');
+    const envFile = path.join(targetDir, '.env');
+    if (fs.existsSync(envExample)) {
+        fs.copyFileSync(envExample, envFile);
+    }
     // 2. Copy mode-specific template
     const modeTemplateDir = path.join(templatesDir, mode);
     if (fs.existsSync(modeTemplateDir)) {
@@ -74,6 +92,8 @@ function createPackageJson(name, mode, features) {
         pkg.devDependencies['vite'] = '^6.0.0';
         pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^5.0.0';
         pkg.devDependencies['concurrently'] = '^9.0.0';
+        pkg.devDependencies['tailwindcss'] = '^4.0.0';
+        pkg.devDependencies['@tailwindcss/vite'] = '^4.0.0';
     }
     else if (mode === 'vue') {
         pkg.dependencies['@nara-web/inertia-vue'] = '^1.0.0';

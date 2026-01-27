@@ -1,6 +1,6 @@
 {
   "name": "@nara-web/inertia-svelte",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Svelte 5 + Inertia.js adapter for NARA",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,10 +11,10 @@
     "@inertiajs/svelte": "^2.0.0"
   },
   "devDependencies": {
-    "@nara-web/core": "^0.1.0"
+    "@nara-web/core": "^1.0.0"
   },
   "peerDependencies": {
-    "@nara-web/core": "^0.1.0",
+    "@nara-web/core": "^1.0.0",
     "svelte": "^5.0.0",
     "vite": "^5.0.0 || ^6.0.0"
   },
