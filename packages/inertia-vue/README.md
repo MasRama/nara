@@ -5,7 +5,7 @@ Vue 3 + Inertia.js adapter for the NARA framework.
 ## Installation
 
 ```bash
-pnpm add @nara/inertia-vue @inertiajs/vue3 vue
+npm install @nara/inertia-vue @inertiajs/vue3 vue
 ```
 
 ## Usage
