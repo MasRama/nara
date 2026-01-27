@@ -1,7 +1,31 @@
 import type { NaraApp } from '@nara-web/core';
 import { webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
+import fs from 'fs';
+import path from 'path';
 
 export function registerRoutes(app: NaraApp) {
+  // Serve uploaded files
+  app.get('/uploads/*', (req, res) => {
+    const requestPath = req.path?.replace('/uploads/', '') || '';
+    const filePath = path.join(process.cwd(), 'uploads', requestPath);
+
+    if (fs.existsSync(filePath)) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        '.webp': 'image/webp',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+      };
+      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.send(fs.readFileSync(filePath));
+    } else {
+      res.status(404).send('Not found');
+    }
+  });
+
   // Public routes
   app.get('/', (req, res) => {
     res.inertia?.('landing', {
