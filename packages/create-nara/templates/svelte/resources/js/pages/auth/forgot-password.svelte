@@ -1,9 +1,9 @@
 <script lang="ts">
     import { inertia, router } from "@inertiajs/svelte";
-    import NaraIcon from "../../Components/NaraIcon.svelte";
-    import DarkModeToggle from "../../Components/DarkModeToggle.svelte";
+    import NaraIcon from "../../components/NaraIcon.svelte";
+    import DarkModeToggle from "../../components/DarkModeToggle.svelte";
     import axios from "axios";
-    import { api, Toast } from "../../Components/helper";
+    import { api, Toast } from "../../components/helper";
 
     interface ForgotPasswordForm {
         email: string;

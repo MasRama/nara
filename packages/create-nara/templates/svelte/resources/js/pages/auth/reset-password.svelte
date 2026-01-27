@@ -1,8 +1,8 @@
 <script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
-  import NaraIcon from '../../Components/NaraIcon.svelte';
-  import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
-  import { password_generator, Toast } from '../../Components/helper';
+  import NaraIcon from '../../components/NaraIcon.svelte';
+  import DarkModeToggle from '../../components/DarkModeToggle.svelte';
+  import { password_generator, Toast } from '../../components/helper';
 
   interface ResetPasswordForm {
     password: string;

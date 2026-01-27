@@ -1,76 +1,233 @@
 @import url('https://rsms.me/inter/inter.css');
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  html {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  }
+/* Custom theme colors using CSS variables */
+@theme {
+  --color-primary-50: #ecfdf5;
+  --color-primary-100: #d1fae5;
+  --color-primary-200: #a7f3d0;
+  --color-primary-300: #6ee7b7;
+  --color-primary-400: #34d399;
+  --color-primary-500: #10b981;
+  --color-primary-600: #059669;
+  --color-primary-700: #047857;
+  --color-primary-800: #065f46;
+  --color-primary-900: #064e3b;
+  --color-primary-950: #022c22;
 
-  body::-webkit-scrollbar {
-    width: 4px;
-  }
+  --color-secondary-50: #fffbeb;
+  --color-secondary-100: #fef3c7;
+  --color-secondary-200: #fde68a;
+  --color-secondary-300: #fcd34d;
+  --color-secondary-400: #fbbf24;
+  --color-secondary-500: #f59e0b;
+  --color-secondary-600: #d97706;
+  --color-secondary-700: #b45309;
+  --color-secondary-800: #92400e;
+  --color-secondary-900: #78350f;
+  --color-secondary-950: #451a03;
 
-  body::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  --color-accent-50: #faf5ff;
+  --color-accent-100: #f3e8ff;
+  --color-accent-200: #e9d5ff;
+  --color-accent-300: #d8b4fe;
+  --color-accent-400: #c084fc;
+  --color-accent-500: #a855f7;
+  --color-accent-600: #9333ea;
+  --color-accent-700: #7c3aed;
+  --color-accent-800: #6b21a8;
+  --color-accent-900: #581c87;
+  --color-accent-950: #3b0764;
 
-  body::-webkit-scrollbar-thumb {
-    background-color: theme('colors.primary.500');
-    border-radius: 3px;
+  --color-info-50: #ecfeff;
+  --color-info-100: #cffafe;
+  --color-info-200: #a5f3fc;
+  --color-info-300: #67e8f9;
+  --color-info-400: #22d3ee;
+  --color-info-500: #06b6d4;
+  --color-info-600: #0891b2;
+  --color-info-700: #0e7490;
+  --color-info-800: #155e75;
+  --color-info-900: #164e63;
+  --color-info-950: #083344;
+
+  --color-warning-50: #fff7ed;
+  --color-warning-100: #ffedd5;
+  --color-warning-200: #fed7aa;
+  --color-warning-300: #fdba74;
+  --color-warning-400: #fb923c;
+  --color-warning-500: #f97316;
+  --color-warning-600: #ea580c;
+  --color-warning-700: #c2410c;
+  --color-warning-800: #9a3412;
+  --color-warning-900: #7c2d12;
+  --color-warning-950: #431407;
+
+  --color-danger-50: #fef2f2;
+  --color-danger-100: #fee2e2;
+  --color-danger-200: #fecaca;
+  --color-danger-300: #fca5a5;
+  --color-danger-400: #f87171;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-danger-800: #991b1b;
+  --color-danger-900: #7f1d1d;
+  --color-danger-950: #450a0a;
+
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+  --color-success-950: #022c22;
+
+  --color-surface-light: #f8f8f8;
+  --color-surface-dark: #0a0a0a;
+  --color-surface-card-light: #f1f5f9;
+  --color-surface-card-dark: #0f0f0f;
+
+  --font-family-sans: 'Inter var', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-family-serif: 'Playfair Display', Georgia, Cambria, 'Times New Roman', Times, serif;
+
+  --shadow-soft: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+}
+
+/* Base styles */
+html {
+  font-family: var(--font-family-sans);
+}
+
+body::-webkit-scrollbar {
+  width: 4px;
+}
+
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+body::-webkit-scrollbar-thumb {
+  background-color: var(--color-primary-500);
+  border-radius: 3px;
+}
+
+/* Component utilities */
+@utility card-hover {
+  transition-property: all;
+  transition-duration: 300ms;
+  &:hover {
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-0.25rem);
   }
 }
 
-@layer components {
-  .card-hover {
-    @apply transition-all duration-300 hover:shadow-soft hover:-translate-y-1;
-  }
-
-  .nav-link {
-    @apply px-4 py-2 text-gray-600 dark:text-gray-200 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-300;
-  }
-
-  .nav-link.active {
-    @apply bg-primary-50 dark:bg-gray-800 text-primary-600;
-  }
-
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-600 to-primary-400;
-  }
-
-  .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700
-           transition-all duration-300 active:bg-primary-800
-           disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
-  }
-
-  .btn-secondary {
-    @apply bg-white text-gray-900 px-4 py-2 rounded-lg border border-gray-300
-           hover:bg-gray-50 transition-all duration-300 active:bg-gray-100
-           disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
-  }
-
-  .btn-danger {
-    @apply bg-danger-600 text-white px-4 py-2 rounded-lg hover:bg-danger-700
-           transition-all duration-300 active:bg-danger-800
-           disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-danger-500 focus:ring-offset-2;
-  }
-
-  .card {
-    @apply bg-white rounded-xl shadow-soft p-6 transition-all duration-300
-           shadow-lg hover:shadow-xl hover:-translate-y-0.5;
-  }
-
-  .bg-surface {
-    @apply bg-surface-light dark:bg-surface-dark;
-  }
-
-  .bg-surface-card {
-    @apply bg-surface-card-light dark:bg-surface-card-dark;
+@utility nav-link {
+  padding: 0.5rem 1rem;
+  color: rgb(75 85 99);
+  border-radius: 0.5rem;
+  transition-property: color, background-color;
+  transition-duration: 300ms;
+  &:hover {
+    color: rgb(17 24 39);
+    background-color: rgb(243 244 246);
   }
 }
+
+@utility gradient-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to right, var(--color-primary-600), var(--color-primary-400));
+}
+
+@utility btn-primary {
+  background-color: var(--color-primary-600);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition-property: all;
+  transition-duration: 300ms;
+  &:hover {
+    background-color: var(--color-primary-700);
+  }
+  &:active {
+    background-color: var(--color-primary-800);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color-primary-500);
+  }
+}
+
+@utility btn-secondary {
+  background-color: white;
+  color: rgb(17 24 39);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(209 213 219);
+  transition-property: all;
+  transition-duration: 300ms;
+  &:hover {
+    background-color: rgb(249 250 251);
+  }
+  &:active {
+    background-color: rgb(243 244 246);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(107 114 128);
+  }
+}
+
+@utility btn-danger {
+  background-color: var(--color-danger-600);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition-property: all;
+  transition-duration: 300ms;
+  &:hover {
+    background-color: var(--color-danger-700);
+  }
+  &:active {
+    background-color: var(--color-danger-800);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--color-danger-500);
+  }
+}
+
+@utility card {
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-soft);
+  padding: 1.5rem;
+  transition-property: all;
+  transition-duration: 300ms;
+  &:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-0.125rem);
+  }
+}
+
+/* Surface utilities - use standard Tailwind classes instead */
+/* bg-surface-light, bg-surface-dark, bg-surface-card-light, bg-surface-card-dark are available */

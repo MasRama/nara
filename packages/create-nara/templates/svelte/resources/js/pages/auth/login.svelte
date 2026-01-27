@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte'
-  import { Toast } from '../../Components/helper';
-  import NaraIcon from '../../Components/NaraIcon.svelte';
+  import { Toast } from '../../components/helper';
+  import NaraIcon from '../../components/NaraIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
   onMount(() => {
