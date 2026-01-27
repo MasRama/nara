@@ -11,13 +11,27 @@ export async function setupProject(options) {
     }
     // 1. Copy base template (shared files like .gitignore, tsconfig, etc)
     copyDir(path.join(templatesDir, 'base'), targetDir);
-    // Rename gitignore.template to .gitignore (npm doesn't include dotfiles)
+    // 2. Copy mode-specific template
+    const modeTemplateDir = path.join(templatesDir, mode);
+    if (fs.existsSync(modeTemplateDir)) {
+        copyDir(modeTemplateDir, targetDir);
+    }
+    // 3. Copy feature-specific templates
+    const featuresDir = path.join(templatesDir, 'features');
+    for (const feature of features) {
+        const featureDir = path.join(featuresDir, feature);
+        if (fs.existsSync(featureDir)) {
+            copyDir(featureDir, targetDir);
+        }
+    }
+    // 4. Rename dotfiles (npm doesn't include them by default)
+    // Must happen AFTER all templates are copied
     const gitignoreTemplate = path.join(targetDir, 'gitignore.template');
     const gitignoreDest = path.join(targetDir, '.gitignore');
     if (fs.existsSync(gitignoreTemplate)) {
         fs.renameSync(gitignoreTemplate, gitignoreDest);
     }
-    // Rename env files (npm doesn't include dotfiles)
+    // Rename env files
     const envFiles = [
         { src: 'env.example', dest: '.env.example' },
         { src: 'env.production.example', dest: '.env.production.example' }
@@ -35,20 +49,7 @@ export async function setupProject(options) {
     if (fs.existsSync(envExample)) {
         fs.copyFileSync(envExample, envFile);
     }
-    // 2. Copy mode-specific template
-    const modeTemplateDir = path.join(templatesDir, mode);
-    if (fs.existsSync(modeTemplateDir)) {
-        copyDir(modeTemplateDir, targetDir);
-    }
-    // 3. Copy feature-specific templates
-    const featuresDir = path.join(templatesDir, 'features');
-    for (const feature of features) {
-        const featureDir = path.join(featuresDir, feature);
-        if (fs.existsSync(featureDir)) {
-            copyDir(featureDir, targetDir);
-        }
-    }
-    // 4. Ensure required directories exist
+    // 5. Ensure required directories exist
     fs.mkdirSync(path.join(targetDir, 'app/controllers'), { recursive: true });
     fs.mkdirSync(path.join(targetDir, 'app/models'), { recursive: true });
     // Create database directory if db feature is selected
@@ -59,7 +60,7 @@ export async function setupProject(options) {
     if (features.includes('uploads')) {
         fs.mkdirSync(path.join(targetDir, 'uploads'), { recursive: true });
     }
-    // 5. Generate package.json (dynamic content)
+    // 6. Generate package.json (dynamic content)
     const pkg = createPackageJson(projectName, mode, features);
     fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(pkg, null, 2));
 }
