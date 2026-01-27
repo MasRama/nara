@@ -25,21 +25,26 @@
   function handleAvatarChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
+    if (file) console.log('[AVATAR DEBUG] Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
       isLoading = true;
+      console.log('[AVATAR DEBUG] Sending request to /assets/avatar');
       axios
         .post("/assets/avatar", formData)
         .then((response) => {
+          console.log('[AVATAR DEBUG] Upload response:', response.data);
           setTimeout(() => {
             isLoading = false;
             previewUrl = response.data.data.url + "?v=" + Date.now();
+            console.log('[AVATAR DEBUG] previewUrl set to:', previewUrl);
           }, 500);
           user.avatar = response.data.data.url + "?v=" + Date.now();
           Toast("Avatar berhasil diupload", "success");
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log('[AVATAR DEBUG] Upload failed:', error);
           isLoading = false;
           Toast("Gagal mengupload avatar", "error");
         });

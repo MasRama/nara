@@ -27,6 +27,7 @@ class AssetController extends BaseController {
 
         // Store user reference for use in nested callbacks
         const userId = request.user.id;
+        console.log('[AVATAR DEBUG] Upload started for user:', userId);
 
         try { 
             let isValidFile = true;
@@ -34,6 +35,7 @@ class AssetController extends BaseController {
             await request.multipart(async (field: any) => {
                 if (field.file) {
                     if (!field.mime_type.includes("image")) {
+                        console.log('[AVATAR DEBUG] File mime_type:', field.mime_type);
                         isValidFile = false;
                         return;
                     }
@@ -51,6 +53,7 @@ class AssetController extends BaseController {
 
                     readable.on('end', async () => {
                         const buffer = Buffer.concat(chunks);
+                        console.log('[AVATAR DEBUG] Total buffer length received:', buffer.length);
 
                         try {
                             // Process image with Sharp and get buffer
@@ -61,12 +64,14 @@ class AssetController extends BaseController {
                                     withoutEnlargement: true
                                 })
                                 .toBuffer();
+                            console.log('[AVATAR DEBUG] Processed buffer length (WebP):', processedBuffer.length);
 
                             // Store processed image using Storage service
                             const storedFile = await Storage.put(processedBuffer, {
                                 directory: UPLOAD.AVATAR_DIR,
                                 name: id,
                                 extension: 'webp'
+                            console.log('[AVATAR DEBUG] File stored at:', storedFile.url);
                             });
 
                             // Build public URL for the saved file
@@ -87,6 +92,7 @@ class AssetController extends BaseController {
                             await User.updateAvatar(userId, publicUrl);
 
                             // Return success response with public URL
+                            console.log('[AVATAR DEBUG] Returning public URL:', publicUrl);
                             jsonSuccess(response, 'Avatar berhasil diupload', { url: publicUrl });
                         } catch (err) {
                             Logger.error('Error processing and uploading image', err as Error);
