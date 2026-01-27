@@ -71,8 +71,8 @@ class AssetController extends BaseController {
                                 directory: UPLOAD.AVATAR_DIR,
                                 name: id,
                                 extension: 'webp'
-                            console.log('[AVATAR DEBUG] File stored at:', storedFile.url);
                             });
+                            console.log('[AVATAR DEBUG] File stored at:', storedFile.url);
 
                             // Build public URL for the saved file
                             const publicUrl = storedFile.url;
