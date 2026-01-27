@@ -34,6 +34,22 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email, password: form.password })
       });
+
+      // Handle non-JSON responses (server errors returning HTML)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const statusMessages: Record<number, string> = {
+          401: 'Invalid email or password.',
+          403: 'Access denied.',
+          404: 'Login service not available.',
+          500: 'Server error. Please try again later.',
+          502: 'Server is temporarily unavailable.',
+          503: 'Service unavailable. Please try again later.',
+        };
+        Toast(statusMessages[response.status] || `Server error (${response.status})`, 'error');
+        return;
+      }
+
       const result = await response.json();
 
       if (result.success) {
@@ -43,14 +59,21 @@
         // Handle validation errors
         if (result.errors) {
           const errorMessages = Object.values(result.errors).flat() as string[];
-          Toast(errorMessages[0] || result.message || 'Login failed', 'error');
+          Toast(errorMessages[0] || result.message || 'Invalid email or password.', 'error');
         } else {
-          Toast(result.message || 'Login failed', 'error');
+          Toast(result.message || 'Invalid email or password.', 'error');
         }
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
-      Toast(errorMessage, 'error');
+      // Network or parsing error
+      if (err instanceof SyntaxError) {
+        Toast('Server returned an invalid response. Please try again.', 'error');
+      } else if (err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('network'))) {
+        Toast('Unable to connect to server. Please check your connection.', 'error');
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+        Toast(errorMessage, 'error');
+      }
     } finally {
       loading = false;
     }

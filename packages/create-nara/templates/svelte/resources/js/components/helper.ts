@@ -145,6 +145,73 @@ function formatValidationErrors(errors: Record<string, string[]> | undefined): s
 }
 
 /**
+ * Map HTTP status codes to human-readable messages
+ */
+function getHttpErrorMessage(status: number, statusText?: string): string {
+  const messages: Record<number, string> = {
+    400: 'Invalid request. Please check your input.',
+    401: 'Please log in to continue.',
+    403: 'You do not have permission to perform this action.',
+    404: 'The requested resource was not found.',
+    405: 'This action is not allowed.',
+    408: 'Request timed out. Please try again.',
+    409: 'This action conflicts with existing data.',
+    413: 'File too large. Please upload a smaller file.',
+    422: 'Invalid data provided. Please check your input.',
+    429: 'Too many requests. Please wait a moment.',
+    500: 'Server error. Please try again later.',
+    502: 'Server is temporarily unavailable.',
+    503: 'Service unavailable. Please try again later.',
+    504: 'Server took too long to respond.',
+  };
+  return messages[status] || statusText || `Error ${status}`;
+}
+
+/**
+ * Parse error from various response types
+ */
+function parseErrorResponse(error: unknown): { message: string; code?: string; errors?: Record<string, string[]> } {
+  const axiosError = error as {
+    response?: { status?: number; statusText?: string; data?: ApiResponse | string };
+    message?: string;
+    code?: string;
+  };
+
+  // Network error (no response)
+  if (!axiosError.response) {
+    if (axiosError.code === 'ERR_NETWORK') {
+      return { message: 'Unable to connect to server. Please check your connection.' };
+    }
+    if (axiosError.code === 'ECONNABORTED') {
+      return { message: 'Request timed out. Please try again.' };
+    }
+    return { message: axiosError.message || 'Network error. Please try again.' };
+  }
+
+  const { status, statusText, data } = axiosError.response;
+
+  // If response is a string (HTML error page), use status code message
+  if (typeof data === 'string') {
+    return { message: getHttpErrorMessage(status || 500, statusText) };
+  }
+
+  // If response is JSON with our API format
+  if (data && typeof data === 'object') {
+    const apiResponse = data as ApiResponse;
+    if (apiResponse.message) {
+      return {
+        message: apiResponse.message,
+        code: apiResponse.code,
+        errors: apiResponse.errors
+      };
+    }
+  }
+
+  // Fallback to HTTP status message
+  return { message: getHttpErrorMessage(status || 500, statusText) };
+}
+
+/**
  * Standardized API call wrapper that handles JSON responses from backend
  */
 export async function api<T = unknown>(
@@ -152,11 +219,11 @@ export async function api<T = unknown>(
   options: ApiOptions = {}
 ): Promise<ApiResponse<T>> {
   const { showSuccessToast = true, showErrorToast = true } = options;
-  
+
   try {
     const response = await axiosCall();
     const result = response.data;
-    
+
     if (result.success) {
       if (showSuccessToast && result.message) {
         Toast(result.message, 'success');
@@ -164,27 +231,24 @@ export async function api<T = unknown>(
       return { success: true, message: result.message, data: result.data };
     } else {
       if (showErrorToast) {
-        const errorMsg = result.errors 
-          ? formatValidationErrors(result.errors) || result.message 
+        const errorMsg = result.errors
+          ? formatValidationErrors(result.errors) || result.message
           : result.message;
         if (errorMsg) Toast(errorMsg, 'error');
       }
       return { success: false, message: result.message, code: result.code, errors: result.errors };
     }
   } catch (error: unknown) {
-    const axiosError = error as { response?: { data?: ApiResponse } };
-    const message = axiosError?.response?.data?.message || 'An error occurred. Please try again.';
-    const code = axiosError?.response?.data?.code;
-    const errors = axiosError?.response?.data?.errors;
-    
+    const parsed = parseErrorResponse(error);
+
     if (showErrorToast) {
-      const errorMsg = errors 
-        ? formatValidationErrors(errors) || message 
-        : message;
+      const errorMsg = parsed.errors
+        ? formatValidationErrors(parsed.errors) || parsed.message
+        : parsed.message;
       Toast(errorMsg, 'error');
     }
-    
-    return { success: false, message, code, errors };
+
+    return { success: false, message: parsed.message, code: parsed.code, errors: parsed.errors };
   }
 }
 

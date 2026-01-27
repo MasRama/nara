@@ -42,6 +42,23 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: form.name, email: form.email, password: form.password })
       });
+
+      // Handle non-JSON responses (server errors returning HTML)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const statusMessages: Record<number, string> = {
+          400: 'Invalid registration data.',
+          403: 'Registration is not allowed.',
+          404: 'Registration service not available.',
+          409: 'This email is already registered.',
+          500: 'Server error. Please try again later.',
+          502: 'Server is temporarily unavailable.',
+          503: 'Service unavailable. Please try again later.',
+        };
+        Toast(statusMessages[response.status] || `Server error (${response.status})`, 'error');
+        return;
+      }
+
       const result = await response.json();
 
       if (result.success) {
@@ -51,14 +68,21 @@
         // Handle validation errors
         if (result.errors) {
           const errorMessages = Object.values(result.errors).flat() as string[];
-          Toast(errorMessages[0] || result.message || 'Registration failed', 'error');
+          Toast(errorMessages[0] || result.message || 'Registration failed. Please check your input.', 'error');
         } else {
-          Toast(result.message || 'Registration failed', 'error');
+          Toast(result.message || 'Registration failed. Please check your input.', 'error');
         }
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
-      Toast(errorMessage, 'error');
+      // Network or parsing error
+      if (err instanceof SyntaxError) {
+        Toast('Server returned an invalid response. Please try again.', 'error');
+      } else if (err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('network'))) {
+        Toast('Unable to connect to server. Please check your connection.', 'error');
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+        Toast(errorMessage, 'error');
+      }
     } finally {
       loading = false;
     }

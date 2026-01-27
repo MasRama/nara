@@ -28,24 +28,44 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: form.email })
             });
+
+            // Handle non-JSON responses
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const statusMessages: Record<number, string> = {
+                    400: 'Please enter a valid email address.',
+                    404: 'Password reset service not available.',
+                    429: 'Too many requests. Please wait a moment.',
+                    500: 'Server error. Please try again later.',
+                };
+                Toast(statusMessages[response.status] || `Server error (${response.status})`, 'error');
+                return;
+            }
+
             const result = await response.json();
 
             if (result.success) {
                 success = true;
                 form.email = "";
-                Toast(result.message || 'Reset link sent!', 'success');
+                Toast(result.message || 'Reset link sent! Check your email.', 'success');
             } else {
                 // Handle validation errors
                 if (result.errors) {
                     const errorMessages = Object.values(result.errors).flat() as string[];
-                    Toast(errorMessages[0] || result.message || 'Failed to send reset link', 'error');
+                    Toast(errorMessages[0] || result.message || 'Please enter a valid email address.', 'error');
                 } else {
-                    Toast(result.message || 'Failed to send reset link', 'error');
+                    Toast(result.message || 'Failed to send reset link. Please try again.', 'error');
                 }
             }
         } catch (err: unknown) {
-            const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
-            Toast(errorMessage, 'error');
+            if (err instanceof SyntaxError) {
+                Toast('Server returned an invalid response. Please try again.', 'error');
+            } else if (err instanceof TypeError) {
+                Toast('Unable to connect to server. Please check your connection.', 'error');
+            } else {
+                const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+                Toast(errorMessage, 'error');
+            }
         } finally {
             loading = false;
         }

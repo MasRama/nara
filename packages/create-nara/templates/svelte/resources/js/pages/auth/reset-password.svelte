@@ -42,23 +42,43 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: form.password, token: form.token })
       });
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const statusMessages: Record<number, string> = {
+          400: 'Invalid reset request. Please try again.',
+          401: 'Reset link has expired. Please request a new one.',
+          404: 'Password reset service not available.',
+          500: 'Server error. Please try again later.',
+        };
+        Toast(statusMessages[response.status] || `Server error (${response.status})`, 'error');
+        return;
+      }
+
       const result = await response.json();
 
       if (result.success) {
-        Toast(result.message || 'Password reset successful', 'success');
+        Toast(result.message || 'Password reset successful! Please log in.', 'success');
         router.visit('/login');
       } else {
         // Handle validation errors
         if (result.errors) {
           const errorMessages = Object.values(result.errors).flat() as string[];
-          Toast(errorMessages[0] || result.message || 'Password reset failed', 'error');
+          Toast(errorMessages[0] || result.message || 'Password reset failed. Please try again.', 'error');
         } else {
-          Toast(result.message || 'Password reset failed', 'error');
+          Toast(result.message || 'Password reset failed. Please try again.', 'error');
         }
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
-      Toast(errorMessage, 'error');
+      if (err instanceof SyntaxError) {
+        Toast('Server returned an invalid response. Please try again.', 'error');
+      } else if (err instanceof TypeError) {
+        Toast('Unable to connect to server. Please check your connection.', 'error');
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+        Toast(errorMessage, 'error');
+      }
     } finally {
       loading = false;
     }
