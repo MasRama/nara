@@ -1,6 +1,10 @@
 {
   "name": "nara",
   "version": "1.2.10",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "description": "Nara is a high-performance TypeScript web framework combining HyperExpress, Svelte 5, and Inertia.js. Features include type-safe routing, comprehensive security (CSRF, rate limiting, login throttling), structured logging with Pino, graceful shutdown, and a powerful CLI with 21+ commands for scaffolding, database management, and project health checks.",
   "main": "server.ts",
   "scripts": {
