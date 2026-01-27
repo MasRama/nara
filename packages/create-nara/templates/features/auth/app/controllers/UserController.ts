@@ -1,21 +1,71 @@
-import { BaseController, jsonSuccess, ValidationError } from '@nara-web/core';
+import { BaseController, jsonSuccess, jsonError, ValidationError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
+import { UserModel } from '../models/User.js';
+import { db } from '../config/database.js';
 import bcrypt from 'bcrypt';
 
 export class UserController extends BaseController {
   async index(req: NaraRequest, res: NaraResponse) {
-    // TODO: Implement pagination and filtering
-    // const { page = 1, limit = 10, search, filter } = req.query;
-    // const users = await UserModel.paginate({ page, limit, search, filter });
+    // Get query parameters
+    const page = parseInt(req.query?.page as string) || 1;
+    const limit = parseInt(req.query?.limit as string) || 10;
+    const search = (req.query?.search as string) || '';
+    const filter = (req.query?.filter as string) || 'all';
+    const offset = (page - 1) * limit;
+
+    // Build query
+    let query = db('users').select(
+      'id', 'name', 'email', 'phone', 'avatar', 'role',
+      'email_verified_at', 'created_at', 'updated_at'
+    );
+
+    // Apply search filter
+    if (search) {
+      query = query.where(function() {
+        this.where('name', 'like', `%${search}%`)
+            .orWhere('email', 'like', `%${search}%`);
+      });
+    }
+
+    // Apply role filter
+    if (filter === 'admin') {
+      query = query.where('role', 'admin');
+    } else if (filter === 'user') {
+      query = query.where('role', 'user');
+    } else if (filter === 'verified') {
+      query = query.whereNotNull('email_verified_at');
+    } else if (filter === 'unverified') {
+      query = query.whereNull('email_verified_at');
+    }
+
+    // Get total count for pagination
+    const countQuery = query.clone();
+    const [{ count: totalCount }] = await countQuery.count('* as count');
+    const total = Number(totalCount);
+
+    // Apply pagination and ordering
+    const users = await query
+      .orderBy('created_at', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    // Transform users to include is_admin and is_verified flags
+    const transformedUsers = users.map(user => ({
+      ...user,
+      is_admin: user.role === 'admin',
+      is_verified: !!user.email_verified_at
+    }));
+
+    const totalPages = Math.ceil(total / limit);
 
     return jsonSuccess(res, {
-      users: [],
-      total: 0,
-      page: 1,
-      limit: 10,
-      totalPages: 0,
-      hasNext: false,
-      hasPrev: false,
+      users: transformedUsers,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
     });
   }
 
@@ -29,12 +79,40 @@ export class UserController extends BaseController {
       });
     }
 
-    // TODO: Create user in database
-    // const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
-    // const user = await UserModel.create({ name, email, password: hashedPassword, phone, is_admin, is_verified });
+    // Check if email already exists
+    const existing = await UserModel.findByEmail(email);
+    if (existing) {
+      throw new ValidationError({ email: ['Email already registered'] });
+    }
+
+    // Hash password if provided, otherwise generate random
+    const hashedPassword = password
+      ? await bcrypt.hash(password, 10)
+      : await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
+
+    // Create user in database
+    const [userId] = await UserModel.create({
+      name,
+      email,
+      password: hashedPassword,
+      phone: phone || null,
+      role: is_admin ? 'admin' : 'user',
+      email_verified_at: is_verified ? new Date().toISOString() : null
+    });
+
+    // Fetch created user
+    const user = await UserModel.findById(userId);
 
     return jsonSuccess(res, {
-      user: { id: '1', name, email, phone, is_admin, is_verified }
+      user: {
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        phone: user?.phone,
+        avatar: user?.avatar,
+        is_admin: user?.role === 'admin',
+        is_verified: !!user?.email_verified_at
+      }
     }, 'User created successfully');
   }
 
@@ -49,15 +127,49 @@ export class UserController extends BaseController {
       });
     }
 
-    // TODO: Update user in database
-    // const updateData: any = { name, email, phone, is_admin, is_verified };
-    // if (password) {
-    //   updateData.password = await bcrypt.hash(password, 10);
-    // }
-    // await UserModel.update(id, updateData);
+    // Check if user exists
+    const existingUser = await UserModel.findById(Number(id));
+    if (!existingUser) {
+      return jsonError(res, 'User not found', 404);
+    }
+
+    // Check if email is taken by another user
+    const emailUser = await UserModel.findByEmail(email);
+    if (emailUser && emailUser.id !== Number(id)) {
+      throw new ValidationError({ email: ['Email already registered'] });
+    }
+
+    // Build update data
+    const updateData: Record<string, any> = {
+      name,
+      email,
+      phone: phone || null,
+      role: is_admin ? 'admin' : 'user',
+      email_verified_at: is_verified ? (existingUser.email_verified_at || new Date().toISOString()) : null,
+      updated_at: new Date().toISOString()
+    };
+
+    // Hash new password if provided
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update user in database
+    await UserModel.update(Number(id), updateData);
+
+    // Fetch updated user
+    const user = await UserModel.findById(Number(id));
 
     return jsonSuccess(res, {
-      user: { id, name, email, phone, is_admin, is_verified }
+      user: {
+        id: user?.id,
+        name: user?.name,
+        email: user?.email,
+        phone: user?.phone,
+        avatar: user?.avatar,
+        is_admin: user?.role === 'admin',
+        is_verified: !!user?.email_verified_at
+      }
     }, 'User updated successfully');
   }
 
@@ -70,9 +182,15 @@ export class UserController extends BaseController {
       });
     }
 
-    // TODO: Delete users from database
-    // await UserModel.deleteMany(ids);
+    // Prevent deleting current user
+    const currentUserId = req.user?.id;
+    if (currentUserId && ids.includes(currentUserId)) {
+      return jsonError(res, 'Cannot delete your own account', 400);
+    }
 
-    return jsonSuccess(res, {}, `${ids.length} user(s) deleted successfully`);
+    // Delete users from database
+    const deleted = await db('users').whereIn('id', ids).delete();
+
+    return jsonSuccess(res, { deleted }, `${deleted} user(s) deleted successfully`);
   }
 }
