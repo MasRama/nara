@@ -4,8 +4,7 @@
   import Header from '../components/Header.svelte';
   import UserModal from '../components/UserModal.svelte';
   import Pagination from '../components/Pagination.svelte';
-  import axios from 'axios';
-  import { api, Toast } from '../components/helper';
+  import { Toast } from '../components/helper';
   import type { User, UserForm, PaginationMeta } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
 
@@ -48,7 +47,7 @@
   async function handleSubmit(event: CustomEvent<UserForm>): Promise<void> {
     const formData = event.detail;
     if (!formData.name || !formData.email) {
-      Toast('Nama dan email wajib diisi', 'error');
+      Toast('Name and email are required', 'error');
       return;
     }
 
@@ -63,32 +62,64 @@
       password: formData.password || undefined
     };
 
-    const result = mode === 'create'
-      ? await api(() => axios.post('/users', payload))
-      : await api(() => axios.put(`/users/${formData.id}`, payload));
+    try {
+      const url = mode === 'create' ? '/api/users' : `/api/users/${formData.id}`;
+      const method = mode === 'create' ? 'POST' : 'PUT';
 
-    if (result.success) {
-      closeUserModal();
-      router.visit('/users', { preserveScroll: true, preserveState: true });
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        Toast(result.message || `User ${mode === 'create' ? 'created' : 'updated'} successfully`, 'success');
+        closeUserModal();
+        router.visit('/users', { preserveScroll: true, preserveState: true });
+      } else {
+        if (result.errors) {
+          const errorMessages = Object.values(result.errors).flat() as string[];
+          Toast(errorMessages[0] || result.message || 'Operation failed', 'error');
+        } else {
+          Toast(result.message || 'Operation failed', 'error');
+        }
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error';
+      Toast(errorMessage, 'error');
+    } finally {
+      isSubmitting = false;
     }
-
-    isSubmitting = false;
   }
 
   async function deleteUser(id: string): Promise<void> {
-    if (!confirm('Yakin ingin menghapus user ini?')) {
+    if (!confirm('Are you sure you want to delete this user?')) {
       return;
     }
 
     isSubmitting = true;
 
-    const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));
+    try {
+      const response = await fetch('/api/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: [id] })
+      });
+      const result = await response.json();
 
-    if (result.success) {
-      router.visit('/users', { preserveScroll: true, preserveState: true });
+      if (result.success) {
+        Toast(result.message || 'User deleted successfully', 'success');
+        router.visit('/users', { preserveScroll: true, preserveState: true });
+      } else {
+        Toast(result.message || 'Failed to delete user', 'error');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error';
+      Toast(errorMessage, 'error');
+    } finally {
+      isSubmitting = false;
     }
-
-    isSubmitting = false;
   }
 </script>
 

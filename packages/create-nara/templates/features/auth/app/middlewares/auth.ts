@@ -10,7 +10,7 @@ export function authMiddleware(req: NaraRequest, res: NaraResponse, next: () => 
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized' });
+    res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
   }
 
@@ -21,7 +21,7 @@ export function authMiddleware(req: NaraRequest, res: NaraResponse, next: () => 
     req.user = { id: decoded.userId, email: decoded.email, name: '' };
     next();
   } catch (error) {
-    res.status(401).json({ error: 'Invalid token' });
+    res.status(401).json({ success: false, message: 'Invalid token' });
   }
 }
 
@@ -32,12 +32,17 @@ export function authMiddleware(req: NaraRequest, res: NaraResponse, next: () => 
 export function webAuthMiddleware(req: NaraRequest, res: NaraResponse, next: () => void) {
   // Check for auth token in cookie
   const token = req.cookies?.auth_token;
+  const isApiRoute = req.path.startsWith('/api/');
 
   if (!token) {
-    // For Inertia requests, redirect to login
-    if (req.headers['x-inertia']) {
+    if (isApiRoute) {
+      // API routes return JSON
+      res.status(401).json({ success: false, message: 'Unauthorized. Please log in.' });
+    } else if (req.headers['x-inertia']) {
+      // Inertia requests get redirect header
       res.status(409).setHeader('X-Inertia-Location', '/login').send('');
     } else {
+      // Regular requests get redirected
       res.redirect('/login');
     }
     return;
@@ -50,7 +55,9 @@ export function webAuthMiddleware(req: NaraRequest, res: NaraResponse, next: () 
   } catch (error) {
     // Clear invalid token
     res.cookie('auth_token', '', 0);
-    if (req.headers['x-inertia']) {
+    if (isApiRoute) {
+      res.status(401).json({ success: false, message: 'Session expired. Please log in again.' });
+    } else if (req.headers['x-inertia']) {
       res.status(409).setHeader('X-Inertia-Location', '/login').send('');
     } else {
       res.redirect('/login');

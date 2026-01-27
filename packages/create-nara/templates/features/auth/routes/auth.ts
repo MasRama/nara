@@ -1,10 +1,15 @@
 import type { NaraApp } from '@nara-web/core';
 import { AuthController } from '../app/controllers/AuthController.js';
-import { authMiddleware } from '../app/middlewares/auth.js';
+import { ProfileController } from '../app/controllers/ProfileController.js';
+import { UserController } from '../app/controllers/UserController.js';
+import { authMiddleware, webAuthMiddleware } from '../app/middlewares/auth.js';
 
 export function registerAuthRoutes(app: NaraApp) {
   const auth = new AuthController();
+  const profile = new ProfileController();
+  const users = new UserController();
 
+  // ===== Auth Routes =====
   // Public routes
   app.post('/api/auth/login', async (req, res) => {
     await auth.login(req, res);
@@ -12,13 +17,43 @@ export function registerAuthRoutes(app: NaraApp) {
   app.post('/api/auth/register', async (req, res) => {
     await auth.register(req, res);
   });
-  // Logout is public - just clears the cookie
   app.post('/api/auth/logout', async (req, res) => {
     await auth.logout(req, res);
+  });
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    await auth.forgotPassword(req, res);
+  });
+  app.post('/api/auth/reset-password', async (req, res) => {
+    await auth.resetPassword(req, res);
   });
 
   // Protected API routes (Bearer token)
   app.get('/api/auth/me', authMiddleware as any, async (req, res) => {
     await auth.me(req, res);
+  });
+
+  // ===== Profile Routes (cookie-based auth) =====
+  app.post('/api/profile/update', webAuthMiddleware as any, async (req, res) => {
+    await profile.update(req, res);
+  });
+  app.post('/api/profile/password', webAuthMiddleware as any, async (req, res) => {
+    await profile.changePassword(req, res);
+  });
+  app.post('/api/profile/avatar', webAuthMiddleware as any, async (req, res) => {
+    await profile.uploadAvatar(req, res);
+  });
+
+  // ===== User Management Routes (cookie-based auth, admin only) =====
+  app.get('/api/users', webAuthMiddleware as any, async (req, res) => {
+    await users.index(req, res);
+  });
+  app.post('/api/users', webAuthMiddleware as any, async (req, res) => {
+    await users.store(req, res);
+  });
+  app.put('/api/users/:id', webAuthMiddleware as any, async (req, res) => {
+    await users.update(req, res);
+  });
+  app.delete('/api/users', webAuthMiddleware as any, async (req, res) => {
+    await users.destroy(req, res);
   });
 }

@@ -93,4 +93,44 @@ export class AuthController extends BaseController {
 
     return jsonSuccess(res, { redirect: '/login' }, 'Logged out successfully');
   }
+
+  async forgotPassword(req: NaraRequest, res: NaraResponse) {
+    const { email } = await req.json();
+
+    if (!email) {
+      throw new ValidationError({ email: ['Email is required'] });
+    }
+
+    // TODO: Implement actual password reset email sending
+    // const user = await UserModel.findByEmail(email);
+    // if (user) {
+    //   const token = generateResetToken();
+    //   await sendResetEmail(user.email, token);
+    // }
+
+    // Always return success to prevent email enumeration
+    return jsonSuccess(res, {}, 'If an account exists with this email, a reset link has been sent.');
+  }
+
+  async resetPassword(req: NaraRequest, res: NaraResponse) {
+    const { token, password } = await req.json();
+
+    if (!token || !password) {
+      throw new ValidationError({
+        token: !token ? ['Reset token is required'] : [],
+        password: !password ? ['Password is required'] : [],
+      });
+    }
+
+    // TODO: Implement actual password reset
+    // const resetRecord = await PasswordReset.findByToken(token);
+    // if (!resetRecord || resetRecord.expired) {
+    //   throw new ValidationError({ token: ['Invalid or expired reset token'] });
+    // }
+    // const hashedPassword = await bcrypt.hash(password, 10);
+    // await UserModel.updatePassword(resetRecord.userId, hashedPassword);
+    // await PasswordReset.delete(token);
+
+    return jsonSuccess(res, { redirect: '/login' }, 'Password has been reset successfully.');
+  }
 }
