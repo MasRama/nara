@@ -2,3 +2,8 @@ node_modules
 dist
 .env
 *.db
+*.log
+database/*.sqlite3
+database/*.sqlite3-*
+uploads/*
+!uploads/.gitkeep

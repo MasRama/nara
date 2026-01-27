@@ -16,10 +16,26 @@ export async function setupProject(options) {
     if (fs.existsSync(modeTemplateDir)) {
         copyDir(modeTemplateDir, targetDir);
     }
-    // 3. Ensure required directories exist
+    // 3. Copy feature-specific templates
+    const featuresDir = path.join(templatesDir, 'features');
+    for (const feature of features) {
+        const featureDir = path.join(featuresDir, feature);
+        if (fs.existsSync(featureDir)) {
+            copyDir(featureDir, targetDir);
+        }
+    }
+    // 4. Ensure required directories exist
     fs.mkdirSync(path.join(targetDir, 'app/controllers'), { recursive: true });
     fs.mkdirSync(path.join(targetDir, 'app/models'), { recursive: true });
-    // 4. Generate package.json (dynamic content)
+    // Create database directory if db feature is selected
+    if (features.includes('db')) {
+        fs.mkdirSync(path.join(targetDir, 'database'), { recursive: true });
+    }
+    // Create uploads directory if uploads feature is selected
+    if (features.includes('uploads')) {
+        fs.mkdirSync(path.join(targetDir, 'uploads'), { recursive: true });
+    }
+    // 5. Generate package.json (dynamic content)
     const pkg = createPackageJson(projectName, mode, features);
     fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(pkg, null, 2));
 }
@@ -64,6 +80,9 @@ function createPackageJson(name, mode, features) {
         pkg.dependencies['knex'] = '^3.1.0';
         pkg.dependencies['better-sqlite3'] = '^11.0.0';
         pkg.devDependencies['@types/better-sqlite3'] = '^7.6.0';
+        pkg.scripts['db:migrate'] = 'knex migrate:latest';
+        pkg.scripts['db:rollback'] = 'knex migrate:rollback';
+        pkg.scripts['db:make'] = 'knex migrate:make';
     }
     if (features.includes('auth')) {
         pkg.dependencies['bcrypt'] = '^5.1.0';
