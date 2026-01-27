@@ -1,4 +1,4 @@
-import { db } from '../app/config/database.js';
+import { db } from '../config/database.js';
 
 export interface User {
   id: number;

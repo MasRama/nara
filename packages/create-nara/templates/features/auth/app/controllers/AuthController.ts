@@ -44,7 +44,7 @@ export class AuthController extends BaseController {
 
     const token = jwt.sign({ userId: 1, email }, JWT_SECRET, { expiresIn: '7d' });
 
-    return jsonSuccess(res, { token, message: 'Registration successful' }, 201);
+    return jsonSuccess(res, { token }, 'Registration successful');
   }
 
   async me(req: NaraRequest, res: NaraResponse) {

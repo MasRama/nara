@@ -40,8 +40,7 @@ export class UploadController extends BaseController {
       return jsonSuccess(res, {
         filename,
         path: `/uploads/${filename}`,
-        message: 'File uploaded successfully',
-      }, 201);
+      }, 'File uploaded successfully');
     } catch (error) {
       console.error('Upload error:', error);
       return jsonError(res, 'Failed to upload file', 500);
