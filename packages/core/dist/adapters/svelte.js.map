@@ -1,0 +1,1 @@
+{"version":3,"file":"svelte.js","sourceRoot":"","sources":["../../src/adapters/svelte.ts"],"names":[],"mappings":";;;;;AASA,sCAsBC;AA7BD,wEAA0D;AAO1D,SAAgB,aAAa;IAC3B,OAAO;QACL,IAAI,EAAE,gBAAgB;QAKtB,UAAU,EAAE,GAA6B,EAAE;YACzC,OAAO,IAAA,iBAAiB,GAAyC,CAAC;QACpE,CAAC;QAOD,cAAc,EAAE,CAAC,GAAiB,EAAQ,EAAE;QAI5C,CAAC;KACF,CAAC;AACJ,CAAC"}

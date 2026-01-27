@@ -1,0 +1,22 @@
+{
+  "name": "@nara/inertia-svelte",
+  "version": "0.1.0",
+  "description": "Svelte 5 + Inertia.js adapter for NARA",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@inertiajs/svelte": "^2.0.0"
+  },
+  "devDependencies": {
+    "@nara/core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "@nara/core": "^0.1.0",
+    "svelte": "^5.0.0",
+    "vite": "^5.0.0 || ^6.0.0"
+  },
+  "license": "MIT"
+}
