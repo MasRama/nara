@@ -1,8 +1,8 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import axios from "axios";
-  import Header from "../Components/Header.svelte";
-  import { api, Toast } from "../Components/helper";
+  import Header from "../components/Header.svelte";
+  import { api, Toast } from "../components/helper";
 
   interface User {
     id: string;

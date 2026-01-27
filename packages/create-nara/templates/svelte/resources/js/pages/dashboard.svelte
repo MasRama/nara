@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, inertia } from '@inertiajs/svelte';
-  import Header from '../Components/Header.svelte';
+  import Header from '../components/Header.svelte';
   import type { User } from '../types';
 
   export let users: User[] = [];

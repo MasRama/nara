@@ -2,7 +2,7 @@
   import { inertia, page } from '@inertiajs/svelte'
   import { fade, fly } from 'svelte/transition'
   import { onMount } from 'svelte'
-  import DarkModeToggle from '../Components/DarkModeToggle.svelte'
+  import DarkModeToggle from '../components/DarkModeToggle.svelte'
 
   interface User {
     id: string;

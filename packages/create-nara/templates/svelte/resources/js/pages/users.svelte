@@ -1,11 +1,11 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, router } from '@inertiajs/svelte';
-  import Header from '../Components/Header.svelte';
-  import UserModal from '../Components/UserModal.svelte';
-  import Pagination from '../Components/Pagination.svelte';
+  import Header from '../components/Header.svelte';
+  import UserModal from '../components/UserModal.svelte';
+  import Pagination from '../components/Pagination.svelte';
   import axios from 'axios';
-  import { api, Toast } from '../Components/helper';
+  import { api, Toast } from '../components/helper';
   import type { User, UserForm, PaginationMeta } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
 

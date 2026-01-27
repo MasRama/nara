@@ -1,8 +1,8 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
-  import { clickOutside } from '../Components/helper';
-  import DarkModeToggle from '../Components/DarkModeToggle.svelte';
+  import { clickOutside } from '../components/helper';
+  import DarkModeToggle from '../components/DarkModeToggle.svelte';
 
   interface User {
     id: string;
