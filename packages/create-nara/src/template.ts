@@ -23,6 +23,13 @@ export async function setupProject(options: ProjectOptions) {
   // 1. Copy base template (shared files like .gitignore, tsconfig, etc)
   copyDir(path.join(templatesDir, 'base'), targetDir);
 
+  // Rename gitignore.template to .gitignore (npm doesn't include dotfiles)
+  const gitignoreTemplate = path.join(targetDir, 'gitignore.template');
+  const gitignoreDest = path.join(targetDir, '.gitignore');
+  if (fs.existsSync(gitignoreTemplate)) {
+    fs.renameSync(gitignoreTemplate, gitignoreDest);
+  }
+
   // 2. Copy mode-specific template
   const modeTemplateDir = path.join(templatesDir, mode);
   if (fs.existsSync(modeTemplateDir)) {
