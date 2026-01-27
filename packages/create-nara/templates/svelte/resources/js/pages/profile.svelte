@@ -1,7 +1,8 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import Header from "../components/Header.svelte";
-  import { Toast } from "../components/helper";
+  import axios from "axios";
+  import Header from "../Components/Header.svelte";
+  import { api, Toast } from "../Components/helper";
 
   interface User {
     id: string;
@@ -21,104 +22,64 @@
   let isLoading: boolean = false;
   let previewUrl: string | null = user.avatar || null;
 
-  async function handleAvatarChange(event: Event): Promise<void> {
+  function handleAvatarChange(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
+    if (file) console.log('[AVATAR DEBUG] Uploading file:', file.name, 'Size:', file.size, 'Type:', file.type);
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
       isLoading = true;
-
-      try {
-        const response = await fetch('/api/profile/avatar', {
-          method: 'POST',
-          body: formData
+      console.log('[AVATAR DEBUG] Sending request to /assets/avatar');
+      axios
+        .post("/assets/avatar", formData)
+        .then((response) => {
+          console.log('[AVATAR DEBUG] Upload response:', response.data);
+          setTimeout(() => {
+            isLoading = false;
+            previewUrl = response.data.data.url + "?v=" + Date.now();
+            console.log('[AVATAR DEBUG] previewUrl set to:', previewUrl);
+          }, 500);
+          user.avatar = response.data.data.url + "?v=" + Date.now();
+          Toast("Avatar berhasil diupload", "success");
+        })
+        .catch((error) => {
+          console.log('[AVATAR DEBUG] Upload failed:', error);
+          isLoading = false;
+          Toast("Gagal mengupload avatar", "error");
         });
-        const result = await response.json();
-
-        if (result.success) {
-          previewUrl = result.data?.url + "?v=" + Date.now();
-          user.avatar = result.data?.url;
-          Toast(result.message || "Avatar uploaded successfully", "success");
-        } else {
-          Toast(result.message || "Failed to upload avatar", "error");
-        }
-      } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Network error';
-        Toast(errorMessage, "error");
-      } finally {
-        isLoading = false;
-      }
     }
   }
 
   async function changeProfile(): Promise<void> {
     isLoading = true;
-    try {
-      const response = await fetch('/api/profile/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: user.name, email: user.email, phone: user.phone })
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        Toast(result.message || 'Profile updated successfully', 'success');
-      } else {
-        if (result.errors) {
-          const errorMessages = Object.values(result.errors).flat() as string[];
-          Toast(errorMessages[0] || result.message || 'Failed to update profile', 'error');
-        } else {
-          Toast(result.message || 'Failed to update profile', 'error');
-        }
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
-      Toast(errorMessage, 'error');
-    } finally {
-      isLoading = false;
-    }
+    await api(() => axios.post("/change-profile", user));
+    isLoading = false;
   }
 
   async function changePassword(): Promise<void> {
-    if (new_password !== confirm_password) {
-      Toast("Passwords do not match", "error");
+    if (new_password != confirm_password) {
+      Toast("Password tidak cocok", "error");
       return;
     }
 
     if (!current_password || !new_password || !confirm_password) {
-      Toast("Please fill in all fields", "error");
+      Toast("Mohon isi semua field", "error");
       return;
     }
 
     isLoading = true;
-    try {
-      const response = await fetch('/api/profile/password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current_password, new_password })
-      });
-      const result = await response.json();
+    const result = await api(() => axios.post("/change-password", {
+      current_password,
+      new_password,
+    }));
 
-      if (result.success) {
-        Toast(result.message || 'Password changed successfully', 'success');
-        current_password = "";
-        new_password = "";
-        confirm_password = "";
-      } else {
-        if (result.errors) {
-          const errorMessages = Object.values(result.errors).flat() as string[];
-          Toast(errorMessages[0] || result.message || 'Failed to change password', 'error');
-        } else {
-          Toast(result.message || 'Failed to change password', 'error');
-        }
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
-      Toast(errorMessage, 'error');
-    } finally {
-      isLoading = false;
+    if (result.success) {
+      current_password = "";
+      new_password = "";
+      confirm_password = "";
     }
+    isLoading = false;
   }
 </script>
 
