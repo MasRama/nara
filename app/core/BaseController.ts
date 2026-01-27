@@ -24,7 +24,7 @@
  * }
  */
 
-import type { NaraRequest, NaraResponse, User } from './types';
+import type { NaraRequest, NaraResponse, NaraResponseWithInertia, User } from './types';
 import { AuthError, ForbiddenError, ValidationError } from './errors';
 import type { Validator, ValidationResult } from '@validators/validate';
 import { PAGINATION } from '@config';
@@ -50,7 +50,7 @@ export interface PaginationParams {
 
 /**
  * Abstract base controller class
- * 
+ *
  * Provides common utilities for authentication, validation, and pagination.
  * All controllers should extend this class to reduce boilerplate.
  */
@@ -59,12 +59,27 @@ export abstract class BaseController {
     // Auto-bind all methods to preserve 'this' context when passed as route callbacks
     const prototype = Object.getPrototypeOf(this);
     const propertyNames = Object.getOwnPropertyNames(prototype);
-    
+
     for (const name of propertyNames) {
       const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
       if (name !== 'constructor' && descriptor && typeof descriptor.value === 'function') {
         (this as any)[name] = (this as any)[name].bind(this);
       }
+    }
+  }
+
+  /**
+   * Require Inertia support on the response
+   *
+   * Throws Error if Inertia is not enabled (adapter not provided).
+   * After calling this, TypeScript knows res.inertia() exists.
+   *
+   * @param res - Response object
+   * @throws Error if Inertia is not supported
+   */
+  protected requireInertia(res: NaraResponse): asserts res is NaraResponseWithInertia {
+    if (typeof res.inertia !== 'function') {
+      throw new Error('Inertia support is not enabled. Please provide a FrontendAdapter (e.g., svelteAdapter) to NaraApp.');
     }
   }
 

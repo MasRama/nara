@@ -8,17 +8,18 @@
  * @see app/core/App.ts for the full implementation
  */
 
-import { createApp } from "@core";
+import { createApp, svelteAdapter } from "@core";
 import routes from "@routes/web";
 
 // Create and start the application
 const app = createApp({
   routes,
+  // Add Svelte adapter to enable Inertia support
+  adapter: svelteAdapter(),
   // All other options are auto-configured from environment:
   // - port: from env.PORT (default 5555)
   // - https: from env.HAS_CERTIFICATE
   // - cors: enabled by default
-  // - inertia: enabled by default
   // - shutdownTimeout: 10 seconds
 });
 

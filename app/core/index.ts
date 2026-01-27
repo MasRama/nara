@@ -39,6 +39,10 @@ export type {
 // Router
 export { NaraRouter, createRouter } from './Router';
 
+// Adapters
+export * from './adapters/types';
+export { svelteAdapter } from './adapters/svelte';
+
 // Errors
 export {
   HttpError,

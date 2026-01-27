@@ -29,6 +29,7 @@ class AuthController extends BaseController {
     if (request.cookies.auth_id) {
       return response.redirect("/dashboard");
     }
+    this.requireInertia(response);
     return response.inertia("auth/register");
   }
 
@@ -36,6 +37,7 @@ class AuthController extends BaseController {
    * Login page
    */
   public async loginPage(request: NaraRequest, response: NaraResponse) {
+    this.requireInertia(response);
     return response.inertia("auth/login");
   }
 

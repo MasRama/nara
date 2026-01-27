@@ -4,7 +4,7 @@ import { Session, User } from "@models";
 
 class HomeController extends BaseController {
     
-    public async index(request: NaraRequest, response: NaraResponse) { 
+    public async index(request: NaraRequest, response: NaraResponse) {
         let user: any = {};
 
         if (request.cookies.auth_id) {
@@ -15,6 +15,7 @@ class HomeController extends BaseController {
             }
         }
 
+        this.requireInertia(response);
         return response.inertia("landing", { user });
     }
 }

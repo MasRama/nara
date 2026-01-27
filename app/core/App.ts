@@ -20,7 +20,6 @@ import path from "path";
 import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "@config";
 import type { Env } from "@config";
 import Logger from "@services/Logger";
-import inertia from "@middlewares/inertia";
 import { securityHeaders } from "@middlewares/securityHeaders";
 import { requestLogger } from "@middlewares/requestLogger";
 import { rateLimit } from "@middlewares/rateLimit";
@@ -28,6 +27,7 @@ import { csrf } from "@middlewares/csrf";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
+import type { FrontendAdapter } from "./adapters/types";
 
 /**
  * Application configuration options
@@ -51,10 +51,9 @@ export interface AppOptions {
   cors?: boolean;
 
   /**
-   * Enable Inertia.js middleware for SSR-like responses.
-   * @default true
+   * Frontend adapter (e.g., Inertia). If provided, enables frontend features.
    */
-  inertia?: boolean;
+  adapter?: FrontendAdapter;
 
   /**
    * Enable security headers middleware (HSTS, X-Frame-Options, etc.).
@@ -106,11 +105,11 @@ export interface AppOptions {
 /**
  * Default application options
  */
-const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler">> = {
+const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler" | "adapter">> & Pick<AppOptions, "adapter"> = {
   port: 5555,
   https: false,
   cors: true,
-  inertia: true,
+  adapter: undefined,
   securityHeaders: true,
   requestLogging: true,
   rateLimit: false, // Opt-in
@@ -132,7 +131,7 @@ const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler">> = {
 export class NaraApp {
   private server: HyperExpress.Server;
   private env: Env;
-  private options: Required<Omit<AppOptions, "routes" | "errorHandler">> & Pick<AppOptions, "routes" | "errorHandler">;
+  private options: Required<Omit<AppOptions, "routes" | "errorHandler" | "adapter">> & Pick<AppOptions, "routes" | "errorHandler" | "adapter">;
   private isShuttingDown = false;
   private isStarted = false;
 
@@ -235,10 +234,16 @@ export class NaraApp {
       this.server.use(csrf() as any);
     }
 
-    if (this.options.inertia) {
-      // Note: Type cast needed due to HyperExpress middleware signature differences
+    if (this.options.adapter) {
+      // Apply adapter middleware
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.server.use(inertia() as any);
+      this.server.use(this.options.adapter.middleware() as any);
+
+      // Register response extensions
+      this.server.use((_req, res, next) => {
+        this.options.adapter?.extendResponse(res as NaraResponse);
+        next();
+      });
     }
   }
 

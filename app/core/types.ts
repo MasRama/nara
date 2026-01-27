@@ -42,12 +42,23 @@ export interface NaraRequest extends HyperRequest {
  */
 export interface NaraResponse extends HyperResponse {
   view(template: string, data?: Record<string, unknown>): Promise<unknown>;
-  inertia(
+  inertia?(
     component: string,
     props?: Record<string, unknown>,
     viewProps?: Record<string, unknown>
   ): Promise<unknown>;
   flash(key: string, value: unknown): NaraResponse;
+}
+
+/**
+ * NaraResponse with Inertia support explicitly enabled
+ */
+export interface NaraResponseWithInertia extends NaraResponse {
+  inertia(
+    component: string,
+    props?: Record<string, unknown>,
+    viewProps?: Record<string, unknown>
+  ): Promise<unknown>;
 }
 
 /**

@@ -64,8 +64,9 @@ class UserController extends BaseController {
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
-    return response.inertia("dashboard", { 
-      users: result.data, 
+    this.requireInertia(response);
+    return response.inertia("dashboard", {
+      users: result.data,
       ...result.meta,
       search: params.search,
       filter: params.filter
@@ -80,6 +81,7 @@ class UserController extends BaseController {
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
+    this.requireInertia(response);
     return response.inertia("users", {
       users: result.data,
       ...result.meta,
@@ -166,7 +168,8 @@ class UserController extends BaseController {
   /**
    * Profile page
    */
-  public async profilePage(request: NaraRequest, response: NaraResponse) { 
+  public async profilePage(request: NaraRequest, response: NaraResponse) {
+    this.requireInertia(response);
     return response.inertia("profile");
   }
 

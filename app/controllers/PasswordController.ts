@@ -32,6 +32,7 @@ class PasswordController extends BaseController {
    * Forgot password page
    */
   public async forgotPasswordPage(request: NaraRequest, response: NaraResponse) {
+    this.requireInertia(response);
     return response.inertia("auth/forgot-password");
   }
 
@@ -47,6 +48,7 @@ class PasswordController extends BaseController {
       return response.status(404).send("Link tidak valid atau sudah kadaluarsa");
     }
 
+    this.requireInertia(response);
     return response.inertia("auth/reset-password", { id: request.params.id });
   }
 
