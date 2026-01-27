@@ -48,13 +48,17 @@
         Toast(result.message || 'Registration successful', 'success');
         router.visit(result.data?.redirect || '/dashboard');
       } else {
-        const errorMsg = result.errors
-          ? Object.values(result.errors).flat().join(', ')
-          : result.message || 'Registration failed';
-        Toast(errorMsg, 'error');
+        // Handle validation errors
+        if (result.errors) {
+          const errorMessages = Object.values(result.errors).flat() as string[];
+          Toast(errorMessages[0] || result.message || 'Registration failed', 'error');
+        } else {
+          Toast(result.message || 'Registration failed', 'error');
+        }
       }
-    } catch (err) {
-      Toast('An error occurred. Please try again.', 'error');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
+      Toast(errorMessage, 'error');
     } finally {
       loading = false;
     }

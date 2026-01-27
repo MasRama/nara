@@ -35,13 +35,17 @@
                 form.email = "";
                 Toast(result.message || 'Reset link sent!', 'success');
             } else {
-                const errorMsg = result.errors
-                    ? Object.values(result.errors).flat().join(', ')
-                    : result.message || 'Failed to send reset link';
-                Toast(errorMsg, 'error');
+                // Handle validation errors
+                if (result.errors) {
+                    const errorMessages = Object.values(result.errors).flat() as string[];
+                    Toast(errorMessages[0] || result.message || 'Failed to send reset link', 'error');
+                } else {
+                    Toast(result.message || 'Failed to send reset link', 'error');
+                }
             }
-        } catch (err) {
-            Toast('An error occurred. Please try again.', 'error');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
+            Toast(errorMessage, 'error');
         } finally {
             loading = false;
         }

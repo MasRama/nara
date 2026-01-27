@@ -48,13 +48,17 @@
         Toast(result.message || 'Password reset successful', 'success');
         router.visit('/login');
       } else {
-        const errorMsg = result.errors
-          ? Object.values(result.errors).flat().join(', ')
-          : result.message || 'Password reset failed';
-        Toast(errorMsg, 'error');
+        // Handle validation errors
+        if (result.errors) {
+          const errorMessages = Object.values(result.errors).flat() as string[];
+          Toast(errorMessages[0] || result.message || 'Password reset failed', 'error');
+        } else {
+          Toast(result.message || 'Password reset failed', 'error');
+        }
       }
-    } catch (err) {
-      Toast('An error occurred. Please try again.', 'error');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error. Please check your connection.';
+      Toast(errorMessage, 'error');
     } finally {
       loading = false;
     }
