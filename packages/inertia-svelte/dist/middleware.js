@@ -1,8 +1,5 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.inertiaMiddleware = void 0;
-const fs_1 = require("fs");
-const path_1 = require("path");
+import { readFileSync, existsSync } from "fs";
+import { join } from "path";
 function escapeHtml(value) {
     return value
         .replace(/&/g, "&amp;")
@@ -11,7 +8,7 @@ function escapeHtml(value) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
-const inertiaMiddleware = (config = {}) => {
+export const inertiaMiddleware = (config = {}) => {
     const version = config.version || "1.0.0";
     const rootView = config.rootView || "inertia.html";
     return (req, res, next) => {
@@ -39,12 +36,12 @@ const inertiaMiddleware = (config = {}) => {
                 return res.json(inertiaObject);
             }
             const viewsDir = process.env.NODE_ENV === "development"
-                ? (0, path_1.join)(process.cwd(), "resources/views")
-                : (0, path_1.join)(process.cwd(), "dist/views");
-            const viewPath = (0, path_1.join)(viewsDir, rootView);
+                ? join(process.cwd(), "resources/views")
+                : join(process.cwd(), "dist/views");
+            const viewPath = join(viewsDir, rootView);
             let html = `<!DOCTYPE html><html><body><div id="app" data-page="{{it.page}}"></div></body></html>`;
-            if ((0, fs_1.existsSync)(viewPath)) {
-                html = (0, fs_1.readFileSync)(viewPath, "utf8");
+            if (existsSync(viewPath)) {
+                html = readFileSync(viewPath, "utf8");
             }
             const title = config.title || process.env.TITLE || "NARA App";
             const pageJson = JSON.stringify(inertiaObject);
@@ -60,6 +57,5 @@ const inertiaMiddleware = (config = {}) => {
         next();
     };
 };
-exports.inertiaMiddleware = inertiaMiddleware;
-exports.default = exports.inertiaMiddleware;
+export default inertiaMiddleware;
 //# sourceMappingURL=middleware.js.map

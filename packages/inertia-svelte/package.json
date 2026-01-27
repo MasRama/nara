@@ -1,9 +1,20 @@
 {
   "name": "@nara-web/inertia-svelte",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Svelte 5 + Inertia.js adapter for NARA",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    }
+  },
   "scripts": {
     "build": "tsc"
   },
@@ -11,12 +22,21 @@
     "@inertiajs/svelte": "^2.0.0"
   },
   "devDependencies": {
-    "@nara-web/core": "^1.0.0"
+    "@nara-web/core": "^1.0.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "vite": "^6.0.0"
   },
   "peerDependencies": {
     "@nara-web/core": "^1.0.0",
-    "svelte": "^5.0.0",
-    "vite": "^5.0.0 || ^6.0.0"
+    "svelte": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@sveltejs/vite-plugin-svelte": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
   },
   "license": "MIT"
 }
