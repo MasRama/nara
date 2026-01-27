@@ -1,100 +1,48 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.InternalError = exports.TooManyRequestsError = exports.ConflictError = exports.BadRequestError = exports.ForbiddenError = exports.NotFoundError = exports.AuthError = exports.ValidationError = exports.HttpError = void 0;
-exports.isHttpError = isHttpError;
-exports.isValidationError = isValidationError;
+exports.ValidationError = exports.BadRequestError = exports.ForbiddenError = exports.UnauthorizedError = exports.NotFoundError = exports.HttpError = void 0;
 class HttpError extends Error {
-    constructor(message, statusCode = 500, code = 'HTTP_ERROR') {
+    constructor(statusCode, message) {
         super(message);
-        this.name = 'HttpError';
         this.statusCode = statusCode;
-        this.code = code;
-        Error.captureStackTrace(this, this.constructor);
-    }
-    toJSON() {
-        return {
-            name: this.name,
-            message: this.message,
-            statusCode: this.statusCode,
-            code: this.code,
-        };
+        this.name = 'HttpError';
     }
 }
 exports.HttpError = HttpError;
-class ValidationError extends HttpError {
-    constructor(message = 'Validation failed', errors = {}) {
-        super(message, 422, 'VALIDATION_ERROR');
-        this.name = 'ValidationError';
-        this.errors = errors;
-    }
-    toJSON() {
-        return {
-            ...super.toJSON(),
-            errors: this.errors,
-        };
-    }
-}
-exports.ValidationError = ValidationError;
-class AuthError extends HttpError {
-    constructor(message = 'Unauthorized') {
-        super(message, 401, 'AUTH_ERROR');
-        this.name = 'AuthError';
-    }
-}
-exports.AuthError = AuthError;
 class NotFoundError extends HttpError {
-    constructor(message = 'Not Found') {
-        super(message, 404, 'NOT_FOUND');
+    constructor(message = 'Not found') {
+        super(404, message);
         this.name = 'NotFoundError';
     }
 }
 exports.NotFoundError = NotFoundError;
+class UnauthorizedError extends HttpError {
+    constructor(message = 'Unauthorized') {
+        super(401, message);
+        this.name = 'UnauthorizedError';
+    }
+}
+exports.UnauthorizedError = UnauthorizedError;
 class ForbiddenError extends HttpError {
     constructor(message = 'Forbidden') {
-        super(message, 403, 'FORBIDDEN');
+        super(403, message);
         this.name = 'ForbiddenError';
     }
 }
 exports.ForbiddenError = ForbiddenError;
 class BadRequestError extends HttpError {
-    constructor(message = 'Bad Request') {
-        super(message, 400, 'BAD_REQUEST');
+    constructor(message = 'Bad request') {
+        super(400, message);
         this.name = 'BadRequestError';
     }
 }
 exports.BadRequestError = BadRequestError;
-class ConflictError extends HttpError {
-    constructor(message = 'Conflict') {
-        super(message, 409, 'CONFLICT');
-        this.name = 'ConflictError';
+class ValidationError extends HttpError {
+    constructor(errors, message = 'Validation failed') {
+        super(422, message);
+        this.errors = errors;
+        this.name = 'ValidationError';
     }
 }
-exports.ConflictError = ConflictError;
-class TooManyRequestsError extends HttpError {
-    constructor(message = 'Too Many Requests', retryAfter) {
-        super(message, 429, 'TOO_MANY_REQUESTS');
-        this.name = 'TooManyRequestsError';
-        this.retryAfter = retryAfter;
-    }
-    toJSON() {
-        return {
-            ...super.toJSON(),
-            ...(this.retryAfter && { retryAfter: this.retryAfter }),
-        };
-    }
-}
-exports.TooManyRequestsError = TooManyRequestsError;
-class InternalError extends HttpError {
-    constructor(message = 'Internal Server Error') {
-        super(message, 500, 'INTERNAL_ERROR');
-        this.name = 'InternalError';
-    }
-}
-exports.InternalError = InternalError;
-function isHttpError(error) {
-    return error instanceof HttpError;
-}
-function isValidationError(error) {
-    return error instanceof ValidationError;
-}
+exports.ValidationError = ValidationError;
 //# sourceMappingURL=errors.js.map
