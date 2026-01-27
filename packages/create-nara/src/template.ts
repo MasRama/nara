@@ -79,7 +79,7 @@ function createPackageJson(name: string, mode: string, features: string[]) {
       start: 'node dist/server.js'
     },
     dependencies: {
-      '@nara-web/core': '^0.1.0',
+      '@nara-web/core': '^1.0.0',
       'dotenv': '^16.4.7'
     },
     devDependencies: {
@@ -90,13 +90,13 @@ function createPackageJson(name: string, mode: string, features: string[]) {
   };
 
   if (mode === 'svelte') {
-    pkg.dependencies['@nara-web/inertia-svelte'] = '^0.1.0';
+    pkg.dependencies['@nara-web/inertia-svelte'] = '^1.0.0';
     pkg.dependencies['svelte'] = '^5.0.0';
     pkg.devDependencies['vite'] = '^6.0.0';
     pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^5.0.0';
     pkg.devDependencies['concurrently'] = '^9.0.0';
   } else if (mode === 'vue') {
-    pkg.dependencies['@nara-web/inertia-vue'] = '^0.1.0';
+    pkg.dependencies['@nara-web/inertia-vue'] = '^1.0.0';
     pkg.dependencies['vue'] = '^3.5.0';
     pkg.devDependencies['vite'] = '^6.0.0';
     pkg.devDependencies['@vitejs/plugin-vue'] = '^5.0.0';
@@ -107,9 +107,9 @@ function createPackageJson(name: string, mode: string, features: string[]) {
     pkg.dependencies['knex'] = '^3.1.0';
     pkg.dependencies['better-sqlite3'] = '^11.0.0';
     pkg.devDependencies['@types/better-sqlite3'] = '^7.6.0';
-    pkg.scripts['db:migrate'] = 'knex migrate:latest';
-    pkg.scripts['db:rollback'] = 'knex migrate:rollback';
-    pkg.scripts['db:make'] = 'knex migrate:make';
+    pkg.scripts['db:migrate'] = 'tsx node_modules/.bin/knex migrate:latest';
+    pkg.scripts['db:rollback'] = 'tsx node_modules/.bin/knex migrate:rollback';
+    pkg.scripts['db:make'] = 'tsx node_modules/.bin/knex migrate:make';
   }
 
   if (features.includes('auth')) {
