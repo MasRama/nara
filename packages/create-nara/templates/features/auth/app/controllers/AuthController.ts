@@ -4,14 +4,13 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_SECONDS = 7 * 24 * 60 * 60; // 7 days in seconds
 
 // Cookie options for auth token
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
   path: '/',
 };
 
@@ -33,11 +32,11 @@ export class AuthController extends BaseController {
     const token = jwt.sign(
       { userId: 1, email, name: 'Demo User' },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_SECONDS }
     );
 
-    // Set auth cookie for web routes
-    res.cookie('auth_token', token, COOKIE_OPTIONS);
+    // Set auth cookie for web routes (maxAge in ms)
+    res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
 
     return jsonSuccess(res, {
       user: { id: 1, email, name: 'Demo User' },
@@ -66,11 +65,11 @@ export class AuthController extends BaseController {
     const token = jwt.sign(
       { userId: 1, email, name },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
+      { expiresIn: JWT_EXPIRES_SECONDS }
     );
 
-    // Set auth cookie for web routes
-    res.cookie('auth_token', token, COOKIE_OPTIONS);
+    // Set auth cookie for web routes (maxAge in ms)
+    res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
 
     return jsonSuccess(res, {
       user: { id: 1, email, name },
@@ -89,8 +88,8 @@ export class AuthController extends BaseController {
   }
 
   async logout(req: NaraRequest, res: NaraResponse) {
-    // Clear auth cookie
-    res.cookie('auth_token', '', { ...COOKIE_OPTIONS, maxAge: 0 });
+    // Clear auth cookie (set maxAge to 0)
+    res.cookie('auth_token', '', 0, COOKIE_OPTIONS);
 
     return jsonSuccess(res, { redirect: '/login' }, 'Logged out successfully');
   }

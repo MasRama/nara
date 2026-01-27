@@ -49,7 +49,7 @@ export function webAuthMiddleware(req: NaraRequest, res: NaraResponse, next: () 
     next();
   } catch (error) {
     // Clear invalid token
-    res.cookie('auth_token', '', { maxAge: 0 });
+    res.cookie('auth_token', '', 0);
     if (req.headers['x-inertia']) {
       res.status(409).setHeader('X-Inertia-Location', '/login').send('');
     } else {
@@ -77,7 +77,7 @@ export function guestMiddleware(req: NaraRequest, res: NaraResponse, next: () =>
       return;
     } catch {
       // Invalid token, clear it and continue
-      res.cookie('auth_token', '', { maxAge: 0 });
+      res.cookie('auth_token', '', 0);
     }
   }
 
