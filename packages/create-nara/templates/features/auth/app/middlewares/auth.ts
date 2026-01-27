@@ -1,4 +1,5 @@
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
+import { UserModel } from '../models/User.js';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -29,7 +30,7 @@ export function authMiddleware(req: NaraRequest, res: NaraResponse, next: () => 
  * Auth middleware for web/Inertia routes (cookie-based)
  * Redirects to login if not authenticated
  */
-export function webAuthMiddleware(req: NaraRequest, res: NaraResponse, next: () => void) {
+export async function webAuthMiddleware(req: NaraRequest, res: NaraResponse, next: () => void) {
   // Check for auth token in cookie
   const token = req.cookies?.auth_token;
   const isApiRoute = req.path.startsWith('/api/');
@@ -50,7 +51,24 @@ export function webAuthMiddleware(req: NaraRequest, res: NaraResponse, next: () 
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string; name: string };
-    req.user = { id: decoded.userId, email: decoded.email, name: decoded.name };
+
+    // Fetch fresh user data from database to include avatar and other fields
+    const dbUser = await UserModel.findById(decoded.userId);
+    if (dbUser) {
+      (req as any).user = {
+        id: dbUser.id,
+        email: dbUser.email,
+        name: dbUser.name,
+        phone: dbUser.phone,
+        avatar: dbUser.avatar,
+        role: dbUser.role,
+        is_admin: dbUser.role === 'admin',
+        is_verified: !!dbUser.email_verified_at
+      };
+    } else {
+      req.user = { id: decoded.userId, email: decoded.email, name: decoded.name };
+    }
+
     next();
   } catch (error) {
     // Clear invalid token
