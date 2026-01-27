@@ -4,6 +4,16 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+// Cookie options for auth token
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+  path: '/',
+};
 
 export class AuthController extends BaseController {
   async login(req: NaraRequest, res: NaraResponse) {
@@ -14,15 +24,25 @@ export class AuthController extends BaseController {
     }
 
     // TODO: Replace with your actual user lookup
-    // const user = await User.findByEmail(email);
+    // const user = await UserModel.findByEmail(email);
     // if (!user || !await bcrypt.compare(password, user.password)) {
-    //   return jsonError(res, 'Invalid credentials', 401);
+    //   throw new ValidationError({ email: ['Invalid credentials'] });
     // }
 
-    // Example: Generate JWT token
-    const token = jwt.sign({ userId: 1, email }, JWT_SECRET, { expiresIn: '7d' });
+    // Example: Generate JWT token with user info
+    const token = jwt.sign(
+      { userId: 1, email, name: 'Demo User' },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
 
-    return jsonSuccess(res, { token, message: 'Login successful' });
+    // Set auth cookie for web routes
+    res.cookie('auth_token', token, COOKIE_OPTIONS);
+
+    return jsonSuccess(res, {
+      user: { id: 1, email, name: 'Demo User' },
+      redirect: '/dashboard'
+    }, 'Login successful');
   }
 
   async register(req: NaraRequest, res: NaraResponse) {
@@ -40,15 +60,25 @@ export class AuthController extends BaseController {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // TODO: Replace with your actual user creation
-    // const user = await User.create({ name, email, password: hashedPassword });
+    // const user = await UserModel.create({ name, email, password: hashedPassword });
 
-    const token = jwt.sign({ userId: 1, email }, JWT_SECRET, { expiresIn: '7d' });
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: 1, email, name },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
 
-    return jsonSuccess(res, { token }, 'Registration successful');
+    // Set auth cookie for web routes
+    res.cookie('auth_token', token, COOKIE_OPTIONS);
+
+    return jsonSuccess(res, {
+      user: { id: 1, email, name },
+      redirect: '/dashboard'
+    }, 'Registration successful');
   }
 
   async me(req: NaraRequest, res: NaraResponse) {
-    // TODO: Get user from JWT token in auth middleware
     const user = req.user;
 
     if (!user) {
@@ -59,7 +89,9 @@ export class AuthController extends BaseController {
   }
 
   async logout(req: NaraRequest, res: NaraResponse) {
-    // For JWT, logout is typically handled client-side by removing the token
-    return jsonSuccess(res, { message: 'Logged out successfully' });
+    // Clear auth cookie
+    res.cookie('auth_token', '', { ...COOKIE_OPTIONS, maxAge: 0 });
+
+    return jsonSuccess(res, { redirect: '/login' }, 'Logged out successfully');
   }
 }
