@@ -1,5 +1,6 @@
 import { BaseController, jsonSuccess, jsonError, ValidationError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
+import { UserModel } from '../models/User.js';
 import bcrypt from 'bcrypt';
 import sharp from 'sharp';
 import fs from 'fs';
@@ -32,8 +33,8 @@ export class ProfileController extends BaseController {
       });
     }
 
-    // TODO: Update user in database
-    // await UserModel.update(user.id, { name, email, phone });
+    // Update user in database
+    await UserModel.update(user.id, { name, email, phone });
 
     return jsonSuccess(res, {
       user: { ...user, name, email, phone }
@@ -61,13 +62,13 @@ export class ProfileController extends BaseController {
       });
     }
 
-    // TODO: Verify current password and update
-    // const dbUser = await UserModel.findById(user.id);
-    // if (!await bcrypt.compare(current_password, dbUser.password)) {
-    //   throw new ValidationError({ current_password: ['Current password is incorrect'] });
-    // }
-    // const hashedPassword = await bcrypt.hash(new_password, 10);
-    // await UserModel.updatePassword(user.id, hashedPassword);
+    // Verify current password and update
+    const dbUser = await UserModel.findById(user.id);
+    if (!dbUser || !await bcrypt.compare(current_password, dbUser.password)) {
+      throw new ValidationError({ current_password: ['Current password is incorrect'] });
+    }
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    await UserModel.update(user.id, { password: hashedPassword });
 
     return jsonSuccess(res, {}, 'Password changed successfully');
   }
@@ -123,8 +124,8 @@ export class ProfileController extends BaseController {
 
       const avatarUrl = `/uploads/avatars/${filename}`;
 
-      // TODO: Update user avatar in database
-      // await UserModel.updateAvatar(user.id, avatarUrl);
+      // Update user avatar in database
+      await UserModel.update(user.id, { avatar: avatarUrl });
 
       return jsonSuccess(res, { url: avatarUrl }, 'Avatar uploaded successfully');
     } catch (error) {
