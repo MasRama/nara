@@ -78,18 +78,41 @@ export const inertiaMiddleware = (config: InertiaConfig = {}) => {
       const title = config.title || process.env.TITLE || "NARA App";
       const pageJson = JSON.stringify(inertiaObject);
 
+      // Handle @vite directive
+      let viteTags = "";
+      const isDev = process.env.NODE_ENV === "development";
+      const vitePort = process.env.VITE_PORT || 5173;
+
+      if (isDev) {
+        viteTags = `
+    <script type="module" src="http://localhost:${vitePort}/@vite/client"></script>
+    <script type="module" src="http://localhost:${vitePort}/resources/js/app.ts"></script>
+        `.trim();
+      } else {
+        const manifestPath = join(process.cwd(), "public/build/.vite/manifest.json");
+        if (existsSync(manifestPath)) {
+          try {
+            const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+            const entry = manifest["resources/js/app.ts"];
+
+            if (entry) {
+              viteTags = `<script type="module" src="/build/${entry.file}"></script>`;
+              if (entry.css) {
+                entry.css.forEach((cssFile: string) => {
+                  viteTags += `\n    <link rel="stylesheet" href="/build/${cssFile}">`;
+                });
+              }
+            }
+          } catch (e) {
+            console.error("Failed to parse Vite manifest:", e);
+          }
+        }
+      }
+
       let rendered = html
         .replace("{{it.title}}", escapeHtml(title))
-        .replace("{{it.page}}", escapeHtml(pageJson));
-
-      // Handle Vite dev server asset rewriting if needed
-      if (process.env.NODE_ENV === "development") {
-        const vitePort = process.env.VITE_PORT || 3000;
-        rendered = rendered.replace(
-          /\/js\//g,
-          `http://localhost:${vitePort}/js/`
-        );
-      }
+        .replace("@inertia", `<div id="app" data-page='${pageJson.replace(/'/g, "&#039;")}'></div>`)
+        .replace("@vite", viteTags);
 
       return res.type("html").send(rendered);
     };
