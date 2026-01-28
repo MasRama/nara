@@ -25,7 +25,7 @@ export function registerRoutes(app: NaraApp) {
     (res as InertiaResponse).inertia('landing', { title: 'Welcome to NARA' });
   });
 
-  // Guest only
+  // Guest only - Pages
   app.get('/login', guestMiddleware as any, (req, res: any) => {
     (res as InertiaResponse).inertia('auth/login');
   });
@@ -39,7 +39,14 @@ export function registerRoutes(app: NaraApp) {
     (res as InertiaResponse).inertia('auth/reset-password', { token: req.params.token });
   });
 
-  // Protected
+  // Auth Form Actions (same path as pages - for Inertia form handling)
+  app.post('/login', wrapHandler((req, res) => auth.login(req, res)));
+  app.post('/register', wrapHandler((req, res) => auth.register(req, res)));
+  app.post('/logout', wrapHandler((req, res) => auth.logout(req, res)));
+  app.post('/forgot-password', wrapHandler((req, res) => auth.forgotPassword(req, res)));
+  app.post('/reset-password', wrapHandler((req, res) => auth.resetPassword(req, res)));
+
+  // Protected - Pages
   app.get('/dashboard', webAuthMiddleware as any, (req, res: any) => {
     (res as InertiaResponse).inertia('dashboard');
   });
@@ -82,13 +89,13 @@ export function registerRoutes(app: NaraApp) {
     const total = Number(totalCount);
 
     // Apply pagination and ordering
-    const users = await query
+    const usersData = await query
       .orderBy('created_at', 'desc')
       .limit(limit)
       .offset(offset);
 
     // Transform users to include is_admin and is_verified flags
-    const transformedUsers = users.map((user: any) => ({
+    const transformedUsers = usersData.map((user: any) => ({
       ...user,
       is_admin: user.role === 'admin',
       is_verified: !!user.email_verified_at
@@ -112,8 +119,16 @@ export function registerRoutes(app: NaraApp) {
     (res as InertiaResponse).inertia('profile');
   });
 
+  // Protected Form Actions (same path pattern - for Inertia form handling)
+  app.post('/change-profile', webAuthMiddleware as any, wrapHandler((req, res) => profile.update(req, res)));
+  app.post('/change-password', webAuthMiddleware as any, wrapHandler((req, res) => profile.changePassword(req, res)));
+  app.post('/users', webAuthMiddleware as any, wrapHandler((req, res) => users.store(req, res)));
+  app.put('/users/:id', webAuthMiddleware as any, wrapHandler((req, res) => users.update(req, res)));
+  app.delete('/users', webAuthMiddleware as any, wrapHandler((req, res) => users.destroy(req, res)));
+  app.post('/assets/avatar', webAuthMiddleware as any, wrapHandler((req, res) => profile.uploadAvatar(req, res)));
 
-  // --- API Routes ---
+
+  // --- API Routes (for programmatic access) ---
 
   // Auth
   app.post('/api/auth/login', wrapHandler((req, res) => auth.login(req, res)));
@@ -142,5 +157,13 @@ export function registerRoutes(app: NaraApp) {
   app.get('/uploads/*', (req, res) => {
     const filePath = req.path.replace('/uploads/', '');
     res.sendFile(`uploads/${filePath}`);
+  });
+  app.get('/public/*', (req, res) => {
+    const filePath = req.path.replace('/public/', '');
+    res.sendFile(`public/${filePath}`);
+  });
+  app.get('/storage/*', (req, res) => {
+    const filePath = req.path.replace('/storage/', '');
+    res.sendFile(`storage/${filePath}`);
   });
 }

@@ -4,8 +4,8 @@ import {
 
 // src/middleware.ts
 function inertiaMiddleware(options = {}) {
-  const { rootView = "inertia.html", version = "1.0.0" } = options;
-  return async (req, res, next) => {
+  const { rootView = "inertia.html", version = "1.0.0", viewFn = null } = options;
+  return (req, res, next) => {
     res.inertia = async (component, inertiaProps = {}, viewProps = {}) => {
       const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
       const props = {
@@ -25,11 +25,15 @@ function inertiaMiddleware(options = {}) {
       };
       if (!req.header("X-Inertia")) {
         try {
-          const viewService = await import("@services/View").catch(() => null);
-          if (!viewService || !viewService.view) {
+          let viewFunc = viewFn;
+          if (!viewFunc) {
+            const viewService = await import("@services/View").catch(() => null);
+            viewFunc = viewService?.view;
+          }
+          if (!viewFunc) {
             throw new Error("View service unavailable");
           }
-          const html = await viewService.view(rootView, {
+          const html = await viewFunc(rootView, {
             page: JSON.stringify(inertiaObject),
             title: process.env["TITLE"] || "Nara App"
           });

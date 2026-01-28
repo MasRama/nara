@@ -1,4 +1,4 @@
-import { BaseController, jsonSuccess, jsonError, ValidationError } from '@nara-web/core';
+import { BaseController, jsonSuccess, jsonError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
 import { UserModel } from '../models/User.js';
 import bcrypt from 'bcrypt';
@@ -21,62 +21,58 @@ export class ProfileController extends BaseController {
   async update(req: NaraRequest, res: NaraResponse) {
     const user = req.user;
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.redirect('/login');
     }
 
     const { name, email, phone } = await req.json();
 
     if (!name || !email) {
-      throw new ValidationError({
-        name: !name ? ['Name is required'] : [],
-        email: !email ? ['Email is required'] : [],
-      });
+      res.cookie('error', 'Name and email are required', 5000);
+      return res.redirect('/profile');
     }
 
     // Update user in database
     await UserModel.update(user.id, { name, email, phone });
 
-    return jsonSuccess(res, {
-      user: { ...user, name, email, phone }
-    }, 'Profile updated successfully');
+    res.cookie('success', 'Profile updated successfully', 5000);
+    return res.redirect('/profile');
   }
 
   async changePassword(req: NaraRequest, res: NaraResponse) {
     const user = req.user;
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.redirect('/login');
     }
 
     const { current_password, new_password } = await req.json();
 
     if (!current_password || !new_password) {
-      throw new ValidationError({
-        current_password: !current_password ? ['Current password is required'] : [],
-        new_password: !new_password ? ['New password is required'] : [],
-      });
+      res.cookie('error', 'Current password and new password are required', 5000);
+      return res.redirect('/profile');
     }
 
     if (new_password.length < 6) {
-      throw new ValidationError({
-        new_password: ['Password must be at least 6 characters'],
-      });
+      res.cookie('error', 'Password must be at least 6 characters', 5000);
+      return res.redirect('/profile');
     }
 
     // Verify current password and update
     const dbUser = await UserModel.findById(user.id);
     if (!dbUser || !await bcrypt.compare(current_password, dbUser.password)) {
-      throw new ValidationError({ current_password: ['Current password is incorrect'] });
+      res.cookie('error', 'Current password is incorrect', 5000);
+      return res.redirect('/profile');
     }
     const hashedPassword = await bcrypt.hash(new_password, 10);
     await UserModel.update(user.id, { password: hashedPassword });
 
-    return jsonSuccess(res, {}, 'Password changed successfully');
+    res.cookie('success', 'Password changed successfully', 5000);
+    return res.redirect('/profile');
   }
 
   async uploadAvatar(req: NaraRequest, res: NaraResponse) {
     const user = req.user;
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
+      return res.redirect('/login');
     }
 
     try {
@@ -84,13 +80,15 @@ export class ProfileController extends BaseController {
       const buffer = await req.buffer();
 
       if (!buffer || buffer.length === 0) {
-        return jsonError(res, 'No file uploaded', 400);
+        res.cookie('error', 'No file uploaded', 5000);
+        return res.redirect('/profile');
       }
 
       // Extract image from multipart form data
       const boundary = req.headers['content-type']?.split('boundary=')[1];
       if (!boundary) {
-        return jsonError(res, 'Invalid multipart form data', 400);
+        res.cookie('error', 'Invalid multipart form data', 5000);
+        return res.redirect('/profile');
       }
 
       // Find image data in multipart
@@ -109,7 +107,8 @@ export class ProfileController extends BaseController {
       }
 
       if (!imageBuffer) {
-        return jsonError(res, 'No image found in upload', 400);
+        res.cookie('error', 'No image found in upload', 5000);
+        return res.redirect('/profile');
       }
 
       // Generate unique filename
@@ -127,6 +126,7 @@ export class ProfileController extends BaseController {
       // Update user avatar in database
       await UserModel.update(user.id, { avatar: avatarUrl });
 
+      // Return JSON for AJAX upload (not redirect)
       return jsonSuccess(res, { url: avatarUrl }, 'Avatar uploaded successfully');
     } catch (error) {
       console.error('Avatar upload error:', error);

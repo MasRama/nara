@@ -2,10 +2,11 @@ import 'dotenv/config';
 import { createApp, jsonError } from '@nara-web/core';
 import { vueAdapter } from '@nara-web/inertia-vue';
 import { registerRoutes } from './routes/web.js';
+import { view } from './app/services/View.js';
 
 const app = createApp({
   port: Number(process.env.PORT) || 3000,
-  adapter: vueAdapter()
+  adapter: vueAdapter({ viewFn: view } as any)
 });
 
 // Global error handler

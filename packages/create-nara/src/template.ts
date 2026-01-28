@@ -124,6 +124,9 @@ function createPackageJson(name: string, mode: string, features: string[]) {
     pkg.devDependencies['vite'] = '^6.0.0';
     pkg.devDependencies['@vitejs/plugin-vue'] = '^5.0.0';
     pkg.devDependencies['concurrently'] = '^9.0.0';
+    pkg.devDependencies['tailwindcss'] = '^4.0.0';
+    pkg.devDependencies['@tailwindcss/postcss'] = '^4.0.0';
+    pkg.devDependencies['autoprefixer'] = '^10.4.20';
   }
 
   if (features.includes('db')) {

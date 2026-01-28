@@ -11,15 +11,25 @@ export interface VueAdapterOptions {
    * @default '1.0.0'
    */
   version?: string;
+  /**
+   * Optional view function to render templates
+   * If not provided, will try to import from @services/View
+   */
+  viewFn?: (filename: string, data?: any) => string | Promise<string>;
 }
 
 /**
  * Inertia middleware factory for Vue
+ * 
+ * NOTE: This middleware must NOT be async because HyperExpress
+ * does not allow calling next() after await in async middlewares.
+ * The res.inertia method can be async, but the middleware wrapper must be sync.
  */
 export function inertiaMiddleware(options: VueAdapterOptions = {}): AdapterMiddlewareHandler {
-  const { rootView = 'inertia.html', version = '1.0.0' } = options;
+  const { rootView = 'inertia.html', version = '1.0.0', viewFn = null } = options;
 
-  return async (req: NaraRequest, res: NaraResponse, next: () => void) => {
+  // Return a SYNCHRONOUS middleware (no async keyword!)
+  return (req: NaraRequest, res: NaraResponse, next: () => void) => {
     // Add res.inertia method to the response object
     res.inertia = async (component: string, inertiaProps: Record<string, any> = {}, viewProps: Record<string, any> = {}) => {
       const url = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
@@ -47,15 +57,18 @@ export function inertiaMiddleware(options: VueAdapterOptions = {}): AdapterMiddl
       if (!req.header('X-Inertia')) {
         // Full page render
         try {
-          // In Nara, 'view' is usually imported from @services/View
-          // We use dynamic import and cast to any to avoid type issues during library build
-          const viewService: any = await import('@services/View' as any).catch(() => null);
-
-          if (!viewService || !viewService.view) {
-             throw new Error('View service unavailable');
+          // Use provided viewFn or try to import from @services/View
+          let viewFunc = viewFn;
+          if (!viewFunc) {
+            const viewService: any = await import('@services/View' as any).catch(() => null);
+            viewFunc = viewService?.view;
           }
 
-          const html = await viewService.view(rootView, {
+          if (!viewFunc) {
+            throw new Error('View service unavailable');
+          }
+
+          const html = await viewFunc(rootView, {
             page: JSON.stringify(inertiaObject),
             title: process.env['TITLE'] || 'Nara App',
           });

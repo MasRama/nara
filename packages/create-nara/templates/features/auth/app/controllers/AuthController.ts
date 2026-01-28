@@ -1,4 +1,4 @@
-import { BaseController, jsonSuccess, jsonError, ValidationError } from '@nara-web/core';
+import { BaseController, jsonSuccess, jsonError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
 import { UserModel } from '../models/User.js';
 import bcrypt from 'bcrypt';
@@ -20,13 +20,16 @@ export class AuthController extends BaseController {
     const { email, password } = await req.json();
 
     if (!email || !password) {
-      throw new ValidationError({ email: ['Email and password are required'] });
+      // Set error cookie and redirect back (Inertia pattern)
+      res.cookie('error', 'Email and password are required', 5000);
+      return res.redirect('/login');
     }
 
     // Find user by email
     const user = await UserModel.findByEmail(email);
     if (!user || !await bcrypt.compare(password, user.password)) {
-      throw new ValidationError({ email: ['Invalid credentials'] });
+      res.cookie('error', 'Invalid credentials', 5000);
+      return res.redirect('/login');
     }
 
     // Generate JWT token with user info
@@ -39,27 +42,23 @@ export class AuthController extends BaseController {
     // Set auth cookie for web routes (maxAge in ms)
     res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
 
-    return jsonSuccess(res, {
-      user: { id: user.id, email: user.email, name: user.name },
-      redirect: '/dashboard'
-    }, 'Login successful');
+    // Redirect to dashboard (Inertia will handle it)
+    return res.redirect('/dashboard');
   }
 
   async register(req: NaraRequest, res: NaraResponse) {
     const { name, email, password } = await req.json();
 
     if (!name || !email || !password) {
-      throw new ValidationError({
-        name: !name ? ['Name is required'] : [],
-        email: !email ? ['Email is required'] : [],
-        password: !password ? ['Password is required'] : [],
-      });
+      res.cookie('error', 'Name, email and password are required', 5000);
+      return res.redirect('/register');
     }
 
     // Check if email already exists
     const existing = await UserModel.findByEmail(email);
     if (existing) {
-      throw new ValidationError({ email: ['Email already registered'] });
+      res.cookie('error', 'Email already registered', 5000);
+      return res.redirect('/register');
     }
 
     // Hash password
@@ -78,10 +77,8 @@ export class AuthController extends BaseController {
     // Set auth cookie for web routes (maxAge in ms)
     res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
 
-    return jsonSuccess(res, {
-      user: { id: userId, email, name },
-      redirect: '/dashboard'
-    }, 'Registration successful');
+    // Redirect to dashboard
+    return res.redirect('/dashboard');
   }
 
   async me(req: NaraRequest, res: NaraResponse) {
@@ -98,46 +95,36 @@ export class AuthController extends BaseController {
     // Clear auth cookie (set maxAge to 0)
     res.cookie('auth_token', '', 0, COOKIE_OPTIONS);
 
-    return jsonSuccess(res, { redirect: '/login' }, 'Logged out successfully');
+    // Redirect to login
+    return res.redirect('/login');
   }
 
   async forgotPassword(req: NaraRequest, res: NaraResponse) {
     const { email } = await req.json();
 
     if (!email) {
-      throw new ValidationError({ email: ['Email is required'] });
+      res.cookie('error', 'Email is required', 5000);
+      return res.redirect('/forgot-password');
     }
 
     // TODO: Implement actual password reset email sending
-    // const user = await UserModel.findByEmail(email);
-    // if (user) {
-    //   const token = generateResetToken();
-    //   await sendResetEmail(user.email, token);
-    // }
 
-    // Always return success to prevent email enumeration
-    return jsonSuccess(res, {}, 'If an account exists with this email, a reset link has been sent.');
+    // Set success message and redirect
+    res.cookie('success', 'If an account exists with this email, a reset link has been sent.', 5000);
+    return res.redirect('/login');
   }
 
   async resetPassword(req: NaraRequest, res: NaraResponse) {
     const { token, password } = await req.json();
 
     if (!token || !password) {
-      throw new ValidationError({
-        token: !token ? ['Reset token is required'] : [],
-        password: !password ? ['Password is required'] : [],
-      });
+      res.cookie('error', 'Reset token and password are required', 5000);
+      return res.redirect('/forgot-password');
     }
 
     // TODO: Implement actual password reset
-    // const resetRecord = await PasswordReset.findByToken(token);
-    // if (!resetRecord || resetRecord.expired) {
-    //   throw new ValidationError({ token: ['Invalid or expired reset token'] });
-    // }
-    // const hashedPassword = await bcrypt.hash(password, 10);
-    // await UserModel.updatePassword(resetRecord.userId, hashedPassword);
-    // await PasswordReset.delete(token);
 
-    return jsonSuccess(res, { redirect: '/login' }, 'Password has been reset successfully.');
+    res.cookie('success', 'Password has been reset successfully.', 5000);
+    return res.redirect('/login');
   }
 }

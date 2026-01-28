@@ -41,6 +41,11 @@ interface VueAdapterOptions {
      * @default '1.0.0'
      */
     version?: string;
+    /**
+     * Optional view function to render templates
+     * If not provided, will try to import from @services/View
+     */
+    viewFn?: (filename: string, data?: any) => string | Promise<string>;
 }
 
 /**
