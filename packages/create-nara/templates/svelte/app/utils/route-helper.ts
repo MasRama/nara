@@ -10,17 +10,19 @@ export function wrapHandler(handler: NaraHandler): NaraHandler {
       await handler(req, res);
     } catch (error: any) {
       if (error instanceof ValidationError) {
-        return jsonValidationError(res, error.errors);
+        jsonValidationError(res, error.errors);
+        return;
       }
 
       // Handle other HttpErrors
       if (error.statusCode) {
-        return jsonError(res, error.message, error.statusCode);
+        jsonError(res, error.message, error.statusCode);
+        return;
       }
 
       // Unknown error
       console.error('[Unhandled Error]:', error);
-      return jsonError(res, 'Internal server error', 500);
+      jsonError(res, 'Internal server error', 500);
     }
   };
 }

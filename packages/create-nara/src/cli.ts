@@ -33,16 +33,7 @@ export async function main() {
 
   if (!mode) process.exit(1);
 
-  const { features } = await prompts({
-    type: 'multiselect',
-    name: 'features',
-    message: 'Select features:',
-    choices: [
-      { title: 'Authentication', value: 'auth', selected: true },
-      { title: 'Database (SQLite)', value: 'db', selected: true },
-      { title: 'File uploads', value: 'uploads', selected: false }
-    ]
-  });
+  const features = ['auth', 'db', 'uploads'];
 
   const targetDir = path.resolve(process.cwd(), projectName);
 

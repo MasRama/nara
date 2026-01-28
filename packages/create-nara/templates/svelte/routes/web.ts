@@ -1,61 +1,74 @@
 import type { NaraApp } from '@nara-web/core';
-import { webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
-import fs from 'fs';
-import path from 'path';
+import { AuthController } from '../app/controllers/AuthController.js';
+import { ProfileController } from '../app/controllers/ProfileController.js';
+import { UserController } from '../app/controllers/UserController.js';
+import { UploadController } from '../app/controllers/UploadController.js';
+import { authMiddleware, webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
+import { wrapHandler } from '../app/utils/route-helper.js';
 
 export function registerRoutes(app: NaraApp) {
-  // Serve uploaded files
-  app.get('/uploads/*', (req, res) => {
-    const requestPath = req.path?.replace('/uploads/', '') || '';
-    const filePath = path.join(process.cwd(), 'uploads', requestPath);
+  const auth = new AuthController();
+  const profile = new ProfileController();
+  const users = new UserController();
+  const upload = new UploadController();
 
-    if (fs.existsSync(filePath)) {
-      const ext = path.extname(filePath).toLowerCase();
-      const mimeTypes: Record<string, string> = {
-        '.webp': 'image/webp',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-      };
-      res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
-      res.setHeader('Cache-Control', 'public, max-age=31536000');
-      res.send(fs.readFileSync(filePath));
-    } else {
-      res.status(404).send('Not found');
-    }
-  });
+  // --- Page Routes (Inertia) ---
 
-  // Public routes
+  // Public
   app.get('/', (req, res) => {
-    res.inertia?.('landing', {
-      title: 'Welcome to NARA'
+    return res.inertia('landing', {
+        title: 'Welcome to NARA'
     });
   });
 
-  // Guest only routes (redirect to dashboard if logged in)
+  // Guest only
   app.get('/login', guestMiddleware as any, (req, res) => {
-    res.inertia?.('auth/login');
+    return res.inertia('auth/login');
   });
-
   app.get('/register', guestMiddleware as any, (req, res) => {
-    res.inertia?.('auth/register');
+    return res.inertia('auth/register');
   });
-
   app.get('/forgot-password', guestMiddleware as any, (req, res) => {
-    res.inertia?.('auth/forgot-password');
+    return res.inertia('auth/forgot-password');
+  });
+  app.get('/reset-password/:token', guestMiddleware as any, (req, res) => {
+    return res.inertia('auth/reset-password', { token: req.params.token });
   });
 
-  // Protected routes (redirect to login if not authenticated)
+  // Protected
   app.get('/dashboard', webAuthMiddleware as any, (req, res) => {
-    res.inertia?.('dashboard');
+    return res.inertia('dashboard');
   });
-
   app.get('/users', webAuthMiddleware as any, (req, res) => {
-    res.inertia?.('users');
+    return res.inertia('users');
+  });
+  app.get('/profile', webAuthMiddleware as any, (req, res) => {
+    return res.inertia('profile');
   });
 
-  app.get('/profile', webAuthMiddleware as any, (req, res) => {
-    res.inertia?.('profile');
-  });
+
+  // --- API Routes ---
+
+  // Auth
+  app.post('/api/auth/login', wrapHandler((req, res) => auth.login(req, res)));
+  app.post('/api/auth/register', wrapHandler((req, res) => auth.register(req, res)));
+  app.post('/api/auth/logout', wrapHandler((req, res) => auth.logout(req, res)));
+  app.post('/api/auth/forgot-password', wrapHandler((req, res) => auth.forgotPassword(req, res)));
+  app.post('/api/auth/reset-password', wrapHandler((req, res) => auth.resetPassword(req, res)));
+  app.get('/api/auth/me', authMiddleware as any, wrapHandler((req, res) => auth.me(req, res)));
+
+  // Profile
+  app.post('/api/profile/update', webAuthMiddleware as any, wrapHandler((req, res) => profile.update(req, res)));
+  app.post('/api/profile/password', webAuthMiddleware as any, wrapHandler((req, res) => profile.changePassword(req, res)));
+  app.post('/api/profile/avatar', webAuthMiddleware as any, wrapHandler((req, res) => profile.uploadAvatar(req, res)));
+
+  // Users
+  app.get('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.index(req, res)));
+  app.post('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.store(req, res)));
+  app.put('/api/users/:id', webAuthMiddleware as any, wrapHandler((req, res) => users.update(req, res)));
+  app.delete('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.destroy(req, res)));
+
+  // Uploads
+  app.post('/api/uploads', wrapHandler((req, res) => upload.upload(req, res)));
+  app.delete('/api/uploads/:filename', wrapHandler((req, res) => upload.delete(req, res)));
 }

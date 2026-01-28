@@ -169,7 +169,7 @@ export function rateLimit(options: RateLimitOptions = {}): NaraMiddleware {
         res.setHeader('Retry-After', String(Math.ceil(resetMs / 1000)));
       }
 
-      return jsonError(res, message, 429, 'TOO_MANY_REQUESTS');
+      return jsonError(res, message, 429);
     }
 
     // Record this request
