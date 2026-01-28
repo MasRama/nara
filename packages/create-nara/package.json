@@ -1,6 +1,6 @@
 {
   "name": "create-nara",
-  "version": "1.0.36",
+  "version": "1.0.37",
   "description": "CLI to scaffold NARA projects",
   "type": "module",
   "bin": {
