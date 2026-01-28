@@ -130,9 +130,6 @@ function createPackageJson(name: string, mode: string, features: string[]) {
     pkg.dependencies['knex'] = '^3.1.0';
     pkg.dependencies['better-sqlite3'] = '^11.0.0';
     pkg.devDependencies['@types/better-sqlite3'] = '^7.6.0';
-    pkg.scripts['db:migrate'] = 'tsx node_modules/.bin/knex migrate:latest';
-    pkg.scripts['db:rollback'] = 'tsx node_modules/.bin/knex migrate:rollback';
-    pkg.scripts['db:make'] = 'tsx node_modules/.bin/knex migrate:make';
   }
 
   if (features.includes('auth')) {

@@ -11,6 +11,10 @@ const config: { [key: string]: Knex.Config } = {
       directory: './migrations',
       extension: 'ts',
     },
+    seeds: {
+      directory: './seeds',
+      extension: 'ts',
+    },
   },
 
   production: {
@@ -21,6 +25,9 @@ const config: { [key: string]: Knex.Config } = {
     useNullAsDefault: true,
     migrations: {
       directory: './migrations',
+    },
+    seeds: {
+      directory: './seeds',
     },
   },
 };

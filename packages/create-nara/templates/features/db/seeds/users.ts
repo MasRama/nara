@@ -16,6 +16,7 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   const password = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'password', 10);
+  const now = new Date().toISOString();
 
   await knex('users').insert([
     {
@@ -25,10 +26,10 @@ export async function seed(knex: Knex): Promise<void> {
       phone: null,
       avatar: null,
       role: 'admin',
-      email_verified_at: Date.now(),
+      email_verified_at: now,
       password: password,
-      created_at: Date.now(),
-      updated_at: Date.now(),
+      created_at: now,
+      updated_at: now,
     },
   ]);
 
