@@ -1,10 +1,12 @@
 import { ValidationError, jsonValidationError, jsonError } from '@nara-web/core';
-import type { NaraRequest, NaraResponse, NaraHandler } from '@nara-web/core';
+import type { NaraRequest, NaraResponse } from '@nara-web/core';
+
+type AsyncHandler = (req: NaraRequest, res: NaraResponse) => Promise<any> | any;
 
 /**
  * Wraps a route handler with error handling
  */
-export function wrapHandler(handler: NaraHandler): NaraHandler {
+export function wrapHandler(handler: AsyncHandler): any {
   return async (req: NaraRequest, res: NaraResponse) => {
     try {
       await handler(req, res);

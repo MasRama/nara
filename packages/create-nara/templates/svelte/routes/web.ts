@@ -6,6 +6,11 @@ import { UploadController } from '../app/controllers/UploadController.js';
 import { authMiddleware, webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
 import { wrapHandler } from '../app/utils/route-helper.js';
 
+// Type augmentation for Inertia response
+type InertiaResponse = {
+  inertia: (component: string, props?: Record<string, any>) => Promise<any>;
+};
+
 export function registerRoutes(app: NaraApp) {
   const auth = new AuthController();
   const profile = new ProfileController();
@@ -15,35 +20,33 @@ export function registerRoutes(app: NaraApp) {
   // --- Page Routes (Inertia) ---
 
   // Public
-  app.get('/', (req, res) => {
-    return res.inertia('landing', {
-        title: 'Welcome to NARA'
-    });
+  app.get('/', (req, res: any) => {
+    (res as InertiaResponse).inertia('landing', { title: 'Welcome to NARA' });
   });
 
   // Guest only
-  app.get('/login', guestMiddleware as any, (req, res) => {
-    return res.inertia('auth/login');
+  app.get('/login', guestMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('auth/login');
   });
-  app.get('/register', guestMiddleware as any, (req, res) => {
-    return res.inertia('auth/register');
+  app.get('/register', guestMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('auth/register');
   });
-  app.get('/forgot-password', guestMiddleware as any, (req, res) => {
-    return res.inertia('auth/forgot-password');
+  app.get('/forgot-password', guestMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('auth/forgot-password');
   });
-  app.get('/reset-password/:token', guestMiddleware as any, (req, res) => {
-    return res.inertia('auth/reset-password', { token: req.params.token });
+  app.get('/reset-password/:token', guestMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('auth/reset-password', { token: req.params.token });
   });
 
   // Protected
-  app.get('/dashboard', webAuthMiddleware as any, (req, res) => {
-    return res.inertia('dashboard');
+  app.get('/dashboard', webAuthMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('dashboard');
   });
-  app.get('/users', webAuthMiddleware as any, (req, res) => {
-    return res.inertia('users');
+  app.get('/users', webAuthMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('users');
   });
-  app.get('/profile', webAuthMiddleware as any, (req, res) => {
-    return res.inertia('profile');
+  app.get('/profile', webAuthMiddleware as any, (req, res: any) => {
+    (res as InertiaResponse).inertia('profile');
   });
 
 
@@ -71,4 +74,10 @@ export function registerRoutes(app: NaraApp) {
   // Uploads
   app.post('/api/uploads', wrapHandler((req, res) => upload.upload(req, res)));
   app.delete('/api/uploads/:filename', wrapHandler((req, res) => upload.delete(req, res)));
+
+  // Static files
+  app.get('/uploads/*', (req, res) => {
+    const filePath = req.path.replace('/uploads/', '');
+    res.sendFile(`uploads/${filePath}`);
+  });
 }
