@@ -336,3 +336,30 @@ export function Toast(text: string, type: ToastType = "success", duration: numbe
         }, 200);
     }, duration);
 }
+
+/**
+ * Vue directive for click outside detection
+ * Usage: v-click-outside="handleClickOutside"
+ *
+ * @example
+ * <div v-click-outside="closeDropdown">...</div>
+ */
+interface ClickOutsideHTMLElement extends HTMLElement {
+  _clickOutsideHandler?: (event: MouseEvent) => void;
+}
+
+export const vClickOutside = {
+  mounted(el: ClickOutsideHTMLElement, binding: { value: () => void }) {
+    el._clickOutsideHandler = (event: MouseEvent) => {
+      if (!el.contains(event.target as Node) && !event.defaultPrevented) {
+        binding.value();
+      }
+    };
+    document.addEventListener('click', el._clickOutsideHandler, true);
+  },
+  unmounted(el: ClickOutsideHTMLElement) {
+    if (el._clickOutsideHandler) {
+      document.removeEventListener('click', el._clickOutsideHandler, true);
+    }
+  }
+};

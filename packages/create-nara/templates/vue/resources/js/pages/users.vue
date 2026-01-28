@@ -73,8 +73,8 @@ async function handleSubmit(formData: UserForm): Promise<void> {
   };
 
   const result = mode.value === 'create'
-    ? await api(() => axios.post('/users', payload))
-    : await api(() => axios.put(`/users/${formData.id}`, payload));
+    ? await api(() => axios.post('/api/users', payload))
+    : await api(() => axios.put(`/api/users/${formData.id}`, payload));
 
   if (result.success) {
     closeUserModal();
@@ -91,7 +91,7 @@ async function deleteUser(id: string): Promise<void> {
 
   isSubmitting.value = true;
 
-  const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));
+  const result = await api(() => axios.delete('/api/users', { data: { ids: [id] } }));
 
   if (result.success) {
     router.visit('/users', { preserveScroll: true, preserveState: true });

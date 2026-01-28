@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
-import { Toast } from '../../utils/helper';
+import { Toast } from '../../components/helper';
 import NaraIcon from '../../components/NaraIcon.vue';
 
 const props = defineProps<{

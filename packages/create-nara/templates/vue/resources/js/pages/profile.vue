@@ -32,13 +32,13 @@ function handleAvatarChange(event: Event): void {
     formData.append("file", file);
     isLoading.value = true;
     axios
-      .post("/assets/avatar", formData)
+      .post("/api/profile/avatar", formData)
       .then((response) => {
         setTimeout(() => {
           isLoading.value = false;
-          previewUrl.value = response.data + "?v=" + Date.now();
+          previewUrl.value = response.data.data?.url + "?v=" + Date.now();
         }, 500);
-        props.user.avatar = response.data + "?v=" + Date.now();
+        props.user.avatar = response.data.data?.url + "?v=" + Date.now();
         Toast("Avatar berhasil diupload", "success");
       })
       .catch(() => {

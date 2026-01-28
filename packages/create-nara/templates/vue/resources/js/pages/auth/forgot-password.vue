@@ -2,7 +2,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
-import { api, Toast } from '../../utils/helper';
+import { api, Toast } from '../../components/helper';
 import NaraIcon from '../../components/NaraIcon.vue';
 import DarkModeToggle from '../../components/DarkModeToggle.vue';
 
