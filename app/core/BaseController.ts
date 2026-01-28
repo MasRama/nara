@@ -150,7 +150,7 @@ export abstract class BaseController {
     const result: ValidationResult<T> = schema(raw);
     
     if (!result.success) {
-      throw new ValidationError('Validation failed', result.errors);
+      throw new ValidationError(result.errors);
     }
     
     return result.data;
@@ -231,9 +231,9 @@ export abstract class BaseController {
   protected getRequiredParam(req: NaraRequest, key: string): string {
     const value = req.params[key];
     if (!value) {
-      throw new ValidationError(`Parameter '${key}' is required`, {
+      throw new ValidationError({
         [key]: [`${key} wajib diisi`]
-      });
+      }, `Parameter '${key}' is required`);
     }
     return value;
   }

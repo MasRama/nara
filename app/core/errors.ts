@@ -46,15 +46,15 @@ export class HttpError extends Error {
  * Contains field-level error messages.
  * 
  * @example
- * throw new ValidationError('Validation failed', {
+ * throw new ValidationError({
  *   email: ['Email is required', 'Email format is invalid'],
  *   password: ['Password must be at least 8 characters']
- * });
+ * }, 'Validation failed');
  */
 export class ValidationError extends HttpError {
   public readonly errors: Record<string, string[]>;
 
-  constructor(message: string = 'Validation failed', errors: Record<string, string[]> = {}) {
+  constructor(errors: Record<string, string[]> = {}, message: string = 'Validation failed') {
     super(message, 422, 'VALIDATION_ERROR');
     this.name = 'ValidationError';
     this.errors = errors;

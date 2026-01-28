@@ -281,7 +281,7 @@ export class NaraApp {
           if (isInertia) {
             // For Inertia requests, redirect back with error cookie
             const referer = req.headers["referer"] || "/";
-            const errorMsg = error.errors
+            const errorMsg = (error.errors && Object.keys(error.errors).length > 0)
               ? Object.values(error.errors).flat().join(", ")
               : error.message;
 
