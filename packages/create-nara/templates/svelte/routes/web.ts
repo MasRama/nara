@@ -5,6 +5,7 @@ import { UserController } from '../app/controllers/UserController.js';
 import { UploadController } from '../app/controllers/UploadController.js';
 import { authMiddleware, webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
 import { wrapHandler } from '../app/utils/route-helper.js';
+import { db } from '../app/config/database.js';
 
 // Type augmentation for Inertia response
 type InertiaResponse = {
@@ -42,8 +43,70 @@ export function registerRoutes(app: NaraApp) {
   app.get('/dashboard', webAuthMiddleware as any, (req, res: any) => {
     (res as InertiaResponse).inertia('dashboard');
   });
-  app.get('/users', webAuthMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('users');
+  app.get('/users', webAuthMiddleware as any, async (req, res: any) => {
+    // Fetch users data for the page
+    const page = parseInt(req.query?.page as string) || 1;
+    const limit = parseInt(req.query?.limit as string) || 10;
+    const search = (req.query?.search as string) || '';
+    const filter = (req.query?.filter as string) || 'all';
+    const offset = (page - 1) * limit;
+
+    // Build query
+    let query = db('users').select(
+      'id', 'name', 'email', 'phone', 'avatar', 'role',
+      'email_verified_at', 'created_at', 'updated_at'
+    );
+
+    // Apply search filter
+    if (search) {
+      query = query.where((builder: any) => {
+        builder.where('name', 'like', `%${search}%`)
+               .orWhere('email', 'like', `%${search}%`);
+      });
+    }
+
+    // Apply role filter
+    if (filter === 'admin') {
+      query = query.where('role', 'admin');
+    } else if (filter === 'user') {
+      query = query.where('role', 'user');
+    } else if (filter === 'verified') {
+      query = query.whereNotNull('email_verified_at');
+    } else if (filter === 'unverified') {
+      query = query.whereNull('email_verified_at');
+    }
+
+    // Get total count for pagination
+    const countQuery = query.clone();
+    const [{ count: totalCount }] = await countQuery.count('* as count');
+    const total = Number(totalCount);
+
+    // Apply pagination and ordering
+    const users = await query
+      .orderBy('created_at', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    // Transform users to include is_admin and is_verified flags
+    const transformedUsers = users.map((user: any) => ({
+      ...user,
+      is_admin: user.role === 'admin',
+      is_verified: !!user.email_verified_at
+    }));
+
+    const totalPages = Math.ceil(total / limit);
+
+    (res as InertiaResponse).inertia('users', {
+      users: transformedUsers,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+      search,
+      filter,
+    });
   });
   app.get('/profile', webAuthMiddleware as any, (req, res: any) => {
     (res as InertiaResponse).inertia('profile');

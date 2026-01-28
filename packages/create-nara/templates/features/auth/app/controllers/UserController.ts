@@ -82,38 +82,47 @@ export class UserController extends BaseController {
     // Check if email already exists
     const existing = await UserModel.findByEmail(email);
     if (existing) {
-      throw new ValidationError({ email: ['Email already registered'] });
+      return jsonError(res, 'Email already registered', 400);
     }
 
-    // Hash password if provided, otherwise generate random
-    const hashedPassword = password
-      ? await bcrypt.hash(password, 10)
-      : await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
+    try {
+      // Hash password if provided, otherwise generate random
+      const hashedPassword = password
+        ? await bcrypt.hash(password, 10)
+        : await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
 
-    // Create user in database
-    const [userId] = await UserModel.create({
-      name,
-      email,
-      password: hashedPassword,
-      phone: phone || null,
-      role: is_admin ? 'admin' : 'user',
-      email_verified_at: is_verified ? new Date().toISOString() : null
-    });
+      // Create user in database
+      const [userId] = await UserModel.create({
+        name,
+        email,
+        password: hashedPassword,
+        phone: phone || null,
+        role: is_admin ? 'admin' : 'user',
+        email_verified_at: is_verified ? new Date().toISOString() : null
+      });
 
-    // Fetch created user
-    const user = await UserModel.findById(userId);
+      // Fetch created user
+      const user = await UserModel.findById(userId);
 
-    return jsonSuccess(res, {
-      user: {
-        id: user?.id,
-        name: user?.name,
-        email: user?.email,
-        phone: user?.phone,
-        avatar: user?.avatar,
-        is_admin: user?.role === 'admin',
-        is_verified: !!user?.email_verified_at
+      return jsonSuccess(res, {
+        user: {
+          id: user?.id,
+          name: user?.name,
+          email: user?.email,
+          phone: user?.phone,
+          avatar: user?.avatar,
+          is_admin: user?.role === 'admin',
+          is_verified: !!user?.email_verified_at
+        }
+      }, 'User created successfully');
+    } catch (error: any) {
+      // Handle UNIQUE constraint error (race condition)
+      if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        return jsonError(res, 'Email already registered', 400);
       }
-    }, 'User created successfully');
+      // Re-throw other errors for global error handler
+      throw error;
+    }
   }
 
   async update(req: NaraRequest, res: NaraResponse) {
