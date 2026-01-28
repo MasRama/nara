@@ -3,7 +3,7 @@ import { AuthController } from '../app/controllers/AuthController.js';
 import { ProfileController } from '../app/controllers/ProfileController.js';
 import { UserController } from '../app/controllers/UserController.js';
 import { UploadController } from '../app/controllers/UploadController.js';
-import { authMiddleware, webAuthMiddleware } from '../app/middlewares/auth.js';
+import { authMiddleware, webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
 import { wrapHandler } from '../app/utils/route-helper.js';
 
 export function registerRoutes(app: NaraApp) {
@@ -44,4 +44,10 @@ export function registerRoutes(app: NaraApp) {
   // Uploads
   app.post('/api/uploads', wrapHandler((req, res) => upload.upload(req, res)));
   app.delete('/api/uploads/:filename', wrapHandler((req, res) => upload.delete(req, res)));
+
+  // Static files
+  app.get('/uploads/*', (req, res) => {
+    const filePath = req.path.replace('/uploads/', '');
+    res.sendFile(`uploads/${filePath}`);
+  });
 }

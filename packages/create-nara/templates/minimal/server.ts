@@ -7,9 +7,11 @@ const app = createApp({
 });
 
 // Global error handler
-app.getServer().set_error_handler((req, res, error) => {
+app.getServer().set_error_handler((req, res, error: any) => {
   console.error('[Server Error]:', error);
-  return jsonError(res, error.message || 'Internal server error', error.statusCode || 500);
+  const message = error.message || 'Internal server error';
+  const status = error.statusCode || 500;
+  return jsonError(res, message, status);
 });
 
 registerRoutes(app);
