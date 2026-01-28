@@ -1,7 +1,7 @@
 import type { Request, Response, MiddlewareHandler } from 'hyper-express';
 
 export interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role?: string;

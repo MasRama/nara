@@ -3,6 +3,7 @@ import type { NaraRequest, NaraResponse } from '@nara-web/core';
 import { UserModel } from '../models/User.js';
 import { db } from '../config/database.js';
 import bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 export class UserController extends BaseController {
   async index(req: NaraRequest, res: NaraResponse) {
@@ -86,13 +87,17 @@ export class UserController extends BaseController {
     }
 
     try {
+      // Generate UUID for user ID
+      const userId = randomUUID();
+      
       // Hash password if provided, otherwise generate random
       const hashedPassword = password
         ? await bcrypt.hash(password, 10)
         : await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
 
       // Create user in database
-      const [userId] = await UserModel.create({
+      await UserModel.create({
+        id: userId,
         name,
         email,
         password: hashedPassword,
@@ -137,14 +142,14 @@ export class UserController extends BaseController {
     }
 
     // Check if user exists
-    const existingUser = await UserModel.findById(Number(id));
+    const existingUser = await UserModel.findById(id);
     if (!existingUser) {
       return jsonError(res, 'User not found', 404);
     }
 
     // Check if email is taken by another user
     const emailUser = await UserModel.findByEmail(email);
-    if (emailUser && emailUser.id !== Number(id)) {
+    if (emailUser && emailUser.id !== id) {
       throw new ValidationError({ email: ['Email already registered'] });
     }
 
@@ -164,10 +169,10 @@ export class UserController extends BaseController {
     }
 
     // Update user in database
-    await UserModel.update(Number(id), updateData);
+    await UserModel.update(id, updateData);
 
     // Fetch updated user
-    const user = await UserModel.findById(Number(id));
+    const user = await UserModel.findById(id);
 
     return jsonSuccess(res, {
       user: {

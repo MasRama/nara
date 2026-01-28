@@ -18,7 +18,7 @@ export function authMiddleware(req: NaraRequest, res: NaraResponse, next: () => 
   const token = authHeader.substring(7);
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string };
     req.user = { id: decoded.userId, email: decoded.email, name: '' };
     next();
   } catch (error) {
@@ -50,7 +50,7 @@ export async function webAuthMiddleware(req: NaraRequest, res: NaraResponse, nex
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string; name: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; name: string };
 
     // Fetch fresh user data from database to include avatar and other fields
     const dbUser = await UserModel.findById(decoded.userId);
