@@ -3,6 +3,7 @@ import { AuthController } from '../app/controllers/AuthController.js';
 import { ProfileController } from '../app/controllers/ProfileController.js';
 import { UserController } from '../app/controllers/UserController.js';
 import { UploadController } from '../app/controllers/UploadController.js';
+import { OAuthController } from '../app/controllers/OAuthController.js';
 import { authMiddleware, webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
 import { wrapHandler } from '../app/utils/route-helper.js';
 import { db } from '../app/config/database.js';
@@ -17,6 +18,7 @@ export function registerRoutes(app: NaraApp) {
   const profile = new ProfileController();
   const users = new UserController();
   const upload = new UploadController();
+  const oauth = new OAuthController();
 
   // --- Page Routes (Inertia) ---
 
@@ -111,6 +113,10 @@ export function registerRoutes(app: NaraApp) {
   app.get('/profile', webAuthMiddleware as any, (req, res: any) => {
     (res as InertiaResponse).inertia('profile');
   });
+
+  // --- Google OAuth Routes ---
+  app.get('/google/redirect', wrapHandler((req, res) => oauth.googleRedirect(req, res)));
+  app.get('/google/callback', wrapHandler((req, res) => oauth.googleCallback(req, res)));
 
 
   // --- API Routes ---
