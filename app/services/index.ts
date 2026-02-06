@@ -5,7 +5,7 @@
  * Import services from this module for cleaner imports.
  * 
  * @example
- * import { DB, Logger, Mailer } from "@services";
+ * import { DB, Logger, Storage } from "@services";
  */
 
 // Database
@@ -18,9 +18,6 @@ export { default as Logger } from './Logger';
 export { default as Authenticate } from './Authenticate';
 export { default as LoginThrottle } from './LoginThrottle';
 export { redirectParamsURL as GoogleAuthRedirectParams } from './GoogleAuth';
-
-// Email
-export { default as Mailer } from './Mailer';
 
 // Pagination
 export { paginate, parsePaginationQuery } from './Paginator';

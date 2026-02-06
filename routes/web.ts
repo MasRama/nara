@@ -7,9 +7,7 @@
 import { createRouter } from "@core";
 import AuthController from "@controllers/AuthController";
 import UserController from "@controllers/UserController";
-import PasswordController from "@controllers/PasswordController";
 import OAuthController from "@controllers/OAuthController";
-import VerificationController from "@controllers/VerificationController";
 import HomeController from "@controllers/HomeController";
 import AssetController from "@controllers/AssetController";
 import Auth from "@middlewares/auth";
@@ -52,29 +50,6 @@ Route.get("/google/redirect", OAuthController.googleRedirect);
 Route.get("/google/callback", OAuthController.googleCallback);
 
 /**
- * Password Reset Routes
- * Routes for handling password reset
- * ------------------------------------------------
- * GET   /forgot-password - Forgot password page
- * POST  /forgot-password - Send reset password link
- * GET   /reset-password/:id - Reset password page
- * POST  /reset-password - Process password reset
- */
-Route.get("/forgot-password", PasswordController.forgotPasswordPage);
-Route.post("/forgot-password", strictRateLimit(), PasswordController.sendResetPassword);
-Route.get("/reset-password/:id", PasswordController.resetPasswordPage);
-Route.post("/reset-password", strictRateLimit(), PasswordController.resetPassword);
-
-/**
- * Email Verification Routes
- * ------------------------------------------------
- * POST  /verify - Send verification email
- * GET   /verify/:id - Verify email token
- */
-Route.post("/verify", [Auth], VerificationController.sendVerification);
-Route.get("/verify/:id", [Auth], VerificationController.verifyEmail);
-
-/**
  * Protected Routes
  * These routes require authentication
  * ------------------------------------------------
@@ -91,7 +66,7 @@ Route.get("/dashboard", [Auth], UserController.homePage);
 Route.get("/users", [Auth], UserController.usersPage);
 Route.get("/profile", [Auth], UserController.profilePage);
 Route.post("/change-profile", [Auth], UserController.changeProfile);
-Route.post("/change-password", [Auth], PasswordController.changePassword);
+Route.post("/change-password", [Auth], AuthController.changePassword);
 Route.post("/users", [Auth], UserController.createUser);
 Route.put("/users/:id", [Auth], UserController.updateUser);
 Route.delete("/users", [Auth], UserController.deleteUsers);

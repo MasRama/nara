@@ -9,7 +9,6 @@ export async function up(knex: Knex): Promise<void> {
     table.string('phone').nullable();
     table.string('avatar').nullable();
     table.string('role').defaultTo('user');
-    table.datetime('email_verified_at').nullable();
     table.datetime('created_at').defaultTo(knex.fn.now());
     table.datetime('updated_at').defaultTo(knex.fn.now());
   });

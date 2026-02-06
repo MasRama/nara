@@ -1,16 +1,18 @@
 import { BaseController, jsonSuccess, jsonError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
 import { UserModel } from '../models/User.js';
+import { SessionModel } from '../models/Session.js';
+import Authenticate from '../services/Authenticate.js';
 import LoginThrottle from '../services/LoginThrottle.js';
 import Logger from '../services/Logger.js';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { AUTH, ERROR_MESSAGES } from '../config/index.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_SECONDS = AUTH.JWT_EXPIRY_SECONDS;
+// Session cookie configuration
+const SESSION_COOKIE_NAME = 'auth_id';
+const SESSION_EXPIRY_MS = 1000 * 60 * 60 * 24 * 60; // 60 days
 
-// Cookie options for auth token
+// Cookie options for auth session
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -68,7 +70,8 @@ export class AuthController extends BaseController {
       return res.redirect('/login');
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
+    // Verify password using PBKDF2
+    const passwordMatch = await Authenticate.compare(password, user.password);
     if (!passwordMatch) {
       const throttleResult = LoginThrottle.recordFailedAttempt(email, ip);
 
@@ -96,17 +99,18 @@ export class AuthController extends BaseController {
       ip,
     });
 
-    // Generate JWT token with user info
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, name: user.name },
-      JWT_SECRET,
-      { expiresIn: AUTH.JWT_EXPIRY_SECONDS }
-    );
+    // Create session in database
+    const sessionId = randomUUID();
+    await SessionModel.create({
+      id: sessionId,
+      user_id: user.id,
+      user_agent: req.headers['user-agent'] || null,
+    });
 
-    // Set auth cookie for web routes (maxAge in ms)
-    res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
+    // Set session cookie
+    res.cookie(SESSION_COOKIE_NAME, sessionId, SESSION_EXPIRY_MS, COOKIE_OPTIONS);
 
-    // Redirect to dashboard (Inertia will handle it)
+    // Redirect to dashboard
     return res.redirect('/dashboard');
   }
 
@@ -135,12 +139,13 @@ export class AuthController extends BaseController {
       return res.redirect('/register');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, AUTH.BCRYPT_SALT_ROUNDS);
+    // Hash password using PBKDF2
+    const hashedPassword = await Authenticate.hash(password);
 
     try {
-      // Create user in database
-      const [userId] = await UserModel.create({ name, email, password: hashedPassword });
+      // Create user in database with UUID
+      const userId = randomUUID();
+      await UserModel.create({ id: userId, name, email, password: hashedPassword });
 
       Logger.logAuth('registration_success', {
         userId,
@@ -148,15 +153,16 @@ export class AuthController extends BaseController {
         ip: req.ip,
       });
 
-      // Generate JWT token
-      const token = jwt.sign(
-        { userId, email, name },
-        JWT_SECRET,
-        { expiresIn: AUTH.JWT_EXPIRY_SECONDS }
-      );
+      // Create session
+      const sessionId = randomUUID();
+      await SessionModel.create({
+        id: sessionId,
+        user_id: userId,
+        user_agent: req.headers['user-agent'] || null,
+      });
 
-      // Set auth cookie for web routes (maxAge in ms)
-      res.cookie('auth_token', token, JWT_EXPIRES_SECONDS * 1000, COOKIE_OPTIONS);
+      // Set session cookie
+      res.cookie(SESSION_COOKIE_NAME, sessionId, SESSION_EXPIRY_MS, COOKIE_OPTIONS);
 
       // Redirect to dashboard
       return res.redirect('/dashboard');
@@ -178,8 +184,14 @@ export class AuthController extends BaseController {
   }
 
   async logout(req: NaraRequest, res: NaraResponse) {
-    // Clear auth cookie (set maxAge to 0)
-    res.cookie('auth_token', '', 0, COOKIE_OPTIONS);
+    // Delete session from database
+    const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
+    if (sessionId) {
+      await SessionModel.delete(sessionId);
+    }
+
+    // Clear session cookie
+    res.cookie(SESSION_COOKIE_NAME, '', 0, COOKIE_OPTIONS);
 
     Logger.logAuth('logout', {
       userId: req.user?.id,
@@ -198,9 +210,8 @@ export class AuthController extends BaseController {
       return res.redirect('/forgot-password');
     }
 
-    // TODO: Implement actual password reset email sending
+    // TODO: Implement password reset (requires email service)
 
-    // Set success message and redirect
     res.cookie('success', 'If an account exists with this email, a reset link has been sent.', AUTH.ERROR_COOKIE_EXPIRY_MS);
     return res.redirect('/login');
   }
@@ -213,7 +224,7 @@ export class AuthController extends BaseController {
       return res.redirect('/forgot-password');
     }
 
-    // TODO: Implement actual password reset
+    // TODO: Implement password reset (requires email service)
 
     res.cookie('success', 'Password has been reset successfully.', AUTH.ERROR_COOKIE_EXPIRY_MS);
     return res.redirect('/login');

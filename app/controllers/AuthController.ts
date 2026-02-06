@@ -4,12 +4,11 @@
  * Handles core authentication flows:
  * - Login/Register pages and processing
  * - Logout
+ * - Change password
  * 
  * Related controllers:
  * - UserController: User CRUD and profile management
- * - PasswordController: Password reset and change
  * - OAuthController: Google OAuth
- * - VerificationController: Email verification
  */
 import Authenticate from "@services/Authenticate";
 import { User } from "@models";
@@ -18,7 +17,7 @@ import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
 import { BaseController } from "@core"; 
 import { randomUUID } from "crypto";
-import { LoginSchema, RegisterSchema } from "@validators";
+import { LoginSchema, RegisterSchema, ChangePasswordSchema } from "@validators";
 import { AUTH, ERROR_MESSAGES } from "@config";
 
 class AuthController extends BaseController {
@@ -180,6 +179,45 @@ class AuthController extends BaseController {
     if (request.cookies.auth_id) {
       await Authenticate.logout(request, response);
     }
+  }
+
+  /**
+   * Change password for authenticated user
+   */
+  public async changePassword(request: NaraRequest, response: NaraResponse) {
+    const data = await this.getBody(request, ChangePasswordSchema);
+    const user = request.user;
+
+    if (!user) {
+      return response.redirect("/login");
+    }
+
+    // Get fresh user data with password
+    const dbUser = await User.findById(user.id);
+    if (!dbUser) {
+      return response.redirect("/login");
+    }
+
+    // Verify current password
+    const passwordMatch = await Authenticate.compare(data.current_password, dbUser.password);
+    if (!passwordMatch) {
+      return response
+        .cookie("error", "Password saat ini tidak valid", AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .redirect("/profile");
+    }
+
+    // Update password
+    const hashedPassword = await Authenticate.hash(data.new_password);
+    await User.update(user.id, { password: hashedPassword });
+
+    Logger.logAuth('password_changed', {
+      userId: user.id,
+      ip: request.ip
+    });
+
+    return response
+      .cookie("success", "Password berhasil diubah", AUTH.ERROR_COOKIE_EXPIRY_MS)
+      .redirect("/profile");
   }
 }
 
