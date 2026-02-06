@@ -26,7 +26,6 @@ export async function seed(knex: Knex): Promise<void> {
       phone: null,
       avatar: null,
       role: 'admin',
-      email_verified_at: now,
       password: password,
       created_at: now,
       updated_at: now,
