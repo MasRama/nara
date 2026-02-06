@@ -35,6 +35,14 @@
         body: JSON.stringify({ email: form.email, password: form.password })
       });
 
+      // Check if login was successful via redirect (backend returns 302 on success)
+      // fetch follows redirects automatically, so we check if we ended up at dashboard
+      if (response.redirected || response.url.endsWith('/dashboard')) {
+        Toast('Login successful', 'success');
+        router.visit('/dashboard');
+        return;
+      }
+
       // Handle non-JSON responses (server errors returning HTML)
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
