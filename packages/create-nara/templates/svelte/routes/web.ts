@@ -141,8 +141,8 @@ export function registerRoutes(app: NaraApp) {
   app.delete('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.destroy(req, res)));
 
   // Uploads
-  app.post('/api/uploads', wrapHandler((req, res) => upload.upload(req, res)));
-  app.delete('/api/uploads/:filename', wrapHandler((req, res) => upload.delete(req, res)));
+  app.post('/api/uploads', wrapHandler((req, res) => upload.uploadAsset(req, res)));
+  app.delete('/api/uploads/:id', wrapHandler((req, res) => upload.deleteAsset(req, res)));
 
   // Static files
   app.get('/uploads/*', (req, res) => {

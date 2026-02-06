@@ -3,8 +3,30 @@
  *
  * In-memory rate limiting middleware using sliding window algorithm.
  * Tracks requests per key (IP, user, or custom) and returns 429 when limit exceeded.
+ *
+ * Features:
+ * - Configurable max requests and window duration
+ * - Custom key generator (default: IP address)
+ * - Automatic cleanup of expired entries
+ * - Skip function for whitelisting certain requests
+ *
+ * @example
+ * // Basic usage (100 requests per 15 minutes per IP)
+ * Route.use(rateLimit());
+ *
+ * // Custom configuration
+ * Route.use(rateLimit({
+ *   maxRequests: 10,
+ *   windowMs: 60 * 1000, // 1 minute
+ *   keyGenerator: (req) => req.user?.id || req.ip,
+ * }));
+ *
+ * // Per-route rate limiting
+ * Route.post('/api/upload', rateLimit({ maxRequests: 5, windowMs: 60000 }), uploadHandler);
  */
 
+import { RATE_LIMIT } from "../config/index.js";
+import Logger from "../services/Logger.js";
 import type { NaraRequest, NaraResponse, NaraMiddleware } from '@nara-web/core';
 import { jsonError } from '@nara-web/core';
 
@@ -121,14 +143,17 @@ function getResetTime(key: string, windowMs: number): number {
 
 /**
  * Create rate limit middleware
+ *
+ * @param options - Rate limit configuration
+ * @returns Middleware function
  */
 export function rateLimit(options: RateLimitOptions = {}): NaraMiddleware {
   const {
-    maxRequests = 100,
-    windowMs = 15 * 60 * 1000, // 15 minutes
+    maxRequests = RATE_LIMIT.MAX_REQUESTS,
+    windowMs = RATE_LIMIT.WINDOW_MS,
     keyGenerator = (req: NaraRequest) => req.ip || 'unknown',
     skip,
-    message = 'Too many requests, please try again later',
+    message = 'Terlalu banyak permintaan, coba lagi nanti',
     headers = true,
     name = 'default',
   } = options;
@@ -156,13 +181,14 @@ export function rateLimit(options: RateLimitOptions = {}): NaraMiddleware {
 
     // Check if limit exceeded
     if (currentCount >= maxRequests) {
-      console.warn('[RateLimit] Exceeded', {
+      Logger.logSecurity('Rate limit exceeded', {
         key,
         name,
         currentCount,
         maxRequests,
         ip: req.ip,
         path: req.path,
+        method: req.method,
       });
 
       if (headers) {
@@ -181,11 +207,14 @@ export function rateLimit(options: RateLimitOptions = {}): NaraMiddleware {
 
 /**
  * Create a strict rate limiter for sensitive endpoints
+ *
+ * @example
+ * Route.post('/api/login', strictRateLimit(), AuthController.processLogin);
  */
 export function strictRateLimit(options: RateLimitOptions = {}): NaraMiddleware {
   return rateLimit({
-    maxRequests: 10,
-    windowMs: 60 * 1000, // 1 minute
+    maxRequests: RATE_LIMIT.STRICT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT.STRICT_WINDOW_MS,
     name: 'strict',
     ...options,
   });
@@ -193,11 +222,14 @@ export function strictRateLimit(options: RateLimitOptions = {}): NaraMiddleware 
 
 /**
  * Create an API rate limiter
+ *
+ * @example
+ * Route.use('/api', apiRateLimit());
  */
 export function apiRateLimit(options: RateLimitOptions = {}): NaraMiddleware {
   return rateLimit({
-    maxRequests: 60,
-    windowMs: 60 * 1000, // 60 requests per minute
+    maxRequests: RATE_LIMIT.API_MAX_REQUESTS,
+    windowMs: RATE_LIMIT.API_WINDOW_MS,
     name: 'api',
     ...options,
   });
