@@ -90,7 +90,7 @@
   <header class="fixed inset-x-0 top-0 z-40 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-xl">
       <div class="max-w-6xl mx-auto flex h-16 items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
           <a href="/" use:inertia class="flex items-center gap-2">
-              <img src="/public/nara.png" alt="Nara logo" class="h-7 w-7 rounded-lg object-cover" />
+              <img src="/nara.png" alt="Nara logo" class="h-7 w-7 rounded-lg object-cover" />
               <div class="flex flex-col leading-tight">
                   <span class="text-sm font-semibold tracking-tight text-slate-50">Nara</span>
                   <span class="text-[10px] uppercase tracking-[0.22em] text-slate-500">TypeScript framework</span>
