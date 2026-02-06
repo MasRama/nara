@@ -5,6 +5,7 @@
  */
 
 import type { NaraRequest, NaraResponse, NaraMiddleware } from '@nara-web/core';
+import Logger from '../services/Logger.js';
 
 /**
  * Request logger configuration options
@@ -142,13 +143,13 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
 
       // Log based on level
       if (level === 'error') {
-        console.error(`[ERROR] ${message}`, logData);
+        Logger.error(message, logData);
       } else if (level === 'warn') {
-        console.warn(`[WARN] ${message}`, logData);
+        Logger.warn(message, logData);
       } else if (level === 'debug' || level === 'trace') {
-        console.debug(`[DEBUG] ${message}`, logData);
+        Logger.debug(message, logData);
       } else {
-        console.log(`[INFO] ${message}`, logData);
+        Logger.info(message, logData);
       }
     };
 

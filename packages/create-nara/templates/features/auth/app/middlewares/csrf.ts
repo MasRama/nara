@@ -9,6 +9,7 @@
 import { randomBytes } from 'crypto';
 import type { NaraRequest, NaraResponse, NaraMiddleware } from '@nara-web/core';
 import { jsonForbidden } from '@nara-web/core';
+import Logger from '../services/Logger.js';
 
 /**
  * CSRF configuration options
@@ -133,7 +134,7 @@ export function csrf(options: CSRFOptions = {}): NaraMiddleware {
 
     // Validate token
     if (!submittedToken || submittedToken !== token) {
-      console.warn('[CSRF] Validation failed', {
+      Logger.logSecurity('CSRF validation failed', {
         ip: req.ip,
         path: req.path,
         method: req.method,
