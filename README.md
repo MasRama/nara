@@ -2,17 +2,18 @@
 
 A high-performance TypeScript web framework combining HyperExpress, Svelte 5, and Inertia.js for building modern full-stack applications. Features include type-safe routing, comprehensive security (CSRF, rate limiting, login throttling), structured logging with Pino, graceful shutdown, and a powerful CLI with 21+ commands for scaffolding, database management, and project health checks.
 
+**Monorepo Structure**: Nara is organized as a monorepo with separate packages for the core framework, CLI scaffolding tool, and frontend adapters.
+
 Visit the repository: [https://github.com/MasRama/nara](https://github.com/MasRama/nara)
 
 ## Table of Contents
 - [Overview](#nara)
+- [Packages](#packages)
 - [Features](#features)
 - [Performance Benchmark](#performance-benchmark)
 - [Database Performance](#database-performance)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Manual Installation](#manual-installation)
-- [Environment Setup (Google OAuth)](#manual-installation)
 - [Development](#development)
 - [Build for Production](#build-for-production)
 - [Deployment](#deployment)
@@ -31,6 +32,31 @@ Visit the repository: [https://github.com/MasRama/nara](https://github.com/MasRa
 - [Acknowledgments](#acknowledgments)
 - [Support](#support)
 - [License](#license)
+
+## Packages
+
+Nara is organized as a monorepo with the following packages:
+
+```
+nara/
+├── packages/
+│   ├── core/           # @nara-web/core - HTTP framework
+│   ├── create-nara/    # CLI scaffolding tool
+│   ├── inertia-svelte/ # Svelte adapter for Inertia
+│   └── inertia-vue/    # Vue adapter for Inertia
+```
+
+### @nara-web/core
+The core HTTP framework built on HyperExpress with type-safe routing, middleware support, and graceful shutdown handling.
+
+### create-nara
+CLI tool for scaffolding new Nara projects with interactive prompts for selecting frontend frameworks (Svelte/Vue) and optional features (auth, database, uploads).
+
+### @nara-web/inertia-svelte
+Svelte 5 adapter for Inertia.js with Vite integration, providing seamless client-server state management.
+
+### @nara-web/inertia-vue
+Vue 3 adapter for Inertia.js with Vite integration, offering an alternative frontend option.
 
 ## Features
 
@@ -55,7 +81,8 @@ Visit the repository: [https://github.com/MasRama/nara](https://github.com/MasRa
 - **Standardized pagination** helper with metadata
 
 ### Developer Experience
-- **21+ CLI commands** for scaffolding and management:
+- **CLI scaffolding tool** (`create-nara`) for instant project setup
+- **21+ built-in CLI commands** for scaffolding and management:
   - `make:resource` - Generate controller, validator, routes, and pages
   - `make:controller`, `make:middleware`, `make:service`, `make:validator`
   - `make:migration`, `make:seeder`, `make:command`
@@ -327,43 +354,18 @@ Results will vary based on your hardware. Share your results with the community!
 
 ## Quick Start
 
+Create a new Nara project using the CLI scaffolding tool:
+
 ```bash
-git clone https://github.com/MasRama/nara.git
-cd nara
+npm create nara@latest my-app
+cd my-app
 npm install
 npm run dev
 ```
 
-## Manual Installation
-
-1. Clone the repository.
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.example` to `.env` and configure your variables:
-   ```bash
-   cp .env.example .env
-   ```
-4. Set up Google OAuth credentials:
-   1. Go to the Google Cloud Console: `https://console.cloud.google.com/`
-   2. Create/select a project
-   3. Enable Google OAuth2 API
-   4. Go to "Credentials" → "Create Credentials" → "OAuth client ID"
-   5. Choose "Web application"
-   6. Use:
-      - Authorized JavaScript origins: `http://localhost:5555`
-      - Authorized redirect URIs: `http://localhost:5555/google/callback`
-   7. Copy the Client ID and Client Secret
-   8. Add them to `.env`:
-      ```
-      GOOGLE_CLIENT_ID=your_client_id_here
-      GOOGLE_CLIENT_SECRET=your_client_secret_here
-      ```
-5. Run database migrations:
-   ```bash
-   npx knex migrate:latest
-   ```
+The CLI will guide you through selecting:
+- Frontend framework (Svelte 5 or Vue 3)
+- Optional features (authentication, database, file uploads)
 
 ## Development
 
@@ -1022,7 +1024,7 @@ You can build complete Nara applications using AI coding assistants without writ
 Start with the Nara scaffolding:
 
 ```bash
-npx create-nara-app project-name
+npm create nara@latest project-name
 cd project-name
 ```
 
