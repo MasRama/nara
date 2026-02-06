@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte'
-  import { Toast } from '../../components/helper';
+  import { apiFetch, Toast } from '../../components/helper';
   import NaraIcon from '../../components/NaraIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
@@ -28,63 +28,15 @@
 
   async function submitForm(): Promise<void> {
     loading = true;
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email, password: form.password })
-      });
+    const result = await apiFetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: form.email, password: form.password })
+    });
 
-      // Check if login was successful via redirect (backend returns 302 on success)
-      // fetch follows redirects automatically, so we check if we ended up at dashboard
-      if (response.redirected || response.url.endsWith('/dashboard')) {
-        Toast('Login successful', 'success');
-        router.visit('/dashboard');
-        return;
-      }
-
-      // Handle non-JSON responses (server errors returning HTML)
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const statusMessages: Record<number, string> = {
-          401: 'Invalid email or password.',
-          403: 'Access denied.',
-          404: 'Login service not available.',
-          500: 'Server error. Please try again later.',
-          502: 'Server is temporarily unavailable.',
-          503: 'Service unavailable. Please try again later.',
-        };
-        Toast(statusMessages[response.status] || `Server error (${response.status})`, 'error');
-        return;
-      }
-
-      const result = await response.json();
-
-      if (result.success) {
-        Toast(result.message || 'Login successful', 'success');
-        router.visit(result.data?.redirect || '/dashboard');
-      } else {
-        // Handle validation errors
-        if (result.errors) {
-          const errorMessages = Object.values(result.errors).flat() as string[];
-          Toast(errorMessages[0] || result.message || 'Invalid email or password.', 'error');
-        } else {
-          Toast(result.message || 'Invalid email or password.', 'error');
-        }
-      }
-    } catch (err: unknown) {
-      // Network or parsing error
-      if (err instanceof SyntaxError) {
-        Toast('Server returned an invalid response. Please try again.', 'error');
-      } else if (err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('network'))) {
-        Toast('Unable to connect to server. Please check your connection.', 'error');
-      } else {
-        const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
-        Toast(errorMessage, 'error');
-      }
-    } finally {
-      loading = false;
+    if (result.success || result.redirected) {
+      router.visit(result.redirectUrl || '/dashboard');
     }
+    loading = false;
   }
 </script>
 

@@ -68,6 +68,18 @@ interface ApiOptions {
   showErrorToast?: boolean;
 }
 
+/**
+ * Fetch API response type
+ */
+export interface FetchApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  message: string;
+  redirected?: boolean;
+  redirectUrl?: string;
+  errors?: Record<string, string[]>;
+}
+
 /** 
  * Creates a click outside event listener for a DOM node
  */
@@ -249,6 +261,138 @@ export async function api<T = unknown>(
     }
 
     return { success: false, message: parsed.message, code: parsed.code, errors: parsed.errors };
+  }
+}
+
+/**
+ * Reusable fetch API helper that handles JSON responses, redirects, and errors
+ *
+ * @param url - The URL to fetch
+ * @param options - Fetch options (method, body, headers, etc.)
+ * @param apiOptions - API options for toast notifications
+ * @returns FetchApiResponse with success, data, message, and redirect info
+ *
+ * @example
+ * // POST request with JSON body
+ * const result = await apiFetch('/api/auth/logout', { method: 'POST' });
+ * if (result.success || result.redirected) {
+ *   router.visit(result.redirectUrl || '/login');
+ * }
+ *
+ * @example
+ * // POST request with body
+ * const result = await apiFetch('/api/auth/login', {
+ *   method: 'POST',
+ *   body: JSON.stringify({ email, password })
+ * });
+ */
+export async function apiFetch<T = unknown>(
+  url: string,
+  options: RequestInit = {},
+  apiOptions: ApiOptions = {}
+): Promise<FetchApiResponse<T>> {
+  const { showSuccessToast = true, showErrorToast = true } = apiOptions;
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    // Check if the response was a redirect (fetch follows redirects automatically)
+    // We detect this by checking if the final URL is different from the requested URL
+    // or if the URL matches common redirect targets
+    const isRedirected = response.redirected;
+    const finalUrl = response.url;
+
+    // Handle non-JSON responses (redirects, HTML error pages)
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      // If redirected to a success page, treat as success
+      if (isRedirected || finalUrl.endsWith('/dashboard') || finalUrl.endsWith('/login')) {
+        const successMsg = finalUrl.includes('login') ? 'Logged out successfully' : 'Success';
+        if (showSuccessToast) {
+          Toast(successMsg, 'success');
+        }
+        return {
+          success: true,
+          message: successMsg,
+          redirected: true,
+          redirectUrl: finalUrl,
+        };
+      }
+
+      // Handle error status codes
+      if (!response.ok) {
+        const errorMsg = getHttpErrorMessage(response.status, response.statusText);
+        if (showErrorToast) {
+          Toast(errorMsg, 'error');
+        }
+        return {
+          success: false,
+          message: errorMsg,
+        };
+      }
+
+      // Unknown non-JSON response
+      return {
+        success: true,
+        message: 'Success',
+        redirected: isRedirected,
+        redirectUrl: finalUrl,
+      };
+    }
+
+    // Parse JSON response
+    const result = await response.json() as ApiResponse<T>;
+
+    if (result.success) {
+      if (showSuccessToast && result.message) {
+        Toast(result.message, 'success');
+      }
+      return {
+        success: true,
+        message: result.message,
+        data: result.data,
+        redirected: isRedirected,
+        redirectUrl: finalUrl,
+      };
+    } else {
+      if (showErrorToast) {
+        const errorMsg = result.errors
+          ? formatValidationErrors(result.errors) || result.message
+          : result.message;
+        if (errorMsg) Toast(errorMsg, 'error');
+      }
+      return {
+        success: false,
+        message: result.message,
+        errors: result.errors,
+      };
+    }
+  } catch (err: unknown) {
+    // Network or parsing error
+    let errorMessage: string;
+
+    if (err instanceof SyntaxError) {
+      errorMessage = 'Server returned an invalid response. Please try again.';
+    } else if (err instanceof TypeError && (err.message.includes('fetch') || err.message.includes('network'))) {
+      errorMessage = 'Unable to connect to server. Please check your connection.';
+    } else {
+      errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred.';
+    }
+
+    if (showErrorToast) {
+      Toast(errorMessage, 'error');
+    }
+
+    return {
+      success: false,
+      message: errorMessage,
+    };
   }
 }
 

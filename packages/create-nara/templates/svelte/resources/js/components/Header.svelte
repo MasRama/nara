@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
-  import { clickOutside, Toast } from '../components/helper';
+  import { clickOutside, apiFetch } from '../components/helper';
   import DarkModeToggle from '../components/DarkModeToggle.svelte';
 
   interface User {
@@ -35,22 +35,12 @@
   $: visibleMenuLinks = menuLinks.filter((item) => item.show);
 
   async function handleLogout(): Promise<void> {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const result = await response.json();
+    const result = await apiFetch('/api/auth/logout', {
+      method: 'POST'
+    });
 
-      if (result.success) {
-        Toast(result.message || 'Logged out successfully', 'success');
-        router.visit(result.data?.redirect || '/login');
-      } else {
-        Toast(result.message || 'Logout failed', 'error');
-      }
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error';
-      Toast(errorMessage, 'error');
+    if (result.success || result.redirected) {
+      router.visit(result.redirectUrl || '/login');
     }
   }
 </script>
