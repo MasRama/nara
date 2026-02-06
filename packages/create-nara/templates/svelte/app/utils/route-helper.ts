@@ -1,5 +1,6 @@
 import { ValidationError, jsonValidationError, jsonError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
+import Logger from '../services/Logger.js';
 
 type AsyncHandler = (req: NaraRequest, res: NaraResponse) => Promise<any> | any;
 
@@ -23,7 +24,7 @@ export function wrapHandler(handler: AsyncHandler): any {
       }
 
       // Unknown error
-      console.error('[Unhandled Error]:', error);
+      Logger.error('[Unhandled Error]', error);
       jsonError(res, 'Internal server error', 500);
     }
   };
