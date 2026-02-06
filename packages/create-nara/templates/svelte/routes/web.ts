@@ -149,4 +149,9 @@ export function registerRoutes(app: NaraApp) {
     const filePath = req.path.replace('/uploads/', '');
     res.sendFile(`uploads/${filePath}`);
   });
+
+  // Public folder static files
+  app.get('/nara.png', (req, res) => {
+    res.sendFile('public/nara.png');
+  });
 }

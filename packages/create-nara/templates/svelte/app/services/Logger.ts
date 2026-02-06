@@ -16,6 +16,18 @@ const LOG_LEVELS: Record<LogLevel, number> = {
   fatal: 60,
 };
 
+// ANSI color codes for log levels
+const COLORS = {
+  reset: '\x1b[0m',
+  trace: '\x1b[90m',   // Gray
+  debug: '\x1b[36m',   // Cyan
+  info: '\x1b[32m',    // Green
+  warn: '\x1b[33m',    // Yellow
+  error: '\x1b[31m',   // Red
+  fatal: '\x1b[35m',   // Magenta
+  timestamp: '\x1b[90m', // Gray
+};
+
 /**
  * Get current log level from environment
  */
@@ -38,11 +50,12 @@ function shouldLog(level: LogLevel): boolean {
 function formatLog(level: LogLevel, message: string, data?: Record<string, any>): string {
   const timestamp = new Date().toISOString();
   const levelUpper = level.toUpperCase().padEnd(5);
+  const color = COLORS[level];
 
   if (data && Object.keys(data).length > 0) {
-    return `[${timestamp}] ${levelUpper} ${message} ${JSON.stringify(data)}`;
+    return `${COLORS.timestamp}[${timestamp}]${COLORS.reset} ${color}${levelUpper}${COLORS.reset} ${message} ${JSON.stringify(data)}`;
   }
-  return `[${timestamp}] ${levelUpper} ${message}`;
+  return `${COLORS.timestamp}[${timestamp}]${COLORS.reset} ${color}${levelUpper}${COLORS.reset} ${message}`;
 }
 
 /**
