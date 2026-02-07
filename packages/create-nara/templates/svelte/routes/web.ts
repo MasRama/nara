@@ -1,157 +1,116 @@
-import type { NaraApp } from '@nara-web/core';
-import { AuthController } from '../app/controllers/AuthController.js';
-import { ProfileController } from '../app/controllers/ProfileController.js';
-import { UserController } from '../app/controllers/UserController.js';
-import { UploadController } from '../app/controllers/UploadController.js';
-import { OAuthController } from '../app/controllers/OAuthController.js';
-import { authMiddleware, webAuthMiddleware, guestMiddleware } from '../app/middlewares/auth.js';
-import { wrapHandler } from '../app/utils/route-helper.js';
-import { db } from '../app/config/database.js';
+/**
+ * Web Routes
+ * 
+ * All application routes are defined here using the type-safe NaraRouter.
+ * Routes can use middleware arrays for authentication and authorization.
+ */
+import { createRouter } from '@nara-web/core';
+import AuthController from '../app/controllers/AuthController.js';
+import UserController from '../app/controllers/UserController.js';
+import OAuthController from '../app/controllers/OAuthController.js';
+import HomeController from '../app/controllers/HomeController.js';
+import AssetController from '../app/controllers/AssetController.js';
+import { webAuthMiddleware as Auth } from '../app/middlewares/auth.js';
+import { strictRateLimit } from '../app/middlewares/rateLimit.js';
 
-// Type augmentation for Inertia response
-type InertiaResponse = {
-  inertia: (component: string, props?: Record<string, any>) => Promise<any>;
-};
+const Route = createRouter();
 
-export function registerRoutes(app: NaraApp) {
-  const auth = new AuthController();
-  const profile = new ProfileController();
-  const users = new UserController();
-  const upload = new UploadController();
-  const oauth = new OAuthController();
+/**
+ * Public Routes
+ * These routes are accessible without authentication
+ * ------------------------------------------------
+ * GET  / - Home page
+ */
+Route.get('/', HomeController.index);
 
-  // --- Page Routes (Inertia) ---
+/**
+ * Authentication Routes
+ * Routes for handling user authentication
+ * ------------------------------------------------
+ * GET   /login - Login page
+ * POST  /login - Process login
+ * GET   /register - Registration page
+ * POST  /register - Process registration
+ * POST  /logout - Logout user
+ */
+Route.get('/login', AuthController.loginPage);
+Route.post('/login', strictRateLimit(), AuthController.processLogin);
+Route.get('/register', AuthController.registerPage);
+Route.post('/register', strictRateLimit(), AuthController.processRegister);
+Route.post('/logout', AuthController.logout);
 
-  // Public
-  app.get('/', (req, res: any) => {
-    (res as InertiaResponse).inertia('landing', { title: 'Welcome to NARA' });
-  });
+/**
+ * OAuth Routes
+ * Routes for third-party authentication
+ * ------------------------------------------------
+ * GET   /google/redirect - Google OAuth redirect
+ * GET   /google/callback - Google OAuth callback
+ */
+Route.get('/google/redirect', OAuthController.googleRedirect);
+Route.get('/google/callback', OAuthController.googleCallback);
 
-  // Guest only
-  app.get('/login', guestMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('auth/login');
-  });
-  app.get('/register', guestMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('auth/register');
-  });
-  app.get('/forgot-password', guestMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('auth/forgot-password');
-  });
-  app.get('/reset-password/:token', guestMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('auth/reset-password', { token: req.params.token });
-  });
+/**
+ * Protected Routes
+ * These routes require authentication
+ * ------------------------------------------------
+ * GET    /dashboard       - User dashboard
+ * GET    /users           - Users management page
+ * GET    /profile         - User profile
+ * POST   /change-profile  - Update profile
+ * POST   /change-password - Change password
+ * POST   /users           - Create user (admin only)
+ * PUT    /users/:id       - Update user (admin only)
+ * DELETE /users           - Delete users (admin only)
+ */
+Route.get('/dashboard', [Auth], UserController.homePage);
+Route.get('/users', [Auth], UserController.usersPage);
+Route.get('/profile', [Auth], UserController.profilePage);
+Route.post('/change-profile', [Auth], UserController.changeProfile);
+Route.post('/change-password', [Auth], AuthController.changePassword);
+Route.post('/users', [Auth], UserController.createUser);
+Route.put('/users/:id', [Auth], UserController.updateUser);
+Route.delete('/users', [Auth], UserController.deleteUsers);
 
-  // Protected
-  app.get('/dashboard', webAuthMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('dashboard');
-  });
-  app.get('/users', webAuthMiddleware as any, async (req, res: any) => {
-    // Fetch users data for the page
-    const page = parseInt(req.query?.page as string) || 1;
-    const limit = parseInt(req.query?.limit as string) || 10;
-    const search = (req.query?.search as string) || '';
-    const filter = (req.query?.filter as string) || 'all';
-    const offset = (page - 1) * limit;
+// Avatar upload endpoint (local storage) - rate limited to prevent abuse
+Route.post('/assets/avatar', [Auth, strictRateLimit()], AssetController.uploadAsset);
 
-    // Build query
-    let query = db('users').select(
-      'id', 'name', 'email', 'phone', 'avatar', 'role',
-      'email_verified_at', 'created_at', 'updated_at'
-    );
+/**
+ * Static Asset Handling Routes
+ * 
+ * 1. Dist Assets (/assets/:file)
+ * Serves compiled and bundled assets from the dist/assets directory
+ * - Handles JavaScript files (*.js) with proper content type
+ * - Handles CSS files (*.css) with proper content type
+ * - Implements in-memory caching for better performance
+ * - Sets long-term browser cache headers (1 year)
+ * Example URLs:
+ * - /assets/app.1234abc.js
+ * - /assets/main.5678def.css
+ */
+Route.get('/assets/:file', AssetController.distFolder);
 
-    // Apply search filter
-    if (search) {
-      query = query.where((builder: any) => {
-        builder.where('name', 'like', `%${search}%`)
-               .orWhere('email', 'like', `%${search}%`);
-      });
-    }
+/**
+ * 2. Public & Storage Assets (/*) - Catch-all Route
+ * Serves static files from public and storage directories
+ * - Must be the LAST route in the file
+ * - Only serves files with allowed extensions
+ * - Returns 404 for paths without extensions
+ * - Implements security checks against unauthorized access
+ *
+ * Allowed file types:
+ * - Images: .ico, .png, .jpeg, .jpg, .gif, .svg, .webp
+ * - Documents: .txt, .pdf
+ * - Fonts: .woff, .woff2, .ttf, .eot
+ * - Media: .mp4, .webm, .mp3, .wav
+ * - Web: .css, .js
+ *
+ * Example URLs:
+ * - /public/images/logo.png
+ * - /storage/avatars/user-1.webp
+ */
+Route.get('/public/*', AssetController.publicFolder);
+Route.get('/storage/*', AssetController.publicFolder);
+Route.get('/uploads/*', AssetController.publicFolder);
 
-    // Apply role filter
-    if (filter === 'admin') {
-      query = query.where('role', 'admin');
-    } else if (filter === 'user') {
-      query = query.where('role', 'user');
-    } else if (filter === 'verified') {
-      query = query.whereNotNull('email_verified_at');
-    } else if (filter === 'unverified') {
-      query = query.whereNull('email_verified_at');
-    }
-
-    // Get total count for pagination
-    const countQuery = query.clone();
-    const [{ count: totalCount }] = await countQuery.count('* as count');
-    const total = Number(totalCount);
-
-    // Apply pagination and ordering
-    const users = await query
-      .orderBy('created_at', 'desc')
-      .limit(limit)
-      .offset(offset);
-
-    // Transform users to include is_admin and is_verified flags
-    const transformedUsers = users.map((user: any) => ({
-      ...user,
-      is_admin: user.role === 'admin',
-      is_verified: !!user.email_verified_at
-    }));
-
-    const totalPages = Math.ceil(total / limit);
-
-    (res as InertiaResponse).inertia('users', {
-      users: transformedUsers,
-      total,
-      page,
-      limit,
-      totalPages,
-      hasNext: page < totalPages,
-      hasPrev: page > 1,
-      search,
-      filter,
-    });
-  });
-  app.get('/profile', webAuthMiddleware as any, (req, res: any) => {
-    (res as InertiaResponse).inertia('profile');
-  });
-
-  // --- Google OAuth Routes ---
-  app.get('/google/redirect', wrapHandler((req, res) => oauth.googleRedirect(req, res)));
-  app.get('/google/callback', wrapHandler((req, res) => oauth.googleCallback(req, res)));
-
-
-  // --- API Routes ---
-
-  // Auth
-  app.post('/api/auth/login', wrapHandler((req, res) => auth.login(req, res)));
-  app.post('/api/auth/register', wrapHandler((req, res) => auth.register(req, res)));
-  app.post('/api/auth/logout', wrapHandler((req, res) => auth.logout(req, res)));
-  app.post('/api/auth/forgot-password', wrapHandler((req, res) => auth.forgotPassword(req, res)));
-  app.post('/api/auth/reset-password', wrapHandler((req, res) => auth.resetPassword(req, res)));
-  app.get('/api/auth/me', authMiddleware as any, wrapHandler((req, res) => auth.me(req, res)));
-
-  // Profile
-  app.post('/api/profile/update', webAuthMiddleware as any, wrapHandler((req, res) => profile.update(req, res)));
-  app.post('/api/profile/password', webAuthMiddleware as any, wrapHandler((req, res) => profile.changePassword(req, res)));
-  app.post('/api/profile/avatar', webAuthMiddleware as any, wrapHandler((req, res) => profile.uploadAvatar(req, res)));
-
-  // Users
-  app.get('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.index(req, res)));
-  app.post('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.store(req, res)));
-  app.put('/api/users/:id', webAuthMiddleware as any, wrapHandler((req, res) => users.update(req, res)));
-  app.delete('/api/users', webAuthMiddleware as any, wrapHandler((req, res) => users.destroy(req, res)));
-
-  // Uploads
-  app.post('/api/uploads', wrapHandler((req, res) => upload.uploadAsset(req, res)));
-  app.delete('/api/uploads/:id', wrapHandler((req, res) => upload.deleteAsset(req, res)));
-
-  // Static files
-  app.get('/uploads/*', (req, res) => {
-    const filePath = req.path.replace('/uploads/', '');
-    res.sendFile(`uploads/${filePath}`);
-  });
-
-  // Public folder static files
-  app.get('/nara.png', (req, res) => {
-    res.sendFile('public/nara.png');
-  });
-}
+// Export the underlying HyperExpress router for mounting to the server
+export default Route.getRouter();

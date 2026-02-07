@@ -1,7 +1,7 @@
 import { BaseController, jsonSuccess, jsonError, ValidationError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
-import { UserModel } from '../models/User.js';
-import { db } from '../config/database.js';
+import { User } from '@models';
+import { db } from '@config/database';
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 
@@ -81,7 +81,7 @@ export class UserController extends BaseController {
     }
 
     // Check if email already exists
-    const existing = await UserModel.findByEmail(email);
+    const existing = await User.findByEmail(email);
     if (existing) {
       return jsonError(res, 'Email already registered', 400);
     }
@@ -96,7 +96,7 @@ export class UserController extends BaseController {
         : await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
 
       // Create user in database
-      await UserModel.create({
+      await User.create({
         id: userId,
         name,
         email,
@@ -107,7 +107,7 @@ export class UserController extends BaseController {
       });
 
       // Fetch created user
-      const user = await UserModel.findById(userId);
+      const user = await User.findById(userId);
 
       return jsonSuccess(res, {
         user: {
@@ -142,13 +142,13 @@ export class UserController extends BaseController {
     }
 
     // Check if user exists
-    const existingUser = await UserModel.findById(id);
+    const existingUser = await User.findById(id);
     if (!existingUser) {
       return jsonError(res, 'User not found', 404);
     }
 
     // Check if email is taken by another user
-    const emailUser = await UserModel.findByEmail(email);
+    const emailUser = await User.findByEmail(email);
     if (emailUser && emailUser.id !== id) {
       throw new ValidationError({ email: ['Email already registered'] });
     }
@@ -169,10 +169,10 @@ export class UserController extends BaseController {
     }
 
     // Update user in database
-    await UserModel.update(id, updateData);
+    await User.update(id, updateData);
 
     // Fetch updated user
-    const user = await UserModel.findById(id);
+    const user = await User.findById(id);
 
     return jsonSuccess(res, {
       user: {

@@ -1,6 +1,6 @@
 import { BaseController, jsonSuccess, jsonError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
-import { UserModel } from '../models/User.js';
+import { User } from '@models';
 import bcrypt from 'bcrypt';
 import sharp from 'sharp';
 import fs from 'fs';
@@ -32,7 +32,7 @@ export class ProfileController extends BaseController {
     }
 
     // Update user in database
-    await UserModel.update(user.id, { name, email, phone });
+    await User.update(user.id, { name, email, phone });
 
     res.cookie('success', 'Profile updated successfully', 5000);
     return res.redirect('/profile');
@@ -57,13 +57,13 @@ export class ProfileController extends BaseController {
     }
 
     // Verify current password and update
-    const dbUser = await UserModel.findById(user.id);
+    const dbUser = await User.findById(user.id);
     if (!dbUser || !await bcrypt.compare(current_password, dbUser.password)) {
       res.cookie('error', 'Current password is incorrect', 5000);
       return res.redirect('/profile');
     }
     const hashedPassword = await bcrypt.hash(new_password, 10);
-    await UserModel.update(user.id, { password: hashedPassword });
+    await User.update(user.id, { password: hashedPassword });
 
     res.cookie('success', 'Password changed successfully', 5000);
     return res.redirect('/profile');
@@ -124,7 +124,7 @@ export class ProfileController extends BaseController {
       const avatarUrl = `/uploads/avatars/${filename}`;
 
       // Update user avatar in database
-      await UserModel.update(user.id, { avatar: avatarUrl });
+      await User.update(user.id, { avatar: avatarUrl });
 
       // Return JSON for AJAX upload (not redirect)
       return jsonSuccess(res, { url: avatarUrl }, 'Avatar uploaded successfully');

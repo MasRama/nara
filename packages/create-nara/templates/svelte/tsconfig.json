@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
@@ -8,8 +11,54 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["vite/client"]
+    "types": [
+      "vite/client"
+    ],
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "app/*"
+      ],
+      "@controllers/*": [
+        "app/controllers/*"
+      ],
+      "@services/*": [
+        "app/services/*"
+      ],
+      "@services": [
+        "app/services/index.ts"
+      ],
+      "@middlewares/*": [
+        "app/middlewares/*"
+      ],
+      "@validators/*": [
+        "app/validators/*"
+      ],
+      "@validators": [
+        "app/validators/index.ts"
+      ],
+      "@models/*": [
+        "app/models/*"
+      ],
+      "@models": [
+        "app/models/index.ts"
+      ],
+      "@config/*": [
+        "app/config/*"
+      ],
+      "@config": [
+        "app/config/index.ts"
+      ]
+    }
   },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "resources"]
+  "include": [
+    "**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "resources"
+  ]
 }

@@ -1,12 +1,11 @@
 import { BaseController, jsonSuccess, jsonError } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
-import { UserModel } from '../models/User.js';
-import { SessionModel } from '../models/Session.js';
-import Authenticate from '../services/Authenticate.js';
-import LoginThrottle from '../services/LoginThrottle.js';
-import Logger from '../services/Logger.js';
+import { User, Session } from '@models';
+import Authenticate from '@services/Authenticate';
+import LoginThrottle from '@services/LoginThrottle';
+import Logger from '@services/Logger';
 import { randomUUID } from 'crypto';
-import { AUTH, ERROR_MESSAGES } from '../config/index.js';
+import { AUTH, ERROR_MESSAGES } from '@config';
 
 // Session cookie configuration
 const SESSION_COOKIE_NAME = 'auth_id';
@@ -52,7 +51,7 @@ export class AuthController extends BaseController {
     });
 
     // Find user by email
-    const user = await UserModel.findByEmail(email);
+    const user = await User.findByEmail(email);
     if (!user) {
       const throttleResult = LoginThrottle.recordFailedAttempt(email, ip);
 
@@ -101,7 +100,7 @@ export class AuthController extends BaseController {
 
     // Create session in database
     const sessionId = randomUUID();
-    await SessionModel.create({
+    await Session.create({
       id: sessionId,
       user_id: user.id,
       user_agent: req.headers['user-agent'] || null,
@@ -129,7 +128,7 @@ export class AuthController extends BaseController {
     });
 
     // Check if email already exists
-    const existing = await UserModel.findByEmail(email);
+    const existing = await User.findByEmail(email);
     if (existing) {
       Logger.logSecurity('Registration failed - duplicate email', {
         email,
@@ -145,7 +144,7 @@ export class AuthController extends BaseController {
     try {
       // Create user in database with UUID
       const userId = randomUUID();
-      await UserModel.create({ id: userId, name, email, password: hashedPassword });
+      await User.create({ id: userId, name, email, password: hashedPassword });
 
       Logger.logAuth('registration_success', {
         userId,
@@ -155,7 +154,7 @@ export class AuthController extends BaseController {
 
       // Create session
       const sessionId = randomUUID();
-      await SessionModel.create({
+      await Session.create({
         id: sessionId,
         user_id: userId,
         user_agent: req.headers['user-agent'] || null,
@@ -187,7 +186,7 @@ export class AuthController extends BaseController {
     // Delete session from database
     const sessionId = req.cookies?.[SESSION_COOKIE_NAME];
     if (sessionId) {
-      await SessionModel.delete(sessionId);
+      await Session.delete(sessionId);
     }
 
     // Clear session cookie

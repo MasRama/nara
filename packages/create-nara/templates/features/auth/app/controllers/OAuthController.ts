@@ -7,8 +7,8 @@
  */
 import { BaseController } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
-import { UserModel } from '../models/User.js';
-import { redirectParamsURL } from '../services/GoogleAuth.js';
+import { User } from '@models';
+import { redirectParamsURL } from '@services/GoogleAuth';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
@@ -103,14 +103,14 @@ export class OAuthController extends BaseController {
       const name = userData.name;
 
       // Check if user exists
-      let user = await UserModel.findByEmail(email);
+      let user = await User.findByEmail(email);
 
       if (!user) {
         // Create new user
         const userId = randomUUID();
         const hashedPassword = await bcrypt.hash(email + Date.now(), 10);
 
-        await UserModel.create({
+        await User.create({
           id: userId,
           email,
           password: hashedPassword,
@@ -119,7 +119,7 @@ export class OAuthController extends BaseController {
           email_verified_at: userData.verified_email ? new Date().toISOString() : null,
         });
 
-        user = await UserModel.findById(userId);
+        user = await User.findById(userId);
       }
 
       if (!user) {

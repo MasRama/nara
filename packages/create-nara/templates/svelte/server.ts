@@ -1,25 +1,25 @@
+/**
+ * Nara Server Entrypoint
+ * 
+ * Minimal entry point that bootstraps the application using the NaraApp kernel.
+ * All server configuration, middlewares, error handling, and graceful shutdown
+ * are managed by the App abstraction.
+ */
+
 import 'dotenv/config';
-import { createApp, jsonError } from '@nara-web/core';
-import { svelteAdapter } from '@nara-web/inertia-svelte';
-import { registerRoutes } from './routes/web.js';
-import Logger from './app/services/Logger.js';
-import { requestLogger } from './app/middlewares/requestLogger.js';
+import { createApp, svelteAdapter } from '@nara-web/core';
+import routes from './routes/web.js';
 
+// Create and start the application
 const app = createApp({
-  port: Number(process.env.PORT) || 3000,
-  adapter: svelteAdapter()
+  routes,
+  // Add Svelte adapter to enable Inertia support
+  adapter: svelteAdapter(),
+  // All other options are auto-configured from environment:
+  // - port: from env.PORT (default 5555)
+  // - https: from env.HAS_CERTIFICATE
+  // - cors: enabled by default
+  // - shutdownTimeout: 10 seconds
 });
 
-// Request logging middleware
-app.use(requestLogger());
-
-// Global error handler
-app.getServer().set_error_handler((req, res, error: any) => {
-  Logger.error('[Server Error]', error);
-  const message = error.message || 'Internal server error';
-  const status = error.statusCode || 500;
-  return jsonError(res, message, status);
-});
-
-registerRoutes(app);
 app.start();
