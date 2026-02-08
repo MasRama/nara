@@ -3,59 +3,84 @@
  * 
  * Handles session-related database operations.
  */
-import { db } from '../config/database.js';
+import { BaseModel, BaseRecord } from "./BaseModel.js";
 
-export interface Session {
+/**
+ * Session record interface
+ */
+export interface SessionRecord extends BaseRecord {
   id: string;
   user_id: string;
   user_agent: string | null;
 }
 
-export class SessionModel {
-  static tableName = 'sessions';
+/**
+ * Data for creating a new session
+ */
+export interface CreateSessionData {
+  id: string;
+  user_id: string;
+  user_agent?: string | null;
+}
 
-  static async findById(id: string): Promise<Session | undefined> {
-    return db(this.tableName).where({ id }).first();
+class SessionModel extends BaseModel<SessionRecord> {
+  protected tableName = "sessions";
+  protected timestampOptions = {
+    useTimestamps: false,
+    timestampFormat: 'bigint' as const
+  };
+
+  /**
+   * Find sessions by user ID
+   */
+  async findByUserId(userId: string): Promise<SessionRecord[]> {
+    return this.query().where("user_id", userId);
   }
 
-  static async findByUserId(userId: string): Promise<Session[]> {
-    return db(this.tableName).where({ user_id: userId });
+  /**
+   * Delete all sessions for a user
+   */
+  async deleteByUserId(userId: string): Promise<number> {
+    return this.query().where("user_id", userId).delete();
   }
 
-  static async create(data: Partial<Session>): Promise<number[]> {
-    return db(this.tableName).insert(data);
-  }
-
-  static async delete(id: string): Promise<number> {
-    return db(this.tableName).where({ id }).delete();
-  }
-
-  static async deleteByUserId(userId: string): Promise<number> {
-    return db(this.tableName).where({ user_id: userId }).delete();
+  /**
+   * Create a new session
+   */
+  async createSession(data: CreateSessionData): Promise<SessionRecord> {
+    await this.query().insert(data);
+    return this.findById(data.id) as Promise<SessionRecord>;
   }
 
   /**
    * Get user by session ID (optimized JOIN query)
+   * Returns user data if session is valid, undefined otherwise
    */
-  static async getUserBySessionId(sessionId: string): Promise<{
+  async getUserBySessionId(sessionId: string): Promise<{
     id: string;
     name: string | null;
     email: string;
     phone: string | null;
     avatar: string | null;
     is_admin: boolean;
+    is_verified: boolean;
   } | undefined> {
-    return db('sessions')
-      .join('users', 'sessions.user_id', 'users.id')
-      .where('sessions.id', sessionId)
+    const DB = (await import("../services/DB.js")).default;
+    return DB.from("sessions")
+      .join("users", "sessions.user_id", "users.id")
+      .where("sessions.id", sessionId)
       .select([
-        'users.id',
-        'users.name',
-        'users.email',
-        'users.phone',
-        'users.avatar',
-        db.raw("CASE WHEN users.role = 'admin' THEN 1 ELSE 0 END as is_admin")
+        "users.id",
+        "users.name",
+        "users.email",
+        "users.phone",
+        "users.avatar",
+        "users.is_admin",
+        "users.is_verified"
       ])
       .first();
   }
 }
+
+export const Session = new SessionModel();
+export default Session;

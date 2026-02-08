@@ -1,19 +1,19 @@
 /**
  * PasswordResetToken Model
- *
+ * 
  * Handles password reset token database operations.
  */
-import { db } from '../config/database.js';
+import { BaseModel, BaseRecord } from "./BaseModel.js";
 
 /**
  * PasswordResetToken record interface
  */
-export interface PasswordResetTokenRecord {
+export interface PasswordResetTokenRecord extends BaseRecord {
   id: number;
   email: string;
   token: string;
-  created_at: number;
-  expires_at: number;
+  created_at: Date;
+  expires_at: Date;
 }
 
 /**
@@ -22,19 +22,23 @@ export interface PasswordResetTokenRecord {
 export interface CreatePasswordResetTokenData {
   email: string;
   token: string;
-  expires_at: number;
+  expires_at: Date;
 }
 
-class PasswordResetTokenModel {
-  private tableName = 'password_reset_tokens';
+class PasswordResetTokenModel extends BaseModel<PasswordResetTokenRecord> {
+  protected tableName = "password_reset_tokens";
+  protected timestampOptions = {
+    useTimestamps: false,
+    timestampFormat: 'datetime' as const
+  };
 
   /**
    * Find valid token (not expired)
    */
   async findValidToken(token: string): Promise<PasswordResetTokenRecord | undefined> {
-    return db(this.tableName)
-      .where('token', token)
-      .where('expires_at', '>', Date.now())
+    return this.query()
+      .where("token", token)
+      .where("expires_at", ">", new Date())
       .first();
   }
 
@@ -42,18 +46,17 @@ class PasswordResetTokenModel {
    * Find by email
    */
   async findByEmail(email: string): Promise<PasswordResetTokenRecord | undefined> {
-    return db(this.tableName).where('email', email).first();
+    return this.query().where("email", email).first();
   }
 
   /**
    * Create a new password reset token
    */
   async createToken(data: CreatePasswordResetTokenData): Promise<void> {
-    await db(this.tableName).insert({
+    await this.query().insert({
       email: data.email,
       token: data.token,
-      expires_at: data.expires_at,
-      created_at: Date.now(),
+      expires_at: data.expires_at
     });
   }
 
@@ -61,21 +64,21 @@ class PasswordResetTokenModel {
    * Delete token by token string
    */
   async deleteByToken(token: string): Promise<number> {
-    return db(this.tableName).where('token', token).delete();
+    return this.query().where("token", token).delete();
   }
 
   /**
    * Delete all tokens for an email
    */
   async deleteByEmail(email: string): Promise<number> {
-    return db(this.tableName).where('email', email).delete();
+    return this.query().where("email", email).delete();
   }
 
   /**
    * Delete expired tokens
    */
   async deleteExpired(): Promise<number> {
-    return db(this.tableName).where('expires_at', '<', Date.now()).delete();
+    return this.query().where("expires_at", "<", new Date()).delete();
   }
 }
 
