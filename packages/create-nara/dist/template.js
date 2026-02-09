@@ -109,6 +109,7 @@ function createPackageJson(name, mode, features) {
     if (features.includes('db')) {
         pkg.dependencies['knex'] = '^3.1.0';
         pkg.dependencies['better-sqlite3'] = '^11.0.0';
+        pkg.dependencies['dayjs'] = '^1.11.13';
         pkg.devDependencies['@types/better-sqlite3'] = '^7.6.0';
     }
     if (features.includes('auth')) {
