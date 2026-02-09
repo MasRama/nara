@@ -4,8 +4,8 @@
  * session management, and login/logout functionality.
  */
 
-import { SessionModel } from '../models/Session.js';
-import type { NaraRequest, NaraResponse } from '@nara-web/core';
+import { Session } from '@models'; 
+import type { NaraRequest as Request, NaraResponse as Response } from '@nara-web/core';
 import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
 
 // PBKDF2 configuration
@@ -20,70 +20,104 @@ const SESSION_EXPIRY_MS = 1000 * 60 * 60 * 24 * 60; // 60 days
 
 /**
  * Secure cookie options
+ * - httpOnly: Prevents JavaScript access (XSS protection)
+ * - secure: Only send over HTTPS (in production)
+ * - sameSite: Prevents CSRF attacks
+ * - path: Cookie valid for entire site
  */
 const getSecureCookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  path: '/',
+   httpOnly: true,
+   secure: process.env.NODE_ENV === 'production',
+   sameSite: 'lax' as const,
+   path: '/',
 });
 
-class Authenticate {
-  /**
-   * Hashes a plain text password using PBKDF2
-   */
-  async hash(password: string) {
-    const salt = randomBytes(SALT_SIZE).toString('hex');
-    const hash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
-    return `${salt}:${hash}`;
-  }
+/**
+ * Authentication class providing core authentication functionality
+ */
+class Autenticate {
+   /**
+    * Hashes a plain text password using PBKDF2
+    * @param {string} password - The plain text password to hash
+    * @returns {string} The hashed password with salt (format: salt:hash)
+    */
+   async hash(password: string) {
+      const salt = randomBytes(SALT_SIZE).toString('hex');
+      const hash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
+      return `${salt}:${hash}`;
+   }
 
-  /**
-   * Compares a plain text password with a hashed password
-   * Uses timing-safe comparison to prevent timing attacks
-   */
-  async compare(password: string, storedHash: string) {
-    const [salt, hash] = storedHash.split(':');
-    if (!salt || !hash) return false;
+   /**
+    * Compares a plain text password with a hashed password
+    * Uses timing-safe comparison to prevent timing attacks
+    * @param {string} password - The plain text password to verify
+    * @param {string} storedHash - The stored password hash with salt (format: salt:hash)
+    * @returns {boolean} True if passwords match, false otherwise
+    */
+   async compare(password: string, storedHash: string) {
+      const [salt, hash] = storedHash.split(':');
+      if (!salt || !hash) return false;
+      
+      const newHash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
+      
+      // Use timing-safe comparison to prevent timing attacks
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const newHashBuffer = Buffer.from(newHash, 'hex');
+      
+      if (hashBuffer.length !== newHashBuffer.length) return false;
+      
+      return timingSafeEqual(hashBuffer, newHashBuffer);
+   }
 
-    const newHash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
+   /**
+    * Processes user login by creating a new session
+    * @param {Object} user - The user object containing user details
+    * @param {Request} request - The HTTP request object
+    * @param {Response} response - The HTTP response object
+    * 
+    * @description
+    * 1. Generates a unique session token
+    * 2. Creates a session record in the database
+    * 3. Sets a secure session cookie with HttpOnly, Secure, SameSite flags
+    * 4. Redirects to the home page
+    */
+   async process(user: any, request: Request, response: Response) {
+      const token = randomUUID();
 
-    // Use timing-safe comparison to prevent timing attacks
-    const hashBuffer = Buffer.from(hash, 'hex');
-    const newHashBuffer = Buffer.from(newHash, 'hex');
+      await Session.createSession({
+         id: token,
+         user_id: user.id,
+         user_agent: request.headers["user-agent"] || null,
+      });
 
-    if (hashBuffer.length !== newHashBuffer.length) return false;
+      // Set secure cookie with proper security flags
+      // HttpOnly: Prevents XSS attacks from stealing session
+      // Secure: Only sent over HTTPS in production
+      // SameSite: Prevents CSRF attacks
+      response
+         .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
+         .redirect("/dashboard");
+   }
 
-    return timingSafeEqual(hashBuffer, newHashBuffer);
-  }
+   /**
+    * Handles user logout by removing the session
+    * @param {Request} request - The HTTP request object
+    * @param {Response} response - The HTTP response object
+    * 
+    * @description
+    * 1. Deletes the session from the database
+    * 2. Clears the session cookie with same security options
+    * 3. Redirects to the login page
+    */
+   async logout(request: Request, response: Response) {
+      await Session.delete(request.cookies[SESSION_COOKIE_NAME]);
 
-  /**
-   * Processes user login by creating a new session
-   */
-  async process(user: any, request: NaraRequest, response: NaraResponse) {
-    const token = randomUUID();
-
-    await SessionModel.create({
-      id: token,
-      user_id: user.id,
-      user_agent: request.headers['user-agent'] || null,
-    });
-
-    response
-      .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
-      .redirect('/dashboard');
-  }
-
-  /**
-   * Handles user logout by removing the session
-   */
-  async logout(request: NaraRequest, response: NaraResponse) {
-    await SessionModel.delete(request.cookies[SESSION_COOKIE_NAME]);
-
-    response
-      .cookie(SESSION_COOKIE_NAME, '', 0, getSecureCookieOptions())
-      .redirect('/login');
-  }
+      // Clear cookie with same options to ensure proper deletion
+      response
+         .cookie(SESSION_COOKIE_NAME, "", 0, getSecureCookieOptions())
+         .redirect("/login");
+   }
 }
 
-export default new Authenticate();
+// Export a singleton instance
+export default new Autenticate();
