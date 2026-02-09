@@ -113,11 +113,11 @@ function createPackageJson(name: string, mode: string, features: string[]) {
   if (mode === 'svelte') {
     pkg.dependencies['@nara-web/inertia-svelte'] = '^1.0.0';
     pkg.dependencies['svelte'] = '^5.0.0';
-    pkg.devDependencies['vite'] = '^6.0.0';
-    pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^5.0.0';
+    pkg.devDependencies['vite'] = '^5.4.10';
+    pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^4.0.0';
     pkg.devDependencies['concurrently'] = '^9.0.0';
-    pkg.devDependencies['tailwindcss'] = '^4.0.0';
-    pkg.devDependencies['@tailwindcss/vite'] = '^4.0.0';
+    pkg.devDependencies['tailwindcss'] = '^3.4.14';
+    pkg.devDependencies['autoprefixer'] = '^10.4.20';
   } else if (mode === 'vue') {
     pkg.dependencies['@nara-web/inertia-vue'] = '^1.0.0';
     pkg.dependencies['vue'] = '^3.5.0';
