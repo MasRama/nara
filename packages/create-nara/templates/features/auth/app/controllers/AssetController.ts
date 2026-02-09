@@ -4,7 +4,7 @@
  * Handles static file serving and asset uploads.
  */
 import { randomUUID } from 'crypto';
-import { BaseController, jsonError, jsonServerError, jsonSuccess } from '@nara-web/core';
+import { BaseController, jsonError, jsonSuccess } from '@nara-web/core';
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
 import fs from 'fs';
 import path from 'path';
@@ -85,7 +85,7 @@ class AssetController extends BaseController {
               jsonSuccess(response, 'Avatar uploaded successfully', { url: publicUrl });
             } catch (err) {
               Logger.error('Error processing and uploading image', err as Error);
-              jsonServerError(response, 'Failed to process and upload image');
+              jsonError(response, 'Failed to process and upload image', 500);
             }
           });
         }
@@ -96,7 +96,7 @@ class AssetController extends BaseController {
       }
     } catch (error) {
       Logger.error('Error uploading asset', error as Error);
-      return jsonServerError(response, 'Internal server error');
+      return jsonError(response, 'Internal server error', 500);
     }
   }
 

@@ -1,5 +1,5 @@
 import type { NaraRequest, NaraResponse } from '@nara-web/core';
-import { SessionModel } from '../models/Session.js';
+import { Session } from '../models/Session.js';
 
 const SESSION_COOKIE_NAME = 'auth_id';
 
@@ -36,7 +36,7 @@ export async function webAuthMiddleware(req: NaraRequest, res: NaraResponse, nex
 
   try {
     // Get user from session using optimized JOIN query
-    const user = await SessionModel.getUserBySessionId(sessionId);
+    const user = await Session.getUserBySessionId(sessionId);
 
     if (!user) {
       // Session not found or invalid, clear cookie
@@ -76,7 +76,7 @@ export async function guestMiddleware(req: NaraRequest, res: NaraResponse, next:
 
   if (sessionId) {
     try {
-      const user = await SessionModel.getUserBySessionId(sessionId);
+      const user = await Session.getUserBySessionId(sessionId);
       if (user) {
         // User is authenticated, redirect to dashboard
         if (req.headers['x-inertia']) {
