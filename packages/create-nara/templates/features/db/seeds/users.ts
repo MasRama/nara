@@ -8,25 +8,24 @@ import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 
 export async function seed(knex: Knex): Promise<void> {
-  // Check if admin already exists
-  const existingAdmin = await knex('users').where('email', 'admin@example.com').first();
-  if (existingAdmin) {
-    console.log('Admin user already exists, skipping seed...');
-    return;
-  }
+  // Delete all existing users first
+  await knex('users').del();
 
-  const password = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'password', 10);
-  const now = new Date().toISOString();
+  const password = await bcrypt.hash('nara', 10);
+  const now = Date.now();
 
   await knex('users').insert([
     {
       id: randomUUID(),
-      name: process.env.ADMIN_NAME || 'Admin',
-      email: process.env.ADMIN_EMAIL || 'admin@example.com',
+      name: 'Nara',
+      email: 'nara@ramaren.com',
       phone: null,
       avatar: null,
-      role: 'admin',
+      is_verified: false,
+      membership_date: null,
+      is_admin: true,
       password: password,
+      remember_me_token: null,
       created_at: now,
       updated_at: now,
     },
