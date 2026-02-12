@@ -7,8 +7,9 @@
  */
 
 import 'dotenv/config';
-import { createApp, svelteAdapter } from '@nara-web/core';
-import routes from './routes/web.js';
+import { createApp } from '@nara-web/core';
+import { svelteAdapter } from '@nara-web/inertia-svelte';
+import routes from './routes/web';
 
 // Create and start the application
 const app = createApp({

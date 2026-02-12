@@ -5,17 +5,20 @@ import type { FrontendAdapter } from './adapters';
 export interface AppOptions {
   port?: number;
   adapter?: FrontendAdapter;
+  routes?: HyperExpress.Router;
 }
 
 export class NaraApp {
   private server: HyperExpress.Server;
   private port: number;
   private adapter?: FrontendAdapter;
+  private routes?: HyperExpress.Router;
 
   constructor(options: AppOptions = {}) {
     this.server = new HyperExpress.Server();
     this.port = options.port || 3000;
     this.adapter = options.adapter;
+    this.routes = options.routes;
 
     if (this.adapter) {
       this.server.use(this.adapter.middleware());
@@ -53,6 +56,9 @@ export class NaraApp {
   }
 
   async start() {
+    if (this.routes) {
+      this.server.use(this.routes);
+    }
     await this.server.listen(this.port);
     console.log(`🚀 Server running on http://localhost:${this.port}`);
   }

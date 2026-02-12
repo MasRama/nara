@@ -5,13 +5,13 @@
  * Routes can use middleware arrays for authentication and authorization.
  */
 import { createRouter } from '@nara-web/core';
-import AuthController from '../app/controllers/AuthController.js';
-import UserController from '../app/controllers/UserController.js';
-import OAuthController from '../app/controllers/OAuthController.js';
-import HomeController from '../app/controllers/HomeController.js';
-import AssetController from '../app/controllers/AssetController.js';
-import { webAuthMiddleware as Auth } from '../app/middlewares/auth.js';
-import { strictRateLimit } from '../app/middlewares/rateLimit.js';
+import AuthController from '../app/controllers/AuthController';
+import UserController from '../app/controllers/UserController';
+import OAuthController from '../app/controllers/OAuthController';
+import HomeController from '../app/controllers/HomeController';
+import AssetController from '../app/controllers/AssetController';
+import { webAuthMiddleware as Auth } from '../app/middlewares/auth';
+import { strictRateLimit } from '../app/middlewares/rateLimit';
 
 const Route = createRouter();
 
