@@ -97,10 +97,7 @@ function createPackageJson(name: string, mode: string, features: string[]) {
     scripts: {
       dev: mode === 'minimal' ? 'tsx watch server.ts' : 'concurrently "tsx watch server.ts" "vite"',
       build: 'tsc',
-      start: 'node dist/server.js',
-      "db:migrate": 'knex migrate:latest --knexfile knexfile.ts',
-      "db:migrate:rollback": 'knex migrate:rollback --knexfile knexfile.ts',
-      "db:seed": 'knex seed:run --knexfile knexfile.ts'
+      start: 'node dist/server.js'
     },
     dependencies: {
       '@nara-web/core': '^1.0.0',
