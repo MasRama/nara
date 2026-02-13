@@ -26,6 +26,40 @@ class BaseController {
             throw new Error('Inertia support is not enabled. Please provide a FrontendAdapter.');
         }
     }
+    requireAuth(req) {
+        if (!req.user) {
+            throw new Error('Unauthorized');
+        }
+    }
+    requireAdmin(req) {
+        this.requireAuth(req);
+        if (!req.user.is_admin) {
+            throw new Error('Forbidden');
+        }
+    }
+    async getBody(req, _schema) {
+        return await req.json();
+    }
+    getPaginationParams(req) {
+        const page = parseInt(req.query.page) || 1;
+        const rawLimit = parseInt(req.query.limit) || 10;
+        const limit = Math.min(rawLimit, 100);
+        const search = req.query.search || '';
+        return { page, limit, search };
+    }
+    getQueryParam(req, key, defaultValue = '') {
+        return req.query[key] || defaultValue;
+    }
+    getParam(req, key) {
+        return req.params[key];
+    }
+    getRequiredParam(req, key) {
+        const value = req.params[key];
+        if (!value) {
+            throw new Error(`Parameter '${key}' is required`);
+        }
+        return value;
+    }
 }
 exports.BaseController = BaseController;
 //# sourceMappingURL=BaseController.js.map

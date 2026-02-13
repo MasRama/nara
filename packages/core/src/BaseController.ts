@@ -30,4 +30,45 @@ export class BaseController {
       throw new Error('Inertia support is not enabled. Please provide a FrontendAdapter.');
     }
   }
+
+  protected requireAuth(req: NaraRequest): void {
+    if (!req.user) {
+      throw new Error('Unauthorized');
+    }
+  }
+
+  protected requireAdmin(req: NaraRequest): void {
+    this.requireAuth(req);
+    if (!(req.user as any).is_admin) {
+      throw new Error('Forbidden');
+    }
+  }
+
+  protected async getBody<T = any>(req: NaraRequest, _schema?: any): Promise<T> {
+    return await req.json() as T;
+  }
+
+  protected getPaginationParams(req: NaraRequest) {
+    const page = parseInt(req.query.page as string) || 1;
+    const rawLimit = parseInt(req.query.limit as string) || 10;
+    const limit = Math.min(rawLimit, 100);
+    const search = (req.query.search as string) || '';
+    return { page, limit, search };
+  }
+
+  protected getQueryParam(req: NaraRequest, key: string, defaultValue: string = ''): string {
+    return (req.query[key] as string) || defaultValue;
+  }
+
+  protected getParam(req: NaraRequest, key: string): string | undefined {
+    return req.params[key];
+  }
+
+  protected getRequiredParam(req: NaraRequest, key: string): string {
+    const value = req.params[key];
+    if (!value) {
+      throw new Error(`Parameter '${key}' is required`);
+    }
+    return value;
+  }
 }
