@@ -68,7 +68,7 @@
 
                 <form
                     class="space-y-4 md:space-y-6"
-                    on:submit|preventDefault={submitForm}
+                    onsubmit={(e) => { e.preventDefault(); submitForm(); }}
                 >
                     <div>
                         <label for="email" class="block mb-2 text-sm font-medium text-slate-200">Email atau Nomor Telepon</label>

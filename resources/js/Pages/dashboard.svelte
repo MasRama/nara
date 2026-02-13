@@ -9,10 +9,10 @@
   export let filter: string = 'all';
   export let total: number = 0;
   export let page: number = 1;
-  export let limit: number = 10;
-  export let totalPages: number = 1;
-  export let hasNext: boolean = false;
-  export let hasPrev: boolean = false;
+  export const limit: number = 10;
+  export const totalPages: number = 1;
+  export const hasNext: boolean = false;
+  export const hasPrev: boolean = false;
 
   const currentUser = $inertiaPage.props.user as User | undefined;
 

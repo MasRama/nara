@@ -16,11 +16,11 @@
     if (error) Toast(error, 'error');
   });
 
-  let form: ResetPasswordForm = {
+  let form: ResetPasswordForm = $state({
     password: '',
     password_confirmation: '',
     id
-  }
+  })
  
   function generatePassword(): void { 
     const retVal = password_generator(10); 
@@ -65,7 +65,7 @@
           Reset Password
         </h1>
 
-        <form class="space-y-4 md:space-y-6" on:submit|preventDefault={submitForm}>
+        <form class="space-y-4 md:space-y-6" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
           <div>
             <label for="password" class="block mb-2 text-sm font-medium text-slate-200">Password Baru</label>
             <input 
@@ -77,7 +77,7 @@
               class="bg-slate-900/70 border border-slate-700 text-slate-50 sm:text-sm rounded-lg focus:ring-2 focus:ring-primary-400 focus:border-primary-400 focus:outline-none block w-full py-2.5 px-3 placeholder-slate-500"
               required
             >
-            <button type="button" on:click={generatePassword} class="text-xs text-slate-400 mt-1">Generate Password</button>
+            <button type="button" onclick={generatePassword} class="text-xs text-slate-400 mt-1">Generate Password</button>
           </div>
           <div>
             <label for="confirm-password" class="block mb-2 text-sm font-medium text-slate-200">Konfirmasi Password</label>

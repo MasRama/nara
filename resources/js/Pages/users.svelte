@@ -16,8 +16,8 @@
   export let totalPages: number = 1;
   export let hasNext: boolean = false;
   export let hasPrev: boolean = false;
-  export let search: string = '';
-  export let filter: string = 'all';
+  export const search: string = '';
+  export const filter: string = 'all';
 
   const currentUser = $inertiaPage.props.user as User | undefined;
 

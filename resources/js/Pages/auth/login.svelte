@@ -68,7 +68,7 @@
               </div>
           </div>
 
-          <form class="space-y-5" on:submit|preventDefault={submitForm}>
+          <form class="space-y-5" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
               <div class="space-y-1">
                   <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email</label>
                   <input bind:value={form.email} required type="text" name="email" id="email" 

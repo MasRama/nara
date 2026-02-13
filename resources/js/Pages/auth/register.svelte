@@ -120,7 +120,7 @@
               </div>
           </div>
 
-          <form class="space-y-4" on:submit|preventDefault={submitForm}>
+          <form class="space-y-4" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
               <div class="space-y-1">
                   <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Full Name</label>
                   <input bind:value={form.name} required type="text" name="name" id="name" 
@@ -151,7 +151,7 @@
               </div>
 
               <div class="flex justify-end">
-                <button type="button" on:click="{generatePassword}" class="text-xs font-mono text-info-400 hover:text-info-300 transition-colors flex items-center gap-1">
+                <button type="button" onclick={generatePassword} class="text-xs font-mono text-info-400 hover:text-info-300 transition-colors flex items-center gap-1">
                     <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19H12" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     GENERATE SECURE PASSWORD
                 </button>
