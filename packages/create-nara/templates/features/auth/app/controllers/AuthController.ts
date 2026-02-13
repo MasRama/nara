@@ -28,7 +28,7 @@ class AuthController extends BaseController {
     if (request.cookies.auth_id) {
       const isInertia = request.headers['x-inertia'];
       if (isInertia) {
-        return response.status(409).setHeader('X-Inertia-Location', '/dashboard').send('');
+        return response.setHeader('X-Inertia-Location', '/dashboard').redirect("/dashboard");
       }
       return response.redirect("/dashboard");
     }
