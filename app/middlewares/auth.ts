@@ -13,7 +13,7 @@ export default async (request: Request, response: Response) => {
 
    if (!authId) {
       if (isInertia) {
-         return response.cookie("auth_id", "", 0).status(409).setHeader('X-Inertia-Location', '/login').send('');
+         return response.cookie("auth_id", "", 0).setHeader('X-Inertia-Location', '/login').redirect("/login");
       }
       return response.cookie("auth_id", "", 0).redirect("/login");
    }
@@ -26,7 +26,7 @@ export default async (request: Request, response: Response) => {
    if (!user) {
       // Session not found or user deleted - clear cookie and redirect
       if (isInertia) {
-         return response.cookie("auth_id", "", 0).status(409).setHeader('X-Inertia-Location', '/login').send('');
+         return response.cookie("auth_id", "", 0).setHeader('X-Inertia-Location', '/login').redirect("/login");
       }
       return response.cookie("auth_id", "", 0).redirect("/login");
    }

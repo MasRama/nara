@@ -95,9 +95,8 @@ class Autenticate {
       if (isInertia) {
          return response
             .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
-            .status(409)
             .setHeader('X-Inertia-Location', '/dashboard')
-            .send('');
+            .redirect("/dashboard");
       }
 
       response
