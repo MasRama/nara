@@ -57,10 +57,15 @@ function createPackageJson(name) {
     const pkg = {
         name,
         version: '0.1.0',
+        type: 'module',
+        bin: {
+            nara: './nara.cjs'
+        },
         scripts: {
             dev: 'concurrently "tsx watch server.ts" "vite"',
             build: 'tsc',
-            start: 'node dist/server.js'
+            start: 'node dist/server.js',
+            postinstall: 'chmod +x nara.cjs'
         },
         dependencies: {
             '@nara-web/core': '^1.0.0',
