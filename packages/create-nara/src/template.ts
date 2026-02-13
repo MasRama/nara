@@ -56,6 +56,9 @@ export async function setupProject(options: ProjectOptions) {
   fs.mkdirSync(path.join(targetDir, 'app/models'), { recursive: true });
   fs.mkdirSync(path.join(targetDir, 'database'), { recursive: true });
   fs.mkdirSync(path.join(targetDir, 'storage'), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, 'migrations'), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, 'seeds'), { recursive: true });
+  fs.mkdirSync(path.join(targetDir, 'commands/native'), { recursive: true });
 
   // Generate package.json (dynamic content)
   const pkg = createPackageJson(projectName);
@@ -95,6 +98,7 @@ function createPackageJson(name: string) {
     devDependencies: {
       'typescript': '^5.7.0',
       'tsx': '^4.19.0',
+      'ts-node': '^10.9.2',
       '@types/node': '^22.0.0',
       '@types/better-sqlite3': '^7.6.0',
       'vite': '^5.4.10',
