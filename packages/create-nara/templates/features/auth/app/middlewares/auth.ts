@@ -27,7 +27,7 @@ export async function webAuthMiddleware(req: NaraRequest, res: NaraResponse, nex
     if (isApiRoute) {
       res.status(401).json({ success: false, message: 'Unauthorized. Please log in.' });
     } else if (req.headers['x-inertia']) {
-      res.status(409).setHeader('X-Inertia-Location', '/login').send('');
+      res.setHeader('X-Inertia-Location', '/login').redirect('/login');
     } else {
       res.redirect('/login');
     }
@@ -43,8 +43,8 @@ export async function webAuthMiddleware(req: NaraRequest, res: NaraResponse, nex
       res.cookie(SESSION_COOKIE_NAME, '', 0);
       if (isApiRoute) {
         res.status(401).json({ success: false, message: 'Session expired. Please log in again.' });
-      } else if (req.headers['x-inertia']) {
-        res.status(409).setHeader('X-Inertia-Location', '/login').send('');
+    } else if (req.headers['x-inertia']) {
+      res.setHeader('X-Inertia-Location', '/login').redirect('/login');
       } else {
         res.redirect('/login');
       }
@@ -60,7 +60,7 @@ export async function webAuthMiddleware(req: NaraRequest, res: NaraResponse, nex
     if (isApiRoute) {
       res.status(401).json({ success: false, message: 'Session error. Please log in again.' });
     } else if (req.headers['x-inertia']) {
-      res.status(409).setHeader('X-Inertia-Location', '/login').send('');
+      res.setHeader('X-Inertia-Location', '/login').redirect('/login');
     } else {
       res.redirect('/login');
     }
@@ -80,7 +80,7 @@ export async function guestMiddleware(req: NaraRequest, res: NaraResponse, next:
       if (user) {
         // User is authenticated, redirect to dashboard
         if (req.headers['x-inertia']) {
-          res.status(409).setHeader('X-Inertia-Location', '/dashboard').send('');
+          res.setHeader('X-Inertia-Location', '/dashboard').redirect('/dashboard');
         } else {
           res.redirect('/dashboard');
         }
