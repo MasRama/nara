@@ -2,6 +2,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseController = void 0;
 class BaseController {
+    constructor() {
+        const prototype = Object.getPrototypeOf(this);
+        const propertyNames = Object.getOwnPropertyNames(prototype);
+        for (const name of propertyNames) {
+            const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+            if (name !== 'constructor' && descriptor && typeof descriptor.value === 'function') {
+                this[name] = this[name].bind(this);
+            }
+        }
+    }
     json(res, data, status = 200) {
         return res.status(status).json(data);
     }
