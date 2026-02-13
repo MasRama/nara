@@ -49,6 +49,11 @@ export async function setupProject(options) {
     // Generate package.json (dynamic content)
     const pkg = createPackageJson(projectName);
     fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(pkg, null, 2));
+    // Make nara.cjs executable
+    const naraCjsPath = path.join(targetDir, 'nara.cjs');
+    if (fs.existsSync(naraCjsPath)) {
+        fs.chmodSync(naraCjsPath, '755');
+    }
 }
 function copyDir(src, dest) {
     fs.cpSync(src, dest, { recursive: true, force: true });
@@ -58,10 +63,14 @@ function createPackageJson(name) {
         name,
         version: '0.1.0',
         type: 'module',
+        bin: {
+            nara: './nara.cjs'
+        },
         scripts: {
             dev: 'concurrently "tsx watch server.ts" "vite"',
             build: 'tsc',
-            start: 'node dist/server.js'
+            start: 'node dist/server.js',
+            "postinstall": "chmod +x nara.cjs"
         },
         dependencies: {
             '@nara-web/core': '^1.0.0',
