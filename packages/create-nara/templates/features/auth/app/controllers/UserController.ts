@@ -208,3 +208,5 @@ export class UserController extends BaseController {
     return jsonSuccess(res, { deleted }, `${deleted} user(s) deleted successfully`);
   }
 }
+
+export default new UserController();

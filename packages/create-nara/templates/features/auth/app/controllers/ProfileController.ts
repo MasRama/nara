@@ -134,3 +134,5 @@ export class ProfileController extends BaseController {
     }
   }
 }
+
+export default new ProfileController();

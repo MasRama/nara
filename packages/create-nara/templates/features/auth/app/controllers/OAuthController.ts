@@ -146,3 +146,5 @@ export class OAuthController extends BaseController {
     }
   }
 }
+
+export default new OAuthController();
