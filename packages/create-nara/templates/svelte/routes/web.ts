@@ -10,8 +10,8 @@ import UserController from '../app/controllers/UserController';
 import OAuthController from '../app/controllers/OAuthController';
 import HomeController from '../app/controllers/HomeController';
 import AssetController from '../app/controllers/AssetController';
-import { webAuthMiddleware as Auth } from '../app/middlewares/auth';
-import { strictRateLimit } from '../app/middlewares/rateLimit';
+import { webAuthMiddleware as Auth } from '../app/middlewares/auth.js';
+import { strictRateLimit } from '../app/middlewares/rateLimit.js';
 
 const Route = createRouter();
 
