@@ -7,9 +7,10 @@
  */
 
 import 'dotenv/config';
+import 'tsconfig-paths/register';
 import { createApp } from '@nara-web/core';
 import { svelteAdapter } from '@nara-web/inertia-svelte';
-import routes from './routes/web';
+import routes from './routes/web.js';
 
 // Create and start the application
 const app = createApp({

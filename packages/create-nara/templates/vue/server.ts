@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import 'tsconfig-paths/register';
 import { createApp, jsonError } from '@nara-web/core';
 import { vueAdapter } from '@nara-web/inertia-vue';
 import { registerRoutes } from './routes/web.js';

@@ -101,7 +101,8 @@ function createPackageJson(name: string, mode: string, features: string[]) {
     },
     dependencies: {
       '@nara-web/core': '^1.0.0',
-      'dotenv': '^16.4.7'
+      'dotenv': '^16.4.7',
+      'tsconfig-paths': '^4.2.0'
     },
     devDependencies: {
       'typescript': '^5.7.0',
@@ -114,6 +115,7 @@ function createPackageJson(name: string, mode: string, features: string[]) {
     pkg.dependencies['@nara-web/inertia-svelte'] = '^1.0.0';
     pkg.dependencies['svelte'] = '^5.0.0';
     pkg.dependencies['@tailwindcss/typography'] = '^0.5.16';
+    pkg.dependencies['tsconfig-paths'] = '^4.2.0';
     pkg.devDependencies['vite'] = '^5.4.10';
     pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^4.0.0';
     pkg.devDependencies['concurrently'] = '^9.0.0';
@@ -122,6 +124,7 @@ function createPackageJson(name: string, mode: string, features: string[]) {
   } else if (mode === 'vue') {
     pkg.dependencies['@nara-web/inertia-vue'] = '^1.0.0';
     pkg.dependencies['vue'] = '^3.5.0';
+    pkg.dependencies['tsconfig-paths'] = '^4.2.0';
     pkg.devDependencies['vite'] = '^6.0.0';
     pkg.devDependencies['@vitejs/plugin-vue'] = '^5.0.0';
     pkg.devDependencies['concurrently'] = '^9.0.0';
