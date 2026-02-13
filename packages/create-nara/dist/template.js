@@ -90,6 +90,7 @@ function createPackageJson(name, mode, features) {
     if (mode === 'svelte') {
         pkg.dependencies['@nara-web/inertia-svelte'] = '^1.0.0';
         pkg.dependencies['svelte'] = '^5.0.0';
+        pkg.dependencies['@tailwindcss/typography'] = '^0.5.16';
         pkg.devDependencies['vite'] = '^5.4.10';
         pkg.devDependencies['@sveltejs/vite-plugin-svelte'] = '^4.0.0';
         pkg.devDependencies['concurrently'] = '^9.0.0';
