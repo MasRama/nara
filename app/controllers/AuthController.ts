@@ -26,6 +26,10 @@ class AuthController extends BaseController {
    */
   public async registerPage(request: NaraRequest, response: NaraResponse) {
     if (request.cookies.auth_id) {
+      const isInertia = request.headers['x-inertia'];
+      if (isInertia) {
+        return response.status(409).setHeader('X-Inertia-Location', '/dashboard').send('');
+      }
       return response.redirect("/dashboard");
     }
     this.requireInertia(response);

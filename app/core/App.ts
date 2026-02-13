@@ -287,7 +287,9 @@ export class NaraApp {
 
             return (res as NaraResponse)
               .cookie("error", errorMsg, 5000)
-              .redirect(referer);
+              .status(409)
+              .setHeader('X-Inertia-Location', referer)
+              .send('');
           }
 
           // For API requests, return JSON

@@ -90,10 +90,16 @@ class Autenticate {
          user_agent: request.headers["user-agent"] || null,
       });
 
-      // Set secure cookie with proper security flags
-      // HttpOnly: Prevents XSS attacks from stealing session
-      // Secure: Only sent over HTTPS in production
-      // SameSite: Prevents CSRF attacks
+      const isInertia = request.headers['x-inertia'];
+
+      if (isInertia) {
+         return response
+            .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
+            .status(409)
+            .setHeader('X-Inertia-Location', '/dashboard')
+            .send('');
+      }
+
       response
          .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
          .redirect("/dashboard");
