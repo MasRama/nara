@@ -6,13 +6,8 @@
 
 import { Session } from '@models'; 
 import type { NaraRequest as Request, NaraResponse as Response } from '@nara-web/core';
-import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
-
-// PBKDF2 configuration
-const ITERATIONS = 100000;
-const KEYLEN = 64;
-const DIGEST = 'sha512';
-const SALT_SIZE = 16;
+import { randomUUID } from 'crypto';
+import bcrypt from 'bcrypt';
 
 // Session cookie configuration
 const SESSION_COOKIE_NAME = 'auth_id';
@@ -37,36 +32,22 @@ const getSecureCookieOptions = () => ({
  */
 class Autenticate {
    /**
-    * Hashes a plain text password using PBKDF2
+    * Hashes a plain text password using bcrypt
     * @param {string} password - The plain text password to hash
-    * @returns {string} The hashed password with salt (format: salt:hash)
+    * @returns {string} The hashed password
     */
    async hash(password: string) {
-      const salt = randomBytes(SALT_SIZE).toString('hex');
-      const hash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
-      return `${salt}:${hash}`;
+      return await bcrypt.hash(password, 10);
    }
 
    /**
     * Compares a plain text password with a hashed password
-    * Uses timing-safe comparison to prevent timing attacks
     * @param {string} password - The plain text password to verify
-    * @param {string} storedHash - The stored password hash with salt (format: salt:hash)
+    * @param {string} storedHash - The stored password hash
     * @returns {boolean} True if passwords match, false otherwise
     */
    async compare(password: string, storedHash: string) {
-      const [salt, hash] = storedHash.split(':');
-      if (!salt || !hash) return false;
-      
-      const newHash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
-      
-      // Use timing-safe comparison to prevent timing attacks
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const newHashBuffer = Buffer.from(newHash, 'hex');
-      
-      if (hashBuffer.length !== newHashBuffer.length) return false;
-      
-      return timingSafeEqual(hashBuffer, newHashBuffer);
+      return await bcrypt.compare(password, storedHash);
    }
 
    /**
