@@ -1,6 +1,6 @@
 {
   "name": "@nara-web/inertia-svelte",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Svelte 5 + Inertia.js adapter for NARA",
   "type": "module",
   "main": "dist/index.js",

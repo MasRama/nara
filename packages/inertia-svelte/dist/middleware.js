@@ -51,7 +51,7 @@ export const inertiaMiddleware = (config = {}) => {
             if (isDev) {
                 viteTags = `
     <script type="module" src="http://localhost:${vitePort}/@vite/client"></script>
-    <script type="module" src="http://localhost:${vitePort}/resources/js/app.ts"></script>
+    <script type="module" src="http://localhost:${vitePort}/js/app.ts"></script>
         `.trim();
             }
             else {
