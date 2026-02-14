@@ -25,6 +25,10 @@ export type { AppOptions } from './App';
 export { BaseController } from './BaseController';
 export type { AuthenticatedRequest, AdminRequest, PaginationParams } from './BaseController';
 
+// Form Request
+export { FormRequest } from './FormRequest';
+export type { FormRequestConstructor } from './FormRequest';
+
 // Types
 export type {
   User,

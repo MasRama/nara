@@ -45,7 +45,9 @@
       "@root/*": ["./*"],
       "@root/knexfile": ["./knexfile.ts"],
       "@events": ["app/events/index.ts"],
-      "@events/*": ["app/events/*"]
+      "@events/*": ["app/events/*"],
+      "@requests": ["app/requests/index.ts"],
+      "@requests/*": ["app/requests/*"]
     }
   },
   "include": [

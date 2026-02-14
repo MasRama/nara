@@ -20,11 +20,9 @@ import {
 } from "@core";
 import { randomUUID } from "crypto";
 import {
-  CreateUserSchema,
-  UpdateUserSchema,
-  DeleteUsersSchema,
   ChangeProfileSchema,
 } from "@validators";
+import { CreateUserRequest, UpdateUserRequest, DeleteUsersRequest } from "@requests";
 import { event } from "@helpers/events";
 import { UserCreated, UserUpdated, UsersDeleted } from "@events/examples";
 
@@ -120,8 +118,8 @@ class UserController extends BaseController {
    * Create a new user (admin only)
    */
   public async createUser(request: NaraRequest, response: NaraResponse) {
-    await this.requireAdmin(request);
-    const data = await this.getBody(request, CreateUserSchema);
+    const req = await CreateUserRequest.from(request);
+    const data = req.validated();
 
     try {
       const user = await User.create({
@@ -160,9 +158,9 @@ class UserController extends BaseController {
    * Update an existing user (admin only)
    */
   public async updateUser(request: NaraRequest, response: NaraResponse) {
-    await this.requireAdmin(request);
+    const req = await UpdateUserRequest.from(request);
+    const data = req.validated();
     const id = this.getRequiredParam(request, 'id');
-    const data = await this.getBody(request, UpdateUserSchema);
 
     const payload: Record<string, unknown> = {};
 
@@ -201,8 +199,8 @@ class UserController extends BaseController {
    * Delete multiple users (admin only)
    */
   public async deleteUsers(request: NaraRequest, response: NaraResponse) {
-    await this.requireAdmin(request);
-    const data = await this.getBody(request, DeleteUsersSchema);
+    const req = await DeleteUsersRequest.from(request);
+    const data = req.validated();
 
     const deleted = await User.deleteMany(data.ids);
 

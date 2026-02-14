@@ -27,6 +27,7 @@
 import type { NaraRequest, NaraResponse, NaraResponseWithInertia, User } from './types';
 import { AuthError, ForbiddenError, ValidationError } from './errors';
 import type { Validator, ValidationResult } from '@validators/validate';
+import type { FormRequest, FormRequestConstructor } from './FormRequest';
 import { PAGINATION } from '@config';
 import { authorize as authorizeHelper } from '@helpers/authorization';
 
@@ -271,6 +272,32 @@ export abstract class BaseController {
       throw new AuthError();
     }
     await authorizeHelper(req.user, ability, ...args);
+  }
+
+  /**
+   * Get and validate request using a FormRequest class
+   *
+   * Creates a FormRequest instance, performs authorization and validation,
+   * and returns the validated FormRequest.
+   *
+   * @param req - Request object
+   * @param FormRequestClass - FormRequest class to instantiate
+   * @returns Promise<FormRequest<T>>
+   * @throws ForbiddenError if authorization fails
+   * @throws ValidationError if validation fails
+   *
+   * @example
+   * async create(req: NaraRequest, res: NaraResponse) {
+   *   const formRequest = await this.getValidated(req, CreateUserRequest);
+   *   const data = formRequest.validated();
+   *   // data is typed based on the FormRequest
+   * }
+   */
+  protected async getValidated<T, R extends FormRequest<T>>(
+    req: NaraRequest,
+    FormRequestClass: FormRequestConstructor<T, R>
+  ): Promise<R> {
+    return FormRequestClass.from(req);
   }
 }
 
