@@ -4,15 +4,29 @@
   import Header from '../Components/Header.svelte';
   import type { User } from '../types';
 
-  export let users: User[] = [];
-  export let search: string = '';
-  export let filter: string = 'all';
-  export let total: number = 0;
-  export let page: number = 1;
-  export const limit: number = 10;
-  export const totalPages: number = 1;
-  export const hasNext: boolean = false;
-  export const hasPrev: boolean = false;
+  interface Props {
+    users?: User[];
+    search?: string;
+    filter?: string;
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+    hasNext?: boolean;
+    hasPrev?: boolean;
+  }
+
+  let { 
+    users = [], 
+    search = '', 
+    filter = 'all', 
+    total = 0, 
+    page = 1,
+    limit = 10,
+    totalPages = 1,
+    hasNext = false,
+    hasPrev = false
+  }: Props = $props();
 
   const currentUser = $inertiaPage.props.user as User | undefined;
 

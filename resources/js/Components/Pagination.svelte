@@ -23,7 +23,7 @@
     <div class="flex items-center gap-2">
       <button
         class="px-3 py-1.5 rounded-full bg-slate-800 dark:bg-slate-200 hover:bg-slate-700 dark:hover:bg-slate-300 text-slate-100 dark:text-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={() => goToPage(meta.page - 1)}
+        onclick={() => goToPage(meta.page - 1)}
         disabled={!meta.hasPrev}
       >
         ← Prev
@@ -37,7 +37,7 @@
           class="px-3 py-1.5 rounded-full transition {pageNum === meta.page 
             ? 'bg-primary-500 text-white' 
             : 'bg-slate-800 dark:bg-slate-200 hover:bg-slate-700 dark:hover:bg-slate-300 text-slate-100 dark:text-slate-800'}"
-          on:click={() => goToPage(pageNum)}
+          onclick={() => goToPage(pageNum)}
         >
           {pageNum}
         </button>
@@ -45,7 +45,7 @@
       
       <button
         class="px-3 py-1.5 rounded-full bg-slate-800 dark:bg-slate-200 hover:bg-slate-700 dark:hover:bg-slate-300 text-slate-100 dark:text-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        on:click={() => goToPage(meta.page + 1)}
+        onclick={() => goToPage(meta.page + 1)}
         disabled={!meta.hasNext}
       >
         Next →

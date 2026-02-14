@@ -18,21 +18,25 @@
     show: boolean;
   }
 
-  $: user = $page.props.user as User | undefined;
-  let scrollY = 0;
-  let isMenuOpen: boolean = false;
+  interface Props {
+    group: string;
+  }
 
-  export let group: string; 
+  let { group }: Props = $props();
 
-  $: scrolled = scrollY > 50;
+  let user = $derived($page.props.user as User | undefined);
+  let scrollY = $state(0);
+  let isMenuOpen = $state(false);
 
-  $: menuLinks = [
+  let scrolled = $derived(scrollY > 50);
+
+  let menuLinks = $derived([
     { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },  
     { href: '/users', label: 'Users', group: 'users', show: !!(user?.is_admin) },
     { href: '/profile', label: 'Profile', group: 'profile', show: !!user },
-  ] as MenuLink[];
+  ] as MenuLink[]);
   
-  $: visibleMenuLinks = menuLinks.filter((item) => item.show);
+  let visibleMenuLinks = $derived(menuLinks.filter((item) => item.show));
 
   function handleLogout(): void {
     router.post('/logout');
@@ -106,7 +110,7 @@
               {user.name}
             </span>
             <button 
-              on:click={handleLogout}
+              onclick={handleLogout}
               class="group relative px-5 py-2 text-xs font-bold uppercase tracking-wider overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 hover:border-red-500/50 dark:hover:border-red-500/50 transition-colors"
             >
               <span class="relative z-10 text-slate-600 dark:text-slate-300 group-hover:text-red-500 transition-colors">
@@ -136,7 +140,7 @@
       <!-- Mobile Menu Button -->
       <button
         class="md:hidden relative w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 hover:border-primary-500/50 transition-colors text-slate-900 dark:text-white"
-        on:click={() => isMenuOpen = !isMenuOpen}
+        onclick={() => isMenuOpen = !isMenuOpen}
         aria-label="Menu"
       >
         <div class="flex flex-col gap-1.5 w-4">
@@ -160,7 +164,7 @@
   <!-- Close Button -->
   <button
     class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white z-10"
-    on:click={() => isMenuOpen = false}
+    onclick={() => isMenuOpen = false}
     aria-label="Close menu"
   >
     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -181,7 +185,7 @@
         <a 
           href={item.href}
           use:inertia
-          on:click={() => isMenuOpen = false}
+          onclick={() => isMenuOpen = false}
           class="block text-4xl sm:text-5xl font-bold tracking-tighter transition-all duration-300
             {item.group === group 
               ? 'text-primary-500' 
@@ -202,7 +206,7 @@
         <p class="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-4">Signed in as</p>
         <p class="text-lg font-medium text-slate-900 dark:text-white mb-6">{user.name}</p>
         <button 
-          on:click={handleLogout}
+          onclick={handleLogout}
           class="px-6 py-3 text-sm font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-full hover:border-red-500 hover:text-red-500 transition-colors"
         >
           Logout

@@ -43,8 +43,21 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+      },
+    },
     rollupOptions: {
-      input: input
-    }
+      input: input,
+      output: {
+        manualChunks: {
+          'vendor-svelte': ['svelte'],
+          'vendor-inertia': ['@inertiajs/svelte'],
+          'vendor-utils': ['axios', 'dayjs'],
+        },
+      },
+    },
   }
 });

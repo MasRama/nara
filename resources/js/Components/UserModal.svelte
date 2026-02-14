@@ -33,8 +33,8 @@
   <!-- Backdrop -->
   <div 
     class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
-    on:click={handleBackdropClick}
-    on:keydown={(e) => e.key === 'Escape' && handleClose()}
+    onclick={handleBackdropClick}
+    onkeydown={(e) => e.key === 'Escape' && handleClose()}
     role="dialog"
     aria-modal="true"
     aria-labelledby="modal-title"
@@ -77,7 +77,7 @@
             <!-- Close Button -->
             <button
               class="group w-10 h-10 flex items-center justify-center rounded-full border border-slate-200 dark:border-white/10 hover:border-red-500/50 hover:bg-red-500/5 transition-all duration-300"
-              on:click={handleClose}
+              onclick={handleClose}
               disabled={isSubmitting}
               aria-label="Close modal"
             >
@@ -89,7 +89,7 @@
         </div>
 
         <!-- Form -->
-        <form class="p-8 space-y-6" on:submit|preventDefault={handleSubmit}>
+        <form class="p-8 space-y-6" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
           
           <!-- Name Field -->
           <div class="group">
@@ -200,7 +200,7 @@
             <button
               type="button"
               class="px-6 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors disabled:opacity-50"
-              on:click={handleClose}
+              onclick={handleClose}
               disabled={isSubmitting}
             >
               Cancel

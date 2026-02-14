@@ -1,11 +1,11 @@
 <script lang="ts">
-import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
 
-let darkMode: boolean = false;
-let mounted: boolean = false;
-export let onchange: (mode: boolean) => void = () => {};
+  let darkMode: boolean = false;
+  let mounted: boolean = false;
+  export let onchange: (mode: boolean) => void = () => {};
 
-onMount(() => {
+  onMount(() => {
     // Check system preference
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     // Check localStorage or fallback to system preference
@@ -23,14 +23,20 @@ onMount(() => {
         mounted = true;
     }, 100);
 
-    // Listen for system preference changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e: MediaQueryListEvent) => {
+    // Listen for system preference changes with cleanup
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
         if (localStorage.getItem('darkMode') === null) {
             darkMode = e.matches;
             toggleDarkMode();
         }
-    });
-});
+    };
+    mediaQuery.addEventListener('change', handler);
+
+    return () => {
+        mediaQuery.removeEventListener('change', handler);
+    };
+  });
 
 function toggleDarkMode(): void {
     darkMode = !darkMode;
@@ -49,7 +55,7 @@ function toggleDarkMode(): void {
 </script>
 
 <button 
-    on:click={toggleDarkMode}
+    onclick={toggleDarkMode}
     class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
     aria-label="Toggle dark mode"
 >

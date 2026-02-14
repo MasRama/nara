@@ -15,6 +15,7 @@
 
 import HyperExpress from "hyper-express";
 import cors from "cors";
+import compression from "compression";
 import path from "path";
 
 import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "@config";
@@ -206,6 +207,10 @@ export class NaraApp {
    * Apply default middlewares (Security Headers, Request Logging, CORS, Rate Limit, Inertia)
    */
   private applyDefaultMiddlewares(): void {
+    // Compression should be first for better performance
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.server.use(compression() as any);
+
     // Security headers should be first to ensure all responses have them
     if (this.options.securityHeaders) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
