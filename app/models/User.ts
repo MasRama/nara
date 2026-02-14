@@ -161,10 +161,13 @@ class UserModel extends BaseModel<UserRecord> {
     let query = this.query().select("*");
 
     if (searchTerm) {
+      // Sanitize search term to remove SQL wildcards that could cause unexpected behavior
+      const sanitizedSearch = searchTerm.replace(/[%_]/g, '');
+      const searchPattern = `%${sanitizedSearch}%`;
       query = query.where(function() {
-        this.where('name', 'like', `%${searchTerm}%`)
-          .orWhere('email', 'like', `%${searchTerm}%`)
-          .orWhere('phone', 'like', `%${searchTerm}%`);
+        this.where('name', 'like', searchPattern)
+          .orWhere('email', 'like', searchPattern)
+          .orWhere('phone', 'like', searchPattern);
       });
     }
 

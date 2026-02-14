@@ -9,7 +9,10 @@ import Logger from "@services/Logger";
 import { Storage } from '@services';
 import { UPLOAD } from '@config/constants';
 
-
+// File upload security constants
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
 // Cache object to store file contents in memory
 let cache: { [key: string]: Buffer } = {};
@@ -27,16 +30,32 @@ class AssetController extends BaseController {
 
         // Store user reference for use in nested callbacks
         const userId = request.user.id;
-        console.log('[AVATAR DEBUG] Upload started for user:', userId);
+        Logger.debug('Avatar upload started', { userId });
 
-        try { 
-            let isValidFile = true;
+        let isValidFile = true;
+        let errorMessage = '';
+        let errorCode = '';
+        let errorStatus = 400;
 
+        try {
             await request.multipart(async (field: any) => {
                 if (field.file) {
-                    if (!field.mime_type.includes("image")) {
-                        console.log('[AVATAR DEBUG] File mime_type:', field.mime_type);
+                    // Validate file size
+                    if (field.file_size > MAX_FILE_SIZE_BYTES) {
                         isValidFile = false;
+                        errorMessage = `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB`;
+                        errorCode = "FILE_TOO_LARGE";
+                        errorStatus = 413;
+                        return;
+                    }
+
+                    // Validate MIME type
+                    if (!ALLOWED_MIME_TYPES.includes(field.mime_type)) {
+                        Logger.debug('Invalid file mime_type', { mimeType: field.mime_type, userId });
+                        isValidFile = false;
+                        errorMessage = "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.";
+                        errorCode = "INVALID_FILE_TYPE";
+                        errorStatus = 400;
                         return;
                     }
 
@@ -53,7 +72,7 @@ class AssetController extends BaseController {
 
                     readable.on('end', async () => {
                         const buffer = Buffer.concat(chunks);
-                        console.log('[AVATAR DEBUG] Total buffer length received:', buffer.length);
+                        Logger.debug('Avatar upload buffer received', { size: buffer.length, userId });
 
                         try {
                             // Process image with Sharp and get buffer
@@ -64,7 +83,7 @@ class AssetController extends BaseController {
                                     withoutEnlargement: true
                                 })
                                 .toBuffer();
-                            console.log('[AVATAR DEBUG] Processed buffer length (WebP):', processedBuffer.length);
+                            Logger.debug('Avatar image processed', { processedSize: processedBuffer.length, userId });
 
                             // Store processed image using Storage service
                             const storedFile = await Storage.put(processedBuffer, {
@@ -72,7 +91,7 @@ class AssetController extends BaseController {
                                 name: id,
                                 extension: 'webp'
                             });
-                            console.log('[AVATAR DEBUG] File stored at:', storedFile.url);
+                            Logger.debug('Avatar file stored', { url: storedFile.url, userId });
 
                             // Build public URL for the saved file
                             const publicUrl = storedFile.url;
@@ -92,7 +111,7 @@ class AssetController extends BaseController {
                             await User.updateAvatar(userId, publicUrl);
 
                             // Return success response with public URL
-                            console.log('[AVATAR DEBUG] Returning public URL:', publicUrl);
+                            Logger.debug('Avatar upload completed', { url: publicUrl, userId });
                             jsonSuccess(response, 'Avatar berhasil diupload', { url: publicUrl });
                         } catch (err) {
                             Logger.error('Error processing and uploading image', err as Error);
@@ -103,7 +122,7 @@ class AssetController extends BaseController {
             });
 
             if (!isValidFile) {
-                return jsonError(response, "Invalid file type. Only images are allowed.", 400, "INVALID_FILE_TYPE");
+                return jsonError(response, errorMessage, errorStatus, errorCode);
             }
 
         } catch (error) {

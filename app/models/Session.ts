@@ -6,12 +6,18 @@
 import { BaseModel, BaseRecord } from "./BaseModel";
 
 /**
+ * Session TTL constant (30 days in milliseconds)
+ */
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
  * Session record interface
  */
 export interface SessionRecord extends BaseRecord {
   id: string;
   user_id: string;
   user_agent: string | null;
+  expires_at: number | null;
 }
 
 /**
@@ -21,6 +27,7 @@ export interface CreateSessionData {
   id: string;
   user_id: string;
   user_agent?: string | null;
+  expires_at?: number | null;
 }
 
 class SessionModel extends BaseModel<SessionRecord> {
@@ -48,13 +55,17 @@ class SessionModel extends BaseModel<SessionRecord> {
    * Create a new session
    */
   async createSession(data: CreateSessionData): Promise<SessionRecord> {
-    await this.query().insert(data);
+    const sessionData = {
+      ...data,
+      expires_at: data.expires_at || Date.now() + SESSION_TTL_MS
+    };
+    await this.query().insert(sessionData);
     return this.findById(data.id) as Promise<SessionRecord>;
   }
 
   /**
    * Get user by session ID (optimized JOIN query)
-   * Returns user data if session is valid, undefined otherwise
+   * Returns user data if session is valid and not expired, undefined otherwise
    */
   async getUserBySessionId(sessionId: string): Promise<{
     id: string;
@@ -69,6 +80,10 @@ class SessionModel extends BaseModel<SessionRecord> {
     return DB.from("sessions")
       .join("users", "sessions.user_id", "users.id")
       .where("sessions.id", sessionId)
+      .where(function() {
+        this.whereNull("sessions.expires_at")
+          .orWhere("sessions.expires_at", ">", Date.now());
+      })
       .select([
         "users.id",
         "users.name",
@@ -79,6 +94,17 @@ class SessionModel extends BaseModel<SessionRecord> {
         "users.is_verified"
       ])
       .first();
+  }
+
+  /**
+   * Clean up expired sessions
+   * Returns the number of deleted sessions
+   */
+  async cleanupExpiredSessions(): Promise<number> {
+    return this.query()
+      .whereNotNull("expires_at")
+      .where("expires_at", "<=", Date.now())
+      .delete();
   }
 }
 
