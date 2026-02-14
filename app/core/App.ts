@@ -25,6 +25,7 @@ import { securityHeaders } from "@middlewares/securityHeaders";
 import { requestLogger } from "@middlewares/requestLogger";
 import { rateLimit } from "@middlewares/rateLimit";
 import { csrf } from "@middlewares/csrf";
+import { inputSanitize } from "@middlewares/inputSanitize";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
@@ -100,6 +101,13 @@ export interface AppOptions {
   csrf?: boolean;
 
   /**
+   * Enable input sanitization middleware.
+   * Sanitizes req.body, req.query, req.params to prevent XSS.
+   * @default true
+   */
+  inputSanitize?: boolean;
+
+  /**
    * Application routes (HyperExpress.Router).
    * Can also be mounted later via app.mount()
    */
@@ -133,6 +141,7 @@ const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler" | "ad
   requestLogging: true,
   rateLimit: false, // Opt-in
   csrf: false, // Opt-in, see docs/SECURITY.md
+  inputSanitize: true, // Enabled by default
   shutdownTimeout: 10000,
 };
 
@@ -250,6 +259,11 @@ export class NaraApp {
     // CSRF protection after rate limiting but before route handlers
     if (this.options.csrf) {
       this.server.use(csrf() as unknown as HyperExpressMiddleware);
+    }
+
+    // Input sanitization after CSRF but before route handlers
+    if (this.options.inputSanitize) {
+      this.server.use(inputSanitize() as unknown as HyperExpressMiddleware);
     }
 
     if (this.options.adapter) {
