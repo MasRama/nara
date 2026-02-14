@@ -190,20 +190,34 @@ export function inputSanitize(
         );
       }
 
-      // Sanitize query parameters
+      // Sanitize query parameters in-place (req.query is read-only in HyperExpress)
       if (opts.sanitizeQuery && req.query) {
-        req.query = sanitizeValue(req.query, opts, "query") as Record<
+        const sanitizedQuery = sanitizeValue(req.query, opts, "query") as Record<
           string,
           string | string[]
         >;
+        // Modify each property in-place since we can't reassign req.query
+        for (const key of Object.keys(req.query)) {
+          delete (req.query as Record<string, unknown>)[key];
+        }
+        for (const [key, value] of Object.entries(sanitizedQuery)) {
+          (req.query as Record<string, unknown>)[key] = value;
+        }
       }
 
-      // Sanitize route parameters
+      // Sanitize route parameters in-place (req.params is read-only in HyperExpress)
       if (opts.sanitizeParams && req.params) {
-        req.params = sanitizeValue(req.params, opts, "params") as Record<
+        const sanitizedParams = sanitizeValue(req.params, opts, "params") as Record<
           string,
           string
         >;
+        // Modify each property in-place since we can't reassign req.params
+        for (const key of Object.keys(req.params)) {
+          delete (req.params as Record<string, unknown>)[key];
+        }
+        for (const [key, value] of Object.entries(sanitizedParams)) {
+          (req.params as Record<string, unknown>)[key] = value;
+        }
       }
 
       return next();
