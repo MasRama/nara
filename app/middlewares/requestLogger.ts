@@ -104,7 +104,8 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
     // Store original end method to intercept response
     const originalJson = res.json.bind(res);
     const originalSend = res.send.bind(res);
-    
+    const originalRedirect = res.redirect.bind(res);
+
     let logged = false;
     
     const logRequest = (statusCode?: number) => {
@@ -196,8 +197,15 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
       logRequest();
       return originalSend(data as Parameters<typeof originalSend>[0]);
     };
-    
-    // Also log on response finish (for redirects, etc.)
+
+    // Intercept redirect() to capture status code (3xx)
+    // Note: HyperExpress redirect only takes URL, status is always 302
+    res.redirect = (url: string) => {
+      logRequest(302);
+      return originalRedirect(url);
+    };
+
+    // Also log on response finish (backup for other cases)
     res.on('finish', () => {
       logRequest();
     });
