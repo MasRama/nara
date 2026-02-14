@@ -25,13 +25,15 @@ export interface User {
 
 /**
  * Extended Request interface with user and shared data
- * 
+ *
  * @property user - Authenticated user (set by auth middleware)
  * @property share - Shared data passed to Inertia views
+ * @property requestId - Unique request ID for tracing (set by requestId middleware)
  */
 export interface NaraRequest extends HyperRequest {
   user?: User;
   share?: Record<string, unknown>;
+  requestId?: string;
 }
 
 /**

@@ -62,3 +62,7 @@ export {
   sanitizers,
 } from './inputSanitize';
 export type { InputSanitizeOptions } from './inputSanitize';
+
+// Request ID
+export { requestId, requestIdWithOptions } from './requestId';
+export type { RequestIdOptions } from './requestId';

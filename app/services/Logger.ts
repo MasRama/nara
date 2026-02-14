@@ -268,9 +268,9 @@ export default new Logger();
 
 /**
  * Example usage in controllers:
- * 
+ *
  * import Logger from 'app/services/Logger';
- * 
+ *
  * class UserController {
  *   async login(req, res) {
  *     try {
@@ -281,6 +281,25 @@ export default new Logger();
  *     } catch (error) {
  *       Logger.error('Login failed', error);
  *       return res.status(500).json({ error: 'Login failed' });
+ *     }
+ *   }
+ * }
+ *
+ * Example with request context (child logger):
+ *
+ * class OrderController {
+ *   async process(req: NaraRequest, res: NaraResponse) {
+ *     // Create child logger with request context
+ *     const logger = Logger.child({ requestId: req.requestId });
+ *
+ *     logger.info('Processing order'); // All logs will include requestId
+ *
+ *     try {
+ *       logger.debug('Validating order', { orderId: req.body.orderId });
+ *       // ... processing logic
+ *       logger.info('Order processed successfully');
+ *     } catch (error) {
+ *       logger.error('Order processing failed', error);
  *     }
  *   }
  * }

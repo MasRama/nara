@@ -26,6 +26,7 @@ import { requestLogger } from "@middlewares/requestLogger";
 import { rateLimit } from "@middlewares/rateLimit";
 import { csrf } from "@middlewares/csrf";
 import { inputSanitize } from "@middlewares/inputSanitize";
+import { requestId } from "@middlewares/requestId";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
@@ -241,6 +242,9 @@ export class NaraApp {
     if (this.options.securityHeaders) {
       this.server.use(securityHeaders() as unknown as HyperExpressMiddleware);
     }
+
+    // Request ID middleware - must be before requestLogger so requestId is available for logging
+    this.server.use(requestId() as unknown as HyperExpressMiddleware);
 
     // Request logging early to capture all requests
     if (this.options.requestLogging) {

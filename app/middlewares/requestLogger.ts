@@ -128,7 +128,12 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
         ip: req.ip,
         timestamp: new Date(startTimestamp).toISOString(),
       };
-      
+
+      // Add request ID if available (from requestId middleware)
+      if (req.requestId) {
+        logData.requestId = req.requestId;
+      }
+
       // Add user ID if authenticated
       if (req.user?.id) {
         logData.userId = req.user.id;
