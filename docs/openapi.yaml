@@ -21,7 +21,7 @@ info:
     // Error
     { "success": false, "message": "...", "code": "ERROR_CODE", "errors": {...} }
     ```
-  version: 1.1.12
+  version: 1.2.0
   contact:
     name: MasRama
   license:
@@ -34,14 +34,25 @@ servers:
 tags:
   - name: Auth
     description: Authentication endpoints
+  - name: Home
+    description: Home and static pages
   - name: Users
     description: User management (admin)
   - name: Profile
     description: User profile management
-  - name: Password
-    description: Password management
+  - name: Assets
+    description: File uploads and static assets
 
 paths:
+  /:
+    get:
+      tags: [Home]
+      summary: Home page
+      description: Renders the home/landing page
+      responses:
+        '200':
+          description: Home page HTML
+
   /login:
     get:
       tags: [Auth]
@@ -125,80 +136,7 @@ paths:
         '302':
           description: Redirect to dashboard
 
-  /forgot-password:
-    get:
-      tags: [Password]
-      summary: Forgot password page
-      responses:
-        '200':
-          description: Forgot password page HTML
-    post:
-      tags: [Password]
-      summary: Send reset password link
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ForgotPasswordInput'
-      responses:
-        '200':
-          $ref: '#/components/responses/Success'
-        '404':
-          $ref: '#/components/responses/NotFound'
 
-  /reset-password/{id}:
-    get:
-      tags: [Password]
-      summary: Reset password page
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Reset token
-      responses:
-        '200':
-          description: Reset password page HTML
-        '404':
-          description: Invalid or expired token
-
-  /reset-password:
-    post:
-      tags: [Password]
-      summary: Process password reset
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResetPasswordInput'
-      responses:
-        '302':
-          description: Redirect to dashboard on success
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /change-password:
-    post:
-      tags: [Password]
-      summary: Change password
-      security:
-        - cookieAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ChangePasswordInput'
-      responses:
-        '200':
-          $ref: '#/components/responses/Success'
-        '400':
-          description: Invalid current password
-        '401':
-          $ref: '#/components/responses/Unauthorized'
 
   /dashboard:
     get:
@@ -339,36 +277,81 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /verify:
+  /assets/avatar:
     post:
-      tags: [Profile]
-      summary: Send verification email
+      tags: [Assets]
+      summary: Upload avatar
+      description: Upload user avatar image
       security:
         - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
       responses:
-        '302':
-          description: Redirect to dashboard
+        '200':
+          $ref: '#/components/responses/Success'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Too many requests
 
-  /verify/{id}:
+  /assets/{file}:
     get:
-      tags: [Profile]
-      summary: Verify email
-      security:
-        - cookieAuth: []
+      tags: [Assets]
+      summary: Get dist asset
+      description: Serves compiled assets from dist directory
       parameters:
-        - name: id
+        - name: file
           in: path
           required: true
           schema:
             type: string
-          description: Verification token
       responses:
-        '302':
-          description: Redirect to dashboard
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        '200':
+          description: Asset file
+        '404':
+          description: File not found
+
+  /public/{path*}:
+    get:
+      tags: [Assets]
+      summary: Get public file
+      description: Serves files from public directory
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public file
+        '404':
+          description: File not found
+
+  /storage/{path*}:
+    get:
+      tags: [Assets]
+      summary: Get storage file
+      description: Serves files from storage directory
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Storage file
+        '404':
+          description: File not found
 
 components:
   securitySchemes:

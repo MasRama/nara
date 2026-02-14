@@ -30,7 +30,10 @@ jsonPaginated(res, 'List', data, meta);   // 200 with pagination
 jsonError(res, 'Error', 400);             // Custom error
 jsonNotFound(res, 'Not found');           // 404
 jsonUnauthorized(res, 'Unauthorized');    // 401
+jsonForbidden(res, 'Forbidden');          // 403
 jsonValidationError(res, 'Invalid', errors); // 422
+jsonServerError(res, 'Error');            // 500
+jsonNoContent(res);                       // 204
 ```
 
 ### Timestamps
