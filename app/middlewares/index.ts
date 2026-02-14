@@ -40,14 +40,25 @@ export type { RequestLoggerOptions } from './requestLogger';
 export { authorize, authorizeOrFail } from './authorize';
 
 // Security Headers
-export { 
-  securityHeaders, 
-  strictSecurityHeaders, 
+export {
+  securityHeaders,
+  strictSecurityHeaders,
   devSecurityHeaders,
 } from './securityHeaders';
-export type { 
-  SecurityHeadersOptions, 
-  HSTSOptions, 
-  CSPOptions, 
+export type {
+  SecurityHeadersOptions,
+  HSTSOptions,
+  CSPOptions,
   CSPDirectives,
 } from './securityHeaders';
+
+// Input Sanitization
+export {
+  inputSanitize,
+  sanitizeHtml,
+  stripHtml,
+  sanitizeInput,
+  createSanitizer,
+  sanitizers,
+} from './inputSanitize';
+export type { InputSanitizeOptions } from './inputSanitize';
