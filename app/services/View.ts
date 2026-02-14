@@ -37,6 +37,19 @@ function escapeHtml(value: string): string {
 }
 
 /**
+ * Escapes JSON string for safe embedding in HTML attributes.
+ * This prevents XSS attacks when JSON is placed in data-page attribute.
+ */
+function escapeHtmlForJson(jsonString: string): string {
+   return jsonString
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;");
+}
+
+/**
  * Renders a basic HTML file with provided data.
  * Currently used for `inertia.html` as the SPA shell.
  */
@@ -62,7 +75,8 @@ export function view(filename: string, view_data?: any) {
       }
 
       if (typeof view_data.page === "string") {
-         html = html.replace("{{it.page}}", escapeHtml(view_data.page));
+         // Escape JSON for safe HTML embedding to prevent XSS
+         html = html.replace("{{it.page}}", escapeHtmlForJson(view_data.page));
       }
    }
 
