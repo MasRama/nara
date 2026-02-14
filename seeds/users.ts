@@ -2,6 +2,7 @@ import { Knex } from "knex";
 import Authenticate from "../app/services/Authenticate";
 import dayjs from "dayjs";
 import { randomUUID } from "crypto";
+import { UserFactory } from "../database/factories";
 
 export async function seed(knex: Knex): Promise<void> {
 	// Clean tables in correct order (respecting foreign keys)
@@ -133,26 +134,18 @@ export async function seed(knex: Knex): Promise<void> {
 	await knex("role_permissions").insert(userPermissions);
 
 	// ==========================================
-	// 4. Create Admin User
+	// 4. Create Admin User using Factory
 	// ==========================================
-	const password = await Authenticate.hash("nara");
-	const adminUserId = randomUUID();
+	const hashedPassword = await Authenticate.hash("nara");
 
-	await knex("users").insert([
-		{
-			id: adminUserId,
+	const adminUser = await UserFactory
+		.merge({
 			name: "Nara",
 			email: "nara@ramaren.com",
-			phone: null,
-			avatar: null,
+			password: hashedPassword,
 			is_verified: true,
-			membership_date: null,
-			password: password,
-			remember_me_token: null,
-			created_at: now,
-			updated_at: now,
-		},
-	]);
+		})
+		.create();
 
 	// ==========================================
 	// 5. Assign Admin Role to Admin User
@@ -160,7 +153,7 @@ export async function seed(knex: Knex): Promise<void> {
 	await knex("user_roles").insert([
 		{
 			id: randomUUID(),
-			user_id: adminUserId,
+			user_id: adminUser.id,
 			role_id: adminRole.id,
 			created_at: now,
 		},
