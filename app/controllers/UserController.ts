@@ -11,20 +11,22 @@ import { User } from "@models";
 import { paginate, parsePaginationQuery } from "@services/Paginator";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
-import { 
+import {
   BaseController,
-  jsonSuccess, 
-  jsonCreated, 
-  jsonError, 
-  jsonServerError 
-} from "@core"; 
+  jsonSuccess,
+  jsonCreated,
+  jsonError,
+  jsonServerError
+} from "@core";
 import { randomUUID } from "crypto";
-import { 
+import {
   CreateUserSchema,
   UpdateUserSchema,
   DeleteUsersSchema,
   ChangeProfileSchema,
 } from "@validators";
+import { event } from "@helpers/events";
+import { UserCreated, UserUpdated, UsersDeleted } from "@events/examples";
 
 /**
  * Query parameters for user listing
@@ -138,6 +140,12 @@ class UserController extends BaseController {
         }
       }
 
+      // Dispatch user created event
+      await event(new UserCreated({
+        user,
+        createdBy: request.user!.id
+      }));
+
       return jsonCreated(response, "User created", { user });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -172,6 +180,13 @@ class UserController extends BaseController {
         await User.syncRoles(id, data.roles);
       }
 
+      // Dispatch user updated event
+      await event(new UserUpdated({
+        user: user as unknown as { id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; },
+        updatedBy: request.user!.id,
+        changes: payload as Partial<{ id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; }>
+      }));
+
       return jsonSuccess(response, "User berhasil diupdate", { user });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -197,6 +212,13 @@ class UserController extends BaseController {
       count: deleted,
       ip: request.ip
     });
+
+    // Dispatch users deleted event
+    await event(new UsersDeleted({
+      ids: data.ids,
+      deletedBy: request.user!.id,
+      count: deleted
+    }));
 
     return jsonSuccess(response, "Users berhasil dihapus", { deleted });
   }

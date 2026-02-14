@@ -15,10 +15,12 @@ import { User } from "@models";
 import LoginThrottle from "@services/LoginThrottle";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
-import { BaseController } from "@core"; 
+import { BaseController } from "@core";
 import { randomUUID } from "crypto";
 import { LoginSchema, RegisterSchema, ChangePasswordSchema } from "@validators";
 import { AUTH, ERROR_MESSAGES } from "@config";
+import { event } from "@helpers/events";
+import { UserRegistered, UserLoggedIn, UserLoggedOut } from "@events/examples";
 
 class AuthController extends BaseController {
   /**
@@ -110,6 +112,14 @@ class AuthController extends BaseController {
         email: user.email,
         ip: request.ip
       });
+
+      // Dispatch user logged in event
+      await event(new UserLoggedIn({
+        user,
+        ip: request.ip || 'unknown',
+        userAgent: request.headers['user-agent']
+      }));
+
       return Authenticate.process(user, request, response);
     } else {
       const throttleResult = LoginThrottle.recordFailedAttempt(identifier, ip);
@@ -160,6 +170,11 @@ class AuthController extends BaseController {
         ip: request.ip
       });
 
+      // Dispatch user registered event
+      await event(new UserRegistered({
+        user
+      }));
+
       return Authenticate.process(user, request, response);
     } catch (error: any) {
       if (error.code == "SQLITE_CONSTRAINT_UNIQUE") {
@@ -181,6 +196,13 @@ class AuthController extends BaseController {
    */
   public async logout(request: NaraRequest, response: NaraResponse) {
     if (request.cookies.auth_id) {
+      // Dispatch user logged out event before actual logout
+      if (request.user) {
+        await event(new UserLoggedOut({
+          user: request.user
+        }));
+      }
+
       await Authenticate.logout(request, response);
     }
   }

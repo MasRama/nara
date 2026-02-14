@@ -43,7 +43,9 @@
       "@routes/*": ["routes/*"],
       "@resources/*": ["resources/*"],
       "@root/*": ["./*"],
-      "@root/knexfile": ["./knexfile.ts"]
+      "@root/knexfile": ["./knexfile.ts"],
+      "@events": ["app/events/index.ts"],
+      "@events/*": ["app/events/*"]
     }
   },
   "include": [
