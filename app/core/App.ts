@@ -30,6 +30,24 @@ import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
 
+// Type for HyperExpress compatible middleware
+// Uses unknown as intermediate type to handle type mismatches between
+// Express-style middlewares (compression, cors) and NaraMiddleware
+type HyperExpressMiddleware = (
+  req: HyperExpress.Request,
+  res: HyperExpress.Response,
+  next: () => void
+) => void | Promise<void>;
+
+// Helper type for casting middlewares with incompatible types
+type MiddlewareLike =
+  | HyperExpressMiddleware
+  | ((
+      req: unknown,
+      res: unknown,
+      next: () => void
+    ) => void | Promise<void>);
+
 /**
  * Application configuration options
  */
@@ -208,19 +226,16 @@ export class NaraApp {
    */
   private applyDefaultMiddlewares(): void {
     // Compression should be first for better performance
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.server.use(compression() as any);
+    this.server.use(compression() as unknown as HyperExpressMiddleware);
 
     // Security headers should be first to ensure all responses have them
     if (this.options.securityHeaders) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.server.use(securityHeaders() as any);
+      this.server.use(securityHeaders() as unknown as HyperExpressMiddleware);
     }
 
     // Request logging early to capture all requests
     if (this.options.requestLogging) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.server.use(requestLogger() as any);
+      this.server.use(requestLogger() as unknown as HyperExpressMiddleware);
     }
 
     if (this.options.cors) {
@@ -229,20 +244,17 @@ export class NaraApp {
 
     // Rate limiting after CORS but before route handlers
     if (this.options.rateLimit) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.server.use(rateLimit() as any);
+      this.server.use(rateLimit() as unknown as HyperExpressMiddleware);
     }
 
     // CSRF protection after rate limiting but before route handlers
     if (this.options.csrf) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.server.use(csrf() as any);
+      this.server.use(csrf() as unknown as HyperExpressMiddleware);
     }
 
     if (this.options.adapter) {
       // Apply adapter middleware
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.server.use(this.options.adapter.middleware() as any);
+      this.server.use(this.options.adapter.middleware() as unknown as HyperExpressMiddleware);
 
       // Register response extensions
       this.server.use((_req, res, next) => {
@@ -391,7 +403,8 @@ export class NaraApp {
 
       // Step 2: Close database connections
       Logger.info("Closing database connections...");
-      const DB = (await import("@services/DB")).default;
+      const DBModule = await import("@services/DB");
+      const DB = DBModule.default;
       await DB.destroy();
       Logger.info("Database connections closed");
 
@@ -424,8 +437,12 @@ export class NaraApp {
   use(middleware: Parameters<HyperExpress.Server["use"]>[0]): this;
   use(path: string, middleware: Parameters<HyperExpress.Server["use"]>[0]): this;
   use(...args: unknown[]): this {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.server.use as any)(...args);
+    // Use type assertion through unknown for compatibility with different middleware types
+    if (args.length === 1) {
+      this.server.use(args[0] as unknown as HyperExpressMiddleware);
+    } else {
+      this.server.use(args[0] as string, args[1] as unknown as HyperExpressMiddleware);
+    }
     return this;
   }
 

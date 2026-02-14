@@ -4,7 +4,7 @@
  * session management, and login/logout functionality.
  */
 
-import { Session } from "@models"; 
+import { Session, UserRecord } from "@models"; 
 import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from "crypto";
 
@@ -35,7 +35,7 @@ const getSecureCookieOptions = () => ({
 /**
  * Authentication class providing core authentication functionality
  */
-class Autenticate {
+class Authenticate {
    /**
     * Hashes a plain text password using PBKDF2
     * @param {string} password - The plain text password to hash
@@ -81,7 +81,7 @@ class Autenticate {
     * 3. Sets a secure session cookie with HttpOnly, Secure, SameSite flags
     * 4. Redirects to the home page
     */
-   async process(user: any, request: Request, response: Response) {
+   async process(user: UserRecord, request: Request, response: Response) {
       const token = randomUUID();
 
       await Session.createSession({
@@ -125,4 +125,4 @@ class Autenticate {
 }
 
 // Export a singleton instance
-export default new Autenticate();
+export default new Authenticate();

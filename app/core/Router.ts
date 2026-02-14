@@ -17,6 +17,17 @@ import HyperExpress from 'hyper-express';
 import type { NaraRequest, NaraResponse, NaraMiddleware, NaraHandler, RouteMiddlewares } from './types';
 
 /**
+ * HyperExpress compatible types
+ */
+type HyperExpressHandler = (
+  req: HyperExpress.Request,
+  res: HyperExpress.Response,
+  next?: () => void
+) => void | Promise<void>;
+
+type HyperExpressMiddleware = HyperExpressHandler;
+
+/**
  * HTTP methods supported by the router
  */
 type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options' | 'head';
@@ -60,10 +71,8 @@ export class NaraRouter {
     const middlewareArray = Array.isArray(middlewares) ? middlewares : [middlewares];
 
     // Cast handlers to HyperExpress types (they're compatible at runtime)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hyperMiddlewares = middlewareArray as any[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hyperHandler = handler as any;
+    const hyperMiddlewares = middlewareArray as HyperExpressMiddleware[];
+    const hyperHandler = handler as HyperExpressHandler;
 
     // Register route with HyperExpress
     if (middlewareArray.length > 0) {
@@ -167,10 +176,8 @@ export class NaraRouter {
     const middlewares = args.length > 1 ? args[0] as RouteMiddlewares : [];
 
     const middlewareArray = Array.isArray(middlewares) ? middlewares : [middlewares];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hyperMiddlewares = middlewareArray as any[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const hyperHandler = handler as any;
+    const hyperMiddlewares = middlewareArray as HyperExpressMiddleware[];
+    const hyperHandler = handler as HyperExpressHandler;
 
     if (middlewareArray.length > 0) {
       this.router.any(path, hyperMiddlewares, hyperHandler);
@@ -192,11 +199,9 @@ export class NaraRouter {
   use(path: string, middleware: NaraMiddleware): this;
   use(pathOrMiddleware: string | NaraMiddleware, middleware?: NaraMiddleware): this {
     if (typeof pathOrMiddleware === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.router.use(pathOrMiddleware as any);
+      this.router.use(pathOrMiddleware as HyperExpressMiddleware);
     } else if (middleware) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.router.use(pathOrMiddleware, middleware as any);
+      this.router.use(pathOrMiddleware, middleware as HyperExpressMiddleware);
     }
     return this;
   }

@@ -192,8 +192,7 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
     };
     
     // Intercept send() to capture status code
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    res.send = (data: any) => {
+    res.send = (data: unknown) => {
       logRequest();
       return originalSend(data);
     };
