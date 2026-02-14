@@ -7,7 +7,6 @@
   interface ResetPasswordForm {
     password: string;
     password_confirmation: string;
-    id: string;
   }
 
   let { id, error }: { id: string, error?: string } = $props();
@@ -18,8 +17,7 @@
 
   let form: ResetPasswordForm = $state({
     password: '',
-    password_confirmation: '',
-    id
+    password_confirmation: ''
   })
  
   function generatePassword(): void { 
@@ -34,7 +32,7 @@
       return;
     }
 
-    router.post(`/reset-password`, form as any)
+    router.post(`/reset-password`, { ...form, id } as any)
   }
 </script>
 

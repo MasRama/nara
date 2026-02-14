@@ -9,24 +9,38 @@
   import type { User, UserForm, PaginationMeta } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
 
-  export let users: User[] = [];
-  export let total: number = 0;
-  export let page: number = 1;
-  export let limit: number = 10;
-  export let totalPages: number = 1;
-  export let hasNext: boolean = false;
-  export let hasPrev: boolean = false;
-  export const search: string = '';
-  export const filter: string = 'all';
+  interface Props {
+    users?: User[];
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+    hasNext?: boolean;
+    hasPrev?: boolean;
+    search?: string;
+    filter?: string;
+  }
+
+  let { 
+    users = [], 
+    total = 0, 
+    page = 1, 
+    limit = 10, 
+    totalPages = 1, 
+    hasNext = false, 
+    hasPrev = false,
+    search = '',
+    filter = 'all'
+  }: Props = $props();
 
   const currentUser = $inertiaPage.props.user as User | undefined;
 
-  $: paginationMeta = { total, page, limit, totalPages, hasNext, hasPrev } as PaginationMeta;
+  let paginationMeta = $derived({ total, page, limit, totalPages, hasNext, hasPrev } as PaginationMeta);
 
-  let showUserModal: boolean = false;
-  let isSubmitting: boolean = false;
-  let mode: 'create' | 'edit' = 'create';
-  let form: UserForm = createEmptyUserForm();
+  let showUserModal: boolean = $state(false);
+  let isSubmitting: boolean = $state(false);
+  let mode: 'create' | 'edit' = $state('create');
+  let form: UserForm = $state(createEmptyUserForm());
 
   function openCreateUser(): void {
     mode = 'create';
@@ -130,7 +144,7 @@
           {#if currentUser && currentUser.is_admin}
             <button
               class="group relative px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform disabled:opacity-50"
-              on:click={openCreateUser}
+              onclick={openCreateUser}
               disabled={isSubmitting}
             >
               <span class="relative z-10 flex items-center gap-2">
@@ -198,14 +212,14 @@
                     <div class="flex items-center gap-2 pt-4 border-t border-slate-200 dark:border-white/5">
                       <button
                         class="flex-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-accent-500/50 hover:text-accent-500 transition-colors disabled:opacity-50"
-                        on:click={() => openEditUser(userItem)}
+                        onclick={() => openEditUser(userItem)}
                         disabled={isSubmitting}
                       >
                         Edit
                       </button>
                       <button
                         class="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-danger-500/20 text-danger-500 rounded-full hover:bg-danger-500 hover:text-white transition-colors disabled:opacity-50"
-                        on:click={() => deleteUser(userItem.id)}
+                        onclick={() => deleteUser(userItem.id)}
                         disabled={isSubmitting}
                       >
                         Delete
@@ -232,7 +246,7 @@
             {#if currentUser && currentUser.is_admin}
               <button
                 class="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full hover:scale-105 transition-transform"
-                on:click={openCreateUser}
+                onclick={openCreateUser}
               >
                 Add First User
               </button>
