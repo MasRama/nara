@@ -27,7 +27,7 @@
  * const user = SQLite.get("SELECT * FROM users WHERE id = ?", [userId]);
  * 
  * // Get all rows
- * const users = SQLite.all("SELECT * FROM users WHERE is_admin = ?", [true]);
+ * const users = SQLite.all("SELECT * FROM users WHERE is_verified = ?", [true]);
  * 
  * // Insert/Update/Delete
  * const result = SQLite.run("INSERT INTO logs (message) VALUES (?)", [message]);

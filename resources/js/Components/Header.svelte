@@ -8,7 +8,8 @@
     id: string;
     name: string;
     email: string;
-    is_admin: boolean;
+    roles: string[];
+    permissions: string[];
   }
 
   interface MenuLink {
@@ -31,8 +32,8 @@
   let scrolled = $derived(scrollY > 50);
 
   let menuLinks = $derived([
-    { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },  
-    { href: '/users', label: 'Users', group: 'users', show: !!(user?.is_admin) },
+    { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },
+    { href: '/users', label: 'Users', group: 'users', show: Array.isArray(user?.roles) && user.roles.includes('admin') },
     { href: '/profile', label: 'Profile', group: 'profile', show: !!user },
   ] as MenuLink[]);
   

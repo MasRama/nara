@@ -73,11 +73,13 @@ class SessionModel extends BaseModel<SessionRecord> {
     email: string;
     phone: string | null;
     avatar: string | null;
-    is_admin: boolean;
     is_verified: boolean;
+    roles: string[];
   } | undefined> {
     const DB = (await import("@services/DB")).default;
-    return DB.from("sessions")
+
+    // Get basic user data
+    const user = await DB.from("sessions")
       .join("users", "sessions.user_id", "users.id")
       .where("sessions.id", sessionId)
       .where(function() {
@@ -90,10 +92,22 @@ class SessionModel extends BaseModel<SessionRecord> {
         "users.email",
         "users.phone",
         "users.avatar",
-        "users.is_admin",
         "users.is_verified"
       ])
       .first();
+
+    if (!user) return undefined;
+
+    // Get user roles
+    const roles = await DB.from("user_roles")
+      .join("roles", "user_roles.role_id", "roles.id")
+      .where("user_roles.user_id", user.id)
+      .select("roles.slug as role");
+
+    return {
+      ...user,
+      roles: roles.map((r: { role: string }) => r.role)
+    };
   }
 
   /**

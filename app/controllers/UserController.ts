@@ -64,9 +64,21 @@ class UserController extends BaseController {
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
+    // Attach roles to each user
+    const usersWithRoles = await Promise.all(
+      result.data.map(async (user: unknown) => {
+        const userRecord = user as { id: string };
+        const roles = await User.roles(userRecord.id);
+        return {
+          ...userRecord,
+          roles: roles.map((r) => r.slug),
+        };
+      })
+    );
+
     this.requireInertia(response);
     return response.inertia("dashboard", {
-      users: result.data,
+      users: usersWithRoles,
       ...result.meta,
       search: params.search,
       filter: params.filter
@@ -81,9 +93,21 @@ class UserController extends BaseController {
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
+    // Attach roles to each user
+    const usersWithRoles = await Promise.all(
+      result.data.map(async (user: unknown) => {
+        const userRecord = user as { id: string };
+        const roles = await User.roles(userRecord.id);
+        return {
+          ...userRecord,
+          roles: roles.map((r) => r.slug),
+        };
+      })
+    );
+
     this.requireInertia(response);
     return response.inertia("users", {
-      users: result.data,
+      users: usersWithRoles,
       ...result.meta,
       search: params.search,
       filter: params.filter,
@@ -94,7 +118,7 @@ class UserController extends BaseController {
    * Create a new user (admin only)
    */
   public async createUser(request: NaraRequest, response: NaraResponse) {
-    this.requireAdmin(request);
+    await this.requireAdmin(request);
     const data = await this.getBody(request, CreateUserSchema);
 
     try {
@@ -103,10 +127,17 @@ class UserController extends BaseController {
         name: data.name,
         email: data.email,
         phone: data.phone || null,
-        is_admin: data.is_admin,
         is_verified: data.is_verified,
         password: await Authenticate.hash(data.password || data.email),
       });
+
+      // Assign roles if provided
+      if (data.roles && data.roles.length > 0) {
+        for (const roleSlug of data.roles) {
+          await User.assignRole(user.id, roleSlug);
+        }
+      }
+
       return jsonCreated(response, "User created", { user });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -121,21 +152,26 @@ class UserController extends BaseController {
    * Update an existing user (admin only)
    */
   public async updateUser(request: NaraRequest, response: NaraResponse) {
-    this.requireAdmin(request);
+    await this.requireAdmin(request);
     const id = this.getRequiredParam(request, 'id');
     const data = await this.getBody(request, UpdateUserSchema);
 
-    const payload: Record<string, any> = {};
+    const payload: Record<string, unknown> = {};
 
     if (data.name !== undefined) payload.name = data.name;
     if (data.email !== undefined) payload.email = data.email;
     if (data.phone !== undefined) payload.phone = data.phone;
-    if (data.is_admin !== undefined) payload.is_admin = data.is_admin;
     if (data.is_verified !== undefined) payload.is_verified = data.is_verified;
     if (data.password) payload.password = await Authenticate.hash(data.password);
 
     try {
       const user = await User.update(id, payload);
+
+      // Sync roles if provided
+      if (data.roles !== undefined) {
+        await User.syncRoles(id, data.roles);
+      }
+
       return jsonSuccess(response, "User berhasil diupdate", { user });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
@@ -150,13 +186,13 @@ class UserController extends BaseController {
    * Delete multiple users (admin only)
    */
   public async deleteUsers(request: NaraRequest, response: NaraResponse) {
-    this.requireAdmin(request);
+    await this.requireAdmin(request);
     const data = await this.getBody(request, DeleteUsersSchema);
 
     const deleted = await User.deleteMany(data.ids);
 
     Logger.warn('Users deleted by admin', {
-      adminId: request.user.id,
+      adminId: request.user!.id,
       deletedIds: data.ids,
       count: deleted,
       ip: request.ip

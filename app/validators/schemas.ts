@@ -43,8 +43,8 @@ export interface CreateUserInput {
   email: string;
   phone?: string | null;
   password?: string;
-  is_admin?: boolean;
   is_verified?: boolean;
+  roles?: string[]; // Array of role slugs
 }
 
 export interface UpdateUserInput {
@@ -52,8 +52,8 @@ export interface UpdateUserInput {
   email?: string;
   phone?: string | null;
   password?: string;
-  is_admin?: boolean;
   is_verified?: boolean;
+  roles?: string[]; // Array of role slugs
 }
 
 export interface DeleteUsersInput {
@@ -308,7 +308,7 @@ export function CreateUserSchema(data: unknown): ValidationResult<CreateUserInpu
     return { success: false, errors: { _root: ['Data harus berupa object'] } };
   }
 
-  const { name, email, phone, password, is_admin, is_verified } = data as Record<string, unknown>;
+  const { name, email, phone, password, is_verified, roles } = data as Record<string, unknown>;
 
   // Name validation
   if (!isString(name) || name.trim().length < 2) {
@@ -336,6 +336,18 @@ export function CreateUserSchema(data: unknown): ValidationResult<CreateUserInpu
     }
   }
 
+  // Roles validation (optional)
+  if (roles !== undefined && roles !== null) {
+    if (!isArray(roles)) {
+      errors.roles = ['Roles harus berupa array'];
+    } else {
+      const invalidRoles = roles.filter((role: unknown) => !isString(role));
+      if (invalidRoles.length > 0) {
+        errors.roles = ['Setiap role harus berupa string'];
+      }
+    }
+  }
+
   if (Object.keys(errors).length > 0) {
     return { success: false, errors };
   }
@@ -347,8 +359,8 @@ export function CreateUserSchema(data: unknown): ValidationResult<CreateUserInpu
       email: String(email).toLowerCase(),
       phone: phone ? String(phone) : null,
       password: password ? String(password) : undefined,
-      is_admin: isBoolean(is_admin) ? is_admin : false,
       is_verified: isBoolean(is_verified) ? is_verified : false,
+      roles: roles ? (roles as string[]) : undefined,
     }
   };
 }
@@ -363,11 +375,11 @@ export function UpdateUserSchema(data: unknown): ValidationResult<UpdateUserInpu
     return { success: false, errors: { _root: ['Data harus berupa object'] } };
   }
 
-  const { name, email, phone, password, is_admin, is_verified } = data as Record<string, unknown>;
+  const { name, email, phone, password, is_verified, roles } = data as Record<string, unknown>;
 
   // At least one field must be provided
-  const hasAnyField = name !== undefined || email !== undefined || phone !== undefined || 
-                      password !== undefined || is_admin !== undefined || is_verified !== undefined;
+  const hasAnyField = name !== undefined || email !== undefined || phone !== undefined ||
+                      password !== undefined || is_verified !== undefined || roles !== undefined;
   
   if (!hasAnyField) {
     errors._root = ['Minimal satu field harus diisi untuk update'];
@@ -403,6 +415,18 @@ export function UpdateUserSchema(data: unknown): ValidationResult<UpdateUserInpu
     }
   }
 
+  // Roles validation (optional)
+  if (roles !== undefined && roles !== null) {
+    if (!isArray(roles)) {
+      errors.roles = ['Roles harus berupa array'];
+    } else {
+      const invalidRoles = roles.filter((role: unknown) => !isString(role));
+      if (invalidRoles.length > 0) {
+        errors.roles = ['Setiap role harus berupa string'];
+      }
+    }
+  }
+
   if (Object.keys(errors).length > 0) {
     return { success: false, errors };
   }
@@ -412,8 +436,8 @@ export function UpdateUserSchema(data: unknown): ValidationResult<UpdateUserInpu
   if (email !== undefined) result.email = String(email).toLowerCase();
   if (phone !== undefined) result.phone = phone ? String(phone) : null;
   if (password !== undefined && password !== '') result.password = String(password);
-  if (is_admin !== undefined) result.is_admin = Boolean(is_admin);
   if (is_verified !== undefined) result.is_verified = Boolean(is_verified);
+  if (roles !== undefined) result.roles = roles as string[];
 
   return { success: true, data: result };
 }

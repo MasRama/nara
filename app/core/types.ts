@@ -16,8 +16,9 @@ export interface User {
   email: string;
   phone: string | null;
   avatar: string | null;
-  is_admin: boolean;
   is_verified: boolean;
+  roles?: string[];
+  permissions?: string[];
   created_at?: number;
   updated_at?: number;
 }

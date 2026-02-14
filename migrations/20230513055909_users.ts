@@ -8,9 +8,8 @@ export async function up(knex: Knex): Promise<void> {
         table.string('email', 255).unique().notNullable()
         table.string('phone', 255) 
         table.string('avatar', 255)
-        table.boolean("is_verified").defaultTo(false) 
+        table.boolean("is_verified").defaultTo(false)
         table.dateTime('membership_date');
-        table.boolean("is_admin").defaultTo(false);
         table.string('password', 180).notNullable()
         table.string('remember_me_token').nullable()
    

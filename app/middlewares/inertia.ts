@@ -9,7 +9,23 @@ const inertia = () => {
          
          const url = `//${req.get("host")}${req.originalUrl}`;
 
-         let props = { user : req.user || {}, ...inertiaProps, ...viewProps, error : null  } as any;
+         let props = {
+            user: req.user
+               ? {
+                    id: req.user.id,
+                    name: req.user.name,
+                    email: req.user.email,
+                    phone: req.user.phone,
+                    avatar: req.user.avatar,
+                    roles: req.user.roles || [],
+                    permissions: req.user.permissions || [],
+                    is_verified: req.user.is_verified,
+                 }
+               : {},
+            ...inertiaProps,
+            ...viewProps,
+            error: null,
+         } as any;
 
          
 

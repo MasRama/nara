@@ -1,10 +1,11 @@
 /**
  * User Model
- * 
+ *
  * Handles all user-related database operations.
  */
 import { BaseModel, BaseRecord } from "./BaseModel";
 import DB from "@services/DB";
+import { Role } from "./Role";
 
 /**
  * User record interface
@@ -17,11 +18,27 @@ export interface UserRecord extends BaseRecord {
   avatar: string | null;
   is_verified: boolean;
   membership_date: string | null;
-  is_admin: boolean;
   password: string;
   remember_me_token: string | null;
   created_at: number;
   updated_at: number;
+}
+
+/**
+ * Role record interface (for relationship)
+ */
+interface RoleRecord {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+/**
+ * Permission record interface (for relationship)
+ */
+interface PermissionRecord {
+  id: string;
+  slug: string;
 }
 
 /**
@@ -35,7 +52,6 @@ export interface CreateUserData {
   avatar?: string | null;
   is_verified?: boolean;
   membership_date?: string | null;
-  is_admin?: boolean;
   password: string;
   remember_me_token?: string | null;
 }
@@ -50,7 +66,6 @@ export interface UpdateUserData {
   avatar?: string | null;
   is_verified?: boolean;
   membership_date?: string | null;
-  is_admin?: boolean;
   password?: string;
   remember_me_token?: string | null;
 }
@@ -109,13 +124,6 @@ class UserModel extends BaseModel<UserRecord> {
    */
   async getUnverified(): Promise<UserRecord[]> {
     return this.query().where("is_verified", false);
-  }
-
-  /**
-   * Get admin users
-   */
-  async getAdmins(): Promise<UserRecord[]> {
-    return this.query().where("is_admin", true);
   }
 
   /**
@@ -178,6 +186,125 @@ class UserModel extends BaseModel<UserRecord> {
     }
 
     return query.orderBy('created_at', 'desc');
+  }
+
+  // ==========================================
+  // RBAC Methods
+  // ==========================================
+
+  /**
+   * Get all roles for a user
+   */
+  async roles(userId: string): Promise<RoleRecord[]> {
+    return DB.table("roles")
+      .join("user_roles", "roles.id", "user_roles.role_id")
+      .where("user_roles.user_id", userId)
+      .select("roles.id", "roles.name", "roles.slug");
+  }
+
+  /**
+   * Check if user has a specific role
+   */
+  async hasRole(userId: string, roleSlug: string): Promise<boolean> {
+    const result = await DB.table("user_roles")
+      .join("roles", "user_roles.role_id", "roles.id")
+      .where("user_roles.user_id", userId)
+      .where("roles.slug", roleSlug)
+      .first();
+    return !!result;
+  }
+
+  /**
+   * Check if user has a specific permission (through their roles)
+   */
+  async hasPermission(userId: string, permissionSlug: string): Promise<boolean> {
+    const result = await DB.table("permissions")
+      .join("role_permissions", "permissions.id", "role_permissions.permission_id")
+      .join("user_roles", "role_permissions.role_id", "user_roles.role_id")
+      .where("user_roles.user_id", userId)
+      .where("permissions.slug", permissionSlug)
+      .first();
+    return !!result;
+  }
+
+  /**
+   * Get all permissions for a user (through their roles)
+   */
+  async permissions(userId: string): Promise<PermissionRecord[]> {
+    return DB.table("permissions")
+      .join("role_permissions", "permissions.id", "role_permissions.permission_id")
+      .join("user_roles", "role_permissions.role_id", "user_roles.role_id")
+      .where("user_roles.user_id", userId)
+      .select("permissions.id", "permissions.slug", "permissions.name")
+      .distinct();
+  }
+
+  /**
+   * Assign a role to a user
+   */
+  async assignRole(userId: string, roleSlug: string): Promise<void> {
+    const role = await Role.findBySlug(roleSlug);
+    if (!role) {
+      throw new Error(`Role '${roleSlug}' not found`);
+    }
+
+    const exists = await DB.table("user_roles")
+      .where({ user_id: userId, role_id: role.id })
+      .first();
+
+    if (!exists) {
+      await DB.table("user_roles").insert({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        role_id: role.id,
+        created_at: Date.now(),
+      });
+    }
+  }
+
+  /**
+   * Remove a role from a user
+   */
+  async removeRole(userId: string, roleSlug: string): Promise<void> {
+    const role = await Role.findBySlug(roleSlug);
+    if (!role) return;
+
+    await DB.table("user_roles")
+      .where({ user_id: userId, role_id: role.id })
+      .delete();
+  }
+
+  /**
+   * Sync roles - remove all existing and add new ones
+   */
+  async syncRoles(userId: string, roleSlugs: string[]): Promise<void> {
+    // Get all role IDs
+    const roles = await DB.table("roles")
+      .whereIn("slug", roleSlugs)
+      .select("id", "slug");
+
+    // Delete existing roles
+    await DB.table("user_roles").where("user_id", userId).delete();
+
+    // Insert new roles
+    if (roles.length > 0) {
+      const now = Date.now();
+      const inserts = roles.map((role) => ({
+        id: crypto.randomUUID(),
+        user_id: userId,
+        role_id: role.id,
+        created_at: now,
+      }));
+
+      await DB.table("user_roles").insert(inserts);
+    }
+  }
+
+  /**
+   * Check if user has admin role
+   */
+  async isAdmin(userId: string): Promise<boolean> {
+    return this.hasRole(userId, "admin");
   }
 }
 

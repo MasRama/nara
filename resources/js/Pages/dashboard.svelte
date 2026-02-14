@@ -140,7 +140,7 @@
           </div>
 
           <div class="relative z-10">
-            <p class="text-2xl font-bold tracking-tight mb-1">{$inertiaPage.props.user?.is_admin ? 'Admin' : 'User'}</p>
+            <p class="text-2xl font-bold tracking-tight mb-1">{$inertiaPage.props.user?.roles?.includes('admin') ? 'Admin' : 'User'}</p>
             <div class="flex items-center gap-2">
               <span class="inline-flex h-2 w-2 rounded-full bg-primary-400 animate-pulse"></span>
               <p class="text-xs opacity-80">{$inertiaPage.props.user?.is_verified ? 'Verified' : 'Unverified'}</p>

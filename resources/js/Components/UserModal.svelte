@@ -144,12 +144,20 @@
           <!-- Role & Status Toggles -->
           <div class="grid grid-cols-2 gap-4 pt-2">
             <!-- Admin Toggle -->
-            <label class="group relative flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-accent-500/30 cursor-pointer transition-all duration-300 {form.is_admin ? 'bg-accent-500/5 border-accent-500/30' : ''}">
+            <label class="group relative flex items-center gap-4 p-4 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-accent-500/30 cursor-pointer transition-all duration-300 {form.roles?.includes('admin') ? 'bg-accent-500/5 border-accent-500/30' : ''}">
               <div class="relative">
                 <input
                   type="checkbox"
                   class="sr-only peer"
-                  bind:checked={form.is_admin}
+                  checked={form.roles?.includes('admin')}
+                  onchange={(e) => {
+                    const isAdmin = e.currentTarget.checked;
+                    if (isAdmin) {
+                      form.roles = [...(form.roles || []), 'admin'];
+                    } else {
+                      form.roles = (form.roles || []).filter(r => r !== 'admin');
+                    }
+                  }}
                 />
                 <div class="w-12 h-7 bg-slate-200 dark:bg-white/10 rounded-full peer-checked:bg-accent-500 transition-colors"></div>
                 <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transform peer-checked:translate-x-5 transition-transform"></div>

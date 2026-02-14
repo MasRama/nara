@@ -10,7 +10,8 @@
     email: string;
     phone?: string;
     avatar?: string;
-    is_admin: boolean;
+    roles: string[];
+    permissions: string[];
     is_verified: boolean;
   }
 
@@ -160,10 +161,10 @@
 
                 <!-- Status Badges -->
                 <div class="flex flex-wrap gap-2 mb-6">
-                  <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.is_admin 
-                    ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400 border border-accent-500/20' 
+                  <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.roles?.includes('admin')
+                    ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400 border border-accent-500/20'
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700'}">
-                    {user.is_admin ? 'Administrator' : 'Standard User'}
+                    {user.roles?.includes('admin') ? 'Administrator' : 'Standard User'}
                   </span>
                   <span class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-full {user.is_verified 
                     ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20' 

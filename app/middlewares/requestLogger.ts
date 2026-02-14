@@ -194,7 +194,7 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
     // Intercept send() to capture status code
     res.send = (data: unknown) => {
       logRequest();
-      return originalSend(data);
+      return originalSend(data as Parameters<typeof originalSend>[0]);
     };
     
     // Also log on response finish (for redirects, etc.)

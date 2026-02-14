@@ -23,7 +23,8 @@ export interface User {
   email: string;
   phone?: string;
   avatar?: string;
-  is_admin: boolean;
+  roles: string[];
+  permissions: string[];
   is_verified: boolean;
   created_at?: number;
   updated_at?: number;
@@ -41,7 +42,7 @@ export interface UserForm {
   name: string;
   email: string;
   phone: string;
-  is_admin: boolean;
+  roles: string[];
   is_verified: boolean;
   password: string;
 }
@@ -112,7 +113,7 @@ export function createEmptyUserForm(): UserForm {
     name: '',
     email: '',
     phone: '',
-    is_admin: false,
+    roles: ['user'],
     is_verified: false,
     password: ''
   };
@@ -127,7 +128,7 @@ export function userToForm(user: User): UserForm {
     name: user.name || '',
     email: user.email || '',
     phone: user.phone || '',
-    is_admin: !!user.is_admin,
+    roles: user.roles || ['user'],
     is_verified: !!user.is_verified,
     password: ''
   };

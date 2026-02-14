@@ -28,6 +28,7 @@ import type { NaraRequest, NaraResponse, NaraResponseWithInertia, User } from '.
 import { AuthError, ForbiddenError, ValidationError } from './errors';
 import type { Validator, ValidationResult } from '@validators/validate';
 import { PAGINATION } from '@config';
+import { authorize as authorizeHelper } from '@helpers/authorization';
 
 /**
  * Request with authenticated user
@@ -37,7 +38,7 @@ export type AuthenticatedRequest = NaraRequest & { user: User };
 /**
  * Request with admin user
  */
-export type AdminRequest = NaraRequest & { user: User & { is_admin: true } };
+export type AdminRequest = NaraRequest & { user: User };
 
 /**
  * Pagination parameters
@@ -107,23 +108,27 @@ export abstract class BaseController {
 
   /**
    * Require admin user
-   * 
+   *
    * Throws AuthError if not authenticated, ForbiddenError if not admin.
-   * After calling this, TypeScript knows req.user exists and is admin.
-   * 
+   * After calling this, TypeScript knows req.user exists.
+   *
+   * Note: This now checks for the 'admin' role via RBAC system.
+   *
    * @param req - Request object
    * @throws AuthError if not authenticated
    * @throws ForbiddenError if not admin
-   * 
+   *
    * @example
    * async adminMethod(req: NaraRequest, res: NaraResponse) {
-   *   this.requireAdmin(req);
-   *   // req.user.is_admin is guaranteed true
+   *   await this.requireAdmin(req);
+   *   // req.user exists and has admin role
    * }
    */
-  protected requireAdmin(req: NaraRequest): asserts req is AdminRequest {
+  protected async requireAdmin(req: NaraRequest): Promise<void> {
     this.requireAuth(req);
-    if (!req.user.is_admin) {
+    const { User } = await import('@models');
+    const isAdmin = await User.isAdmin(req.user.id);
+    if (!isAdmin) {
       throw new ForbiddenError();
     }
   }
@@ -236,6 +241,36 @@ export abstract class BaseController {
       }, `Parameter '${key}' is required`);
     }
     return value;
+  }
+
+  /**
+   * Authorize user for a specific ability
+   *
+   * Throws ForbiddenError if user is not authorized.
+   * Uses the authorization helper with the authenticated user.
+   *
+   * @param req - Request object (must have authenticated user)
+   * @param ability - Name of the ability to check
+   * @param args - Additional arguments to pass to the ability callback
+   * @throws ForbiddenError if not authorized
+   *
+   * @example
+   * async update(req: NaraRequest, res: NaraResponse) {
+   *   this.requireAuth(req);
+   *   const post = await Post.findById(this.getParam(req, 'id')!);
+   *   await this.authorize(req, 'update-post', post);
+   *   // User is authorized, proceed with update
+   * }
+   */
+  protected async authorize(
+    req: NaraRequest,
+    ability: string,
+    ...args: unknown[]
+  ): Promise<void> {
+    if (!req.user) {
+      throw new AuthError();
+    }
+    await authorizeHelper(req.user, ability, ...args);
   }
 }
 

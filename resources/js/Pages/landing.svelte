@@ -8,7 +8,8 @@
     id: string;
     name: string;
     email: string;
-    is_admin: boolean;
+    roles: string[];
+    permissions: string[];
     is_verified: boolean;
   }
 

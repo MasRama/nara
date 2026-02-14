@@ -29,12 +29,15 @@ export type { CSRFOptions } from './csrf';
 export { default as inertia } from './inertia';
 
 // Request Logging
-export { 
-  requestLogger, 
-  verboseRequestLogger, 
+export {
+  requestLogger,
+  verboseRequestLogger,
   errorOnlyRequestLogger,
 } from './requestLogger';
 export type { RequestLoggerOptions } from './requestLogger';
+
+// Authorization
+export { authorize, authorizeOrFail } from './authorize';
 
 // Security Headers
 export { 

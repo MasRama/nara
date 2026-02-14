@@ -72,7 +72,7 @@
       name: formData.name,
       email: formData.email,
       phone: formData.phone || null,
-      is_admin: formData.is_admin,
+      roles: formData.roles || ['user'],
       is_verified: formData.is_verified,
       password: formData.password || undefined
     };
@@ -141,7 +141,7 @@
           
           <div class="h-12 w-px bg-slate-200 dark:bg-slate-700"></div>
 
-          {#if currentUser && currentUser.is_admin}
+          {#if currentUser && currentUser.roles?.includes('admin')}
             <button
               class="group relative px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform disabled:opacity-50"
               onclick={openCreateUser}
@@ -202,13 +202,13 @@
                       <span class="font-mono">{userItem.phone || '—'}</span>
                     </div>
                     <div class="flex items-center gap-2 text-xs">
-                      <span class="inline-flex h-1.5 w-1.5 rounded-full {userItem.is_admin ? 'bg-accent-500' : 'bg-slate-400'}"></span>
-                      <span class="text-slate-500 dark:text-slate-400">{userItem.is_admin ? 'Administrator' : 'Standard User'}</span>
+                      <span class="inline-flex h-1.5 w-1.5 rounded-full {userItem.roles?.includes('admin') ? 'bg-accent-500' : 'bg-slate-400'}"></span>
+                      <span class="text-slate-500 dark:text-slate-400">{userItem.roles?.includes('admin') ? 'Administrator' : 'Standard User'}</span>
                     </div>
                   </div>
 
                   <!-- Actions -->
-                  {#if currentUser && currentUser.is_admin}
+                  {#if currentUser && currentUser.roles?.includes('admin')}
                     <div class="flex items-center gap-2 pt-4 border-t border-slate-200 dark:border-white/5">
                       <button
                         class="flex-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-accent-500/50 hover:text-accent-500 transition-colors disabled:opacity-50"
@@ -243,7 +243,7 @@
             </div>
             <h3 class="text-xl font-bold mb-2">No Users Yet</h3>
             <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Start by adding your first user to the system.</p>
-            {#if currentUser && currentUser.is_admin}
+            {#if currentUser && currentUser.roles?.includes('admin')}
               <button
                 class="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full hover:scale-105 transition-transform"
                 onclick={openCreateUser}
