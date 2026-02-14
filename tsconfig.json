@@ -47,7 +47,9 @@
       "@events": ["app/events/index.ts"],
       "@events/*": ["app/events/*"],
       "@requests": ["app/requests/index.ts"],
-      "@requests/*": ["app/requests/*"]
+      "@requests/*": ["app/requests/*"],
+      "@factories": ["database/factories/index.ts"],
+      "@factories/*": ["database/factories/*"]
     }
   },
   "include": [
