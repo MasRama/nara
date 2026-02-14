@@ -179,7 +179,7 @@ export function inputSanitize(
 ): NaraMiddleware {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  return async (req: NaraRequest, res: NaraResponse, next: () => void) => {
+  return (req: NaraRequest, res: NaraResponse, next: () => void) => {
     try {
       // Sanitize request body
       if (opts.sanitizeBody && req.body) {
