@@ -15,7 +15,7 @@ export const UserFactory = Factory.define(User, (faker) => ({
   id: faker.string.uuid(),
   name: faker.person.fullName(),
   email: faker.internet.email(),
-  phone: faker.phone.number(),
+  phone: `+62${faker.string.numeric(11)}`,
   avatar: faker.image.avatar(),
   is_verified: faker.datatype.boolean(),
   membership_date: null,
@@ -43,7 +43,7 @@ UserFactory
   }))
   .state("withPhone", (data) => ({
     ...data,
-    phone: faker.phone.number({ style: "international" }),
+    phone: `+62${faker.string.numeric(11)}`,
   }))
   .state("withAvatar", (data) => ({
     ...data,
