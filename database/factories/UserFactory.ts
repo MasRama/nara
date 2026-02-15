@@ -86,11 +86,13 @@ export async function createVerifiedUsers(
   count: number,
   overrides?: Partial<UserRecord>
 ): Promise<UserRecord[]> {
-  return UserFactory
+  const result = await UserFactory
     .count(count)
     .applyState("verified")
     .merge(overrides || {})
-    .create() as Promise<UserRecord[]>;
+    .create();
+
+  return Array.isArray(result) ? result : [result];
 }
 
 export default UserFactory;
