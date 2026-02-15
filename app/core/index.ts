@@ -83,3 +83,7 @@ export type {
   PaginationMeta,
   ResponseMeta,
 } from './response';
+
+// HTTP Resources
+export { Resource } from '@/http/Resource';
+export { ResourceCollection } from '@/http/ResourceCollection';

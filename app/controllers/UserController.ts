@@ -25,6 +25,8 @@ import {
 import { CreateUserRequest, UpdateUserRequest, DeleteUsersRequest } from "@requests";
 import { event } from "@helpers/events";
 import { UserCreated, UserUpdated, UsersDeleted } from "@events/examples";
+import { UserResource, userCollection } from "@/http/resources/UserResource";
+import { ResourceCollection } from "@core";
 
 /**
  * Query parameters for user listing
@@ -64,13 +66,19 @@ class UserController extends BaseController {
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
-    // Attach roles to each user
+    // Get current user for admin check
+    const isAdmin = request.user ? await User.isAdmin(request.user.id) : false;
+
+    // Attach roles to each user using UserResource
     const usersWithRoles = await Promise.all(
       result.data.map(async (user: unknown) => {
         const userRecord = user as { id: string };
         const roles = await User.roles(userRecord.id);
+        const resource = new UserResource(userRecord as { id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; membership_date: string | null; password: string; remember_me_token: string | null; created_at: number; updated_at: number; })
+          .withEmail(isAdmin)
+          .withRoles(roles);
         return {
-          ...userRecord,
+          ...resource.toJson(),
           roles: roles.map((r) => r.slug),
         };
       })
@@ -93,13 +101,20 @@ class UserController extends BaseController {
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
-    // Attach roles to each user
+    // Get current user for admin check
+    const isAdmin = request.user ? await User.isAdmin(request.user.id) : false;
+
+    // Attach roles to each user using UserResource
     const usersWithRoles = await Promise.all(
       result.data.map(async (user: unknown) => {
-        const userRecord = user as { id: string };
+        const userRecord = user as { id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; membership_date: string | null; password: string; remember_me_token: string | null; created_at: number; updated_at: number; };
         const roles = await User.roles(userRecord.id);
+        const resource = new UserResource(userRecord)
+          .withEmail(isAdmin)
+          .withPhone(isAdmin)
+          .withRoles(roles);
         return {
-          ...userRecord,
+          ...resource.toJson(),
           roles: roles.map((r) => r.slug),
         };
       })
@@ -138,13 +153,21 @@ class UserController extends BaseController {
         }
       }
 
+      // Get roles for the response
+      const roles = await User.roles(user.id);
+
       // Dispatch user created event
       await event(new UserCreated({
         user,
         createdBy: request.user!.id
       }));
 
-      return jsonCreated(response, "User created", { user });
+      // Wrap user with UserResource to hide password and format response
+      const userResource = new UserResource(user)
+        .withEmail(true) // Admin created, so include email
+        .withRoles(roles);
+
+      return jsonCreated(response, "User created", { user: userResource.toJson() });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
         return jsonError(response, "Email sudah digunakan", 400, "DUPLICATE_EMAIL");
@@ -178,6 +201,9 @@ class UserController extends BaseController {
         await User.syncRoles(id, data.roles);
       }
 
+      // Get updated roles for the response
+      const roles = await User.roles(id);
+
       // Dispatch user updated event
       await event(new UserUpdated({
         user: user as unknown as { id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; },
@@ -185,7 +211,13 @@ class UserController extends BaseController {
         changes: payload as Partial<{ id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; }>
       }));
 
-      return jsonSuccess(response, "User berhasil diupdate", { user });
+      // Wrap user with UserResource to hide password and format response
+      const userResource = new UserResource(user as { id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; membership_date: string | null; password: string; remember_me_token: string | null; created_at: number; updated_at: number; })
+        .withEmail(true) // Admin updated, so include email
+        .withPhone(true) // Admin updated, so include phone
+        .withRoles(roles);
+
+      return jsonSuccess(response, "User berhasil diupdate", { user: userResource.toJson() });
     } catch (error: any) {
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
         return jsonError(response, "Email sudah digunakan", 400, "DUPLICATE_EMAIL");
