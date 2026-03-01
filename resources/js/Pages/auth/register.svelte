@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte'
-  import { password_generator, Toast } from '../../Components/helper';
+  import { buildCSRFHeaders, password_generator, Toast } from '../../Components/helper';
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
@@ -38,7 +38,9 @@
     }
  
     form.phone = form.phone.toString()
-    router.post("/register", form as any)
+    router.post("/register", form as any, {
+      headers: buildCSRFHeaders()
+    })
   }
 
   function generatePassword(): void { 

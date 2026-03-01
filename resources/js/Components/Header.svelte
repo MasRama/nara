@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
-  import { clickOutside } from '../Components/helper';
+  import { buildCSRFHeaders, clickOutside } from '../Components/helper';
   import DarkModeToggle from '../Components/DarkModeToggle.svelte';
 
   interface User {
@@ -40,7 +40,9 @@
   let visibleMenuLinks = $derived(menuLinks.filter((item) => item.show));
 
   function handleLogout(): void {
-    router.post('/logout');
+    router.post('/logout', {}, {
+      headers: buildCSRFHeaders()
+    });
   }
 </script>
 

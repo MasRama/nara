@@ -16,6 +16,7 @@ const app = createApp({
   routes,
   // Add Svelte adapter to enable Inertia support
   adapter: svelteAdapter(),
+  csrf: true,
   // All other options are auto-configured from environment:
   // - port: from env.PORT (default 5555)
   // - https: from env.HAS_CERTIFICATE

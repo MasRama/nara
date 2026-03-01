@@ -2,7 +2,7 @@
   import { inertia, router } from '@inertiajs/svelte'
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
-  import { password_generator, Toast } from '../../Components/helper';
+  import { buildCSRFHeaders, password_generator, Toast } from '../../Components/helper';
 
   interface ResetPasswordForm {
     password: string;
@@ -32,7 +32,9 @@
       return;
     }
 
-    router.post(`/reset-password`, { ...form, id } as any)
+    router.post(`/reset-password`, { ...form, id } as any, {
+      headers: buildCSRFHeaders()
+    })
   }
 </script>
 

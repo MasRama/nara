@@ -27,6 +27,15 @@ export function getCSRFToken(): string | undefined {
 }
 
 /**
+ * Build request headers containing the current CSRF token.
+ * Returns an empty object when the token cookie is not present yet.
+ */
+export function buildCSRFHeaders(): Record<string, string> {
+  const token = getCSRFToken();
+  return token ? { 'X-CSRF-Token': token } : {};
+}
+
+/**
  * Configure axios instance with CSRF token
  * Call this once at app initialization to automatically include CSRF token in all requests
  * 

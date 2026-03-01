@@ -17,6 +17,10 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'
 // Cache object to store file contents in memory
 let cache: { [key: string]: Buffer } = {};
 
+type UploadSuccessResult = { ok: true; url: string };
+type UploadErrorResult = { ok: false; message: string; code: string; status: number };
+type UploadResult = UploadSuccessResult | UploadErrorResult;
+
 class AssetController extends BaseController {
     /**
      * Serves assets from the dist folder (compiled assets)
@@ -32,99 +36,142 @@ class AssetController extends BaseController {
         const userId = request.user.id;
         Logger.debug('Avatar upload started', { userId });
 
-        let isValidFile = true;
-        let errorMessage = '';
-        let errorCode = '';
-        let errorStatus = 400;
+        let uploadResult: UploadResult | null = null;
+        let fileProcessed = false;
+        let fileProcessingPromise: Promise<void> | null = null;
 
         try {
-            await request.multipart(async (field: any) => {
+            await request.multipart((field: any) => {
                 if (field.file) {
-                    // Validate file size
-                    if (field.file_size > MAX_FILE_SIZE_BYTES) {
-                        isValidFile = false;
-                        errorMessage = `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB`;
-                        errorCode = "FILE_TOO_LARGE";
-                        errorStatus = 413;
+                    if (fileProcessed) {
+                        uploadResult = {
+                            ok: false,
+                            message: 'Hanya satu file yang diizinkan per upload',
+                            code: 'MULTIPLE_FILES_NOT_ALLOWED',
+                            status: 400
+                        };
                         return;
                     }
+
+                    fileProcessed = true;
 
                     // Validate MIME type
                     if (!ALLOWED_MIME_TYPES.includes(field.mime_type)) {
                         Logger.debug('Invalid file mime_type', { mimeType: field.mime_type, userId });
-                        isValidFile = false;
-                        errorMessage = "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.";
-                        errorCode = "INVALID_FILE_TYPE";
-                        errorStatus = 400;
+                        uploadResult = {
+                            ok: false,
+                            message: "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.",
+                            code: "INVALID_FILE_TYPE",
+                            status: 400
+                        };
                         return;
                     }
 
                     const id = randomUUID();
                     const fileName = `${id}.webp`; 
 
-                    // Create a buffer to store the image data
-                    const chunks: Buffer[] = [];
-                    const readable = field.file.stream;
+                    fileProcessingPromise = new Promise<void>((resolve, reject) => {
+                        const chunks: Buffer[] = [];
+                        const readable = field.file.stream;
+                        let totalBytes = 0;
+                        let streamEnded = false;
 
-                    readable.on('data', (chunk: Buffer) => {
-                        chunks.push(chunk);
-                    });
+                        readable.on('data', (chunk: Buffer) => {
+                            totalBytes += chunk.length;
 
-                    readable.on('end', async () => {
-                        const buffer = Buffer.concat(chunks);
-                        Logger.debug('Avatar upload buffer received', { size: buffer.length, userId });
+                            if (totalBytes > MAX_FILE_SIZE_BYTES) {
+                                readable.destroy(new Error('FILE_TOO_LARGE'));
+                                return;
+                            }
 
-                        try {
-                            // Process image with Sharp and get buffer
-                            const processedBuffer = await sharp(buffer)
-                                .webp({ quality: 80 }) // Convert to WebP with 80% quality
-                                .resize(1200, 1200, { // Resize to max 1200x1200 while maintaining aspect ratio
-                                    fit: 'inside',
-                                    withoutEnlargement: true
-                                })
-                                .toBuffer();
-                            Logger.debug('Avatar image processed', { processedSize: processedBuffer.length, userId });
+                            chunks.push(chunk);
+                        });
 
-                            // Store processed image using Storage service
-                            const storedFile = await Storage.put(processedBuffer, {
-                                directory: UPLOAD.AVATAR_DIR,
-                                name: id,
-                                extension: 'webp'
-                            });
-                            Logger.debug('Avatar file stored', { url: storedFile.url, userId });
+                        readable.on('error', (error: Error) => {
+                            if (error.message === 'FILE_TOO_LARGE') {
+                                uploadResult = {
+                                    ok: false,
+                                    message: `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB`,
+                                    code: 'FILE_TOO_LARGE',
+                                    status: 413
+                                };
+                                return resolve();
+                            }
 
-                            // Build public URL for the saved file
-                            const publicUrl = storedFile.url;
+                            reject(error);
+                        });
 
-                            // Save to assets table with local file reference
-                            await Asset.create({
-                                id,
-                                type: 'image',
-                                url: publicUrl,
-                                mime_type: 'image/webp',
-                                name: fileName,
-                                size: processedBuffer.length,
-                                user_id: userId,
-                            });
+                        readable.on('end', async () => {
+                            if (streamEnded) {
+                                return;
+                            }
 
-                            // Update user avatar in users table
-                            await User.updateAvatar(userId, publicUrl);
+                            streamEnded = true;
 
-                            // Return success response with public URL
-                            Logger.debug('Avatar upload completed', { url: publicUrl, userId });
-                            jsonSuccess(response, 'Avatar berhasil diupload', { url: publicUrl });
-                        } catch (err) {
-                            Logger.error('Error processing and uploading image', err as Error);
-                            jsonServerError(response, 'Gagal memproses dan mengupload gambar');
-                        }
+                            try {
+                                const buffer = Buffer.concat(chunks);
+                                Logger.debug('Avatar upload buffer received', { size: buffer.length, userId });
+
+                                const processedBuffer = await sharp(buffer)
+                                    .webp({ quality: 80 })
+                                    .resize(1200, 1200, {
+                                        fit: 'inside',
+                                        withoutEnlargement: true
+                                    })
+                                    .toBuffer();
+                                Logger.debug('Avatar image processed', { processedSize: processedBuffer.length, userId });
+
+                                const storedFile = await Storage.put(processedBuffer, {
+                                    directory: UPLOAD.AVATAR_DIR,
+                                    name: id,
+                                    extension: 'webp'
+                                });
+                                Logger.debug('Avatar file stored', { url: storedFile.url, userId });
+
+                                const publicUrl = storedFile.url;
+
+                                await Asset.create({
+                                    id,
+                                    type: 'image',
+                                    url: publicUrl,
+                                    mime_type: 'image/webp',
+                                    name: fileName,
+                                    size: processedBuffer.length,
+                                    user_id: userId,
+                                });
+
+                                await User.updateAvatar(userId, publicUrl);
+
+                                Logger.debug('Avatar upload completed', { url: publicUrl, userId });
+                                uploadResult = { ok: true, url: publicUrl };
+                                resolve();
+                            } catch (err) {
+                                reject(err);
+                            }
+                        });
                     });
                 }
             });
 
-            if (!isValidFile) {
-                return jsonError(response, errorMessage, errorStatus, errorCode);
+            if (fileProcessingPromise) {
+                await fileProcessingPromise;
             }
 
+            if (!fileProcessed) {
+                return jsonError(response, 'File avatar wajib diisi', 400, 'FILE_REQUIRED');
+            }
+
+            if (!uploadResult) {
+                return jsonServerError(response, 'Upload avatar gagal diproses');
+            }
+
+            const result = uploadResult as UploadResult;
+
+            if (!result.ok) {
+                return jsonError(response, result.message, result.status, result.code);
+            }
+
+            return jsonSuccess(response, 'Avatar berhasil diupload', { url: result.url });
         } catch (error) {
             Logger.error('Error uploading asset', error as Error);
             return jsonServerError(response, "Internal server error");

@@ -1,5 +1,9 @@
 import { createInertiaApp } from '@inertiajs/svelte'
 import { mount } from 'svelte'
+import axios from 'axios'
+import { configureAxiosCSRF } from './Components/helper'
+
+configureAxiosCSRF(axios)
 
 createInertiaApp({
   resolve: name => {

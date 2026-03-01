@@ -97,6 +97,8 @@ class UserController extends BaseController {
    * Users management page
    */
   public async usersPage(request: NaraRequest, response: NaraResponse) {
+    await this.requireAdmin(request);
+
     const params = this.parseUserQueryParams(request);
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });

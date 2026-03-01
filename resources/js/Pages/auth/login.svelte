@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte'
-  import { Toast } from '../../Components/helper';
+  import { buildCSRFHeaders, Toast } from '../../Components/helper';
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import { fade, fly } from 'svelte/transition';
 
@@ -26,7 +26,9 @@
   });
 
   function submitForm(): void {
-    router.post("/login", { email: form.email, password: form.password })
+    router.post("/login", { email: form.email, password: form.password }, {
+      headers: buildCSRFHeaders()
+    })
   }
 </script>
 
