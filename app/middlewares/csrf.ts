@@ -110,7 +110,7 @@ export function csrf(options: CSRFOptions = {}): NaraMiddleware {
     maxAge: (cookie.maxAge ?? 24 * 60 * 60) * 1000, // Convert to ms
   };
   
-  return async (req: NaraRequest, res: NaraResponse, next: () => void) => {
+  return (req: NaraRequest, res: NaraResponse, next: () => void) => {
     // Get existing token from cookie
     let token = req.cookies[cookieName];
     
