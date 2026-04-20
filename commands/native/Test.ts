@@ -12,38 +12,37 @@ class Test {
     const watchFlag = this.args.includes('--watch');
     const coverageFlag = this.args.includes('--coverage');
     
-    printInfo(`Running tests...`);
-    
-    // Build npm test args
-    const npmArgs = ['test'];
-    
+    const vitestArgs = watchFlag ? [] : ['run'];
+
+    if (coverageFlag) {
+      vitestArgs.push('--coverage');
+    }
+
     if (watchFlag) {
-      npmArgs.push('--', '--watch');
       printInfo(`${c.cyan}Watch mode enabled${c.reset}`);
     }
-    
+
     if (coverageFlag) {
-      npmArgs.push('--', '--coverage');
       printInfo(`${c.cyan}Coverage enabled${c.reset}`);
     }
-    
+
     console.log();
-    
-    const npm = spawn('npm', npmArgs, {
+
+    const proc = spawn('npx', ['vitest', ...vitestArgs], {
       stdio: 'inherit',
       shell: true,
     });
 
-    npm.on('close', (code) => {
+    proc.on('close', (code) => {
       if (code !== 0) {
         printError(`Tests failed with exit code ${code}`);
       }
       console.log();
     });
 
-    npm.on('error', (err) => {
+    proc.on('error', (err) => {
       printError(`Failed to run tests: ${err.message}`);
-      printInfo(`Make sure you have a test script in package.json`);
+      printInfo(`Make sure vitest is installed: npm install -D vitest`);
       console.log();
     });
   }

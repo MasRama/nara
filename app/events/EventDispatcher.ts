@@ -112,13 +112,13 @@ export class EventDispatcher {
    * @returns Promise that resolves when all listeners complete
    */
   async emit<TPayload>(event: Event<TPayload>): Promise<void> {
-    const eventName = event.name;
+    const eventName = event.constructor.name;
     const listeners = this.listeners.get(eventName);
 
     // Execute wildcard listeners
     for (const wildcard of this.wildcards) {
       try {
-        await wildcard(eventName, event as Event);
+        await wildcard(event.name, event as Event);
       } catch (error) {
         console.error(`Error in wildcard listener for ${eventName}:`, error);
       }
