@@ -49,7 +49,9 @@
       "@requests": ["app/requests/index.ts"],
       "@requests/*": ["app/requests/*"],
       "@factories": ["database/factories/index.ts"],
-      "@factories/*": ["database/factories/*"]
+      "@factories/*": ["database/factories/*"],
+      "$lib": ["resources/js/lib/index.ts"],
+      "$lib/*": ["resources/js/lib/*"]
     }
   },
   "include": [

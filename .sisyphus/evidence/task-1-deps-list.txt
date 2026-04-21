@@ -1,0 +1,15 @@
+nara@1.2.11 /home/masripp/docs-project/nara
+├── @lucide/svelte@1.8.0
+├─┬ bits-ui@2.18.0
+│ └─┬ svelte-toolbelt@0.10.6
+│   └── clsx@2.1.1 deduped
+├── clsx@2.1.1
+├─┬ mode-watcher@1.1.0
+│ └─┬ svelte-toolbelt@0.7.1
+│   └── clsx@2.1.1 deduped
+├─┬ svelte@5.49.2
+│ └── clsx@2.1.1 deduped
+├── tailwind-merge@3.5.0
+└─┬ tailwind-variants@3.2.2
+  └── tailwind-merge@3.5.0 deduped
+

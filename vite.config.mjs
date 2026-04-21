@@ -3,6 +3,11 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 import 'dotenv/config'
 import { resolve } from 'path'
 import { readdirSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const files = readdirSync("resources/views");
 
@@ -35,6 +40,11 @@ export default defineConfig({
     }
   ],
   root: 'resources',
+  resolve: {
+    alias: {
+      '$lib': resolve(__dirname, 'resources/js/lib'),
+    },
+  },
   server: {
     host: '0.0.0.0',
     port: PORT,

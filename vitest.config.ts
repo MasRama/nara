@@ -6,8 +6,8 @@ const r = (p: string) => path.resolve(__dirname, p);
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    environment: 'jsdom',
+    include: ['tests/**/*.test.ts', 'resources/js/lib/__tests__/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
@@ -38,6 +38,8 @@ export default defineConfig({
       { find: /^@factories\/(.+)$/, replacement: r('database/factories/$1') },
       { find: '@factories', replacement: r('database/factories/index.ts') },
       { find: '@root/knexfile', replacement: r('knexfile.ts') },
+      { find: /^\$lib\/(.+)$/, replacement: r('resources/js/lib/$1') },
+      { find: '$lib', replacement: r('resources/js/lib') },
     ],
   },
 });

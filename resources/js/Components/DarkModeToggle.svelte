@@ -1,73 +1,26 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { toggleMode, mode } from 'mode-watcher';
+  import { Sun, Moon } from '@lucide/svelte';
+  import { Button } from '$lib/components/ui/button';
 
-  let darkMode: boolean = false;
-  let mounted: boolean = false;
-  export let onchange: (mode: boolean) => void = () => {};
+  let { onchange = (_isDark: boolean) => {} }: { onchange?: (isDark: boolean) => void } = $props();
 
-  onMount(() => {
-    // Check system preference
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    // Check localStorage or fallback to system preference
-    const savedMode = localStorage.getItem('darkMode');
-    darkMode = savedMode === null ? systemPrefersDark : savedMode === 'true';
-    
-    // Apply saved preference
-    if (darkMode) {
-        document.documentElement.classList.add('dark');
-    }
-
-    // Add transition class after initial load to prevent flash
-    setTimeout(() => {
-        document.documentElement.classList.add('transition-colors');
-        mounted = true;
-    }, 100);
-
-    // Listen for system preference changes with cleanup
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e: MediaQueryListEvent) => {
-        if (localStorage.getItem('darkMode') === null) {
-            darkMode = e.matches;
-            toggleDarkMode();
-        }
-    };
-    mediaQuery.addEventListener('change', handler);
-
-    return () => {
-        mediaQuery.removeEventListener('change', handler);
-    };
-  });
-
-function toggleDarkMode(): void {
-    darkMode = !darkMode;
-    
-    if (darkMode) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-    
-    // Save preference to localStorage
-    localStorage.setItem('darkMode', String(darkMode));
-    
-    onchange(darkMode);
-}
+  function handleToggle() {
+    toggleMode();
+    onchange(mode.current === 'dark');
+  }
 </script>
 
-<button 
-    onclick={toggleDarkMode}
-    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800/70 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400/50"
-    aria-label="Toggle dark mode"
+<Button
+  variant="ghost"
+  size="icon"
+  onclick={handleToggle}
+  aria-label="Toggle dark mode"
+  class="rounded-full"
 >
-    {#if darkMode}
-        <!-- Sun icon for light mode -->
-        <svg class="w-5 h-5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-    {:else}
-        <!-- Moon icon for dark mode -->
-        <svg class="w-5 h-5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-    {/if}
-</button>
+  {#if mode.current === 'dark'}
+    <Sun class="h-5 w-5" />
+  {:else}
+    <Moon class="h-5 w-5" />
+  {/if}
+</Button>

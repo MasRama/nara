@@ -1,0 +1,13 @@
+
+> nara@1.2.11 test
+> vitest run
+
+
+ RUN  v4.1.4 /home/masripp/docs-project/nara
+
+
+ Test Files  11 passed (11)
+      Tests  121 passed (121)
+   Start at  21:38:45
+   Duration  1.90s (transform 667ms, setup 0ms, import 1.04s, tests 275ms, environment 15.23s)
+

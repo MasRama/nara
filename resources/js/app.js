@@ -1,7 +1,9 @@
 import { createInertiaApp } from '@inertiajs/svelte'
 import { mount } from 'svelte'
 import axios from 'axios'
-import { configureAxiosCSRF } from './Components/helper'
+import { configureAxiosCSRF } from '$lib/csrf'
+import { ModeWatcher } from 'mode-watcher'
+import { Toaster } from '$lib/components/ui/sonner'
 
 configureAxiosCSRF(axios)
 
@@ -13,16 +15,11 @@ createInertiaApp({
   setup({ el, App, props }) {
     el.classList.add('dark:bg-gray-900', 'min-h-screen');
     mount(App, { target: el, props })
+
+    const portalEl = document.createElement('div');
+    portalEl.id = 'inertia-portals';
+    document.body.appendChild(portalEl);
+    mount(ModeWatcher, { target: portalEl });
+    mount(Toaster, { target: portalEl });
   },
 })
-
-const savedMode = localStorage.getItem('darkMode');
-const isDarkMode = savedMode === null
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
-    : savedMode === 'true';
-
-if (isDarkMode) {
-  document.documentElement.classList.add('dark');
-} else {
-  document.documentElement.classList.remove('dark');
-}

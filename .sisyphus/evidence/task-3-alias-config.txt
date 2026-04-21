@@ -1,0 +1,3 @@
+vite.config.mjs:45:      '$lib': resolve(__dirname, 'resources/js/lib'),
+tsconfig.json:53:      "$lib": ["resources/js/lib/index.ts"],
+tsconfig.json:54:      "$lib/*": ["resources/js/lib/*"]
