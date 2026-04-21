@@ -5,9 +5,16 @@
   import UserModal from '../Components/UserModal.svelte';
   import Pagination from '../Components/Pagination.svelte';
   import axios from 'axios';
-  import { api, Toast } from '../Components/helper';
+  import { api } from '$lib/api';
+  import { Toast } from '$lib/toast';
   import type { User, UserForm, PaginationMeta } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
+  import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
+  import { Badge } from '$lib/components/ui/badge';
+  import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
+  import { Button } from '$lib/components/ui/button';
+  import { Alert, AlertDescription } from '$lib/components/ui/alert';
+  import { Users } from 'lucide-svelte';
 
   interface Props {
     users?: User[];
@@ -142,115 +149,111 @@
           <div class="h-12 w-px bg-slate-200 dark:bg-slate-700"></div>
 
           {#if currentUser && currentUser.roles?.includes('admin')}
-            <button
-              class="group relative px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full overflow-hidden hover:scale-105 transition-transform disabled:opacity-50"
+            <Button
+              variant="default"
+              class="rounded-full px-6 uppercase tracking-wider font-bold text-xs"
               onclick={openCreateUser}
               disabled={isSubmitting}
             >
-              <span class="relative z-10 flex items-center gap-2">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 5v14M5 12h14" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                Add User
-              </span>
-              <div class="absolute inset-0 bg-primary-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-            </button>
+              <Users class="mr-2 h-4 w-4" />
+              Add User
+            </Button>
           {/if}
         </div>
       </div>
 
       <!-- Users Grid - Card Based -->
-      <div class="mb-12" in:fly={{ y: 30, duration: 800, delay: 200 }}>
+      <div class="mb-12 bg-card rounded-2xl border" in:fly={{ y: 30, duration: 800, delay: 200 }}>
         {#if users && users.length}
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {#each users as userItem, i}
-              <div 
-                class="group relative bg-surface-card-light dark:bg-surface-card-dark border border-slate-200 dark:border-white/5 hover:border-accent-500/50 dark:hover:border-accent-500/30 p-6 rounded-2xl transition-all duration-500 overflow-hidden"
-                in:fly={{ y: 20, duration: 400, delay: i * 50 }}
-              >
-                <!-- Hover Glow -->
-                <div class="absolute top-0 right-0 p-20 bg-accent-500/5 rounded-full blur-3xl -mr-10 -mt-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                
-                <div class="relative z-10">
-                  <!-- User Header -->
-                  <div class="flex items-start justify-between mb-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead class="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {#each users as userItem}
+                <TableRow>
+                  <TableCell>
                     <div class="flex items-center gap-3">
-                      <!-- Avatar -->
-                      <div class="w-12 h-12 rounded-full bg-gradient-to-br from-accent-500 to-accent-400 flex items-center justify-center text-white font-bold text-lg">
-                        {userItem.name.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar>
+                        <AvatarFallback>{userItem.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
                       <div>
-                        <h3 class="font-bold text-lg tracking-tight">{userItem.name}</h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">{userItem.email}</p>
+                        <div class="font-medium">{userItem.name}</div>
+                        <div class="text-sm text-muted-foreground">{userItem.email}</div>
                       </div>
                     </div>
-                    
-                    <!-- Status Badge -->
-                    <span class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full {userItem.is_verified 
-                      ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 border border-primary-500/20' 
-                      : 'bg-warning-500/10 text-warning-600 dark:text-warning-400 border border-warning-500/20'}">
-                      {userItem.is_verified ? 'Verified' : 'Pending'}
-                    </span>
-                  </div>
-
-                  <!-- User Details -->
-                  <div class="space-y-2 mb-4">
-                    <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      <span class="font-mono">{userItem.phone || '—'}</span>
+                  </TableCell>
+                  <TableCell>
+                    {#if userItem.is_verified}
+                      <Badge variant="default" class="bg-primary/10 text-primary hover:bg-primary/20">Verified</Badge>
+                    {:else}
+                      <Badge variant="secondary" class="bg-warning/10 text-warning hover:bg-warning/20">Pending</Badge>
+                    {/if}
+                  </TableCell>
+                  <TableCell>
+                    <div class="flex flex-col gap-1">
+                      <div class="flex items-center gap-2 text-xs">
+                        <span class="inline-flex h-1.5 w-1.5 rounded-full {userItem.roles?.includes('admin') ? 'bg-accent-500' : 'bg-slate-400'}"></span>
+                        <span class="text-slate-500 dark:text-slate-400">{userItem.roles?.includes('admin') ? 'Administrator' : 'Standard User'}</span>
+                      </div>
+                      <div class="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span class="font-mono">{userItem.phone || '—'}</span>
+                      </div>
                     </div>
-                    <div class="flex items-center gap-2 text-xs">
-                      <span class="inline-flex h-1.5 w-1.5 rounded-full {userItem.roles?.includes('admin') ? 'bg-accent-500' : 'bg-slate-400'}"></span>
-                      <span class="text-slate-500 dark:text-slate-400">{userItem.roles?.includes('admin') ? 'Administrator' : 'Standard User'}</span>
-                    </div>
-                  </div>
-
-                  <!-- Actions -->
-                  {#if currentUser && currentUser.roles?.includes('admin')}
-                    <div class="flex items-center gap-2 pt-4 border-t border-slate-200 dark:border-white/5">
-                      <button
-                        class="flex-1 px-4 py-2 text-xs font-bold uppercase tracking-wider border border-slate-200 dark:border-slate-700 rounded-full hover:border-accent-500/50 hover:text-accent-500 transition-colors disabled:opacity-50"
-                        onclick={() => openEditUser(userItem)}
-                        disabled={isSubmitting}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        class="px-4 py-2 text-xs font-bold uppercase tracking-wider border border-danger-500/20 text-danger-500 rounded-full hover:bg-danger-500 hover:text-white transition-colors disabled:opacity-50"
-                        onclick={() => deleteUser(userItem.id)}
-                        disabled={isSubmitting}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  {/if}
-                </div>
-              </div>
-            {/each}
-          </div>
+                  </TableCell>
+                  <TableCell class="text-right">
+                    {#if currentUser && currentUser.roles?.includes('admin')}
+                      <div class="flex justify-end gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          class="rounded-full text-xs font-bold uppercase tracking-wider"
+                          onclick={() => openEditUser(userItem)}
+                          disabled={isSubmitting}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          class="rounded-full text-xs font-bold uppercase tracking-wider bg-danger/10 text-danger hover:bg-danger hover:text-white"
+                          onclick={() => deleteUser(userItem.id)}
+                          disabled={isSubmitting}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    {/if}
+                  </TableCell>
+                </TableRow>
+              {/each}
+            </TableBody>
+          </Table>
         {:else}
           <!-- Empty State -->
-          <div class="text-center py-20 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
-            <div class="w-16 h-16 mx-auto mb-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-              <svg class="w-8 h-8 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <h3 class="text-xl font-bold mb-2">No Users Yet</h3>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">Start by adding your first user to the system.</p>
-            {#if currentUser && currentUser.roles?.includes('admin')}
-              <button
-                class="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-bold uppercase tracking-wider rounded-full hover:scale-105 transition-transform"
-                onclick={openCreateUser}
-              >
-                Add First User
-              </button>
-            {/if}
+          <div class="p-8">
+            <Alert class="flex flex-col items-center justify-center text-center py-12 border-dashed">
+              <div class="w-16 h-16 mb-4 rounded-full bg-muted flex items-center justify-center">
+                <Users class="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 class="text-lg font-semibold mb-2">No Users Yet</h3>
+              <AlertDescription class="mb-6">
+                Start by adding your first user to the system.
+              </AlertDescription>
+              {#if currentUser && currentUser.roles?.includes('admin')}
+                <Button
+                  class="rounded-full uppercase tracking-wider font-bold text-xs"
+                  onclick={openCreateUser}
+                >
+                  Add First User
+                </Button>
+              {/if}
+            </Alert>
           </div>
         {/if}
       </div>
