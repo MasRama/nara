@@ -39,7 +39,7 @@
     }
  
     form.phone = form.phone.toString()
-    router.post("/register", form as any, {})
+    router.post("/register", form as Record<string, unknown>, {})
   }
 
   function generatePassword(): void { 

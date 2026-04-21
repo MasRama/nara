@@ -38,7 +38,7 @@
       return;
     }
 
-    router.post(`/reset-password`, { ...form, id } as any, {
+    router.post(`/reset-password`, { ...form, id } as Record<string, unknown>, {
       headers: buildCSRFHeaders()
     })
   }
