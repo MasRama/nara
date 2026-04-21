@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fly, fade } from 'svelte/transition';
   import { page, router, inertia } from '@inertiajs/svelte';
-  import { buildCSRFHeaders, clickOutside } from '../Components/helper';
+  import { buildCSRFHeaders } from '$lib/csrf';
   import DarkModeToggle from '../Components/DarkModeToggle.svelte';
   
   import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '$lib/components/ui/sheet';

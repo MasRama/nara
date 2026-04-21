@@ -14,22 +14,18 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 | `NaraIcon.svelte` | Logo/icon SVG component |
 | `Pagination.svelte` | Page navigation for paginated lists |
 | `UserModal.svelte` | Modal for create/edit user form |
-| `helper.ts` | API utilities, CSRF, Toast notifications |
+| ~~`helper.ts`~~ | **REMOVED** — split into `$lib/*` modules (see below) |
 
-## helper.ts Exports
+## $lib/* Exports (replaces helper.ts)
 
 ```typescript
-import {
-  api,
-  Toast,
-  getCSRFToken,
-  buildCSRFHeaders,
-  configureAxiosCSRF,
-  clickOutside,
-  debounce,
-  password_generator,
-} from "../Components/helper";
-import type { ApiResponse } from "../Components/helper";
+import { api } from '$lib/api';
+import type { ApiResponse } from '$lib/api';
+import { buildCSRFHeaders, getCSRFToken, configureAxiosCSRF } from '$lib/csrf';
+import { Toast } from '$lib/toast';
+import { debounce } from '$lib/utils/debounce';
+import { password_generator } from '$lib/utils/password';
+import { clickOutside } from '$lib/hooks/click-outside';
 ```
 
 ### `api()` — axios wrapper with auto-toast
@@ -38,7 +34,7 @@ import type { ApiResponse } from "../Components/helper";
 
 ```typescript
 import axios from 'axios';
-import { api } from '../Components/helper';
+import { api } from '$lib/api';
 
 // POST
 const result = await api(() => axios.post('/users', payload));
@@ -83,7 +79,7 @@ Signature: `Toast(text: string, type: 'success' | 'error' | 'warning' | 'info' =
 ```typescript
 // For axios — call ONCE at app init (in app.js), NOT per-request
 import axios from 'axios';
-import { configureAxiosCSRF } from '../Components/helper';
+import { configureAxiosCSRF } from '$lib/csrf';
 configureAxiosCSRF(axios);  // sets interceptor — CSRF auto-included in POST/PUT/DELETE
 
 // For manual fetch() (rare — prefer axios + configureAxiosCSRF)

@@ -2,7 +2,7 @@
   import { inertia, router } from '@inertiajs/svelte'
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
-  import { buildCSRFHeaders } from '../../Components/helper';
+  import { buildCSRFHeaders } from '$lib/csrf';
   import { password_generator } from '$lib/utils/password';
   import { Toast } from '$lib/toast';
   import { Button } from '$lib/components/ui/button';

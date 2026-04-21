@@ -24,7 +24,8 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
   import { page as inertiaPage, router } from "@inertiajs/svelte";
   import axios from "axios";
   import Header from "../Components/Header.svelte";
-  import { api, Toast } from "../Components/helper";
+  import { api } from '$lib/api';
+  import { Toast } from '$lib/toast';
   import type { User } from "../types";
 
   // Props from server (passed by res.inertia("PageName", { prop }))
@@ -97,7 +98,7 @@ All CRUD operations use **axios** wrapped in `api()`. Do NOT use raw `fetch()` f
 ```typescript
 // ✅ Correct — axios via api() wrapper
 import axios from 'axios';
-import { api } from '../Components/helper';
+import { api } from '$lib/api';
 
 const result = await api(() => axios.post('/posts', data));
 const result = await api(() => axios.put(`/posts/${id}`, data));

@@ -42,7 +42,7 @@ resources/js/
 
 ```svelte
 <script lang="ts">
-  import { buildCSRFHeaders } from "../Components/helper";
+  import { buildCSRFHeaders } from '$lib/csrf';
 
   let items = $state([]);
 
