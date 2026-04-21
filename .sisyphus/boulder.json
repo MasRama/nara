@@ -2,8 +2,13 @@
   "active_plan": "/home/masripp/docs-project/nara/.sisyphus/plans/shadcn-svelte-overhaul.md",
   "started_at": "2026-04-21T13:12:11.371Z",
   "session_ids": [
-    "ses_24fd48ac0ffeJqpvmeQmigQNc6"
+    "ses_24fd48ac0ffeJqpvmeQmigQNc6",
+    "ses_24f7c8006ffe6IMHLdV4a4FxQ0",
+    "ses_24f7d0501ffe3i5gijnsErmixD",
+    "ses_24f7d4448ffeffh2x7g53N4QMd",
+    "ses_24f7c2c84ffeZNz8Tp0Z0bc1dJ"
   ],
   "plan_name": "shadcn-svelte-overhaul",
-  "agent": "atlas"
+  "agent": "atlas",
+  "task_sessions": {}
 }

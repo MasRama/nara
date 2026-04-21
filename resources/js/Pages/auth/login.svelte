@@ -1,23 +1,23 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte'
-  import { buildCSRFHeaders, Toast } from '../../Components/helper';
+  import { Toast } from '$lib/toast';
   import NaraIcon from '../../Components/NaraIcon.svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
 
-  onMount(() => {
-      // Logic for onMount if needed in future
-  });
+  import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+  import { Label } from '$lib/components/ui/label';
+  import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
   interface LoginForm {
     email: string;
     password: string;
   }
 
-  let form: LoginForm = {
+  let form: LoginForm = $state({
     email: '',
     password: '',
-  }
+  });
 
   let { error }: { error?: string } = $props();
 
@@ -26,9 +26,7 @@
   });
 
   function submitForm(): void {
-    router.post("/login", { email: form.email, password: form.password }, {
-      headers: buildCSRFHeaders()
-    })
+    router.post("/login", { email: form.email, password: form.password }, {})
   }
 </script>
 
@@ -45,7 +43,13 @@
 
       <div class="max-w-md w-full mx-auto" in:fly={{ y: 20, duration: 800 }}>
           <h1 class="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Welcome Back.</h1>
-          <p class="text-slate-500 dark:text-slate-400 mb-10 text-lg">Enter your credentials to access the grid.</p>
+          <p class="text-slate-500 dark:text-slate-400 mb-6 text-lg">Enter your credentials to access the grid.</p>
+
+          {#if error}
+            <Alert variant="destructive" class="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          {/if}
 
           <!-- Google Login Button -->
           <div class="flex flex-col space-y-4 mb-8">
@@ -71,29 +75,24 @@
           </div>
 
           <form class="space-y-5" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
-              <div class="space-y-1">
-                  <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email</label>
-                  <input bind:value={form.email} required type="text" name="email" id="email" 
-                      class="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
-                      placeholder="nara@example.com" >
+              <div class="space-y-2">
+                  <Label for="email">Email</Label>
+                  <Input bind:value={form.email} required type="text" name="email" id="email" placeholder="nara@example.com" />
               </div>
               
-              <div class="space-y-1">
-                  <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
-                  <input bind:value={form.password} required type="password" name="password" id="password" 
-                      placeholder="••••••••" 
-                      class="w-full px-5 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
+              <div class="space-y-2">
+                  <Label for="password">Password</Label>
+                  <Input bind:value={form.password} required type="password" name="password" id="password" placeholder="••••••••" />
               </div>  
 
               <div class="flex items-center justify-end">
                   <a href="/forgot-password" use:inertia class="text-sm font-medium text-slate-500 hover:text-primary-500 transition-colors">Forgot password?</a>
               </div>
 
-              <button type="submit" 
-                  class="group w-full relative overflow-hidden rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-lg py-4 transition-transform active:scale-[0.98]">
+              <Button type="submit" class="w-full font-bold text-lg py-6 group relative overflow-hidden bg-slate-900 text-white dark:bg-white dark:text-black transition-transform active:scale-[0.98]">
                   <span class="relative z-10">LOGIN</span>
                   <div class="absolute inset-0 bg-primary-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
-              </button>
+              </Button>
 
               <p class="text-center text-slate-500 dark:text-slate-400 mt-6">
                   Don't have an account? <a href="/register" use:inertia class="font-bold text-primary-600 dark:text-primary-400 hover:underline">Sign up</a>

@@ -1,0 +1,16 @@
+
+> nara@1.2.11 build
+> mkdir -p dist/views && cp -rf resources/views/* dist/views && vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 9054 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/views/inertia.html                   0.75 kB │ gzip:  0.40 kB
+../dist/assets/inertia-DnmC15lt.css         76.38 kB │ gzip: 13.72 kB
+../dist/assets/vendor-utils-B1ATcuf8.js     35.75 kB │ gzip: 13.98 kB
+../dist/assets/vendor-svelte-Dv-3HcKQ.js    50.52 kB │ gzip: 19.03 kB
+../dist/assets/vendor-inertia-CMrs1jra.js  110.66 kB │ gzip: 33.80 kB
+../dist/assets/inertia-1N8CRe_h.js         395.80 kB │ gzip: 96.51 kB
+✓ built in 18.06s

@@ -1,13 +1,14 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { inertia, router } from '@inertiajs/svelte'
-  import { buildCSRFHeaders, password_generator, Toast } from '../../Components/helper';
+  import { password_generator } from '$lib/utils/password';
+  import { Toast } from '$lib/toast';
   import NaraIcon from '../../Components/NaraIcon.svelte';
-  import { fade, fly } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
 
-  onMount(() => {
-      // Logic for onMount if needed in future
-  });
+  import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+  import { Label } from '$lib/components/ui/label';
+  import { Alert, AlertDescription } from '$lib/components/ui/alert';
 
   interface RegisterForm {
     email: string;
@@ -17,13 +18,13 @@
     password_confirmation: string;
   }
 
-  let form: RegisterForm = {
+  let form: RegisterForm = $state({
     email: '',
     password: '',
     name: '',
     phone: '',
     password_confirmation: '', 
-  }
+  });
 
   let { error }: { error?: string } = $props();
 
@@ -38,9 +39,7 @@
     }
  
     form.phone = form.phone.toString()
-    router.post("/register", form as any, {
-      headers: buildCSRFHeaders()
-    })
+    router.post("/register", form as any, {})
   }
 
   function generatePassword(): void { 
@@ -97,7 +96,13 @@
 
       <div class="max-w-md w-full mx-auto mt-8 lg:mt-0" in:fly={{ y: 20, duration: 800 }}>
           <h1 class="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Create Account.</h1>
-          <p class="text-slate-500 dark:text-slate-400 mb-8 text-lg">Start building your legacy.</p>
+          <p class="text-slate-500 dark:text-slate-400 mb-6 text-lg">Start building your legacy.</p>
+
+          {#if error}
+            <Alert variant="destructive" class="mb-6">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          {/if}
 
           <!-- Google Signup Button -->
           <div class="flex flex-col space-y-4 mb-8">
@@ -123,47 +128,38 @@
           </div>
 
           <form class="space-y-4" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
-              <div class="space-y-1">
-                  <label for="name" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Full Name</label>
-                  <input bind:value={form.name} required type="text" name="name" id="name" 
-                      class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
-                      placeholder="Rama Ren" >
+              <div class="space-y-2">
+                  <Label for="name">Full Name</Label>
+                  <Input bind:value={form.name} required type="text" name="name" id="name" placeholder="Rama Ren" />
               </div>
 
-              <div class="space-y-1">
-                  <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email</label>
-                  <input bind:value={form.email} required type="text" name="email" id="email" 
-                      class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" 
-                      placeholder="nara@example.com" >
+              <div class="space-y-2">
+                  <Label for="email">Email</Label>
+                  <Input bind:value={form.email} required type="text" name="email" id="email" placeholder="nara@example.com" />
               </div> 
 
               <div class="grid grid-cols-2 gap-4">
-                  <div class="space-y-1">
-                      <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
-                      <input bind:value={form.password} required type="password" name="password" id="password" 
-                          placeholder="••••••••" 
-                          class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
+                  <div class="space-y-2">
+                      <Label for="password">Password</Label>
+                      <Input bind:value={form.password} required type="password" name="password" id="password" placeholder="••••••••" />
                   </div>
-                  <div class="space-y-1">
-                      <label for="confirm-password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Confirm</label>
-                      <input bind:value={form.password_confirmation} type="password" name="confirm-password" id="confirm-password" 
-                          placeholder="••••••••" 
-                          class="w-full px-5 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:ring-2 focus:ring-info-500/50 focus:border-info-500 outline-none transition-all dark:text-white placeholder:text-slate-400" >
+                  <div class="space-y-2">
+                      <Label for="confirm-password">Confirm</Label>
+                      <Input bind:value={form.password_confirmation} required type="password" name="confirm-password" id="confirm-password" placeholder="••••••••" />
                   </div>
               </div>
 
               <div class="flex justify-end">
-                <button type="button" onclick={generatePassword} class="text-xs font-mono text-info-400 hover:text-info-300 transition-colors flex items-center gap-1">
+                <Button variant="ghost" size="sm" type="button" onclick={generatePassword} class="text-xs font-mono text-info-400 hover:text-info-300 transition-colors flex items-center gap-1">
                     <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7C21 6.46957 20.7893 5.96086 20.4142 5.58579C20.0391 5.21071 19.5304 5 19 5H5C4.46957 5 3.96086 5.21071 3.58579 5.58579C3.21071 5.96086 3 6.46957 3 7V17C3 17.5304 3.21071 18.0391 3.58579 18.4142C3.96086 18.7893 4.46957 19 5 19H12" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     GENERATE SECURE PASSWORD
-                </button>
+                </Button>
               </div>
            
-              <button type="submit" 
-                  class="group w-full relative overflow-hidden rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-lg py-4 transition-transform active:scale-[0.98] mt-4">
+              <Button type="submit" class="group w-full relative overflow-hidden text-white dark:text-black font-bold text-lg py-6 transition-transform active:scale-[0.98] mt-4 bg-slate-900 dark:bg-white">
                   <span class="relative z-10">CREATE ACCOUNT</span>
                   <div class="absolute inset-0 bg-info-500 transform translate-y-full transition-transform duration-300 group-hover:translate-y-0"></div>
-              </button>
+              </Button>
 
               <p class="text-center text-slate-500 dark:text-slate-400 mt-6">
                   Already have an account? <a href="/login" use:inertia class="font-bold text-info-500 dark:text-info-400 hover:underline">Login</a>
