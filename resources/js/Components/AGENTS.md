@@ -144,7 +144,7 @@ const pwd = password_generator(12); // 12-char random password string
   }
 </script>
 
-<div class="bg-white dark:bg-gray-800" transition:fade={{ duration: 200 }}>
+<div class="bg-background text-foreground" transition:fade={{ duration: 200 }}>
   <!-- content -->
 </div>
 ```

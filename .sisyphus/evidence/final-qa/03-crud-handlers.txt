@@ -1,0 +1,6 @@
+resources/js/Pages/profile.svelte:66:    await api(() => axios.post('/change-profile', user));
+resources/js/Pages/profile.svelte:83:      axios.post('/change-password', {
+resources/js/Pages/auth/forgot-password.svelte:32:        const result = await api(() => axios.post("/forgot-password", form));
+resources/js/Pages/users.svelte:88:      ? await api(() => axios.post('/users', payload))
+resources/js/Pages/users.svelte:89:      : await api(() => axios.put(`/users/${formData.id}`, payload));
+resources/js/Pages/users.svelte:106:    const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));

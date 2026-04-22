@@ -1,0 +1,6 @@
+resources/js/Pages/profile.svelte:48:        .post('/assets/avatar', formData)
+resources/js/Pages/auth/register.svelte:42:    router.post("/register", form as Record<string, unknown>, {})
+resources/js/Pages/auth/reset-password.svelte:41:    router.post(`/reset-password`, { ...form, id } as Record<string, unknown>, {
+resources/js/Pages/auth/login.svelte:29:    router.post("/login", { email: form.email, password: form.password }, {})
+resources/js/Pages/users.svelte:93:      router.visit('/users', { preserveScroll: true, preserveState: true });
+resources/js/Pages/users.svelte:109:      router.visit('/users', { preserveScroll: true, preserveState: true });

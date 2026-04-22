@@ -1,0 +1,2 @@
+  import { toggleMode, mode } from 'mode-watcher';
+    toggleMode();

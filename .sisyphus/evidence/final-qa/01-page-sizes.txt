@@ -1,0 +1,9 @@
+  139 resources/js/Pages/auth/login.svelte
+  173 resources/js/Pages/auth/register.svelte
+  101 resources/js/Pages/auth/forgot-password.svelte
+  111 resources/js/Pages/auth/reset-password.svelte
+  182 resources/js/Pages/dashboard.svelte
+  419 resources/js/Pages/landing.svelte
+  292 resources/js/Pages/profile.svelte
+  277 resources/js/Pages/users.svelte
+ 1694 total
