@@ -2,10 +2,8 @@
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, inertia } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
-  import { Button } from '$lib/components/ui/button';
+  import { Card, CardContent } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
-  import { Separator } from '$lib/components/ui/separator';
   import { Users, Settings, Shield, Activity, ChevronRight } from 'lucide-svelte';
   import type { User } from '../types';
 
@@ -41,142 +39,147 @@
 
 <Header group="dashboard" />
 
-<div class="min-h-screen bg-background text-foreground transition-colors duration-500 overflow-x-hidden">
-  
-  <section class="relative px-6 sm:px-12 lg:px-24 pt-24 pb-20">
+<div class="min-h-screen bg-background text-foreground font-body transition-colors duration-500">
+
+  <section class="relative px-6 sm:px-12 lg:px-24 pt-28 pb-16">
     <div class="max-w-[90rem] mx-auto">
-      
-      <div class="mb-16" in:fly={{ y: 50, duration: 800 }}>
-        <p class="text-xs font-bold uppercase tracking-[0.3em] text-primary mb-6">
-          {greeting}
-        </p>
-        <h1 class="text-4xl sm:text-6xl lg:text-7xl leading-tight font-bold tracking-tighter">
+
+      <div class="mb-12" in:fly={{ y: 20, duration: 800 }}>
+        <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-3">{greeting}</span>
+        <h1 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter leading-tight" style="font-feature-settings: 'ss01'">
           Welcome back,
-          <span class="block text-primary">
-            {currentUser?.name || 'Commander'}
-          </span>
+          <span class="text-primary">{currentUser?.name || 'there'}</span>
         </h1>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20" in:fly={{ y: 30, duration: 800, delay: 200 }}>
-        
-        <Card class="relative overflow-hidden">
-          <CardHeader class="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle class="text-sm font-medium uppercase tracking-wider text-muted-foreground">Users</CardTitle>
-            <Users class="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-4xl font-bold">{total || users?.length || 0}</div>
-            <p class="text-xs text-muted-foreground mt-1">Total registered</p>
-          </CardContent>
-        </Card>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12" in:fly={{ y: 20, duration: 800, delay: 150 }}>
 
-        <Card class="relative overflow-hidden">
-          <CardHeader class="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle class="text-sm font-medium uppercase tracking-wider text-muted-foreground">Page</CardTitle>
-            <Activity class="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-4xl font-bold">{page}<span class="text-xl text-muted-foreground">/{totalPages}</span></div>
-            <p class="text-xs text-muted-foreground mt-1">Current view</p>
-          </CardContent>
-        </Card>
+        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Total Users</span>
+            <Users class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
+          </div>
+          <div>
+            <div class="text-3xl font-heading font-bold tracking-tighter text-foreground group-hover:text-primary transition-colors duration-300">{total || users?.length || 0}</div>
+            <div class="text-xs font-mono-accent text-muted-foreground mt-1">registered</div>
+          </div>
+        </div>
 
-        <Card class="relative overflow-hidden">
-          <CardHeader class="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle class="text-sm font-medium uppercase tracking-wider text-muted-foreground">Filter</CardTitle>
-            <Settings class="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-4xl font-bold capitalize">{filter}</div>
-            <p class="text-xs text-muted-foreground mt-1">Active filter</p>
-          </CardContent>
-        </Card>
-
-        <Card class="relative overflow-hidden bg-primary text-primary-foreground border-none">
-          <CardHeader class="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle class="text-sm font-medium uppercase tracking-wider opacity-80 text-primary-foreground">Status</CardTitle>
-            <Shield class="w-4 h-4 opacity-80" />
-          </CardHeader>
-          <CardContent>
-            <div class="text-4xl font-bold">{currentUser?.roles?.includes('admin') ? 'Admin' : 'User'}</div>
-            <div class="flex items-center gap-2 mt-2">
-              <span class="inline-flex h-2 w-2 rounded-full bg-background animate-pulse"></span>
-              <p class="text-xs opacity-90">{currentUser?.is_verified ? 'Verified' : 'Unverified'}</p>
+        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Page</span>
+            <Activity class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
+          </div>
+          <div>
+            <div class="text-3xl font-heading font-bold tracking-tighter text-foreground group-hover:text-primary transition-colors duration-300">
+              {page}<span class="text-lg text-muted-foreground font-normal">/{totalPages}</span>
             </div>
-          </CardContent>
-        </Card>
-
-      </div>
-
-      <Separator class="my-10" />
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8" in:fly={{ y: 30, duration: 800, delay: 400 }}>
-        
-        <div class="lg:col-span-5">
-          <h2 class="text-lg font-semibold tracking-tight mb-6">Account Details</h2>
-          
-          <div class="space-y-4">
-            <Card>
-              <CardContent class="p-6">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <p class="text-sm font-medium text-muted-foreground mb-1">Email Address</p>
-                    <p class="text-lg font-medium">{currentUser?.email}</p>
-                  </div>
-                  <Badge variant={currentUser?.is_verified ? 'default' : 'secondary'}>
-                    {currentUser?.is_verified ? 'Verified' : 'Pending'}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent class="p-6">
-                <p class="text-sm font-medium text-muted-foreground mb-1">Search Query</p>
-                <p class="text-lg font-medium font-mono">{search || '—'}</p>
-              </CardContent>
-            </Card>
+            <div class="text-xs font-mono-accent text-muted-foreground mt-1">current view</div>
           </div>
         </div>
 
-        <div class="lg:col-span-7">
-          <h2 class="text-lg font-semibold tracking-tight mb-6">Quick Actions</h2>
-          
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card class="group hover:border-primary transition-colors duration-300">
-              <a href="/users" use:inertia class="block h-full">
-                <CardHeader>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="p-2 bg-secondary rounded-lg">
-                      <Users class="w-5 h-5 text-secondary-foreground" />
-                    </div>
-                    <ChevronRight class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <CardTitle class="text-xl">Manage Users</CardTitle>
-                  <CardDescription>View and manage all registered users</CardDescription>
-                </CardHeader>
-              </a>
-            </Card>
-
-            <Card class="group hover:border-primary transition-colors duration-300">
-              <a href="/profile" use:inertia class="block h-full">
-                <CardHeader>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="p-2 bg-secondary rounded-lg">
-                      <Settings class="w-5 h-5 text-secondary-foreground" />
-                    </div>
-                    <ChevronRight class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <CardTitle class="text-xl">Edit Profile</CardTitle>
-                  <CardDescription>Update your account information</CardDescription>
-                </CardHeader>
-              </a>
-            </Card>
+        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Filter</span>
+            <Settings class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
+          </div>
+          <div>
+            <div class="text-3xl font-heading font-bold tracking-tighter text-foreground capitalize group-hover:text-primary transition-colors duration-300">{filter}</div>
+            <div class="text-xs font-mono-accent text-muted-foreground mt-1">active filter</div>
           </div>
         </div>
+
+        <div class="bg-primary text-primary-foreground rounded-2xl p-5 flex flex-col justify-between">
+          <div class="flex items-center justify-between mb-4">
+            <span class="font-mono-accent text-[10px] uppercase tracking-widest opacity-70">Status</span>
+            <Shield class="w-3.5 h-3.5 opacity-70" />
+          </div>
+          <div>
+            <div class="text-3xl font-heading font-bold tracking-tighter">
+              {currentUser?.roles?.includes('admin') ? 'Admin' : 'User'}
+            </div>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="inline-flex h-1.5 w-1.5 rounded-full bg-primary-foreground animate-pulse"></span>
+              <div class="text-xs font-mono-accent opacity-80">{currentUser?.is_verified ? 'Verified' : 'Unverified'}</div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" in:fly={{ y: 20, duration: 800, delay: 300 }}>
+
+        <div class="lg:col-span-5 flex flex-col gap-4">
+          <h2 class="text-sm font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Account Details</h2>
+
+          <div class="bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 transition-colors duration-300">
+            <div>
+              <p class="text-xs font-mono-accent text-muted-foreground mb-1.5">Email Address</p>
+              <p class="text-base font-heading font-semibold tracking-tight">{currentUser?.email}</p>
+            </div>
+            <Badge variant={currentUser?.is_verified ? 'default' : 'secondary'} class="font-mono-accent text-[10px]">
+              {currentUser?.is_verified ? 'Verified' : 'Pending'}
+            </Badge>
+          </div>
+
+          <div class="bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
+            <p class="text-xs font-mono-accent text-muted-foreground mb-1.5">Search Query</p>
+            <p class="text-base font-heading font-semibold tracking-tight font-mono-accent">{search || '—'}</p>
+          </div>
+
+          <div class="bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
+            <p class="text-xs font-mono-accent text-muted-foreground mb-3">Roles</p>
+            <div class="flex flex-wrap gap-2">
+              {#each (currentUser?.roles ?? []) as role}
+                <span class="font-mono-accent text-[11px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary capitalize">{role}</span>
+              {/each}
+              {#if !currentUser?.roles?.length}
+                <span class="font-mono-accent text-[11px] px-2.5 py-1 bg-secondary rounded-full text-muted-foreground">No roles</span>
+              {/if}
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 flex flex-col gap-4">
+          <h2 class="text-sm font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Quick Actions</h2>
+
+          <a href="/users" use:inertia class="group bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 hover:shadow-sm transition-all duration-300 cursor-pointer">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 shrink-0">
+                <Users class="w-5 h-5 text-foreground group-hover:text-primary transition-colors duration-300" />
+              </div>
+              <div>
+                <h4 class="text-base font-heading font-semibold tracking-tight">Manage Users</h4>
+                <p class="text-sm text-muted-foreground font-body mt-0.5">View and manage all registered users</p>
+              </div>
+            </div>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-300 shrink-0" />
+          </a>
+
+          <a href="/profile" use:inertia class="group bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 hover:shadow-sm transition-all duration-300 cursor-pointer">
+            <div class="flex items-center gap-4">
+              <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 shrink-0">
+                <Settings class="w-5 h-5 text-foreground group-hover:text-primary transition-colors duration-300" />
+              </div>
+              <div>
+                <h4 class="text-base font-heading font-semibold tracking-tight">Edit Profile</h4>
+                <p class="text-sm text-muted-foreground font-body mt-0.5">Update your account information</p>
+              </div>
+            </div>
+            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-300 shrink-0" />
+          </a>
+
+          <div class="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-mono-accent text-primary mb-1">Framework</p>
+              <p class="text-base font-heading font-semibold tracking-tight">Nara Framework</p>
+              <p class="text-sm text-muted-foreground font-body mt-0.5">HyperExpress · Svelte 5 · Inertia.js</p>
+            </div>
+            <span class="font-mono-accent text-[11px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">v1.0.0</span>
+          </div>
+        </div>
+
+      </div>
     </div>
   </section>
 

@@ -4,13 +4,10 @@
   import Header from '../Components/Header.svelte';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
-  import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Button } from '$lib/components/ui/button';
   import { Avatar, AvatarImage, AvatarFallback } from '$lib/components/ui/avatar';
-  import { Separator } from '$lib/components/ui/separator';
-  import { Badge } from '$lib/components/ui/badge';
   import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
   import { Loader2, Camera } from '@lucide/svelte';
 
@@ -97,189 +94,171 @@
 
 <Header group="profile" />
 
-<div class="min-h-screen bg-surface-light dark:bg-surface-dark text-slate-900 dark:text-slate-100 transition-colors duration-500 overflow-x-hidden selection:bg-primary-400 selection:text-black">
-  
-  <div class="fixed inset-0 pointer-events-none z-0">
-    <div class="absolute top-0 right-0 w-[600px] h-[600px] bg-info-500/5 rounded-full blur-3xl -mr-64 -mt-64"></div>
-    <div class="absolute bottom-0 left-0 w-[800px] h-[800px] bg-primary-500/5 rounded-full blur-3xl -ml-96 -mb-96"></div>
-  </div>
+<div class="min-h-screen bg-background text-foreground font-body transition-colors duration-500">
 
-  <section class="relative px-6 sm:px-12 lg:px-24 pt-24 pb-20">
+  <section class="relative px-6 sm:px-12 lg:px-24 pt-28 pb-16">
     <div class="max-w-[90rem] mx-auto">
-      
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 mb-20">
-        
-        <div class="lg:col-span-4" in:fly={{ x: -50, duration: 800 }}>
-          <p class="text-xs font-bold uppercase tracking-[0.3em] text-info-600 dark:text-info-400 mb-6">
-            Account
-          </p>
-          <h1 class="text-4xl sm:text-5xl lg:text-6xl leading-[0.9] font-bold tracking-tighter mb-8">
-            YOUR
-            <span class="block text-transparent bg-clip-text bg-gradient-to-r from-info-500 to-primary-400">
-              PROFILE
-            </span>
-          </h1>
 
-          <Card class="relative overflow-hidden border-slate-200 dark:border-white/5 bg-surface-card-light dark:bg-surface-card-dark rounded-3xl">
-            <div class="absolute top-0 right-0 p-32 bg-info-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-            
-            <CardHeader class="relative z-10 pb-0">
-              <div class="flex items-center gap-6 mb-4">
-                <div class="relative group">
-                  <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-info-500 to-primary-500 p-0.5">
-                    <div class="w-full h-full rounded-2xl bg-surface-card-light dark:bg-surface-card-dark flex items-center justify-center overflow-hidden">
-                      <Avatar class="h-full w-full rounded-2xl">
-                        {#if previewUrl}
-                          <AvatarImage src={previewUrl} alt="Profile" class="object-cover" />
-                        {/if}
-                        <AvatarFallback class="text-3xl font-bold bg-transparent text-transparent bg-clip-text bg-gradient-to-br from-info-500 to-primary-500 rounded-2xl">
-                          {user.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
-                  <label class="absolute -bottom-2 -right-2 w-8 h-8 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
-                    <Camera class="w-4 h-4" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onchange={handleAvatarChange}
-                      class="hidden"
-                    />
-                  </label>
-                </div>
-                <div>
-                  <h2 class="text-2xl font-bold tracking-tight mb-1">{user.name}</h2>
-                  <p class="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent class="relative z-10 pt-4">
-              <div class="flex flex-wrap gap-2 mb-6">
-                <Badge variant="outline" class={user.roles?.includes('admin') ? 'bg-accent-500/10 text-accent-600 border-accent-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 border-slate-300'}>
-                  {user.roles?.includes('admin') ? 'Administrator' : 'Standard User'}
-                </Badge>
-                <Badge variant="outline" class={user.is_verified ? 'bg-primary-500/10 text-primary-600 border-primary-500/20' : 'bg-warning-500/10 text-warning-600 border-warning-500/20'}>
-                  {user.is_verified ? 'Verified' : 'Unverified'}
-                </Badge>
-              </div>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-              <div class="space-y-3">
-                <div class="flex items-center gap-3 text-sm">
-                  <svg class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  <span class="font-mono text-slate-600 dark:text-slate-300">{user.phone || '—'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div class="lg:col-span-4 flex flex-col gap-4" in:fly={{ y: 20, duration: 800 }}>
 
-          <div class="mt-6 p-4 border border-slate-200 dark:border-white/5 rounded-2xl">
-            <div class="flex items-start gap-3">
-              <div class="w-8 h-8 rounded-full bg-primary-500/10 flex items-center justify-center flex-shrink-0">
-                <svg class="w-4 h-4 text-primary-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+          <div class="mb-4">
+            <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-3">Account</span>
+            <h1 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter" style="font-feature-settings: 'ss01'">Profile</h1>
+          </div>
+
+          <div class="bg-card border border-border rounded-2xl p-6">
+            <div class="flex items-center gap-4 mb-6">
+              <div class="relative shrink-0">
+                <div class="w-16 h-16 rounded-2xl bg-secondary border border-border overflow-hidden">
+                  <Avatar class="h-full w-full rounded-2xl">
+                    {#if previewUrl}
+                      <AvatarImage src={previewUrl} alt="Profile" class="object-cover" />
+                    {/if}
+                    <AvatarFallback class="text-xl font-heading font-bold bg-secondary text-foreground rounded-2xl">
+                      {user.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                <label class="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors duration-200">
+                  <Camera class="w-3.5 h-3.5" />
+                  <input type="file" accept="image/*" onchange={handleAvatarChange} class="hidden" />
+                </label>
               </div>
               <div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Secure Storage</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">Your data is encrypted and stored securely on Nara's backend infrastructure.</p>
+                <h2 class="text-lg font-heading font-semibold tracking-tight">{user.name}</h2>
+                <p class="text-sm font-mono-accent text-muted-foreground">{user.email}</p>
               </div>
             </div>
+
+            <div class="flex flex-wrap gap-2">
+              <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">
+                {user.roles?.includes('admin') ? 'Admin' : 'User'}
+              </span>
+              <span class="font-mono-accent text-[10px] px-2.5 py-1 {user.is_verified ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-secondary text-muted-foreground'} rounded-full">
+                {user.is_verified ? 'Verified' : 'Unverified'}
+              </span>
+            </div>
           </div>
+
+          {#if user.phone}
+            <div class="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors duration-300">
+              <p class="text-xs font-mono-accent text-muted-foreground mb-1.5">Phone</p>
+              <p class="text-base font-heading font-semibold tracking-tight font-mono-accent">{user.phone}</p>
+            </div>
+          {/if}
+
+          <div class="bg-card border border-border rounded-2xl p-5 flex items-start gap-3">
+            <div class="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+              <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground mb-1">Secure Storage</p>
+              <p class="text-xs text-muted-foreground font-body leading-relaxed">Your data is encrypted and stored securely on Nara's backend.</p>
+            </div>
+          </div>
+
         </div>
 
-        <div class="lg:col-span-8" in:fly={{ x: 50, duration: 800, delay: 200 }}>
-          
+        <div class="lg:col-span-8" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+
           <Tabs value="personal" class="w-full">
-            <TabsList class="grid w-full max-w-md grid-cols-2 mb-8 bg-surface-card-light dark:bg-surface-card-dark rounded-full p-1 border border-slate-200 dark:border-white/5 h-14">
-              <TabsTrigger value="personal" class="rounded-full data-[state=active]:bg-info-500 data-[state=active]:text-white h-full text-sm font-bold uppercase tracking-wider">
+            <TabsList class="inline-flex gap-1 mb-8 bg-card border border-border rounded-full p-1 h-auto">
+              <TabsTrigger
+                value="personal"
+                class="rounded-full px-5 py-2 text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground transition-all duration-200 data-[state=active]:bg-foreground data-[state=active]:text-background"
+              >
                 Personal Info
               </TabsTrigger>
-              <TabsTrigger value="security" class="rounded-full data-[state=active]:bg-warning-500 data-[state=active]:text-white h-full text-sm font-bold uppercase tracking-wider">
+              <TabsTrigger
+                value="security"
+                class="rounded-full px-5 py-2 text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground transition-all duration-200 data-[state=active]:bg-foreground data-[state=active]:text-background"
+              >
                 Security
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="personal" class="space-y-6 outline-none focus-visible:ring-0 mt-0">
-              <Card class="bg-surface-card-light dark:bg-surface-card-dark border-slate-200 dark:border-white/5 rounded-3xl">
-                <CardHeader>
-                  <CardTitle class="text-xl font-bold tracking-tight">Personal Information</CardTitle>
-                  <CardDescription>Update your personal details and public profile.</CardDescription>
-                </CardHeader>
-                <Separator class="bg-slate-200 dark:bg-white/5" />
-                <CardContent class="pt-6">
-                  <form onsubmit={(e) => { e.preventDefault(); changeProfile(); }} class="space-y-6">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div class="space-y-2">
-                        <Label for="name" class="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name</Label>
-                        <Input id="name" type="text" bind:value={user.name} placeholder="Your full name" class="rounded-xl h-12 bg-white dark:bg-black/50 border-slate-200 dark:border-slate-700" />
-                      </div>
-                      <div class="space-y-2">
-                        <Label for="phone" class="text-xs font-bold uppercase tracking-wider text-slate-500">Phone Number</Label>
-                        <Input id="phone" type="text" bind:value={user.phone} placeholder="+62 xxx xxxx xxxx" class="rounded-xl h-12 bg-white dark:bg-black/50 border-slate-200 dark:border-slate-700" />
-                      </div>
-                    </div>
+            <TabsContent value="personal" class="outline-none focus-visible:ring-0 mt-0">
+              <div class="bg-card border border-border rounded-2xl p-6 sm:p-8">
+                <div class="mb-6">
+                  <h3 class="text-lg font-heading font-semibold tracking-tight">Personal Information</h3>
+                  <p class="text-sm text-muted-foreground font-body mt-1">Update your personal details and public profile.</p>
+                </div>
 
+                <div class="h-px bg-border mb-6"></div>
+
+                <form onsubmit={(e) => { e.preventDefault(); changeProfile(); }} class="space-y-5">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div class="space-y-2">
-                      <Label for="email" class="text-xs font-bold uppercase tracking-wider text-slate-500">Email Address</Label>
-                      <Input id="email" type="email" bind:value={user.email} placeholder="you@example.com" class="rounded-xl h-12 bg-white dark:bg-black/50 border-slate-200 dark:border-slate-700" />
+                      <Label for="name" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Full Name</Label>
+                      <Input id="name" type="text" bind:value={user.name} placeholder="Your full name" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
                     </div>
+                    <div class="space-y-2">
+                      <Label for="phone" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Phone Number</Label>
+                      <Input id="phone" type="text" bind:value={user.phone} placeholder="+62 xxx xxxx xxxx" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
+                    </div>
+                  </div>
 
-                    <div class="flex justify-end pt-4">
-                      <Button type="submit" disabled={isLoading} class="px-8 h-12 rounded-full bg-slate-900 dark:bg-white text-white dark:text-black font-bold uppercase tracking-wider text-xs hover:bg-info-500 dark:hover:bg-info-500 hover:text-white transition-colors duration-300">
-                        {#if isLoading}
-                          <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                          Saving...
-                        {:else}
-                          Save Changes
-                        {/if}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
+                  <div class="space-y-2">
+                    <Label for="email" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Email Address</Label>
+                    <Input id="email" type="email" bind:value={user.email} placeholder="you@example.com" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
+                  </div>
+
+                  <div class="flex justify-end pt-2">
+                    <Button type="submit" disabled={isLoading} class="rounded-full px-8 font-heading font-semibold text-sm hover:scale-105 active:scale-95 transition-transform duration-200">
+                      {#if isLoading}
+                        <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      {:else}
+                        Save Changes
+                      {/if}
+                    </Button>
+                  </div>
+                </form>
+              </div>
             </TabsContent>
 
-            <TabsContent value="security" class="space-y-6 outline-none focus-visible:ring-0 mt-0">
-              <Card class="bg-surface-card-light dark:bg-surface-card-dark border-slate-200 dark:border-white/5 rounded-3xl">
-                <CardHeader>
-                  <CardTitle class="text-xl font-bold tracking-tight">Change Password</CardTitle>
-                  <CardDescription>Ensure your account is using a long, random password to stay secure.</CardDescription>
-                </CardHeader>
-                <Separator class="bg-slate-200 dark:bg-white/5" />
-                <CardContent class="pt-6">
-                  <form onsubmit={(e) => { e.preventDefault(); changePassword(); }} class="space-y-6">
+            <TabsContent value="security" class="outline-none focus-visible:ring-0 mt-0">
+              <div class="bg-card border border-border rounded-2xl p-6 sm:p-8">
+                <div class="mb-6">
+                  <h3 class="text-lg font-heading font-semibold tracking-tight">Change Password</h3>
+                  <p class="text-sm text-muted-foreground font-body mt-1">Use a long, random password to keep your account secure.</p>
+                </div>
+
+                <div class="h-px bg-border mb-6"></div>
+
+                <form onsubmit={(e) => { e.preventDefault(); changePassword(); }} class="space-y-5">
+                  <div class="space-y-2">
+                    <Label for="current_password" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Current Password</Label>
+                    <Input id="current_password" type="password" bind:value={current_password} placeholder="••••••••" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
+                  </div>
+
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div class="space-y-2">
-                      <Label for="current_password" class="text-xs font-bold uppercase tracking-wider text-slate-500">Current Password</Label>
-                      <Input id="current_password" type="password" bind:value={current_password} placeholder="••••••••" class="rounded-xl h-12 bg-white dark:bg-black/50 border-slate-200 dark:border-slate-700" />
+                      <Label for="new_password" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">New Password</Label>
+                      <Input id="new_password" type="password" bind:value={new_password} placeholder="••••••••" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
                     </div>
+                    <div class="space-y-2">
+                      <Label for="confirm_password" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Confirm Password</Label>
+                      <Input id="confirm_password" type="password" bind:value={confirm_password} placeholder="••••••••" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
+                    </div>
+                  </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div class="space-y-2">
-                        <Label for="new_password" class="text-xs font-bold uppercase tracking-wider text-slate-500">New Password</Label>
-                        <Input id="new_password" type="password" bind:value={new_password} placeholder="••••••••" class="rounded-xl h-12 bg-white dark:bg-black/50 border-slate-200 dark:border-slate-700" />
-                      </div>
-                      <div class="space-y-2">
-                        <Label for="confirm_password" class="text-xs font-bold uppercase tracking-wider text-slate-500">Confirm Password</Label>
-                        <Input id="confirm_password" type="password" bind:value={confirm_password} placeholder="••••••••" class="rounded-xl h-12 bg-white dark:bg-black/50 border-slate-200 dark:border-slate-700" />
-                      </div>
-                    </div>
-
-                    <div class="flex justify-end pt-4">
-                      <Button variant="outline" type="submit" disabled={isLoading} class="px-8 h-12 rounded-full border-slate-200 dark:border-slate-700 font-bold uppercase tracking-wider text-xs hover:border-warning-500 hover:text-warning-500 dark:hover:border-warning-500 dark:hover:text-warning-500 transition-colors duration-300 bg-transparent">
-                        {#if isLoading}
-                          <Loader2 class="mr-2 h-4 w-4 animate-spin" />
-                          Updating...
-                        {:else}
-                          Update Password
-                        {/if}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
+                  <div class="flex justify-end pt-2">
+                    <Button variant="outline" type="submit" disabled={isLoading} class="rounded-full px-8 font-heading font-semibold text-sm border-border hover:border-primary/40 hover:text-primary transition-colors duration-200">
+                      {#if isLoading}
+                        <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      {:else}
+                        Update Password
+                      {/if}
+                    </Button>
+                  </div>
+                </form>
+              </div>
             </TabsContent>
           </Tabs>
 

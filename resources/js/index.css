@@ -1,8 +1,65 @@
 @import url('https://rsms.me/inter/inter.css');
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .font-heading { font-family: 'Space Grotesk', system-ui, sans-serif; }
+  .font-body { font-family: 'DM Sans', system-ui, sans-serif; }
+  .font-mono-accent { font-family: 'JetBrains Mono', monospace; }
+}
+
+@layer components {
+  [data-sonner-toaster] {
+    font-family: 'JetBrains Mono', monospace !important;
+  }
+
+  [data-sonner-toast] {
+    border-radius: 14px !important;
+    border: 1px solid hsl(var(--border)) !important;
+    background: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+    box-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.08), 0 1px 4px -1px rgba(0, 0, 0, 0.04) !important;
+    padding: 14px 16px !important;
+  }
+
+  [data-sonner-toast] [data-title] {
+    font-family: 'Space Grotesk', system-ui, sans-serif !important;
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  [data-sonner-toast] [data-description] {
+    font-family: 'DM Sans', system-ui, sans-serif !important;
+    font-size: 0.75rem !important;
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  [data-sonner-toast][data-type="success"] [data-icon] {
+    color: hsl(var(--primary)) !important;
+  }
+
+  [data-sonner-toast][data-type="error"] [data-icon] {
+    color: hsl(var(--destructive)) !important;
+  }
+
+  [data-sonner-toast][data-type="warning"] [data-icon] {
+    color: hsl(38 92% 50%) !important;
+  }
+
+  [data-sonner-toast][data-type="info"] [data-icon] {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  [data-sonner-toast] [data-close-button] {
+    background: hsl(var(--secondary)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: 6px !important;
+  }
+}
 
 @layer base {
   :root {
@@ -29,24 +86,24 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --background: 220 18% 8%;
+    --foreground: 210 20% 96%;
+    --card: 220 18% 11%;
+    --card-foreground: 210 20% 96%;
+    --popover: 220 18% 11%;
+    --popover-foreground: 210 20% 96%;
     --primary: 160.1 84.1% 39.4%;
     --primary-foreground: 151 81% 96%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --secondary: 220 18% 16%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 220 18% 16%;
+    --muted-foreground: 215 16% 55%;
     --accent: 271.5 81.3% 55.9%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
+    --border: 220 18% 18%;
+    --input: 220 18% 18%;
     --ring: 160.1 84.1% 39.4%;
   }
 
