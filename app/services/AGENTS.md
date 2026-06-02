@@ -59,8 +59,9 @@ Logger.logQuery("SELECT * FROM users", 12); // query, durationMs
 ```
 
 Logs are written to:
-- Console (pretty-printed in development)
-- `logs/app.log` (daily rotation, 10MB max)
+- Console (pretty human-readable + colors by default when in TTY/dev; raw JSON when in docker/piped/CI)
+  Control with `LOG_PRETTY=true` (force pretty even in prod) or `LOG_PRETTY=false`
+- `logs/app.log` (daily rotation, 10MB max, respects LOG_LEVEL) — always raw JSON
 - `logs/error.log` (error+ level only)
 
 ## Paginator

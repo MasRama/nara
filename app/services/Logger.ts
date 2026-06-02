@@ -3,8 +3,9 @@
  * 
  * High-performance logging system using Pino with the following features:
  * - Multiple log levels: trace, debug, info, warn, error, fatal
- * - Structured JSON logging for production
- * - Pretty printing for development
+ * - Structured JSON (or pretty human-readable) to stdout + file
+ * - Pretty (colored, readable) when in dev / TTY / LOG_PRETTY=true
+ * - Raw JSON when in containers / piped / LOG_PRETTY=false (for log tools)
  * - Automatic log rotation (daily files, max 14 days retention)
  * - Request ID tracking for distributed tracing
  * - Performance optimized (Pino is 5x faster than Winston)
@@ -31,6 +32,11 @@ import pino from 'pino';
 import path from 'path';
 import fs from 'fs';
 
+// Ensure environment is loaded (from .env or .env.production) *before*
+// we read process.env for LOG_LEVEL below. This import triggers top-level
+// loading logic in @config/env.ts
+import '@config';
+
 // Ensure logs directory exists
 const logsDir = path.join(process.cwd(), 'logs');
 if (!fs.existsSync(logsDir)) {
@@ -40,6 +46,28 @@ if (!fs.existsSync(logsDir)) {
 // Determine log level from environment
 const LOG_LEVEL = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Decide console output format:
+// - Use pino-pretty (human readable, colored, single-line friendly) when:
+//   * development, OR
+//   * LOG_PRETTY=true (force for local prod testing), OR
+//   * running in an interactive TTY (you see it directly in terminal)
+// - Otherwise (docker, pm2 detached, CI, piped logs, k8s) → raw JSON to stdout
+//   (so log collectors can parse structured data easily)
+// Files always get raw structured JSON (good for both cases).
+const usePrettyConsole =
+  process.env.LOG_PRETTY === 'true' ||
+  (process.env.LOG_PRETTY !== 'false' && (NODE_ENV === 'development' || process.stdout.isTTY));
+
+/**
+ * Environment variables that affect logging:
+ *   LOG_LEVEL=debug|info|...   (default: debug in dev, info in prod)
+ *   LOG_PRETTY=true            (force human-readable pretty output even in production)
+ *   LOG_PRETTY=false           (force raw JSON even in a TTY)
+ *
+ * Tip: when running production build locally for testing/debugging:
+ *   LOG_LEVEL=debug LOG_PRETTY=true node build/server.js
+ */
 
 /**
  * Pino configuration
@@ -82,20 +110,28 @@ const pinoConfig: pino.LoggerOptions = {
  */
 const transport = pino.transport({
   targets: [
-    // Console output with pretty printing in development
-    ...(NODE_ENV === 'development' ? [{
-      target: 'pino-pretty',
-      level: LOG_LEVEL,
-      options: {
-        colorize: true,
-        translateTime: 'HH:MM:ss',
-        ignore: 'pid,hostname',
-        singleLine: false,
-        messageFormat: '{msg}',
-      },
-    }] : []),
+    // Console/stdout target (chosen for readability vs machine parseability)
+    usePrettyConsole
+      ? {
+          target: 'pino-pretty',
+          level: LOG_LEVEL,
+          options: {
+            colorize: true,
+            translateTime: 'HH:MM:ss',
+            ignore: 'pid,hostname',
+            singleLine: false,
+            messageFormat: '{msg}',
+          },
+        }
+      : {
+          target: 'pino/file',
+          level: LOG_LEVEL,
+          options: {
+            destination: 1, // stdout (fd 1) → raw JSON (for log shippers)
+          },
+        },
 
-    // File output with rotation
+    // File output with rotation (always)
     {
       target: 'pino-roll',
       level: LOG_LEVEL,
@@ -108,7 +144,7 @@ const transport = pino.transport({
       },
     },
 
-    // Separate error log file
+    // Separate error log file (errors only)
     {
       target: 'pino-roll',
       level: 'error',
