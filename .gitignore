@@ -33,6 +33,7 @@ storage/
 .vscode
 .zencoder
 .zenflow
+.sisyphus
 
 # Logs
 logs/

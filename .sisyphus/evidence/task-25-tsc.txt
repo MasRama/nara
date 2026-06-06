@@ -1,1 +1,0 @@
-tsc --noEmit passed successfully with no output
