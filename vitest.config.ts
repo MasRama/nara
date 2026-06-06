@@ -38,6 +38,7 @@ export default defineConfig({
       { find: /^@factories\/(.+)$/, replacement: r('database/factories/$1') },
       { find: '@factories', replacement: r('database/factories/index.ts') },
       { find: '@root/knexfile', replacement: r('knexfile.ts') },
+      { find: /^@\/(.+)$/, replacement: r('app/$1') },
       { find: /^\$lib\/(.+)$/, replacement: r('resources/js/lib/$1') },
       { find: '$lib', replacement: r('resources/js/lib') },
     ],
