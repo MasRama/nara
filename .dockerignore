@@ -1,0 +1,43 @@
+# Dependencies
+node_modules
+
+# Build output (rebuilt inside container)
+build
+dist
+
+# Version control
+.git
+.gitignore
+
+# Environment files (inject via docker --env-file or orchestrator secrets)
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# IDE / editor
+.vscode
+.DS_Store
+
+# Logs (container logs go to stdout)
+logs
+
+# Tests
+tests
+coverage
+vitest.config.ts
+
+# Documentation
+README.md
+AGENTS.md
+todo.md
+LICENSE
+
+# CI/CD
+.github
+
+# Benchmark
+benchmark
+
+# Nara CLI
+nara
