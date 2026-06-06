@@ -10,6 +10,7 @@ import UserController from "@controllers/UserController";
 import OAuthController from "@controllers/OAuthController";
 import HomeController from "@controllers/HomeController";
 import AssetController from "@controllers/AssetController";
+import RoleController from "@controllers/RoleController";
 import Auth from "@middlewares/auth";
 import { strictRateLimit } from "@middlewares/rateLimit";
 
@@ -70,6 +71,23 @@ Route.post("/change-password", [Auth], AuthController.changePassword);
 Route.post("/users", [Auth], UserController.createUser);
 Route.put("/users/:id", [Auth], UserController.updateUser);
 Route.delete("/users", [Auth], UserController.deleteUsers);
+
+/**
+ * Role Management Routes (Admin only)
+ * ------------------------------------------------
+ * GET    /roles              - Roles management page (Inertia)
+ * GET    /roles/data         - Get all roles with permissions (JSON)
+ * GET    /roles/permissions  - Get all permissions grouped by resource (JSON)
+ * POST   /roles              - Create a new role (JSON)
+ * PUT    /roles/:id          - Update a role (JSON)
+ * DELETE /roles/:id          - Delete a role (JSON)
+ */
+Route.get("/roles", [Auth], RoleController.rolesPage);
+Route.get("/roles/data", [Auth], RoleController.index);
+Route.get("/roles/permissions", [Auth], RoleController.permissionsData);
+Route.post("/roles", [Auth], RoleController.store);
+Route.put("/roles/:id", [Auth], RoleController.update);
+Route.delete("/roles/:id", [Auth], RoleController.destroy);
 
 // Avatar upload endpoint (local storage) - rate limited to prevent abuse
 Route.post("/assets/avatar", [Auth, strictRateLimit()], AssetController.uploadAsset);

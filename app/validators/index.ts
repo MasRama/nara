@@ -35,6 +35,10 @@ export {
   UpdateUserSchema,
   DeleteUsersSchema,
   ChangeProfileSchema,
+
+  // Role
+  CreateRoleSchema,
+  UpdateRoleSchema,
 } from './schemas';
 
 // Type exports
@@ -48,4 +52,6 @@ export type {
   UpdateUserInput,
   DeleteUsersInput,
   ChangeProfileInput,
+  CreateRoleInput,
+  UpdateRoleInput,
 } from './schemas';

@@ -13,18 +13,20 @@
   import { Button } from '$lib/components/ui/button';
   import { Switch } from '$lib/components/ui/switch';
   import { Loader2 } from '@lucide/svelte';
-  import type { UserForm } from '../types';
+  import type { UserForm, RoleInfo } from '../types';
 
   let {
     show = false,
     mode = 'create',
     form,
-    isSubmitting = false
+    isSubmitting = false,
+    availableRoles = []
   }: {
     show?: boolean;
     mode?: 'create' | 'edit';
     form: UserForm;
-    isSubmitting?: boolean
+    isSubmitting?: boolean;
+    availableRoles?: RoleInfo[];
   } = $props();
 
   const dispatch = createEventDispatcher<{
@@ -38,6 +40,18 @@
 
   function handleSubmit(): void {
     dispatch('submit', form);
+  }
+
+  function toggleRole(slug: string, checked: boolean): void {
+    if (checked) {
+      form.roles = [...(form.roles || []), slug];
+    } else {
+      form.roles = (form.roles || []).filter(r => r !== slug);
+    }
+  }
+
+  function hasRole(slug: string): boolean {
+    return form.roles?.includes(slug) ?? false;
   }
 </script>
 
@@ -59,7 +73,7 @@
     </DialogHeader>
 
     <form id="user-form" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-      <div class="px-6 py-5 space-y-5">
+      <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
 
         <div class="space-y-2">
           <Label for="name" class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">Full Name</Label>
@@ -112,34 +126,40 @@
           />
         </div>
 
-        <div class="grid grid-cols-2 gap-3 pt-1">
-          <div class="flex items-center gap-3 bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors duration-200">
-            <Switch
-              id="admin-role"
-              checked={form.roles?.includes('admin') ?? false}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  form.roles = [...(form.roles || []), 'admin'];
-                } else {
-                  form.roles = (form.roles || []).filter(r => r !== 'admin');
-                }
-              }}
-            />
-            <div>
-              <Label for="admin-role" class="text-sm font-heading font-semibold cursor-pointer">Admin</Label>
-              <p class="text-xs font-mono-accent text-muted-foreground mt-0.5">Full access</p>
-            </div>
+        <!-- Roles - dynamic from DB -->
+        <div class="space-y-3">
+          <Label class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">Roles</Label>
+          <div class="grid grid-cols-2 gap-2">
+            {#each availableRoles as role}
+              <div class="flex items-center gap-3 bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors duration-200">
+                <Switch
+                  id="role-{role.slug}"
+                  checked={hasRole(role.slug)}
+                  onCheckedChange={(checked) => toggleRole(role.slug, checked)}
+                />
+                <div>
+                  <Label for="role-{role.slug}" class="text-sm font-heading font-semibold cursor-pointer capitalize">{role.name}</Label>
+                  {#if role.description}
+                    <p class="text-[10px] font-mono-accent text-muted-foreground mt-0.5 line-clamp-1">{role.description}</p>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+            {#if availableRoles.length === 0}
+              <p class="text-xs text-muted-foreground font-mono-accent col-span-2">No roles available</p>
+            {/if}
           </div>
+        </div>
 
-          <div class="flex items-center gap-3 bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors duration-200">
-            <Switch
-              id="verified-status"
-              bind:checked={form.is_verified}
-            />
-            <div>
-              <Label for="verified-status" class="text-sm font-heading font-semibold cursor-pointer">Verified</Label>
-              <p class="text-xs font-mono-accent text-muted-foreground mt-0.5">Email confirmed</p>
-            </div>
+        <!-- Verified status -->
+        <div class="flex items-center gap-3 bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors duration-200">
+          <Switch
+            id="verified-status"
+            bind:checked={form.is_verified}
+          />
+          <div>
+            <Label for="verified-status" class="text-sm font-heading font-semibold cursor-pointer">Verified</Label>
+            <p class="text-xs font-mono-accent text-muted-foreground mt-0.5">Email confirmed</p>
           </div>
         </div>
 

@@ -4,6 +4,20 @@ import dayjs from "dayjs";
 import { randomUUID } from "crypto";
 import { UserFactory } from "../database/factories";
 
+/**
+ * Initial Seed - Roles, Permissions & Admin User
+ *
+ * This seed sets up the initial RBAC state:
+ * - Creates the permission pool (what can be controlled)
+ * - Creates default roles (admin, user, moderator) with sensible defaults
+ * - Creates the first admin user
+ *
+ * After seeding, everything here can be managed from the admin dashboard:
+ * - /roles    → Create/edit/delete roles, assign permissions
+ * - /users    → Assign roles to users
+ *
+ * The seed is idempotent — safe to re-run via `node nara db:seed`.
+ */
 export async function seed(knex: Knex): Promise<void> {
 	// Clean tables in correct order (respecting foreign keys)
 	await knex("user_roles").del();
@@ -15,7 +29,9 @@ export async function seed(knex: Knex): Promise<void> {
 	const now = dayjs().valueOf();
 
 	// ==========================================
-	// 1. Create Roles
+	// 1. Create Default Roles
+	// These are starting templates — admin can
+	// create/edit/delete roles from /roles page
 	// ==========================================
 	const roles = [
 		{
@@ -52,7 +68,9 @@ export async function seed(knex: Knex): Promise<void> {
 	const moderatorRole = await knex("roles").where("slug", "moderator").first();
 
 	// ==========================================
-	// 2. Create Permissions
+	// 2. Create Permission Pool
+	// All available permissions in the system.
+	// Admin assigns these to roles via /roles page
 	// ==========================================
 	const permissions = [
 		// User permissions
@@ -88,7 +106,9 @@ export async function seed(knex: Knex): Promise<void> {
 	const permissionMap = new Map(allPermissions.map((p) => [p.slug, p.id]));
 
 	// ==========================================
-	// 3. Assign Permissions to Roles
+	// 3. Default Permission Assignments
+	// These are starting defaults — admin can
+	// change them anytime from /roles page
 	// ==========================================
 
 	// Admin gets all permissions

@@ -34,27 +34,26 @@ import { User } from '@models';
 /**
  * Form request for creating new users
  *
- * Authorization: Only admins can create users
+ * Authorization: Users with 'users.create' permission (or admin)
  * Validation: Uses CreateUserSchema from validators
  */
 export class CreateUserRequest extends FormRequest<CreateUserInput> {
   /**
    * Determine if the user is authorized to create users
    *
-   * Only authenticated admins can create users.
-   * Override this method to customize authorization logic.
+   * Admin users bypass all checks. Others need 'users.create' permission.
    *
    * @returns Promise<boolean>
    */
   async authorize(): Promise<boolean> {
-    // Must be authenticated
     if (!this.user) {
       return false;
     }
 
-    // Check if user has admin role
     const isAdmin = await User.isAdmin(this.user.id);
-    return isAdmin;
+    if (isAdmin) return true;
+
+    return User.hasPermission(this.user.id, "users.create");
   }
 
   /**

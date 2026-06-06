@@ -7,7 +7,7 @@
  * - Profile management (authenticated user)
  */
 import Authenticate from "@services/Authenticate";
-import { User } from "@models";
+import { User, Role } from "@models";
 import { paginate, parsePaginationQuery } from "@services/Paginator";
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse } from "@core";
@@ -25,8 +25,7 @@ import {
 import { CreateUserRequest, UpdateUserRequest, DeleteUsersRequest } from "@requests";
 import { event } from "@helpers/events";
 import { UserCreated, UserUpdated, UsersDeleted } from "@events/examples";
-import { UserResource, userCollection } from "@/http/resources/UserResource";
-import { ResourceCollection } from "@core";
+import { UserResource } from "@/http/resources/UserResource";
 
 /**
  * Query parameters for user listing
@@ -97,14 +96,21 @@ class UserController extends BaseController {
    * Users management page
    */
   public async usersPage(request: NaraRequest, response: NaraResponse) {
-    await this.requireAdmin(request);
+    await this.requirePermission(request, "users.view");
 
     const params = this.parseUserQueryParams(request);
     const query = this.buildUserQuery(params);
     const result = await paginate(query, { page: params.page, limit: params.limit });
 
-    // Get current user for admin check
-    const isAdmin = request.user ? await User.isAdmin(request.user.id) : false;
+    // Check current user permissions for UI (show/hide action buttons)
+    const userId = request.user!.id;
+    const isAdmin = await User.isAdmin(userId);
+    const canCreate = isAdmin || await User.hasPermission(userId, "users.create");
+    const canEdit = isAdmin || await User.hasPermission(userId, "users.edit");
+    const canDelete = isAdmin || await User.hasPermission(userId, "users.delete");
+
+    // Get available roles for the user form
+    const availableRoles = await Role.findAll();
 
     // Attach roles to each user using UserResource
     const usersWithRoles = await Promise.all(
@@ -112,8 +118,8 @@ class UserController extends BaseController {
         const userRecord = user as { id: string; name: string | null; email: string; phone: string | null; avatar: string | null; is_verified: boolean; membership_date: string | null; password: string; remember_me_token: string | null; created_at: number; updated_at: number; };
         const roles = await User.roles(userRecord.id);
         const resource = new UserResource(userRecord)
-          .withEmail(isAdmin)
-          .withPhone(isAdmin)
+          .withEmail(isAdmin || canEdit)
+          .withPhone(isAdmin || canEdit)
           .withRoles(roles);
         return {
           ...resource.toJson(),
@@ -125,6 +131,8 @@ class UserController extends BaseController {
     this.requireInertia(response);
     return response.inertia("users", {
       users: usersWithRoles,
+      availableRoles: availableRoles.map((r) => ({ name: r.name, slug: r.slug, description: r.description })),
+      permissions: { canCreate, canEdit, canDelete },
       ...result.meta,
       search: params.search,
       filter: params.filter,

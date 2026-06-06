@@ -66,6 +66,20 @@ export interface ChangeProfileInput {
   phone?: string | null;
 }
 
+export interface CreateRoleInput {
+  name: string;
+  slug: string;
+  description?: string | null;
+  permissions?: string[]; // Array of permission slugs
+}
+
+export interface UpdateRoleInput {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  permissions?: string[]; // Array of permission slugs
+}
+
 
 // ============================================
 // Validator Functions
@@ -519,5 +533,139 @@ export function ChangeProfileSchema(data: unknown): ValidationResult<ChangeProfi
       phone: phone ? String(phone) : null,
     }
   };
+}
+
+/**
+ * Create role validator
+ */
+export function CreateRoleSchema(data: unknown): ValidationResult<CreateRoleInput> {
+  const errors: Record<string, string[]> = {};
+  
+  if (!isObject(data)) {
+    return { success: false, errors: { _root: ['Data harus berupa object'] } };
+  }
+
+  const { name, slug, description, permissions } = data as Record<string, unknown>;
+
+  // Name validation
+  if (!isString(name) || name.trim().length < 2) {
+    errors.name = ['Nama role minimal 2 karakter'];
+  } else if (name.length > 100) {
+    errors.name = ['Nama role maksimal 100 karakter'];
+  }
+
+  // Slug validation
+  if (!isString(slug) || slug.trim().length < 2) {
+    errors.slug = ['Slug minimal 2 karakter'];
+  } else if (!/^[a-z0-9-]+$/.test(slug.trim())) {
+    errors.slug = ['Slug hanya boleh huruf kecil, angka, dan tanda hubung'];
+  } else if (slug.length > 100) {
+    errors.slug = ['Slug maksimal 100 karakter'];
+  }
+
+  // Description validation (optional)
+  if (description !== undefined && description !== null && description !== '') {
+    if (!isString(description) || description.length > 500) {
+      errors.description = ['Deskripsi maksimal 500 karakter'];
+    }
+  }
+
+  // Permissions validation (optional)
+  if (permissions !== undefined && permissions !== null) {
+    if (!isArray(permissions)) {
+      errors.permissions = ['Permissions harus berupa array'];
+    } else {
+      const invalidPerms = permissions.filter((p: unknown) => !isString(p));
+      if (invalidPerms.length > 0) {
+        errors.permissions = ['Setiap permission harus berupa string'];
+      }
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { success: false, errors };
+  }
+
+  return {
+    success: true,
+    data: {
+      name: String(name).trim(),
+      slug: String(slug).trim().toLowerCase(),
+      description: description ? String(description) : null,
+      permissions: permissions ? (permissions as string[]) : [],
+    }
+  };
+}
+
+/**
+ * Update role validator
+ */
+export function UpdateRoleSchema(data: unknown): ValidationResult<UpdateRoleInput> {
+  const errors: Record<string, string[]> = {};
+  
+  if (!isObject(data)) {
+    return { success: false, errors: { _root: ['Data harus berupa object'] } };
+  }
+
+  const { name, slug, description, permissions } = data as Record<string, unknown>;
+
+  // At least one field must be provided
+  const hasAnyField = name !== undefined || slug !== undefined || 
+                      description !== undefined || permissions !== undefined;
+  
+  if (!hasAnyField) {
+    errors._root = ['Minimal satu field harus diisi untuk update'];
+  }
+
+  // Name validation (optional)
+  if (name !== undefined && name !== null) {
+    if (!isString(name) || name.trim().length < 2) {
+      errors.name = ['Nama role minimal 2 karakter'];
+    } else if (name.length > 100) {
+      errors.name = ['Nama role maksimal 100 karakter'];
+    }
+  }
+
+  // Slug validation (optional)
+  if (slug !== undefined && slug !== null) {
+    if (!isString(slug) || slug.trim().length < 2) {
+      errors.slug = ['Slug minimal 2 karakter'];
+    } else if (!/^[a-z0-9-]+$/.test(slug.trim())) {
+      errors.slug = ['Slug hanya boleh huruf kecil, angka, dan tanda hubung'];
+    } else if (slug.length > 100) {
+      errors.slug = ['Slug maksimal 100 karakter'];
+    }
+  }
+
+  // Description validation (optional)
+  if (description !== undefined && description !== null && description !== '') {
+    if (!isString(description) || description.length > 500) {
+      errors.description = ['Deskripsi maksimal 500 karakter'];
+    }
+  }
+
+  // Permissions validation (optional)
+  if (permissions !== undefined && permissions !== null) {
+    if (!isArray(permissions)) {
+      errors.permissions = ['Permissions harus berupa array'];
+    } else {
+      const invalidPerms = permissions.filter((p: unknown) => !isString(p));
+      if (invalidPerms.length > 0) {
+        errors.permissions = ['Setiap permission harus berupa string'];
+      }
+    }
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return { success: false, errors };
+  }
+
+  const result: UpdateRoleInput = {};
+  if (name !== undefined) result.name = String(name).trim();
+  if (slug !== undefined) result.slug = String(slug).trim().toLowerCase();
+  if (description !== undefined) result.description = description ? String(description) : null;
+  if (permissions !== undefined) result.permissions = permissions as string[];
+
+  return { success: true, data: result };
 }
 

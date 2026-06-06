@@ -34,27 +34,26 @@ import { User } from '@models';
 /**
  * Form request for updating existing users
  *
- * Authorization: Only admins can update users
+ * Authorization: Users with 'users.edit' permission (or admin)
  * Validation: Uses UpdateUserSchema from validators
  */
 export class UpdateUserRequest extends FormRequest<UpdateUserInput> {
   /**
    * Determine if the user is authorized to update users
    *
-   * Only authenticated admins can update users.
-   * Override this method to customize authorization logic.
+   * Admin users bypass all checks. Others need 'users.edit' permission.
    *
    * @returns Promise<boolean>
    */
   async authorize(): Promise<boolean> {
-    // Must be authenticated
     if (!this.user) {
       return false;
     }
 
-    // Check if user has admin role
     const isAdmin = await User.isAdmin(this.user.id);
-    return isAdmin;
+    if (isAdmin) return true;
+
+    return User.hasPermission(this.user.id, "users.edit");
   }
 
   /**

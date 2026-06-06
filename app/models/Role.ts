@@ -49,6 +49,13 @@ class RoleModel extends BaseModel<RoleRecord> {
   protected tableName = "roles";
 
   /**
+   * Get all roles ordered by creation date
+   */
+  async findAll(): Promise<RoleRecord[]> {
+    return this.query().orderBy("created_at", "asc");
+  }
+
+  /**
    * Find role by slug
    */
   async findBySlug(slug: string): Promise<RoleRecord | undefined> {

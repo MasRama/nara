@@ -1,11 +1,12 @@
-import { Session } from "@models";
+import { Session, User } from "@models";
 import type { NaraRequest as Request, NaraResponse as Response } from "@core";
 
 /**
  * Authentication Middleware
  * 
  * Validates session cookie and attaches user to request.
- * Optimized: Uses single JOIN query instead of 2 separate queries.
+ * Also loads user roles and permissions for RBAC.
+ * Optimized: Uses single JOIN query for session + user, then loads roles/permissions.
  */
 export default async (request: Request, response: Response) => {
    const authId = request.cookies.auth_id;
@@ -19,8 +20,6 @@ export default async (request: Request, response: Response) => {
    }
 
    // Single query with JOIN - eliminates N+1 query problem
-   // Previously: 2 queries (session + user) per authenticated request
-   // Now: 1 query with JOIN
    const user = await Session.getUserBySessionId(authId);
 
    if (!user) {
@@ -31,7 +30,16 @@ export default async (request: Request, response: Response) => {
       return response.cookie("auth_id", "", 0).redirect("/login");
    }
 
-   request.user = user;
+   // Load user roles and permissions for RBAC
+   const roles = await User.roles(user.id);
+   const permissions = await User.permissions(user.id);
+
+   request.user = {
+      ...user,
+      roles: roles.map((r) => r.slug),
+      permissions: permissions.map((p) => p.slug),
+   };
+
    request.share = {
       user: request.user,
    };

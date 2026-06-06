@@ -56,6 +56,13 @@ class PermissionModel extends BaseModel<PermissionRecord> {
   protected tableName = "permissions";
 
   /**
+   * Get all permissions ordered by resource and action
+   */
+  async findAll(): Promise<PermissionRecord[]> {
+    return this.query().orderBy("resource", "asc").orderBy("action", "asc");
+  }
+
+  /**
    * Find permission by slug
    */
   async findBySlug(slug: string): Promise<PermissionRecord | undefined> {

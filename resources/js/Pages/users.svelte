@@ -7,7 +7,7 @@
   import axios from 'axios';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
-  import type { User, UserForm, PaginationMeta } from '../types';
+  import type { User, UserForm, PaginationMeta, RoleInfo } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
   import { Badge } from '$lib/components/ui/badge';
@@ -18,6 +18,8 @@
 
   interface Props {
     users?: User[];
+    availableRoles?: RoleInfo[];
+    permissions?: { canCreate: boolean; canEdit: boolean; canDelete: boolean };
     total?: number;
     page?: number;
     limit?: number;
@@ -29,7 +31,9 @@
   }
 
   let { 
-    users = [], 
+    users = [],
+    availableRoles = [],
+    permissions = { canCreate: false, canEdit: false, canDelete: false },
     total = 0, 
     page = 1, 
     limit = 10, 
@@ -66,6 +70,11 @@
     form = createEmptyUserForm();
   }
 
+  function getRoleDisplayName(slug: string): string {
+    const role = availableRoles.find(r => r.slug === slug);
+    return role ? role.name : slug;
+  }
+
   async function handleSubmit(event: CustomEvent<UserForm>): Promise<void> {
     const formData = event.detail;
     if (!formData.name || !formData.email) {
@@ -79,7 +88,7 @@
       name: formData.name,
       email: formData.email,
       phone: formData.phone || null,
-      roles: formData.roles || ['user'],
+      roles: formData.roles || [],
       is_verified: formData.is_verified,
       password: formData.password || undefined
     };
@@ -134,7 +143,7 @@
 
           <div class="h-10 w-px bg-border"></div>
 
-          {#if currentUser && currentUser.roles?.includes('admin')}
+          {#if permissions.canCreate}
             <Button
               class="rounded-full px-6 font-heading font-semibold text-sm"
               onclick={openCreateUser}
@@ -153,7 +162,7 @@
               <TableRow class="border-border">
                 <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">User</TableHead>
                 <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Status</TableHead>
-                <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Role</TableHead>
+                <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Roles</TableHead>
                 <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -181,32 +190,42 @@
                     {/if}
                   </TableCell>
                   <TableCell>
-                    <div class="flex items-center gap-2">
-                      <span class="inline-flex h-1.5 w-1.5 rounded-full {userItem.roles?.includes('admin') ? 'bg-primary' : 'bg-border'}"></span>
-                      <span class="text-xs font-mono-accent text-muted-foreground">{userItem.roles?.includes('admin') ? 'Admin' : 'User'}</span>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                      {#each (userItem.roles || []) as roleSlug}
+                        <span class="inline-flex items-center gap-1 font-mono-accent text-[10px] px-2 py-0.5 rounded-full {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}">
+                          {getRoleDisplayName(roleSlug)}
+                        </span>
+                      {/each}
+                      {#if !userItem.roles?.length}
+                        <span class="font-mono-accent text-[10px] text-muted-foreground">No roles</span>
+                      {/if}
                     </div>
                   </TableCell>
                   <TableCell class="text-right">
-                    {#if currentUser && currentUser.roles?.includes('admin')}
+                    {#if permissions.canEdit || permissions.canDelete}
                       <div class="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          class="rounded-full text-xs font-heading font-medium px-4 hover:border-primary/40 hover:text-primary transition-colors duration-200"
-                          onclick={() => openEditUser(userItem)}
-                          disabled={isSubmitting}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          class="rounded-full text-xs font-heading font-medium px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                          onclick={() => deleteUser(userItem.id)}
-                          disabled={isSubmitting}
-                        >
-                          Delete
-                        </Button>
+                        {#if permissions.canEdit}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            class="rounded-full text-xs font-heading font-medium px-4 hover:border-primary/40 hover:text-primary transition-colors duration-200"
+                            onclick={() => openEditUser(userItem)}
+                            disabled={isSubmitting}
+                          >
+                            Edit
+                          </Button>
+                        {/if}
+                        {#if permissions.canDelete}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            class="rounded-full text-xs font-heading font-medium px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                            onclick={() => deleteUser(userItem.id)}
+                            disabled={isSubmitting}
+                          >
+                            Delete
+                          </Button>
+                        {/if}
                       </div>
                     {/if}
                   </TableCell>
@@ -221,7 +240,7 @@
             </div>
             <h3 class="text-base font-heading font-semibold mb-2">No users yet</h3>
             <p class="text-sm text-muted-foreground font-body mb-6 max-w-xs">Start by adding your first user to the system.</p>
-            {#if currentUser && currentUser.roles?.includes('admin')}
+            {#if permissions.canCreate}
               <Button class="rounded-full px-6 font-heading font-semibold text-sm" onclick={openCreateUser}>
                 Add First User
               </Button>
@@ -242,6 +261,7 @@
     {mode}
     {form}
     {isSubmitting}
+    {availableRoles}
     on:close={closeUserModal}
     on:submit={handleSubmit}
   />

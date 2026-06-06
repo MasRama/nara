@@ -31,6 +31,61 @@ export interface User {
 }
 
 // =============================================================================
+// Role & Permission Types
+// =============================================================================
+
+/**
+ * Role interface
+ */
+export interface Role {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  permissions: string[];
+  user_count?: number;
+  created_at?: number;
+  updated_at?: number;
+}
+
+/**
+ * Role info (minimal, for dropdowns/lists)
+ */
+export interface RoleInfo {
+  name: string;
+  slug: string;
+  description: string | null;
+}
+
+/**
+ * Permission interface
+ */
+export interface Permission {
+  id: string;
+  name: string;
+  slug: string;
+  resource: string;
+  action: string;
+  description: string | null;
+}
+
+/**
+ * Grouped permissions by resource
+ */
+export type GroupedPermissions = Record<string, Permission[]>;
+
+/**
+ * Form data for creating/editing roles
+ */
+export interface RoleForm {
+  id: string | null;
+  name: string;
+  slug: string;
+  description: string;
+  permissions: string[];
+}
+
+// =============================================================================
 // Form Types
 // =============================================================================
 
@@ -146,4 +201,30 @@ export function isApiSuccess<T>(response: ApiResponse<T>): response is ApiSucces
  */
 export function isApiError(response: ApiResponse): response is ApiErrorResponse {
   return response.success === false;
+}
+
+/**
+ * Create empty role form
+ */
+export function createEmptyRoleForm(): RoleForm {
+  return {
+    id: null,
+    name: '',
+    slug: '',
+    description: '',
+    permissions: [],
+  };
+}
+
+/**
+ * Convert Role to RoleForm for editing
+ */
+export function roleToForm(role: Role): RoleForm {
+  return {
+    id: role.id,
+    name: role.name || '',
+    slug: role.slug || '',
+    description: role.description || '',
+    permissions: role.permissions || [],
+  };
 }

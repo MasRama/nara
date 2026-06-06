@@ -4,7 +4,7 @@
   import Header from '../Components/Header.svelte';
   import { Card, CardContent } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
-  import { Users, Settings, Shield, Activity, ChevronRight } from 'lucide-svelte';
+  import { Users, Settings, Shield, Activity, ChevronRight, ShieldCheck } from 'lucide-svelte';
   import type { User } from '../types';
 
   interface Props {
@@ -35,6 +35,15 @@
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+  /**
+   * Check if user has a permission (admin role bypasses all checks)
+   */
+  function hasPermission(slug: string): boolean {
+    if (!currentUser) return false;
+    if (currentUser.roles?.includes('admin')) return true;
+    return currentUser.permissions?.includes(slug) ?? false;
+  }
 </script>
 
 <Header group="dashboard" />
@@ -143,18 +152,35 @@
         <div class="lg:col-span-7 flex flex-col gap-4">
           <h2 class="text-sm font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Quick Actions</h2>
 
-          <a href="/users" use:inertia class="group bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 hover:shadow-sm transition-all duration-300 cursor-pointer">
-            <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 shrink-0">
-                <Users class="w-5 h-5 text-foreground group-hover:text-primary transition-colors duration-300" />
+          {#if hasPermission('users.view')}
+            <a href="/users" use:inertia class="group bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 hover:shadow-sm transition-all duration-300 cursor-pointer">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 shrink-0">
+                  <Users class="w-5 h-5 text-foreground group-hover:text-primary transition-colors duration-300" />
+                </div>
+                <div>
+                  <h4 class="text-base font-heading font-semibold tracking-tight">Manage Users</h4>
+                  <p class="text-sm text-muted-foreground font-body mt-0.5">View and manage all registered users</p>
+                </div>
               </div>
-              <div>
-                <h4 class="text-base font-heading font-semibold tracking-tight">Manage Users</h4>
-                <p class="text-sm text-muted-foreground font-body mt-0.5">View and manage all registered users</p>
+              <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-300 shrink-0" />
+            </a>
+          {/if}
+
+          {#if hasPermission('roles.view')}
+            <a href="/roles" use:inertia class="group bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 hover:shadow-sm transition-all duration-300 cursor-pointer">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300 shrink-0">
+                  <ShieldCheck class="w-5 h-5 text-foreground group-hover:text-primary transition-colors duration-300" />
+                </div>
+                <div>
+                  <h4 class="text-base font-heading font-semibold tracking-tight">Manage Roles</h4>
+                  <p class="text-sm text-muted-foreground font-body mt-0.5">Configure roles and permissions</p>
+                </div>
               </div>
-            </div>
-            <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-300 shrink-0" />
-          </a>
+              <ChevronRight class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-300 shrink-0" />
+            </a>
+          {/if}
 
           <a href="/profile" use:inertia class="group bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 hover:shadow-sm transition-all duration-300 cursor-pointer">
             <div class="flex items-center gap-4">

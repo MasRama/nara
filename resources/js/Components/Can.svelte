@@ -1,23 +1,39 @@
 <script lang="ts">
   import { page } from '@inertiajs/svelte';
+  import type { Snippet } from 'svelte';
 
-  // Props
-  export let permission: string = '';
-  export let role: string = '';
+  interface User {
+    roles?: string[];
+    permissions?: string[];
+  }
 
-  // Get user from page props
-  $: user = $page.props.user as { roles?: string[]; permissions?: string[] } | null | undefined;
-  $: userRoles = user?.roles || [];
-  $: userPermissions = user?.permissions || [];
+  let {
+    permission = '',
+    role = '',
+    children,
+  }: {
+    permission?: string;
+    role?: string;
+    children: Snippet;
+  } = $props();
 
-  // Check access
-  $: hasAccess = permission
-    ? userPermissions.includes(permission)
-    : role
-      ? userRoles.includes(role)
-      : false;
+  let user = $derived($page.props.user as User | undefined);
+  let userRoles = $derived(user?.roles || []);
+  let userPermissions = $derived(user?.permissions || []);
+  let isAdmin = $derived(userRoles.includes('admin'));
+
+  // Admin bypasses all checks (consistent with backend requirePermission)
+  let hasAccess = $derived(
+    isAdmin
+      ? true
+      : permission
+        ? userPermissions.includes(permission)
+        : role
+          ? userRoles.includes(role)
+          : false
+  );
 </script>
 
 {#if hasAccess}
-  <slot />
+  {@render children()}
 {/if}

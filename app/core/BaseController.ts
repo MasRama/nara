@@ -125,14 +125,45 @@ export abstract class BaseController {
    *   // req.user exists and has admin role
    * }
    */
-  protected async requireAdmin(req: NaraRequest): Promise<void> {
-    this.requireAuth(req);
-    const { User } = await import('@models');
-    const isAdmin = await User.isAdmin(req.user.id);
-    if (!isAdmin) {
-      throw new ForbiddenError();
-    }
-  }
+   protected async requireAdmin(req: NaraRequest): Promise<void> {
+     this.requireAuth(req);
+     const { User } = await import('@models');
+     const isAdmin = await User.isAdmin(req.user.id);
+     if (!isAdmin) {
+       throw new ForbiddenError();
+     }
+   }
+
+   /**
+    * Require a specific permission
+    *
+    * Throws AuthError if not authenticated, ForbiddenError if user lacks the permission.
+    * Admin users (role slug 'admin') bypass permission checks.
+    *
+    * @param req - Request object
+    * @param permissionSlug - Permission slug to check (e.g. 'users.view', 'roles.edit')
+    * @throws AuthError if not authenticated
+    * @throws ForbiddenError if user lacks the permission
+    *
+    * @example
+    * async usersPage(req: NaraRequest, res: NaraResponse) {
+    *   await this.requirePermission(req, 'users.view');
+    *   // req.user exists and has 'users.view' permission (or is admin)
+    * }
+    */
+   protected async requirePermission(req: NaraRequest, permissionSlug: string): Promise<void> {
+     this.requireAuth(req);
+     const { User } = await import('@models');
+
+     // Admin bypasses all permission checks
+     const isAdmin = await User.isAdmin(req.user.id);
+     if (isAdmin) return;
+
+     const hasPermission = await User.hasPermission(req.user.id, permissionSlug);
+     if (!hasPermission) {
+       throw new ForbiddenError(`Missing permission: ${permissionSlug}`);
+     }
+   }
 
   /**
    * Get and validate request body

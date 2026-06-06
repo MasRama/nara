@@ -31,9 +31,19 @@
 
   let scrolled = $derived(scrollY > 50);
 
+  /**
+   * Check if user has a permission (admin role bypasses all checks)
+   */
+  function hasPermission(slug: string): boolean {
+    if (!user) return false;
+    if (user.roles?.includes('admin')) return true;
+    return user.permissions?.includes(slug) ?? false;
+  }
+
   let menuLinks = $derived([
     { href: '/dashboard', label: 'Overview', group: 'dashboard', show: true },
-    { href: '/users', label: 'Users', group: 'users', show: Array.isArray(user?.roles) && user.roles.includes('admin') },
+    { href: '/users', label: 'Users', group: 'users', show: hasPermission('users.view') },
+    { href: '/roles', label: 'Roles', group: 'roles', show: hasPermission('roles.view') },
     { href: '/profile', label: 'Profile', group: 'profile', show: !!user },
   ] as MenuLink[]);
 
