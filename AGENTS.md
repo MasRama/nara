@@ -1,7 +1,7 @@
 # Nara Framework - Project Knowledge Base
 
-**Generated:** 2026-04-04
-**Commit:** 1969dcc
+**Generated:** 2026-06-07
+**Commit:** df46fa3
 **Branch:** (current)
 
 ## Overview
@@ -172,6 +172,161 @@ public async store(req, res) {
 | Form Request | `app/requests/*.ts` - authorize() + rules() |
 | API Resource | `app/http/resources/*.ts` - toArray() method |
 | Factory | `database/factories/*.ts` - definition() + state modifiers |
+
+## RBAC System (Role-Based Access Control)
+
+Dynamic permission-based access control manageable from admin dashboard.
+
+### Permission List
+
+| Permission | Controls |
+|------------|----------|
+| `users.view` | View users page & list |
+| `users.create` | Create new users |
+| `users.edit` | Edit existing users |
+| `users.delete` | Delete users |
+| `roles.view` | View roles page & list |
+| `roles.create` | Create new roles |
+| `roles.edit` | Edit roles & assign permissions |
+| `roles.delete` | Delete roles |
+| `permissions.assign` | Assign permissions to roles |
+
+### Backend Pattern - requirePermission()
+
+```typescript
+// app/core/BaseController.ts
+protected requirePermission(permission: string, req: Request, res: Response): boolean {
+  const user = req.user;
+  if (!user) return this.deny(res, 'Unauthorized', 401);
+  
+  // Admin bypass - super admin has all permissions
+  if (user.roles?.some((r: any) => r.name === 'admin')) return true;
+  
+  const hasPermission = user.permissions?.includes(permission);
+  if (!hasPermission) return this.deny(res, 'Forbidden', 403);
+  return true;
+}
+
+// Usage in controllers
+public async store(req: Request, res: Response) {
+  if (!this.requirePermission('users.create', req, res)) return;
+  // ... create user logic
+}
+```
+
+### Backend - RoleController
+
+```typescript
+// app/controllers/RoleController.ts
+public async index(req, res) {
+  const roles = await Role.query().withGraphFetched('permissions');
+  return jsonSuccess(res, 'OK', roles);
+}
+
+public async store(req, res) {
+  const data = await this.getBody(req, CreateRoleSchema);
+  const role = await Role.create({ id: randomUUID(), ...data });
+  await role.syncPermissions(data.permissions);
+  return jsonCreated(res, 'Created', role);
+}
+```
+
+### Frontend - Can.svelte Component
+
+```svelte
+<script lang="ts">
+  import { page } from '@inertiajs/svelte';
+  
+  let { permission, children } = $props();
+  
+  const user = $derived(page.props.user);
+  const can = $derived(
+    user?.roles?.some((r: any) => r.name === 'admin') ||
+    user?.permissions?.includes(permission)
+  );
+</script>
+
+{#if can}
+  {@render children()}
+{/if}
+
+<!-- Usage -->
+<Can permission="users.edit">
+  <button>Edit User</button>
+</Can>
+```
+
+### Frontend - /roles Page
+
+```svelte
+<!-- resources/js/Pages/roles.svelte -->
+<script lang="ts">
+  import { api } from '$lib/api';
+  import axios from 'axios';
+  import RoleModal from '../Components/RoleModal.svelte';
+  
+  let roles = $state([]);
+  let showModal = $state(false);
+  let editingRole = $state(null);
+  
+  async function loadRoles() {
+    const result = await api(() => axios.get('/roles/data'));
+    if (result.success) roles = result.data;
+  }
+  
+  async function createRole(data) {
+    const result = await api(() => axios.post('/roles', data));
+    if (result.success) {
+      await loadRoles();
+      showModal = false;
+    }
+  }
+</script>
+
+<Header group="roles" />
+
+<Can permission="roles.create">
+  <Button on:click={() => showModal = true}>Create Role</Button>
+</Can>
+
+{#each roles as role}
+  <Can permission="roles.edit">
+    <Button on:click={() => editRole(role)}>Edit</Button>
+  </Can>
+{/each}
+```
+
+### Form Request with Permission Check
+
+```typescript
+// app/requests/CreateUserRequest.ts
+export class CreateUserRequest extends FormRequest {
+  authorize(): boolean {
+    return this.req.user?.permissions?.includes('users.create') ?? false;
+  }
+  
+  rules() {
+    return {
+      name: 'required|string|min:3',
+      email: 'required|email|unique:users,email',
+      // ...
+    };
+  }
+}
+```
+
+### Auth Middleware - Shared Props
+
+```typescript
+// app/middlewares/auth.ts - roles & permissions shared with Inertia
+res.locals.user = {
+  ...user,
+  roles: user.roles.map(r => ({ id: r.id, name: r.name })),
+  permissions: user.permissions.map(p => p.name)
+};
+
+// Access in Svelte via $page.props.user.permissions
+```
 
 ## Build/Test
 
