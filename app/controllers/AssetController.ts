@@ -7,15 +7,13 @@ import sharp from "sharp";
 import { Asset, User } from "@models";
 import Logger from "@services/Logger";
 import { Storage } from '@services';
+import { assetCache } from '@services/CacheStore';
 import { UPLOAD } from '@config/constants';
 
 // File upload security constants
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-// Cache object to store file contents in memory
-let cache: { [key: string]: Buffer } = {};
 
 type UploadSuccessResult = { ok: true; url: string };
 type UploadErrorResult = { ok: false; message: string; code: string; status: number };
@@ -197,16 +195,17 @@ class AssetController extends BaseController {
             response.setHeader("Cache-Control", "public, max-age=31536000");
 
             // Return cached content if available
-            if (cache[file]) {
-                return response.send(cache[file]);
+            const cached = assetCache.get(file);
+            if (cached) {
+                return response.send(cached);
             }
 
             // Check if file exists and serve it
             if (await fs.promises.access(filePath).then(() => true).catch(() => false)) {
                 const fileContent = await fs.promises.readFile(filePath);
                 
-                // Cache the file content
-                cache[file] = fileContent;
+                // Cache the file content (bounded LRU with TTL)
+                assetCache.set(file, fileContent);
 
                 return response.send(fileContent);
             }

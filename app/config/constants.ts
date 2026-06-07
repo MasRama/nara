@@ -111,6 +111,23 @@ export const CACHE = {
   
   /** Session cache duration in seconds (1 hour) */
   SESSION_CACHE_DURATION: 60 * 60,
+
+  // ── In-Memory Cache Store Bounds ──
+
+  /** Maximum number of entries in the asset cache (dist CSS/JS files) */
+  ASSET_STORE_MAX_ENTRIES: 100,
+
+  /** Maximum total size of asset cache in bytes (20MB) */
+  ASSET_STORE_MAX_BYTES: 20 * 1024 * 1024,
+
+  /** Default TTL for asset cache entries in milliseconds (1 hour) */
+  ASSET_STORE_TTL_MS: 60 * 60 * 1000,
+
+  /** Maximum number of entries in the template cache (HTML views) */
+  TEMPLATE_STORE_MAX_ENTRIES: 20,
+
+  /** Default TTL for template cache entries in milliseconds (30 minutes) */
+  TEMPLATE_STORE_TTL_MS: 30 * 60 * 1000,
 } as const;
 
 // ============================================

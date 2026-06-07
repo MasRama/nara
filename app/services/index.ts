@@ -32,3 +32,7 @@ export type { StorageConfig, StoredFile, StoreOptions } from './Storage';
 
 // View rendering
 export { view } from './View';
+
+// Cache
+export { CacheStore, assetCache, templateCache } from './CacheStore';
+export type { CacheStoreOptions, CacheStats } from './CacheStore';

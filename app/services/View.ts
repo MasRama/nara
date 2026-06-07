@@ -8,9 +8,8 @@
 
 import { readFileSync, readdirSync } from "fs";
 import path from "path";
+import { templateCache } from "@services/CacheStore";
 require("dotenv").config();
-
-const templateCache: { [key: string]: string } = {};
 
 function getViewsDirectory() {
    return process.env.NODE_ENV === 'development' ? "resources/views" : "dist/views";
@@ -20,11 +19,12 @@ function loadTemplate(filename: string): string {
    const directory = getViewsDirectory();
    const key = path.join(directory, filename);
 
-   if (!templateCache[key]) {
-      templateCache[key] = readFileSync(key, "utf8");
-   }
+   const cached = templateCache.get(key);
+   if (cached) return cached;
 
-   return templateCache[key];
+   const content = readFileSync(key, "utf8");
+   templateCache.set(key, content);
+   return content;
 }
 
 function escapeHtml(value: string): string {
