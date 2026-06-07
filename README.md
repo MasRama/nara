@@ -6,6 +6,8 @@
 
 > High-performance TypeScript web framework combining **HyperExpress**, **Svelte 5**, and **Inertia.js** for building modern full-stack applications with exceptional developer experience.
 
+> **For AI assistants:** See [README-LLM.md](./README-LLM.md) for optimized context file, or [AGENTS.md](./AGENTS.md) for detailed project knowledge base.
+
 ## Philosophy
 
 Nara is designed for developers who want:
