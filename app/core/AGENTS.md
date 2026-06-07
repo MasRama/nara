@@ -19,7 +19,7 @@ app/core/
 ├── App.ts              # NaraApp + createApp (server bootstrap)
 ├── BaseController.ts   # Abstract controller with auth guards
 ├── Router.ts           # NaraRouter + createRouter (type-safe routing)
-├── FormRequest.ts      # Laravel-style form request validation
+├── FormRequest.ts      # Form request validation (auth + rules)
 ├── errors.ts           # HttpError hierarchy (8 error types)
 ├── response.ts         # JSON response helpers
 ├── types.ts            # Core TypeScript types

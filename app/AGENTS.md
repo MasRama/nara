@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `app/` directory contains all application source code. It follows a layered architecture inspired by Laravel, with clear separation of concerns.
+The `app/` directory contains all application source code. It follows a layered architecture with clear separation of concerns.
 
 **Related docs:**
 - [`../AGENTS.md`](../AGENTS.md) - Root project knowledge base (Mental Model, Architecture)
@@ -19,7 +19,7 @@ app/
 ├── services/          # Business logic (DB, Logger, Auth, Storage)
 ├── middlewares/       # HTTP middleware (auth, CSRF, rate limiting)
 ├── validators/        # Input validation (custom, no Zod/Yup/Joi)
-├── requests/          # Form Request classes (Laravel-style validation)
+├── requests/          # Form Request classes (authorization + validation)
 ├── http/              # API Resources (data transformation)
 ├── events/            # Event system (dispatcher + listeners)
 ├── authorization/     # RBAC (Gates, Policies, Permissions)
@@ -37,7 +37,7 @@ app/
 | `App.ts` | Bootstraps server, applies middlewares, handles shutdown |
 | `Router.ts` | Type-safe route registration (wraps HyperExpress.Router) |
 | `BaseController.ts` | Base class for controllers (auth guards, validation, pagination) |
-| `FormRequest.ts` | Laravel-style form request validation |
+| `FormRequest.ts` | Form request validation (auth + rules) |
 | `errors.ts` | HttpError hierarchy (404, 401, 403, 422, etc) |
 | `response.ts` | JSON response helpers (jsonSuccess, jsonError, etc) |
 | `types.ts` | Core TypeScript types (NaraRequest, NaraResponse, User) |
@@ -217,7 +217,7 @@ Gate.define('delete-post', (user, post) => {
 ---
 
 ### `requests/` - Form Requests
-**Purpose:** Laravel-style form request classes combining authorization + validation.
+**Purpose:** Form request classes combining authorization + validation.
 
 **Pattern:**
 ```typescript

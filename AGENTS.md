@@ -6,7 +6,7 @@
 
 ## Overview
 
-TypeScript web framework inspired by Laravel. Full-stack with HyperExpress + Svelte 5 + Inertia.js. MVC + Events + Services architecture.
+TypeScript web framework for building full-stack applications. Powered by HyperExpress + Svelte 5 + Inertia.js. MVC + Events + Services architecture.
 
 ## Mental Model (Start Here)
 
@@ -14,7 +14,7 @@ TypeScript web framework inspired by Laravel. Full-stack with HyperExpress + Sve
 
 ### What is Nara?
 
-Nara is a **Laravel-inspired TypeScript framework** for building full-stack web applications. It combines:
+Nara is a **TypeScript full-stack framework** for building modern web applications. It combines:
 - **Backend**: HyperExpress (fast HTTP server) + Knex.js (SQL query builder)
 - **Frontend**: Svelte 5 + Inertia.js (SPA-like experience without building an API)
 

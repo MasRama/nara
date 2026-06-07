@@ -2,7 +2,7 @@
 
 ## Overview
 
-Laravel-style FormRequests that combine authorization + validation. Use when a controller action requires both permission checks and input validation in one class.
+FormRequests that combine authorization + validation. Use when a controller action requires both permission checks and input validation in one class.
 
 ## Structure
 
