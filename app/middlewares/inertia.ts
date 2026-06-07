@@ -1,10 +1,10 @@
 import { view } from "@services/View"; 
-import type { NaraRequest as Request, NaraResponse as Response } from "@core";
+import type { NaraRequest as Request, NaraResponse as Response, NaraMiddleware } from "@core";
 
 let pkg = {version : "1.0.0"};
 
-const inertia = () => {
-   return (req: Request, res: Response, next: () => void) => { 
+const inertia = (): NaraMiddleware => {
+   return (req: Request, res: Response, next) => { 
       res.inertia = async (component, inertiaProps = {}, viewProps = {}) => {
          
          const url = `//${req.get("host")}${req.originalUrl}`;

@@ -29,26 +29,39 @@ import { inputSanitize } from "@middlewares/inputSanitize";
 import { requestId } from "@middlewares/requestId";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
-import type { NaraRequest, NaraResponse } from "./types";
+import type { MiddlewareHandler, MiddlewareNext } from "hyper-express";
+import type { NaraMiddleware, NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
 
-// Type for HyperExpress compatible middleware
-// Uses unknown as intermediate type to handle type mismatches between
-// Express-style middlewares (compression, cors) and NaraMiddleware
-type HyperExpressMiddleware = (
-  req: HyperExpress.Request,
-  res: HyperExpress.Response,
-  next: () => void
-) => void | Promise<void>;
+/**
+ * Adapts a NaraMiddleware to HyperExpress's MiddlewareHandler.
+ *
+ * NaraMiddleware extends HyperExpress's Request/Response with additional
+ * properties (user, share, requestId, view, inertia, flash). This adapter
+ * is safe because HyperExpress always passes its own Request/Response objects
+ * at runtime, and Nara middleware only reads/writes the extended properties
+ * that are set by other Nara middleware earlier in the chain.
+ */
+function adapt(middleware: NaraMiddleware): MiddlewareHandler {
+  return (req, res, next: MiddlewareNext) =>
+    middleware(req as NaraRequest, res as NaraResponse, next);
+}
 
-// Helper type for casting middlewares with incompatible types
-type MiddlewareLike =
-  | HyperExpressMiddleware
-  | ((
-      req: unknown,
-      res: unknown,
-      next: () => void
-    ) => void | Promise<void>);
+/**
+ * Adapts an Express-style middleware (e.g. compression, cors) to HyperExpress's
+ * MiddlewareHandler.
+ *
+ * Express middleware uses a different Request/Response type hierarchy, but at
+ * runtime HyperExpress provides compatible APIs (headers, status, json, etc.).
+ * This adapter bridges the type gap without unsafe double-casts.
+ */
+function adaptExpress(
+  // Express-style middleware uses incompatible Request/Response types.
+  // We accept any function signature here since the runtime APIs are compatible.
+  middleware: (...args: any[]) => any // eslint-disable-line @typescript-eslint/no-explicit-any
+): MiddlewareHandler {
+  return (req, res, next) => middleware(req, res, next);
+}
 
 /**
  * Application configuration options
@@ -236,19 +249,19 @@ export class NaraApp {
    */
   private applyDefaultMiddlewares(): void {
     // Compression should be first for better performance
-    this.server.use(compression() as unknown as HyperExpressMiddleware);
+    this.server.use(adaptExpress(compression()));
 
     // Security headers should be first to ensure all responses have them
     if (this.options.securityHeaders) {
-      this.server.use(securityHeaders() as unknown as HyperExpressMiddleware);
+      this.server.use(adapt(securityHeaders()));
     }
 
     // Request ID middleware - must be before requestLogger so requestId is available for logging
-    this.server.use(requestId() as unknown as HyperExpressMiddleware);
+    this.server.use(adapt(requestId()));
 
     // Request logging early to capture all requests
     if (this.options.requestLogging) {
-      this.server.use(requestLogger() as unknown as HyperExpressMiddleware);
+      this.server.use(adapt(requestLogger()));
     }
 
     if (this.options.cors) {
@@ -257,22 +270,22 @@ export class NaraApp {
 
     // Rate limiting after CORS but before route handlers
     if (this.options.rateLimit) {
-      this.server.use(rateLimit() as unknown as HyperExpressMiddleware);
+      this.server.use(adapt(rateLimit()));
     }
 
     // CSRF protection after rate limiting but before route handlers
     if (this.options.csrf) {
-      this.server.use(csrf() as unknown as HyperExpressMiddleware);
+      this.server.use(adapt(csrf()));
     }
 
     // Input sanitization after CSRF but before route handlers
     if (this.options.inputSanitize) {
-      this.server.use(inputSanitize() as unknown as HyperExpressMiddleware);
+      this.server.use(adapt(inputSanitize()));
     }
 
     if (this.options.adapter) {
       // Apply adapter middleware
-      this.server.use(this.options.adapter.middleware() as unknown as HyperExpressMiddleware);
+      this.server.use(adapt(this.options.adapter.middleware()));
 
       // Register response extensions
       this.server.use((_req, res, next) => {
@@ -454,13 +467,8 @@ export class NaraApp {
    */
   use(middleware: Parameters<HyperExpress.Server["use"]>[0]): this;
   use(path: string, middleware: Parameters<HyperExpress.Server["use"]>[0]): this;
-  use(...args: unknown[]): this {
-    // Use type assertion through unknown for compatibility with different middleware types
-    if (args.length === 1) {
-      this.server.use(args[0] as unknown as HyperExpressMiddleware);
-    } else {
-      this.server.use(args[0] as string, args[1] as unknown as HyperExpressMiddleware);
-    }
+  use(...args: Parameters<HyperExpress.Server["use"]>): this {
+    this.server.use(...args);
     return this;
   }
 

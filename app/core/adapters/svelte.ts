@@ -15,7 +15,7 @@ export function svelteAdapter(): FrontendAdapter {
      * Use the existing inertia middleware
      */
     middleware: (): AdapterMiddlewareHandler => {
-      return inertiaMiddleware() as unknown as AdapterMiddlewareHandler;
+      return inertiaMiddleware();
     },
 
     /**
