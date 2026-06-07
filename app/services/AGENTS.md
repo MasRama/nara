@@ -1,5 +1,11 @@
 # Services Module
 
+**Related docs:**
+- [`../AGENTS.md`](../AGENTS.md) - Module overview & dependency graph
+- [`../models/AGENTS.md`](../models/AGENTS.md) - Models that use DB service
+- [`../controllers/AGENTS.md`](../controllers/AGENTS.md) - Controllers that use services
+- [`../config/AGENTS.md`](../config/AGENTS.md) - Environment config used by services
+
 ## Overview
 
 Business logic layer providing authentication, database access, logging, file storage, and utility services.

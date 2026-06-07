@@ -1,5 +1,12 @@
 # Controllers
 
+**Related docs:**
+- [`../AGENTS.md`](../AGENTS.md) - Module overview & request lifecycle
+- [`../core/AGENTS.md`](../core/AGENTS.md) - BaseController, response helpers, errors
+- [`../validators/AGENTS.md`](../validators/AGENTS.md) - Input validation schemas
+- [`../../routes/AGENTS.md`](../../routes/AGENTS.md) - Route definitions
+- [`../../resources/js/Pages/AGENTS.md`](../../resources/js/Pages/AGENTS.md) - Frontend page patterns
+
 ## Overview
 
 HTTP request handlers. All controllers extend `BaseController` for auto-binding, auth guards, and validation helpers.

@@ -1,5 +1,11 @@
 # Middlewares
 
+**Related docs:**
+- [`../AGENTS.md`](../AGENTS.md) - Module overview & request lifecycle
+- [`../core/AGENTS.md`](../core/AGENTS.md) - NaraMiddleware type definition
+- [`../services/AGENTS.md`](../services/AGENTS.md) - Services used by middlewares (Logger, LoginThrottle)
+- [`../../routes/AGENTS.md`](../../routes/AGENTS.md) - How middlewares are applied to routes
+
 ## Overview
 
 HTTP request/response middleware for authentication, security, rate limiting, and request processing.

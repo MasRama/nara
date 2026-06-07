@@ -8,6 +8,129 @@
 
 TypeScript web framework inspired by Laravel. Full-stack with HyperExpress + Svelte 5 + Inertia.js. MVC + Events + Services architecture.
 
+## Mental Model (Start Here)
+
+**If you're an AI reading this project for the first time, start here.**
+
+### What is Nara?
+
+Nara is a **Laravel-inspired TypeScript framework** for building full-stack web applications. It combines:
+- **Backend**: HyperExpress (fast HTTP server) + Knex.js (SQL query builder)
+- **Frontend**: Svelte 5 + Inertia.js (SPA-like experience without building an API)
+
+### Architecture Pattern
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         BROWSER (Svelte 5)                          │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────┐  │
+│  │   Pages/    │◄───│  Components/│    │  $lib/api.ts (axios)    │  │
+│  │  *.svelte   │    │  *.svelte   │    │  - handles CRUD calls   │  │
+│  └──────┬──────┘    └─────────────┘    │  - shows toast alerts   │  │
+│         │                              └────────────┬────────────┘  │
+│         │ router.visit() for navigation             │ axios.get/post│
+└─────────┼───────────────────────────────────────────┼───────────────┘
+          │                                           │
+          ▼                                           ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      SERVER (HyperExpress)                          │
+│                                                                     │
+│  Request ──► Middlewares ──► Router ──► Controller ──► Response    │
+│                  │                         │             │          │
+│                  │                         ▼             │          │
+│                  │                    ┌─────────┐        │          │
+│                  │                    │ Service │        │          │
+│                  │                    └────┬────┘        │          │
+│                  │                         │             │          │
+│                  │                         ▼             │          │
+│                  │                    ┌─────────┐        │          │
+│                  │                    │  Model  │        │          │
+│                  │                    └────┬────┘        │          │
+│                  │                         │             │          │
+│                  │                         ▼             │          │
+│                  │                    ┌─────────┐        │          │
+│                  │                    │  SQLite │        │          │
+│                  │                    └─────────┘        │          │
+│                  │                                       │          │
+│                  ▼                                       ▼          │
+│           ┌────────────┐                         ┌─────────────┐   │
+│           │   auth.ts  │                         │   Inertia   │   │
+│           │  csrf.ts   │                         │    OR       │   │
+│           │ rateLimit  │                         │    JSON     │   │
+│           └────────────┘                         └─────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Two Response Types (CRITICAL)
+
+Every route returns **either** an Inertia response **or** a JSON response — never mix them:
+
+| Route Type | Called By | Returns | Controller Method |
+|------------|-----------|---------|-------------------|
+| **Page route** | Browser navigation (`<a>`, `router.visit()`) | `res.inertia("PageName")` | `page()`, `usersPage()` |
+| **Data route** | `axios.get/post/put/delete` from Svelte | `jsonSuccess()`, `jsonPaginated()` | `index()`, `store()`, `update()`, `destroy()` |
+
+### Data Flow Example
+
+```
+1. User clicks "Users" link
+   └─► router.visit("/users") 
+       └─► GET /users → UserController.page() → res.inertia("users")
+           └─► Renders resources/js/Pages/users.svelte
+
+2. Svelte page loads, needs user data
+   └─► api(() => axios.get("/users/data"))
+       └─► GET /users/data → UserController.index() → jsonPaginated()
+           └─► Returns { success: true, data: [...users], meta: {...} }
+               └─► api() shows toast if error, returns data to Svelte
+
+3. User clicks "Create User", fills form, submits
+   └─► api(() => axios.post("/users", payload))
+       └─► POST /users → UserController.store() → jsonCreated()
+           └─► api() shows success toast, Svelte reloads data
+```
+
+### Where to Start Reading
+
+| If you want to understand... | Read this file |
+|------------------------------|----------------|
+| How the app boots up | [`app/core/App.ts`](./app/core/AGENTS.md) |
+| How routes are defined | [`routes/AGENTS.md`](./routes/AGENTS.md) |
+| How controllers work | [`app/controllers/AGENTS.md`](./app/controllers/AGENTS.md) |
+| How database models work | [`app/models/AGENTS.md`](./app/models/AGENTS.md) |
+| How frontend pages work | [`resources/js/Pages/AGENTS.md`](./resources/js/Pages/AGENTS.md) |
+| How auth/permissions work | [`app/authorization/AGENTS.md`](./app/authorization/AGENTS.md) |
+| How CLI commands work | [`commands/native/AGENTS.md`](./commands/native/AGENTS.md) |
+
+### Module Dependency Graph
+
+```
+@config (env, constants)
+    │
+    ▼
+@core (App, Router, BaseController, errors, response)
+    │
+    ├──► @services (DB, Logger, Auth, Storage, Paginator)
+    │         │
+    │         ▼
+    │    @models (User, Role, Session, etc.)
+    │
+    ├──► @middlewares (auth, csrf, rateLimit)
+    │
+    ├──► @validators (schemas, validate helpers)
+    │
+    ├──► @events (EventDispatcher)
+    │
+    └──► @authorization (Gates, Policies)
+```
+
+**Import rules:**
+- `@core` can import from `@config`, `@services`
+- `@services` can import from `@config`, `@models`
+- `@models` can import from `@services/DB` only
+- `@controllers` can import from anywhere
+- `@middlewares` can import from `@services`, `@config`
+
 ## Structure
 
 ```
@@ -135,17 +258,19 @@ public async store(req, res) {
 ```svelte
 <!-- resources/js/Pages/posts/Index.svelte -->
 <script lang="ts">
+  import axios from 'axios';
+  import { api } from '$lib/api';
+
   let posts = $state([]);
 
   async function loadPosts() {
-    const res = await fetch('/posts/data');
-    const json = await res.json();
-    posts = json.data;
+    const result = await api(() => axios.get('/posts/data'), { showSuccessToast: false });
+    if (result.success) posts = result.data;
   }
 
-  async function createPost(form: FormData) {
-    await fetch('/posts', { method: 'POST', body: JSON.stringify(Object.fromEntries(form)) });
-    await loadPosts();
+  async function createPost(payload: Record<string, unknown>) {
+    const result = await api(() => axios.post('/posts', payload));
+    if (result.success) await loadPosts();
   }
 </script>
 ```

@@ -4,21 +4,27 @@
 
 Svelte 5 frontend powered by Inertia.js for server-side rendering with client-side hydration.
 
+**Related docs:**
+- [`Pages/AGENTS.md`](./Pages/AGENTS.md) - Page component patterns
+- [`Components/AGENTS.md`](./Components/AGENTS.md) - Reusable components
+- [`types/AGENTS.md`](./types/AGENTS.md) - TypeScript type definitions
+- [`../../routes/AGENTS.md`](../../routes/AGENTS.md) - Backend route definitions
+- [`../../app/controllers/AGENTS.md`](../../app/controllers/AGENTS.md) - Controller patterns
+
 ## STRUCTURE
 
 ```
 resources/js/
-├── Components/       # Reusable UI components
-│   ├── Can.svelte         # Auth gating wrapper
-│   ├── DarkModeToggle.svelte
-│   ├── Header.svelte      # Top navigation
-│   ├── NaraIcon.svelte    # Logo SVG
-│   ├── Pagination.svelte  # List pagination
-│   ├── UserModal.svelte   # User form modal
-│   └── helper.ts          # API utils, CSRF, Toast
-├── Pages/            # Route pages (dashboard, landing, profile, users, auth/*)
-├── types/            # TypeScript definitions and generated types
-└── app.js            # Inertia app initialization
+├── app.js                 # Inertia app initialization (entry point)
+├── lib/                   # Utilities & UI components
+│   ├── api.ts             # HTTP client wrapper (axios + toast)
+│   ├── csrf.ts            # CSRF token handling
+│   ├── toast.ts           # Toast notifications (svelte-sonner)
+│   ├── utils.ts           # Helper functions (cn, debounce, etc)
+│   └── components/ui/     # shadcn-svelte UI components
+├── Components/            # Reusable UI components (Header, Pagination, etc)
+├── Pages/                 # Route pages (dashboard, users, auth/*)
+└── types/                 # TypeScript definitions
 ```
 
 ## FRAMEWORK
@@ -26,40 +32,51 @@ resources/js/
 - **Svelte 5** with runes: `$state`, `$derived`, `$effect` for reactivity
 - **Inertia.js** adapter for SSR + client navigation via `router` helper
 - **TypeScript** for type safety (`<script lang="ts">`)
+- **axios** for HTTP requests (wrapped in `api()` helper)
 
 ## KEY PATTERNS
+
+### HTTP Client: axios + api() wrapper
+
+**ALWAYS use `api()` wrapper with axios** for all CRUD operations. This handles:
+- Toast notifications (success/error)
+- CSRF token injection
+- Error response parsing
+
+```svelte
+<script lang="ts">
+  import axios from 'axios';
+  import { api } from '$lib/api';
+
+  // ✅ GET - fetch data
+  const result = await api(() => axios.get('/posts/data'), { showSuccessToast: false });
+  if (result.success) items = result.data;
+
+  // ✅ POST - create
+  const result = await api(() => axios.post('/posts', payload));
+
+  // ✅ PUT - update
+  const result = await api(() => axios.put(`/posts/${id}`, payload));
+
+  // ✅ DELETE - remove
+  const result = await api(() => axios.delete(`/posts/${id}`));
+
+  // ❌ NEVER use raw fetch() - won't work with api() wrapper
+  // ❌ NEVER use axios directly without api() wrapper - no toast/CSRF handling
+</script>
+```
 
 ### Receiving Inertia Props (from controller)
 
 ```svelte
 <script lang="ts">
+  import { page as inertiaPage } from "@inertiajs/svelte";
+
   // Props passed by res.inertia("PageName", { user, count })
   let { user, count } = $props();
-</script>
-```
 
-### Fetching CRUD Data (from JSON endpoints)
-
-```svelte
-<script lang="ts">
-  import { buildCSRFHeaders } from '$lib/csrf';
-
-  let items = $state([]);
-
-  async function loadItems() {
-    const res = await fetch("/items/data");
-    const json = await res.json();
-    items = json.data;
-  }
-
-  async function createItem(data) {
-    await fetch("/items", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...buildCSRFHeaders() },
-      body: JSON.stringify(data),
-    });
-    await loadItems();
-  }
+  // Access current user from shared Inertia props
+  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 </script>
 ```
 
@@ -69,20 +86,45 @@ resources/js/
 <script lang="ts">
   import { router } from "@inertiajs/svelte";
 
+  // Navigate to another Inertia page (NOT for CRUD)
   function goToDashboard() {
     router.visit("/dashboard");
   }
+
+  // With options
+  router.visit("/users", {
+    preserveState: true,
+    preserveScroll: true
+  });
 </script>
 ```
 
+## API Response Shape
+
+The `api()` wrapper expects this response format from backend:
+
+```typescript
+interface ApiResponse<T = unknown> {
+  success: boolean;
+  message: string;
+  data?: T;
+  code?: string;
+  errors?: Record<string, string[]>;  // validation errors
+}
+```
+
+This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPaginated`, `jsonError`, `jsonValidationError`.
+
 ## CONVENTIONS
 
-- Components use `.svelte` extension with `<script lang="ts">`
-- Entry point is `app.js` (JavaScript, not TypeScript)
-- State management via `$state()` runes — avoid legacy stores
-- **CRUD data**: always `fetch()` from JSON endpoint — never pass via `res.inertia()`
-- **Navigation**: use `router.visit()` for page transitions
-- **CSRF**: use `buildCSRFHeaders()` from `helper.ts` for all mutating requests
-- Authorization component `<Can />` wraps gated UI sections
-- Dark mode: `dark:` Tailwind prefix on all elements
-- Types in `types/index.ts` and auto-generated `types/generated.ts`
+- **HTTP client**: Always `api(() => axios.method(...))` — never raw `fetch()` or bare `axios`
+- **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.js` — no manual headers needed
+- **Components**: Use `.svelte` extension with `<script lang="ts">`
+- **Entry point**: `app.js` (JavaScript, not TypeScript)
+- **State management**: Use `$state()` runes — avoid legacy stores
+- **CRUD data**: Always fetch via `api(() => axios.get(...))` — never pass via `res.inertia()`
+- **Navigation**: Use `router.visit()` for page transitions
+- **Authorization**: `<Can permission="users.edit">` component wraps gated UI sections
+- **Dark mode**: Use `dark:` Tailwind prefix on all elements
+- **Types**: Import from `$lib/types` or `../types` (relative)
+- **UI components**: Use shadcn-svelte from `$lib/components/ui/`

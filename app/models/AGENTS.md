@@ -1,5 +1,11 @@
 # Models
 
+**Related docs:**
+- [`../AGENTS.md`](../AGENTS.md) - Module overview & dependency graph
+- [`../services/AGENTS.md`](../services/AGENTS.md) - DB service (Knex), Paginator
+- [`../../migrations/AGENTS.md`](../../migrations/AGENTS.md) - Database migrations
+- [`../../database/factories/AGENTS.md`](../../database/factories/AGENTS.md) - Model factories for testing
+
 ## Overview
 Active Record pattern implementation using Knex.js. Provides type-safe database operations with automatic timestamps and query builder access.
 

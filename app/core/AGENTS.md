@@ -2,6 +2,12 @@
 
 **Generated:** 2026-04-04
 
+**Related docs:**
+- [`../AGENTS.md`](../AGENTS.md) - Module overview & request lifecycle
+- [`../controllers/AGENTS.md`](../controllers/AGENTS.md) - Controllers that extend BaseController
+- [`../middlewares/AGENTS.md`](../middlewares/AGENTS.md) - Middleware patterns
+- [`../../server.ts`](../../server.ts) - Entry point that uses createApp()
+
 ## Overview
 
 Framework kernel exporting HTTP abstractions, routing, error handling, and response helpers. Powers the entire application lifecycle.
