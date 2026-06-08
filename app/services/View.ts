@@ -29,13 +29,13 @@ function escapeHtml(value: string): string {
       .replace(/'/g, "&#039;");
 }
 
-function escapeHtmlForJson(jsonString: string): string {
+function escapeJsonForScriptTag(jsonString: string): string {
+   // Only escape characters that could break out of <script> tag or cause XSS
+   // No need to escape quotes since we're inside a script tag, not an HTML attribute
    return jsonString
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;");
+      .replace(/</g, "\\u003c")
+      .replace(/>/g, "\\u003e")
+      .replace(/&/g, "\\u0026");
 }
 
 export function view(filename: string, view_data?: Record<string, unknown>) {
@@ -59,7 +59,7 @@ export function view(filename: string, view_data?: Record<string, unknown>) {
       }
 
       if (typeof view_data.page === "string") {
-         html = html.replace("{{it.page}}", escapeHtmlForJson(view_data.page));
+          html = html.replace("{{it.page}}", escapeJsonForScriptTag(view_data.page));
       }
    }
 
