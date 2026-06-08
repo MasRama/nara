@@ -1,68 +1,39 @@
-/**
- * Nara Core
- * 
- * Core framework components for building type-safe web applications.
- * 
- * @example
- * // Bootstrap application
- * import { createApp } from '@core';
- * import routes from '@routes/web';
- * 
- * const app = createApp({ routes });
- * app.start();
- * 
- * @example
- * // Use router and errors
- * import { createRouter, HttpError, NotFoundError } from '@core';
- * import type { NaraRequest, NaraResponse, NaraMiddleware, NaraHandler } from '@core';
- */
+export { createApp } from './App';
+export type { AppOptions, NaraApp } from './App';
 
-// App
-export { NaraApp, createApp } from './App';
-export type { AppOptions } from './App';
-
-// Base Controller
-export { BaseController } from './BaseController';
-export type { AuthenticatedRequest, AdminRequest, PaginationParams } from './BaseController';
-
-// Form Request
-export { FormRequest } from './FormRequest';
-export type { FormRequestConstructor } from './FormRequest';
-
-// Types
 export type {
-  User,
+  AuthUser,
   NaraRequest,
   NaraResponse,
+  NaraResponseWithInertia,
   NaraMiddleware,
   NaraHandler,
   RouteMiddlewares,
   RouteCallback,
 } from './types';
 
-// Router
-export { NaraRouter, createRouter } from './Router';
+export { createRouter } from './Router';
+export type { NaraRouter } from './Router';
 
-// Adapters
 export * from './adapters/types';
 export { svelteAdapter } from './adapters/svelte';
 
-// Errors
 export {
-  HttpError,
-  ValidationError,
-  AuthError,
-  NotFoundError,
-  ForbiddenError,
-  BadRequestError,
-  ConflictError,
-  TooManyRequestsError,
-  InternalError,
-  isHttpError,
+  httpError,
+  validationError,
+  authError,
+  notFoundError,
+  forbiddenError,
+  badRequestError,
+  conflictError,
+  tooManyRequestsError,
+  internalError,
+  isNaraError,
   isValidationError,
 } from './errors';
 
-// Response Helpers
+export type { NaraError } from './errors';
+
 export {
   jsonSuccess,
   jsonError,
@@ -74,6 +45,7 @@ export {
   jsonNotFound,
   jsonValidationError,
   jsonServerError,
+  inertia,
 } from './response';
 
 export type {
@@ -83,7 +55,3 @@ export type {
   PaginationMeta,
   ResponseMeta,
 } from './response';
-
-// HTTP Resources
-export { Resource } from '@/http/Resource';
-export { ResourceCollection } from '@/http/ResourceCollection';

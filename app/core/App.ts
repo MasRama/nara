@@ -1,21 +1,3 @@
-/**
- * Nara Application Kernel
- * 
- * Central abstraction for bootstrapping and managing the application lifecycle.
- * Wraps environment initialization, server creation, middlewares, routes, and graceful shutdown.
- * 
- * Powered by ultimate-express (uWebSockets.js) for maximum performance
- * with full Express API compatibility.
- * 
- * @example
- * // server.ts
- * import { createApp } from '@core';
- * import routes from '@routes/web';
- * 
- * const app = createApp({ routes });
- * app.start();
- */
-
 import express from "ultimate-express";
 import cors from "cors";
 import compression from "compression";
@@ -30,291 +12,138 @@ import { rateLimit } from "@middlewares/rateLimit";
 import { csrf } from "@middlewares/csrf";
 import { inputSanitize } from "@middlewares/inputSanitize";
 import { requestId } from "@middlewares/requestId";
-import { HttpError, ValidationError, isHttpError } from "./errors";
+import { isNaraError, isValidationError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
 import type { NaraMiddleware, NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
 
-/**
- * Adapts a NaraMiddleware to Express's middleware signature.
- *
- * NaraMiddleware extends Express's Request/Response with additional
- * properties (user, share, requestId, view, inertia, flash). This adapter
- * is safe because Express always passes its own Request/Response objects
- * at runtime, and Nara middleware only reads/writes the extended properties
- * that are set by other Nara middleware earlier in the chain.
- */
 function adapt(middleware: NaraMiddleware): any {
   return (req: any, res: any, next: any) =>
     middleware(req as NaraRequest, res as NaraResponse, next);
 }
 
-/**
- * Application configuration options
- */
 export interface AppOptions {
-  /**
-   * Port to listen on. Defaults to env.PORT or 5555.
-   */
   port?: number;
-
-  /**
-   * Enable HTTPS. If true, uses env.HAS_CERTIFICATE to determine cert paths.
-   * @default auto-detect from env
-   */
   https?: boolean;
-
-  /**
-   * Enable CORS middleware.
-   * @default true
-   */
   cors?: boolean;
-
-  /**
-   * Frontend adapter (e.g., Inertia). If provided, enables frontend features.
-   */
   adapter?: FrontendAdapter;
-
-  /**
-   * Enable security headers middleware (HSTS, X-Frame-Options, etc.).
-   * @default true
-   */
   securityHeaders?: boolean;
-
-  /**
-   * Enable request logging middleware.
-   * @default true
-   */
   requestLogging?: boolean;
-
-  /**
-   * Enable rate limiting middleware.
-   * @default false (opt-in)
-   */
   rateLimit?: boolean;
-
-  /**
-   * Enable CSRF protection middleware.
-   * @default false (opt-in, see docs/SECURITY.md for details)
-   */
   csrf?: boolean;
-
-  /**
-   * Enable input sanitization middleware.
-   * @default true
-   */
   inputSanitize?: boolean;
-
-  /**
-   * Application routes (Express Router).
-   * Can also be mounted later via app.mount()
-   */
   routes?: any;
-
-  /**
-   * Graceful shutdown timeout in milliseconds.
-   * @default 10000 (10 seconds)
-   */
   shutdownTimeout?: number;
-
-  /**
-   * Custom error handler. If not provided, uses the default Nara error handler.
-   */
-  errorHandler?: (
-    req: NaraRequest,
-    res: NaraResponse,
-    error: unknown
-  ) => void;
+  errorHandler?: (req: NaraRequest, res: NaraResponse, error: unknown) => void;
 }
 
-/**
- * Default application options
- */
-const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler" | "adapter">> & Pick<AppOptions, "adapter"> = {
+const DEFAULT_OPTIONS = {
   port: 5555,
   https: false,
   cors: true,
-  adapter: undefined,
   securityHeaders: true,
   requestLogging: true,
-  rateLimit: false, // Opt-in
-  csrf: false, // Opt-in, see docs/SECURITY.md
-  inputSanitize: true, // Enabled by default
+  rateLimit: false,
+  csrf: false,
+  inputSanitize: true,
   shutdownTimeout: 10000,
 };
 
-/**
- * Nara Application class
- * 
- * Manages the entire application lifecycle including:
- * - Environment initialization
- * - Server creation with optional HTTPS
- * - Global middleware registration
- * - Route mounting
- * - Error handling
- * - Graceful shutdown
- */
-export class NaraApp {
-  private app: any;
-  private server: any = null;
-  private env: Env;
-  private options: Required<Omit<AppOptions, "routes" | "errorHandler" | "adapter">> & Pick<AppOptions, "routes" | "errorHandler" | "adapter">;
-  private isShuttingDown = false;
-  private isStarted = false;
+export interface NaraApp {
+  start(): Promise<void>;
+  close(): Promise<void>;
+  use(middleware: any): NaraApp;
+  use(path: string, middleware: any): NaraApp;
+  mount(router: any, prefix?: string): NaraApp;
+  getApp(): any;
+  getEnv(): Env;
+  isRunning(): boolean;
+}
 
-  constructor(options?: AppOptions) {
-    // Initialize environment first
-    this.env = initEnv();
+export function createApp(options?: AppOptions): NaraApp {
+  const env = initEnv();
 
-    // Merge options with defaults
-    this.options = {
-      ...DEFAULT_OPTIONS,
-      port: this.env.PORT,
-      https: this.env.HAS_CERTIFICATE === "true",
-      ...options,
-    };
+  const opts = {
+    ...DEFAULT_OPTIONS,
+    port: env.PORT,
+    https: env.HAS_CERTIFICATE === "true",
+    adapter: undefined as FrontendAdapter | undefined,
+    errorHandler: undefined as AppOptions["errorHandler"],
+    routes: undefined as any,
+    ...options,
+  };
 
-    // Log environment summary and warnings
-    this.logEnvSummary();
-
-    // Create express app
-    this.app = this.createServer();
-
-    // Setup default error handler
-    this.setupErrorHandler();
-
-    // Setup process signal handlers for graceful shutdown
-    this.setupSignalHandlers();
-
-    // Apply default middlewares
-    this.applyDefaultMiddlewares();
-
-    // Mount routes if provided
-    if (this.options.routes) {
-      this.app.use(this.options.routes);
-    }
+  const featureWarnings = checkFeatureConfig(env);
+  if (featureWarnings.length > 0) {
+    console.log("\n⚠️  Optional features not configured:");
+    featureWarnings.forEach((w: string) => console.log(`   - ${w}`));
+    console.log("");
   }
 
-  /**
-   * Log environment summary and feature warnings
-   */
-  private logEnvSummary(): void {
-    const featureWarnings = checkFeatureConfig(this.env);
+  const app = createServer(opts);
+  let server: any = null;
+  let isStarted = false;
+  let isShuttingDown = false;
 
-    if (featureWarnings.length > 0) {
-      console.log("\n⚠️  Optional features not configured:");
-      featureWarnings.forEach((w: string) => console.log(`   - ${w}`));
-      console.log("");
-    }
+  applyDefaultMiddlewares(app, opts);
+  setupErrorHandler(app, env, opts.errorHandler);
+  setupSignalHandlers();
+
+  if (opts.routes) {
+    app.use(opts.routes);
   }
 
-  /**
-   * Create Express app (ultimate-express / uWebSockets.js)
-   */
-  private createServer(): any {
+  function createServer(o: typeof opts): any {
     const appOptions: Record<string, unknown> = {};
 
-    // Enable HTTPS if configured
-    if (this.options.https) {
+    if (o.https) {
       appOptions.uwsOptions = {
         key_file_name: require("path").join(process.cwd(), "localhost+1-key.pem"),
         cert_file_name: require("path").join(process.cwd(), "localhost+1.pem"),
       };
     }
 
-    const app = express(appOptions);
+    const instance = express(appOptions);
+    instance.set("case sensitive routing", true);
+    instance.disable("x-powered-by");
+    instance.set("catch async errors", true);
+    instance.set("body methods", ["POST", "PUT", "PATCH", "DELETE"]);
+    instance.use(express.json({ limit: `${SERVER.MAX_BODY_SIZE / 1024 / 1024}mb` }));
+    instance.use(express.urlencoded({ extended: true, limit: `${SERVER.MAX_BODY_SIZE / 1024 / 1024}mb` }));
+    instance.use(cookieParser() as any);
 
-    // Enable case-sensitive routing for uWS native router optimization
-    app.set("case sensitive routing", true);
-
-    // Disable x-powered-by header (security: don't expose server info)
-    app.disable("x-powered-by");
-
-    // Enable automatic async error catching (replaces express-async-errors)
-    app.set("catch async errors", true);
-
-    // Parse body for DELETE requests too (needed for bulk delete endpoints)
-    app.set("body methods", ["POST", "PUT", "PATCH", "DELETE"]);
-
-    // Set max body size
-    app.use(express.json({ limit: `${SERVER.MAX_BODY_SIZE / 1024 / 1024}mb` }));
-    app.use(express.urlencoded({ extended: true, limit: `${SERVER.MAX_BODY_SIZE / 1024 / 1024}mb` }));
-
-    // Parse cookies (required for req.cookies)
-    app.use(cookieParser() as any);
-
-    return app;
+    return instance;
   }
 
-  /**
-   * Apply default middlewares (Security Headers, Request Logging, CORS, Rate Limit, Inertia)
-   */
-  private applyDefaultMiddlewares(): void {
-    // Compression should be first for better performance
-    this.app.use(compression());
+  function applyDefaultMiddlewares(instance: any, o: typeof opts): void {
+    instance.use(compression());
 
-    // Security headers should be first to ensure all responses have them
-    if (this.options.securityHeaders) {
-      this.app.use(adapt(securityHeaders()));
-    }
+    if (o.securityHeaders) instance.use(adapt(securityHeaders()));
+    instance.use(adapt(requestId()));
+    if (o.requestLogging) instance.use(adapt(requestLogger()));
+    if (o.cors) instance.use(cors());
+    if (o.rateLimit) instance.use(adapt(rateLimit()));
+    if (o.csrf) instance.use(adapt(csrf()));
+    if (o.inputSanitize) instance.use(adapt(inputSanitize()));
 
-    // Request ID middleware - must be before requestLogger so requestId is available for logging
-    this.app.use(adapt(requestId()));
-
-    // Request logging early to capture all requests
-    if (this.options.requestLogging) {
-      this.app.use(adapt(requestLogger()));
-    }
-
-    if (this.options.cors) {
-      this.app.use(cors());
-    }
-
-    // Rate limiting after CORS but before route handlers
-    if (this.options.rateLimit) {
-      this.app.use(adapt(rateLimit()));
-    }
-
-    // CSRF protection after rate limiting but before route handlers
-    if (this.options.csrf) {
-      this.app.use(adapt(csrf()));
-    }
-
-    // Input sanitization after CSRF but before route handlers
-    if (this.options.inputSanitize) {
-      this.app.use(adapt(inputSanitize()));
-    }
-
-    if (this.options.adapter) {
-      // Apply adapter middleware
-      this.app.use(adapt(this.options.adapter.middleware() as NaraMiddleware));
-
-      // Register response extensions
-      this.app.use((_req: any, res: any, next: any) => {
-        this.options.adapter?.extendResponse(res as NaraResponse);
+    if (o.adapter) {
+      instance.use(adapt(o.adapter.middleware() as NaraMiddleware));
+      instance.use((_req: any, res: any, next: any) => {
+        o.adapter?.extendResponse(res as NaraResponse);
         next();
       });
     }
   }
 
-  /**
-   * Setup the global error handler (Express error middleware pattern)
-   */
-  private setupErrorHandler(): void {
-    const customHandler = this.options.errorHandler;
-
-    // Express error-handling middleware: (err, req, res, next)
-    this.app.use((error: unknown, req: any, res: any, _next: any) => {
-      // Use custom handler if provided
+  function setupErrorHandler(instance: any, envConfig: Env, customHandler?: AppOptions["errorHandler"]): void {
+    instance.use((error: unknown, req: any, res: any, _next: any) => {
       if (customHandler) {
         return customHandler(req as NaraRequest, res as NaraResponse, error);
       }
 
-      // Default error handling
-      const isDevelopment = this.env.NODE_ENV === "development";
+      const isDevelopment = envConfig.NODE_ENV === "development";
 
-      // Handle known HttpError types
-      if (isHttpError(error)) {
+      if (isNaraError(error)) {
         Logger.warn("HTTP error", {
           name: error.name,
           message: error.message,
@@ -324,13 +153,10 @@ export class NaraApp {
           method: req.method,
         });
 
-        // Special handling for ValidationError
-        if (error instanceof ValidationError) {
-          // Check if this is an Inertia request
+        if (isValidationError(error)) {
           const isInertia = req.headers["x-inertia"] === "true";
 
           if (isInertia) {
-            // For Inertia requests, redirect back with error cookie
             const referer = (req.headers["referer"] as string) || "/";
             const errorMsg = (error.errors && Object.keys(error.errors).length > 0)
               ? Object.values(error.errors).flat().join(", ")
@@ -342,30 +168,18 @@ export class NaraApp {
               .redirect(referer);
           }
 
-          // For API requests, return JSON
-          return jsonValidationError(
-            res as NaraResponse,
-            error.message,
-            error.errors
-          );
+          return jsonValidationError(res as NaraResponse, error.message, error.errors);
         }
 
-        return jsonError(
-          res as NaraResponse,
-          error.message,
-          error.statusCode,
-          error.code
-        );
+        const { message, statusCode, code } = error;
+        return jsonError(res as NaraResponse, message, statusCode, code);
       }
 
-      // Handle unknown errors
       const err = error as Error;
-      const statusCode =
-        (error as { statusCode?: number }).statusCode ||
-        ((error as { code?: string }).code === "SQLITE_ERROR" ? 500 : 500);
+      const statusCode = (error as { statusCode?: number }).statusCode || 500;
 
       Logger.error("Unhandled request error", {
-        err: err,
+        err,
         path: req.path,
         method: req.method,
         statusCode,
@@ -381,45 +195,30 @@ export class NaraApp {
     });
   }
 
-  /**
-   * Setup process signal handlers for graceful shutdown
-   */
-  private setupSignalHandlers(): void {
-    // SIGTERM (Docker/K8s stop)
-    process.on("SIGTERM", () => this.gracefulShutdown("SIGTERM", 0));
-
-    // SIGINT (Ctrl+C)
-    process.on("SIGINT", () => this.gracefulShutdown("SIGINT", 0));
-
-    // Uncaught exceptions
+  function setupSignalHandlers(): void {
+    process.on("SIGTERM", () => gracefulShutdown("SIGTERM", 0));
+    process.on("SIGINT", () => gracefulShutdown("SIGINT", 0));
     process.on("uncaughtException", async (error: Error) => {
       Logger.fatal("Uncaught exception", error);
-      await this.gracefulShutdown("uncaughtException", 1);
+      await gracefulShutdown("uncaughtException", 1);
     });
-
-    // Unhandled promise rejections
     process.on("unhandledRejection", async (reason: unknown) => {
       Logger.fatal("Unhandled promise rejection", { reason });
-      await this.gracefulShutdown("unhandledRejection", 1);
+      await gracefulShutdown("unhandledRejection", 1);
     });
   }
 
-  /**
-   * Graceful shutdown handler
-   */
-  private async gracefulShutdown(signal: string, exitCode: number = 0): Promise<void> {
-    // Prevent multiple shutdown attempts
-    if (this.isShuttingDown) {
+  async function gracefulShutdown(signal: string, exitCode: number = 0): Promise<void> {
+    if (isShuttingDown) {
       Logger.warn("Shutdown already in progress, ignoring signal", { signal });
       return;
     }
-    this.isShuttingDown = true;
+    isShuttingDown = true;
 
-    const timeoutMs = this.options.shutdownTimeout;
+    const timeoutMs = opts.shutdownTimeout;
     Logger.info(`${signal} received, starting graceful shutdown...`);
     console.log(`\n⏳ Shutting down gracefully (max ${timeoutMs / 1000}s)...`);
 
-    // Set a hard timeout to force exit if graceful shutdown takes too long
     const forceExitTimeout = setTimeout(() => {
       Logger.error("Graceful shutdown timeout exceeded, forcing exit");
       console.log("❌ Shutdown timeout exceeded, forcing exit");
@@ -427,29 +226,23 @@ export class NaraApp {
     }, timeoutMs);
 
     try {
-      // Step 1: Stop accepting new connections
       Logger.info("Closing server (stop accepting new connections)...");
-      if (this.server) {
+      if (server) {
         await new Promise<void>((resolve) => {
-          this.server!.close(() => resolve());
+          server!.close(() => resolve());
         });
       }
       Logger.info("Server closed successfully");
 
-      // Step 2: Close database connections
       Logger.info("Closing database connections...");
-      const DBModule = await import("@services/DB");
-      const DB = DBModule.default;
-      await DB.destroy();
+      const SQLiteModule = await import("@services/SQLite");
+      SQLiteModule.default.close();
       Logger.info("Database connections closed");
 
-      // Step 3: Flush logs
       Logger.info("Flushing logs...");
       await Logger.flush();
 
-      // Clear the force exit timeout
       clearTimeout(forceExitTimeout);
-
       console.log("✅ Graceful shutdown complete");
       process.exit(exitCode);
     } catch (error) {
@@ -459,95 +252,56 @@ export class NaraApp {
     }
   }
 
-  /**
-   * Add a middleware to the application
-   */
-  use(middleware: any): this;
-  use(path: string, middleware: any): this;
-  use(...args: any[]): this {
-    this.app.use(...args);
-    return this;
-  }
+  const api: NaraApp = {
+    async start(): Promise<void> {
+      if (isStarted) {
+        Logger.warn("Server already started");
+        return;
+      }
 
-  /**
-   * Mount a router to the application
-   */
-  mount(router: any, prefix?: string): this {
-    if (prefix) {
-      this.app.use(prefix, router);
-    } else {
-      this.app.use(router);
-    }
-    return this;
-  }
+      const port = opts.port;
 
-  /**
-   * Start the application server
-   */
-  async start(): Promise<void> {
-    if (this.isStarted) {
-      Logger.warn("Server already started");
-      return;
-    }
-
-    const port = this.options.port;
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        this.server = this.app.listen(port, () => {
-          resolve();
+      try {
+        await new Promise<void>((resolve, reject) => {
+          server = app.listen(port, () => resolve());
+          server!.on("error", reject);
         });
-        this.server!.on("error", reject);
-      });
 
-      this.isStarted = true;
+        isStarted = true;
 
-      const envSummary = getEnvSummary(this.env);
-      Logger.info("Server started successfully", {
-        ...envSummary,
-        nodeVersion: process.version,
-      });
+        const envSummary = getEnvSummary(env);
+        Logger.info("Server started successfully", { ...envSummary, nodeVersion: process.version });
 
-      const protocol = this.options.https ? "https" : "http";
-      console.log(`\n🚀 Server is running at ${protocol}://localhost:${port}\n`);
-    } catch (err) {
-      Logger.fatal("Failed to start server", err as Error);
-      process.exit(1);
-    }
-  }
+        const protocol = opts.https ? "https" : "http";
+        console.log(`\n🚀 Server is running at ${protocol}://localhost:${port}\n`);
+      } catch (err) {
+        Logger.fatal("Failed to start server", err as Error);
+        process.exit(1);
+      }
+    },
 
-  /**
-   * Stop the application server
-   */
-  async close(): Promise<void> {
-    await this.gracefulShutdown("close", 0);
-  }
+    async close(): Promise<void> {
+      await gracefulShutdown("close", 0);
+    },
 
-  /**
-   * Get the underlying Express app instance
-   */
-  getApp(): any {
-    return this.app;
-  }
+    use(...args: any[]): NaraApp {
+      app.use(...args);
+      return api;
+    },
 
-  /**
-   * Get the environment configuration
-   */
-  getEnv(): Env {
-    return this.env;
-  }
+    mount(router: any, prefix?: string): NaraApp {
+      if (prefix) {
+        app.use(prefix, router);
+      } else {
+        app.use(router);
+      }
+      return api;
+    },
 
-  /**
-   * Check if the server is currently running
-   */
-  isRunning(): boolean {
-    return this.isStarted && !this.isShuttingDown;
-  }
-}
+    getApp: () => app,
+    getEnv: () => env,
+    isRunning: () => isStarted && !isShuttingDown,
+  };
 
-/**
- * Create a new Nara application instance
- */
-export function createApp(options?: AppOptions): NaraApp {
-  return new NaraApp(options);
+  return api;
 }

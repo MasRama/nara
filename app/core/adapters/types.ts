@@ -1,34 +1,16 @@
 import type { NextFunction } from "express";
 import type { NaraRequest, NaraResponse } from "../types";
 
-/**
- * Handler type for adapter middleware
- */
 export type AdapterMiddlewareHandler = (
   req: NaraRequest,
   res: NaraResponse,
   next: NextFunction
 ) => unknown | Promise<unknown>;
 
-/**
- * Frontend Adapter Interface
- *
- * Defines the contract for providing different frontend engine support
- * (e.g., Inertia, Blade, etc.)
- */
 export interface FrontendAdapter {
-  /**
-   * Unique name for the adapter
-   */
   name: string;
 
-  /**
-   * Factory that returns the adapter's global middleware
-   */
   middleware: () => AdapterMiddlewareHandler;
 
-  /**
-   * Method called during app initialization to extend the NaraResponse prototype or instance
-   */
   extendResponse: (res: NaraResponse) => void;
 }
