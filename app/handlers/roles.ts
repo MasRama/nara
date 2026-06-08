@@ -66,7 +66,7 @@ export const store = (req: NaraRequest, res: NaraResponse) => {
       syncRolePermissions(role.id, permIds);
     }
 
-    return jsonCreated(res, 'Role created', {
+    return jsonCreated(res, 'Role berhasil dibuat', {
       role: { ...role, permissions: getRolePermissions(role.id).map(p => p.slug) }
     });
   } catch (error: unknown) {
@@ -104,7 +104,7 @@ export const update = (req: NaraRequest, res: NaraResponse) => {
       syncRolePermissions(id, permIds);
     }
 
-    return jsonSuccess(res, 'Role updated', {
+    return jsonSuccess(res, 'Role berhasil diupdate', {
       role: { ...role, permissions: getRolePermissions(id).map(p => p.slug) }
     });
   } catch (error: unknown) {
@@ -125,5 +125,5 @@ export const destroy = (req: NaraRequest, res: NaraResponse) => {
   const deleted = deleteRole(id);
   if (!deleted) return jsonError(res, 'Role not found', 404);
 
-  return jsonSuccess(res, 'Role deleted', { deleted: true });
+  return jsonSuccess(res, 'Role berhasil dihapus', { deleted: true });
 };

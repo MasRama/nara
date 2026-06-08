@@ -14,7 +14,7 @@ app/
 ├── events/          # emit/on/off/once
 ├── validators/      # Zod schemas (schemas.ts) + zodToErrors helper (index.ts)
 ├── config/          # env.ts (environment variables) + constants.ts (SERVER, AUTH, RATE_LIMIT, UPLOAD, CACHE)
-└── core/            # App, Router, errors, response helpers, adapters
+└── core/            # App, Router, errors, response helpers, adapters (Svelte/Inertia)
 ```
 
 ## Services Quick Reference

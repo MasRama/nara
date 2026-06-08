@@ -60,7 +60,7 @@ export default defineConfig({
         manualChunks: {
           'vendor-svelte': ['svelte'],
           'vendor-inertia': ['@inertiajs/svelte'],
-          'vendor-utils': ['axios', 'dayjs'],
+          'vendor-utils': ['axios'],
         },
       },
     },

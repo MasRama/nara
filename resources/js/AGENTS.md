@@ -66,17 +66,17 @@ resources/js/
 </script>
 ```
 
-### Receiving Inertia Props (from controller)
+### Receiving Inertia Props (from handler)
 
 ```svelte
 <script lang="ts">
   import { page as inertiaPage } from "@inertiajs/svelte";
 
-  // Props passed by res.inertia("PageName", { user, count })
-  let { user, count } = $props();
+  // Props passed by res.inertia("PageName", { users, permissions, total })
+  let { users = [], permissions, total } = $props();
 
-  // Access current user from shared Inertia props
-  const currentUser = $derived(inertiaPage.props.user as User | undefined);
+  // Access current user from shared Inertia props (store subscription with $)
+  const currentUser = $derived($inertiaPage.props.user as User | undefined);
 </script>
 ```
 
@@ -122,7 +122,8 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 - **Components**: Use `.svelte` extension with `<script lang="ts">`
 - **Entry point**: `app.js` (JavaScript, not TypeScript)
 - **State management**: Use `$state()` runes — avoid legacy stores
-- **CRUD data**: Always fetch via `api(() => axios.get(...))` — never pass via `res.inertia()`
+- **Page data**: All data passed via `res.inertia()` props from handler — lists, permissions, metadata
+- **Mutations**: Use `api(() => axios.post/put/delete())` then `router.visit()` to refresh page
 - **Navigation**: Use `router.visit()` for page transitions
 - **Authorization**: `<Can permission="users.edit">` component wraps gated UI sections
 - **Dark mode**: Use `dark:` Tailwind prefix on all elements

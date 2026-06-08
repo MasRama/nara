@@ -28,49 +28,32 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
   import { Toast } from '$lib/toast';
   import type { User } from "../types";
 
-  // Props from server (passed by res.inertia("PageName", { prop }))
-  let { someServerProp } = $props();
+  // Props from server (passed by res.inertia("PageName", { data }))
+  let { items = [], permissions, total }: Props = $props();
 
-  // Current user from Inertia shared props
-  const currentUser = $derived(inertiaPage.props.user as User | undefined);
+  // Current user from Inertia shared props (store subscription with $)
+  const currentUser = $derived($inertiaPage.props.user as User | undefined);
 
-  // Local UI state
-  let items = $state<ItemType[]>([]);
-  let loading = $state(false);
-
-  // Fetch data from JSON endpoint (called by fetch() pattern — use axios)
-  async function loadData(): Promise<void> {
-    loading = true;
-    const result = await api(() => axios.get("/resource/data"), { showSuccessToast: false });
-    if (result.success) items = result.data as ItemType[];
-    loading = false;
-  }
-
-  // CRUD via axios (NOT router.visit, NOT raw fetch)
+  // CRUD via axios mutations, then router.visit() to refresh page data
   async function createItem(payload: Record<string, unknown>): Promise<void> {
     const result = await api(() => axios.post("/resource", payload));
-    if (result.success) await loadData();
-    // Toast shown automatically by api()
+    if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
   async function updateItem(id: string, payload: Record<string, unknown>): Promise<void> {
     const result = await api(() => axios.put(`/resource/${id}`, payload));
-    if (result.success) await loadData();
+    if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
   async function deleteItem(id: string): Promise<void> {
     const result = await api(() => axios.delete(`/resource/${id}`));
-    if (result.success) await loadData();
+    if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
   // Page navigation — use router.visit, never fetch/axios
   function goToOtherPage(): void {
     router.visit("/other-page");
   }
-
-  $effect(() => {
-    loadData();
-  });
 </script>
 
 <Header group="section-name" />
@@ -84,12 +67,11 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 
 | Concept | How it works |
 |---------|-------------|
-| **Page props** | Passed by `res.inertia("PageName", { prop })` in controller — static, server-side |
-| **CRUD data** | Fetched via `api(() => axios.get('/resource/data'))` from a JSON endpoint — dynamic, client-side |
+| **Page props** | Passed by `res.inertia("PageName", { data })` in handler — includes lists, permissions, metadata |
+| **Mutations** | `api(() => axios.post/put/delete('/resource', ...))` for create/update/delete, then `router.visit()` to refresh |
 | **Navigation** | `router.visit('/path')` for Inertia page transitions |
-| **Mutations** | `api(() => axios.post/put/delete('/resource', ...))` for create/update/delete |
 
-**NEVER** pass CRUD list data from `res.inertia()` — it gets stale. Always fetch via a separate JSON endpoint.
+**Page handlers pass ALL data via `res.inertia()`** — including CRUD lists. After mutations, use `router.visit()` to reload the page with fresh data.
 
 ## HTTP Client: axios (NOT fetch)
 
@@ -117,8 +99,9 @@ CSRF is handled automatically via `configureAxiosCSRF(axios)` called once in `ap
 - Svelte 5 runes: `let x = $state()`, `let y = $derived()`, `$effect(() => {...})` — NEVER `onMount`, NEVER `$:`
 - Page props via `$props()` rune: `let { propName } = $props()` — NEVER `export let propName`
 - User access: `$derived(inertiaPage.props.user as User)`
-- CRUD mutations: use `api(() => axios.method(...))` — NOT raw `fetch()`
+- CRUD mutations: use `api(() => axios.method(...))` then `router.visit()` to refresh — NOT raw `fetch()`
 - CSRF: handled automatically by `configureAxiosCSRF(axios)` in `app.js` — no manual header needed
+- Store access: `$derived($inertiaPage.props.user)` — use `$` prefix for Svelte store subscription
 - Auth pages don't include Header
 - Component path: `../Components/ComponentName.svelte` (relative)
 - Types from: `../types` (relative)

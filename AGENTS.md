@@ -12,7 +12,7 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 ## Philosophy
 
 - **No classes** — functions only
-- **No comments** — code is self-documenting
+- **No unnecessary comments** — code is self-documenting
 - **No abstractions** — inline is fine
 - **Raw SQL** — AI writes SQL, we just execute it
 - **Minimal code** — less code = less bugs
@@ -64,7 +64,7 @@ Server (ultimate-express)
 │   ├── Pages/           # Route pages (.svelte)
 │   ├── Components/      # Reusable components (Header, Pagination, Can, UserModal)
 │   ├── lib/             # api.ts, csrf.ts, toast.ts, utils.ts, hooks/, utils/
-│   └── types/           # generated.ts (auto) + index.ts
+│   └── types/           # generated.ts + index.ts (manually synced with backend)
 ├── tests/               # Vitest tests
 ├── server.ts            # Entry point
 └── knexfile.ts          # DB config (used by SQLite.ts + migrations)
@@ -140,10 +140,12 @@ export default Route.getRouter();
 import { inertia } from '@core';
 
 export const usersPage = (req: NaraRequest, res: NaraResponse) => {
-  // Pass page-level props (user, permissions, metadata) — NOT CRUD data
+  // Pass ALL page data via inertia — lists, permissions, metadata
+  const result = getUsersPaginated(page, limit, search);
   return inertia(res).inertia('users', {
+    users: result.data,
     permissions: { canCreate: true, canEdit: true },
-    total: getUserCount(),
+    total: result.total, page, limit,
   });
 };
 ```
@@ -461,9 +463,44 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 - **HTTP**: Always `api(() => axios.method(...))` — never raw `fetch()`
 - **State**: `$state()`, `$derived()`, `$effect()`, `$props()` — never `onMount`, `$:`, `export let`
 - **Navigation**: `router.visit()` for page transitions
-- **CRUD data**: Fetch via axios — never pass from `res.inertia()`
+- **Page data**: Pass all data via `res.inertia()` props — lists, permissions, metadata
+- **Mutations**: Use `api(() => axios.post/put/delete())` for create/update/delete, then `router.visit()` to refresh
 - **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.js`
 - **Toast**: Auto-shown by `api()` — suppress with `{ showSuccessToast: false }`
+- **Store access**: Use `$storeName` (Svelte store subscription) inside `$derived()` — e.g. `$derived($inertiaPage.props.user)`
+
+## Database Schema
+
+| Table | Key Columns | Relations |
+|---|---|---|
+| `users` | id (uuid), email, name, phone, password, avatar, is_verified | has many roles via `user_roles` |
+| `sessions` | id (uuid), user_id, user_agent, expires_at | belongs to `users` |
+| `roles` | id (uuid), name, slug, description | has many permissions via `role_permissions` |
+| `permissions` | id (uuid), name, slug, resource, action, description | belongs to roles via `role_permissions` |
+| `user_roles` | id (uuid), user_id, role_id, created_at | junction: `users` ↔ `roles` |
+| `role_permissions` | id (uuid), role_id, permission_id, created_at | junction: `roles` ↔ `permissions` |
+| `assets` | id (uuid), name, type, url, mime_type, size, s3_key, user_id | belongs to `users` |
+| `password_reset_tokens` | id (auto), email, token, expires_at, used | standalone |
+
+- All IDs: `crypto.randomUUID()` (except auto-increment tables)
+- All timestamps: `biginteger` unix milliseconds via `Date.now()`
+- Foreign keys: `.onDelete('CASCADE')`
+
+## Adapter Pattern
+
+`app/core/adapters/` contains frontend adapter for Inertia.js:
+
+```typescript
+import { svelteAdapter } from '@core';
+
+const app = createApp({
+  adapter: svelteAdapter(),  // enables res.inertia() on NaraResponse
+});
+```
+
+- `adapters/types.ts` — `FrontendAdapter` interface (middleware, extendResponse)
+- `adapters/svelte.ts` — Svelte/Inertia adapter (shares user/props, renders HTML template)
+- Custom adapters can implement `FrontendAdapter` for other frontend frameworks
 
 ## Conventions
 
@@ -480,11 +517,11 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 2. **Don't** use ORM/query builder — write raw SQL in `queries/`
 3. **Don't** return `jsonSuccess` from a page route — use `inertia(res).inertia()`
 4. **Don't** return `inertia()` from a data route — use `jsonSuccess/jsonError`
-5. **Don't** pass CRUD list data from `res.inertia()` — fetch via separate JSON endpoint
-6. **Don't** use relative imports for core modules — use path aliases
-7. **Don't** use `console.log` — use `Logger.info/warn/error`
-8. **Don't** use `fetch()` on frontend — use `api(() => axios.method(...))`
-9. **Don't** use bcrypt directly — use `hashPassword()` from `@services/Authenticate`
+5. **Don't** use relative imports for core modules — use path aliases
+6. **Don't** use `console.log` — use `Logger.info/warn/error`
+7. **Don't** use `fetch()` on frontend — use `api(() => axios.method(...))`
+8. **Don't** use bcrypt directly — use `hashPassword()` from `@services/Authenticate`
+9. **Don't** mix languages in error messages — use Indonesian for user-facing messages
 
 ## Build/Test
 
@@ -511,3 +548,4 @@ npm run seed         # npx knex seed:run
 | Frontend page | `resources/js/Pages/` |
 | Frontend component | `resources/js/Components/` |
 | Constants | `app/config/constants.ts` |
+| Adapters | `app/core/adapters/` (Svelte/Inertia integration) |

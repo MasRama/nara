@@ -104,7 +104,7 @@ export const create = (req: NaraRequest, res: NaraResponse) => {
     }
 
     const userRoles = getUserRoles(user.id);
-    return jsonCreated(res, 'User created', {
+    return jsonCreated(res, 'User berhasil dibuat', {
       user: { id: user.id, name: user.name, email: user.email, roles: userRoles.map(r => r.slug) }
     });
   } catch (error: unknown) {

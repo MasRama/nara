@@ -1,13 +1,9 @@
 /**
- * Generated Frontend Types
+ * Frontend Types (mirrors backend types)
  * 
- * AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+ * Manually maintained — update this file when backend types change.
  * 
- * This file is generated from backend type definitions.
- * Run `node nara generate:types` to regenerate.
- * 
- * Source: app/core/types.ts
- * Generated: 2025-12-05T02:22:48.293Z
+ * Source: app/core/types.ts, app/types/models.ts
  */
 
 // =============================================================================

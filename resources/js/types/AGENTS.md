@@ -13,7 +13,7 @@ Frontend TypeScript type definitions. `generated.ts` mirrors backend types.
 
 Contains: `User`, `Role`, `Permission`, `Session`, `UserForm`, pagination types, and helper functions that mirror `app/core/types.ts` and `app/types/models.ts`.
 
-When backend types change, update `generated.ts` accordingly.
+Manually maintained — when backend types change, update `generated.ts` accordingly.
 
 ## Adding Custom Types
 
