@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import tailwindcss from '@tailwindcss/vite'
 import 'dotenv/config'
 import { resolve } from 'path'
 import { readdirSync } from 'fs';
@@ -24,7 +25,12 @@ const PORT = parseInt(process.env.VITE_PORT) || 3000;
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    svelte(),
+    tailwindcss(),
+    svelte({
+      compilerOptions: {
+        runes: true,
+      },
+    }),
     {
       name: 'port-handling',
       configureServer(server) {
@@ -54,6 +60,9 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true,
     minify: 'esbuild',
+    cssCodeSplit: true,
+    sourcemap: false,
+    target: 'es2022',
     rollupOptions: {
       input: input,
       output: {

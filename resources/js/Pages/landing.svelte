@@ -16,10 +16,10 @@
   }
 
   let user = $page.props.user as User | undefined
-  let scrollY = 0;
-  let innerHeight = 0;
+  let scrollY = $state(0);
+  let innerHeight = $state(0);
 
-  $: scrolled = scrollY > 50;
+  let scrolled = $derived(scrollY > 50);
 </script>
 
 <svelte:window bind:scrollY bind:innerHeight />
