@@ -9,7 +9,7 @@ Svelte 5 frontend powered by Inertia.js for server-side rendering with client-si
 - [`Components/AGENTS.md`](./Components/AGENTS.md) - Reusable components
 - [`types/AGENTS.md`](./types/AGENTS.md) - TypeScript type definitions
 - [`../../routes/AGENTS.md`](../../routes/AGENTS.md) - Backend route definitions
-- [`../../app/controllers/AGENTS.md`](../../app/controllers/AGENTS.md) - Controller patterns
+- [`../../app/AGENTS.md`](../../app/AGENTS.md) - Backend handlers & services
 
 ## STRUCTURE
 

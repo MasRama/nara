@@ -8,13 +8,13 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 
 | File | Purpose |
 |------|---------|
-| `Can.svelte` | Authorization wrapper — shows/hides content based on user permissions |
+| `Can.svelte` | Authorization wrapper — shows/hides content based on user permissions/roles |
 | `DarkModeToggle.svelte` | Dark mode toggle, persists to localStorage |
 | `Header.svelte` | Top navigation bar with user menu |
 | `NaraIcon.svelte` | Logo/icon SVG component |
 | `Pagination.svelte` | Page navigation for paginated lists |
 | `UserModal.svelte` | Modal for create/edit user form |
-| ~~`helper.ts`~~ | **REMOVED** — split into `$lib/*` modules (see below) |
+| `RoleModal.svelte` | Modal for create/edit role form |
 
 ## $lib/* Exports (replaces helper.ts)
 
@@ -101,24 +101,24 @@ const pwd = password_generator(12); // 12-char random password string
 
 ## Can Component
 
+Accepts `permission` OR `role` prop. Admin bypasses all checks.
+
 ```svelte
-<Can permission="create-user">
-  <button>Create User</button>
+<Can permission="users.edit">
+  <button>Edit User</button>
 </Can>
 
-<Can permission="edit-user" resource={user}>
-  <button>Edit</button>
+<Can role="admin">
+  <button>Admin Only</button>
 </Can>
 ```
 
 ## Pagination Component
 
+Takes a `meta: PaginationMeta` prop (from server). Handles navigation via `router.visit()`.
+
 ```svelte
-<Pagination
-  currentPage={meta.page}
-  totalPages={meta.totalPages}
-  onPageChange={(page) => loadData(page)}
-/>
+<Pagination meta={paginationMeta} />
 ```
 
 ## Svelte 5 Component Pattern
