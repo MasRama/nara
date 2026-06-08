@@ -8,15 +8,15 @@ import type { NaraRequest as Request, NaraResponse as Response } from "@core";
  * Also loads user roles and permissions for RBAC.
  * Optimized: Uses single JOIN query for session + user, then loads roles/permissions.
  */
-export default async (request: Request, response: Response) => {
+export default async (request: Request, response: Response, next: () => void) => {
    const authId = request.cookies.auth_id;
    const isInertia = request.headers['x-inertia'];
 
    if (!authId) {
       if (isInertia) {
-         return response.cookie("auth_id", "", 0).setHeader('X-Inertia-Location', '/login').redirect("/login");
+         return response.clearCookie("auth_id").setHeader('X-Inertia-Location', '/login').redirect("/login");
       }
-      return response.cookie("auth_id", "", 0).redirect("/login");
+      return response.clearCookie("auth_id").redirect("/login");
    }
 
    // Single query with JOIN - eliminates N+1 query problem
@@ -25,9 +25,9 @@ export default async (request: Request, response: Response) => {
    if (!user) {
       // Session not found or user deleted - clear cookie and redirect
       if (isInertia) {
-         return response.cookie("auth_id", "", 0).setHeader('X-Inertia-Location', '/login').redirect("/login");
+         return response.clearCookie("auth_id").setHeader('X-Inertia-Location', '/login').redirect("/login");
       }
-      return response.cookie("auth_id", "", 0).redirect("/login");
+      return response.clearCookie("auth_id").redirect("/login");
    }
 
    // Load user roles and permissions for RBAC
@@ -43,4 +43,6 @@ export default async (request: Request, response: Response) => {
    request.share = {
       user: request.user,
    };
+
+   next();
 }

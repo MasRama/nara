@@ -204,17 +204,11 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
     };
 
     // Intercept redirect() to capture status code (3xx)
-    // Note: HyperExpress redirect only takes URL, status is always 302
-    res.redirect = (url: string) => {
-      logRequest(302);
-      return originalRedirect(url);
-    };
+    res.redirect = ((...args: any[]) => {
+      logRequest(typeof args[0] === 'number' ? args[0] : 302);
+      return originalRedirect.apply(res, args as any);
+    }) as typeof res.redirect;
 
-    // Also log on response finish (backup for other cases)
-    res.on('finish', () => {
-      logRequest();
-    });
-    
     return next();
   };
 }

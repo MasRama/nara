@@ -94,13 +94,13 @@ class Authenticate {
 
       if (isInertia) {
          return response
-            .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
+            .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
             .setHeader('X-Inertia-Location', '/dashboard')
             .redirect("/dashboard");
       }
 
       response
-         .cookie(SESSION_COOKIE_NAME, token, SESSION_EXPIRY_MS, getSecureCookieOptions())
+         .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
          .redirect("/dashboard");
    }
 
@@ -118,9 +118,9 @@ class Authenticate {
       await Session.delete(request.cookies[SESSION_COOKIE_NAME]);
 
       // Clear cookie with same options to ensure proper deletion
-      response
-         .cookie(SESSION_COOKIE_NAME, "", 0, getSecureCookieOptions())
-         .redirect("/login");
+       response
+          .clearCookie(SESSION_COOKIE_NAME, getSecureCookieOptions())
+          .redirect("/login");
    }
 }
 

@@ -117,7 +117,8 @@ export function csrf(options: CSRFOptions = {}): NaraMiddleware {
     // Generate new token if not exists
     if (!token) {
       token = generateToken(tokenLength);
-      res.cookie(cookieName, token, cookieOptions.maxAge, {
+      res.cookie(cookieName, token, {
+        maxAge: cookieOptions.maxAge,
         path: cookieOptions.path,
         httpOnly: cookieOptions.httpOnly,
         secure: cookieOptions.secure,
@@ -210,7 +211,8 @@ export function csrfToken(options: Pick<CSRFOptions, 'cookieName' | 'tokenLength
     
     if (!token) {
       token = generateToken(tokenLength);
-      res.cookie(cookieName, token, cookieOptions.maxAge, {
+      res.cookie(cookieName, token, {
+        maxAge: cookieOptions.maxAge,
         path: cookieOptions.path,
         httpOnly: cookieOptions.httpOnly,
         secure: cookieOptions.secure,

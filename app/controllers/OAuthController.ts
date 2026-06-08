@@ -51,7 +51,7 @@ class OAuthController extends BaseController {
     const params = new URLSearchParams(redirectParamsURL());
     params.set("state", state);
     const googleLoginUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
-    response.cookie(OAUTH_STATE_COOKIE, state, OAUTH_STATE_EXPIRY_MS, getOAuthCookieOptions());
+    response.cookie(OAUTH_STATE_COOKIE, state, { maxAge: OAUTH_STATE_EXPIRY_MS, ...getOAuthCookieOptions() });
     return response.redirect(googleLoginUrl);
   }
 
@@ -62,7 +62,7 @@ class OAuthController extends BaseController {
     const { code, state } = request.query;
     const expectedState = request.cookies[OAUTH_STATE_COOKIE];
 
-    response.cookie(OAUTH_STATE_COOKIE, "", 0, getOAuthCookieOptions());
+    response.clearCookie(OAUTH_STATE_COOKIE, getOAuthCookieOptions());
 
     if (!isValidState(expectedState, state)) {
       Logger.logSecurity("Google OAuth callback rejected - invalid state", {
@@ -72,13 +72,13 @@ class OAuthController extends BaseController {
       });
 
       return response
-        .cookie("error", "Sesi login Google tidak valid", AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .cookie("error", "Sesi login Google tidak valid", { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
         .redirect("/login");
     }
 
     if (typeof code !== "string" || !code) {
       return response
-        .cookie("error", "Kode OAuth tidak valid", AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .cookie("error", "Kode OAuth tidak valid", { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
         .redirect("/login");
     }
 

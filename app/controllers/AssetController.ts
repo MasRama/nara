@@ -4,6 +4,7 @@ import { BaseController, jsonError, jsonServerError, jsonSuccess } from "@core";
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";  
+import multer from "multer";
 import { Asset, User } from "@models";
 import Logger from "@services/Logger";
 import { Storage } from '@services';
@@ -19,165 +20,105 @@ type UploadSuccessResult = { ok: true; url: string };
 type UploadErrorResult = { ok: false; message: string; code: string; status: number };
 type UploadResult = UploadSuccessResult | UploadErrorResult;
 
+/**
+ * Multer configuration for avatar uploads
+ * - memoryStorage: keeps file in memory as Buffer (for sharp processing)
+ * - fileFilter: validates MIME type before accepting
+ * - limits: enforces max file size
+ */
+const avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_FILE_SIZE_BYTES },
+    fileFilter: (_req, file, cb) => {
+        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('INVALID_FILE_TYPE'));
+        }
+    },
+});
+
 class AssetController extends BaseController {
     /**
-     * Serves assets from the dist folder (compiled assets)
-     * - Handles CSS and JS files with proper content types
-     * - Implements file caching for better performance
-     * - Sets appropriate cache headers for browser caching
+     * Multer middleware for avatar upload (single file, field name: 'file')
      */
+    public avatarMiddleware = avatarUpload.single('file');
 
+    /**
+     * Upload avatar endpoint
+     * Receives file via multer middleware, processes with sharp, stores result
+     */
     public async uploadAsset(request: NaraRequest, response: NaraResponse) {
         this.requireAuth(request);
 
-        // Store user reference for use in nested callbacks
         const userId = request.user.id;
         Logger.debug('Avatar upload started', { userId });
 
-        let uploadResult: UploadResult | null = null;
-        let fileProcessed = false;
-        let fileProcessingPromise: Promise<void> | null = null;
-
         try {
-            await request.multipart((field: any) => {
-                if (field.file) {
-                    if (fileProcessed) {
-                        uploadResult = {
-                            ok: false,
-                            message: 'Hanya satu file yang diizinkan per upload',
-                            code: 'MULTIPLE_FILES_NOT_ALLOWED',
-                            status: 400
-                        };
-                        return;
-                    }
+            const file = (request as any).file as { buffer: Buffer; mimetype: string; originalname: string } | undefined;
 
-                    fileProcessed = true;
-
-                    // Validate MIME type
-                    if (!ALLOWED_MIME_TYPES.includes(field.mime_type)) {
-                        Logger.debug('Invalid file mime_type', { mimeType: field.mime_type, userId });
-                        uploadResult = {
-                            ok: false,
-                            message: "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.",
-                            code: "INVALID_FILE_TYPE",
-                            status: 400
-                        };
-                        return;
-                    }
-
-                    const id = randomUUID();
-                    const fileName = `${id}.webp`; 
-
-                    fileProcessingPromise = new Promise<void>((resolve, reject) => {
-                        const chunks: Buffer[] = [];
-                        const readable = field.file.stream;
-                        let totalBytes = 0;
-                        let streamEnded = false;
-
-                        readable.on('data', (chunk: Buffer) => {
-                            totalBytes += chunk.length;
-
-                            if (totalBytes > MAX_FILE_SIZE_BYTES) {
-                                readable.destroy(new Error('FILE_TOO_LARGE'));
-                                return;
-                            }
-
-                            chunks.push(chunk);
-                        });
-
-                        readable.on('error', (error: Error) => {
-                            if (error.message === 'FILE_TOO_LARGE') {
-                                uploadResult = {
-                                    ok: false,
-                                    message: `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB`,
-                                    code: 'FILE_TOO_LARGE',
-                                    status: 413
-                                };
-                                return resolve();
-                            }
-
-                            reject(error);
-                        });
-
-                        readable.on('end', async () => {
-                            if (streamEnded) {
-                                return;
-                            }
-
-                            streamEnded = true;
-
-                            try {
-                                const buffer = Buffer.concat(chunks);
-                                Logger.debug('Avatar upload buffer received', { size: buffer.length, userId });
-
-                                const processedBuffer = await sharp(buffer)
-                                    .webp({ quality: 80 })
-                                    .resize(1200, 1200, {
-                                        fit: 'inside',
-                                        withoutEnlargement: true
-                                    })
-                                    .toBuffer();
-                                Logger.debug('Avatar image processed', { processedSize: processedBuffer.length, userId });
-
-                                const storedFile = await Storage.put(processedBuffer, {
-                                    directory: UPLOAD.AVATAR_DIR,
-                                    name: id,
-                                    extension: 'webp'
-                                });
-                                Logger.debug('Avatar file stored', { url: storedFile.url, userId });
-
-                                const publicUrl = storedFile.url;
-
-                                await Asset.create({
-                                    id,
-                                    type: 'image',
-                                    url: publicUrl,
-                                    mime_type: 'image/webp',
-                                    name: fileName,
-                                    size: processedBuffer.length,
-                                    user_id: userId,
-                                });
-
-                                await User.updateAvatar(userId, publicUrl);
-
-                                Logger.debug('Avatar upload completed', { url: publicUrl, userId });
-                                uploadResult = { ok: true, url: publicUrl };
-                                resolve();
-                            } catch (err) {
-                                reject(err);
-                            }
-                        });
-                    });
-                }
-            });
-
-            if (fileProcessingPromise) {
-                await fileProcessingPromise;
-            }
-
-            if (!fileProcessed) {
+            if (!file) {
                 return jsonError(response, 'File avatar wajib diisi', 400, 'FILE_REQUIRED');
             }
 
-            if (!uploadResult) {
-                return jsonServerError(response, 'Upload avatar gagal diproses');
-            }
+            Logger.debug('Avatar upload buffer received', { size: file.buffer.length, userId });
 
-            const result = uploadResult as UploadResult;
+            // Process image with sharp
+            const id = randomUUID();
+            const processedBuffer = await sharp(file.buffer)
+                .webp({ quality: 80 })
+                .resize(1200, 1200, {
+                    fit: 'inside',
+                    withoutEnlargement: true
+                })
+                .toBuffer();
 
-            if (!result.ok) {
-                return jsonError(response, result.message, result.status, result.code);
-            }
+            Logger.debug('Avatar image processed', { processedSize: processedBuffer.length, userId });
 
-            return jsonSuccess(response, 'Avatar berhasil diupload', { url: result.url });
+            // Store file
+            const storedFile = await Storage.put(processedBuffer, {
+                directory: UPLOAD.AVATAR_DIR,
+                name: id,
+                extension: 'webp'
+            });
+
+            Logger.debug('Avatar file stored', { url: storedFile.url, userId });
+
+            // Create asset record
+            await Asset.create({
+                id,
+                type: 'image',
+                url: storedFile.url,
+                mime_type: 'image/webp',
+                name: `${id}.webp`,
+                size: processedBuffer.length,
+                user_id: userId,
+            });
+
+            // Update user avatar
+            await User.updateAvatar(userId, storedFile.url);
+
+            Logger.debug('Avatar upload completed', { url: storedFile.url, userId });
+
+            return jsonSuccess(response, 'Avatar berhasil diupload', { url: storedFile.url });
         } catch (error) {
-            Logger.error('Error uploading asset', error as Error);
+            const err = error as Error;
+            
+            if (err.message === 'INVALID_FILE_TYPE') {
+                return jsonError(response, "Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.", 400, "INVALID_FILE_TYPE");
+            }
+            
+            if (err.message === 'LIMIT_FILE_SIZE' || (err as any).code === 'LIMIT_FILE_SIZE') {
+                return jsonError(response, `File too large. Maximum size is ${MAX_FILE_SIZE_MB}MB`, 413, 'FILE_TOO_LARGE');
+            }
+
+            Logger.error('Error uploading asset', err);
             return jsonServerError(response, "Internal server error");
         }
     }
 
     public async distFolder(request: NaraRequest, response: NaraResponse) {
-        const file = request.params.file;
+        const file = request.params.file as string;
 
         try {
             const filePath = `dist/assets/${file}`;

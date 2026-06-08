@@ -68,7 +68,7 @@ class AuthController extends BaseController {
 
       return response
         .status(429)
-        .cookie("error", `Terlalu banyak percobaan login. Coba lagi dalam ${remainingMinutes} menit.`, AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .cookie("error", `Terlalu banyak percobaan login. Coba lagi dalam ${remainingMinutes} menit.`, { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
         .redirect("/login");
     }
 
@@ -95,7 +95,7 @@ class AuthController extends BaseController {
         : ERROR_MESSAGES.INVALID_CREDENTIALS;
 
       return response
-        .cookie("error", errorMsg, AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .cookie("error", errorMsg, { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
         .redirect("/login");
     }
 
@@ -136,7 +136,7 @@ class AuthController extends BaseController {
         : ERROR_MESSAGES.INVALID_CREDENTIALS;
 
       return response
-        .cookie("error", errorMsg, AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .cookie("error", errorMsg, { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
         .redirect("/login");
     }
   }
@@ -183,7 +183,7 @@ class AuthController extends BaseController {
           ip: request.ip
         });
         return response
-          .cookie("error", ERROR_MESSAGES.EMAIL_EXISTS, AUTH.ERROR_COOKIE_EXPIRY_MS)
+          .cookie("error", ERROR_MESSAGES.EMAIL_EXISTS, { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
           .redirect("/register");
       }
       Logger.error('Registration failed', error);
@@ -228,7 +228,7 @@ class AuthController extends BaseController {
     const passwordMatch = await Authenticate.compare(data.current_password, dbUser.password);
     if (!passwordMatch) {
       return response
-        .cookie("error", "Password saat ini tidak valid", AUTH.ERROR_COOKIE_EXPIRY_MS)
+        .cookie("error", "Password saat ini tidak valid", { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
         .redirect("/profile");
     }
 
@@ -242,7 +242,7 @@ class AuthController extends BaseController {
     });
 
     return response
-      .cookie("success", "Password berhasil diubah", AUTH.ERROR_COOKIE_EXPIRY_MS)
+      .cookie("success", "Password berhasil diubah", { maxAge: AUTH.ERROR_COOKIE_EXPIRY_MS })
       .redirect("/profile");
   }
 }

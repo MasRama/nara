@@ -190,7 +190,7 @@ export function inputSanitize(
         );
       }
 
-      // Sanitize query parameters in-place (req.query is read-only in HyperExpress)
+      // Sanitize query parameters in-place
       if (opts.sanitizeQuery && req.query) {
         const sanitizedQuery = sanitizeValue(req.query, opts, "query") as Record<
           string,
@@ -205,7 +205,7 @@ export function inputSanitize(
         }
       }
 
-      // Sanitize route parameters in-place (req.params is read-only in HyperExpress)
+      // Sanitize route parameters in-place
       if (opts.sanitizeParams && req.params) {
         const sanitizedParams = sanitizeValue(req.params, opts, "params") as Record<
           string,

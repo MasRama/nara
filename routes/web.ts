@@ -90,7 +90,8 @@ Route.put("/roles/:id", [Auth], RoleController.update);
 Route.delete("/roles/:id", [Auth], RoleController.destroy);
 
 // Avatar upload endpoint (local storage) - rate limited to prevent abuse
-Route.post("/assets/avatar", [Auth, strictRateLimit()], AssetController.uploadAsset);
+// multer middleware parses file upload before controller
+Route.post("/assets/avatar", [Auth, strictRateLimit(), AssetController.avatarMiddleware as any], AssetController.uploadAsset);
 
 /**
  * Static Asset Handling Routes
@@ -129,5 +130,5 @@ Route.get("/assets/:file", AssetController.distFolder);
 Route.get("/public/*", AssetController.publicFolder);
 Route.get("/storage/*", AssetController.publicFolder);
 
-// Export the underlying HyperExpress router for mounting to the server
+// Export the underlying Express router for mounting to the server
 export default Route.getRouter();
