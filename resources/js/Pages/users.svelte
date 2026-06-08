@@ -9,11 +9,8 @@
   import { Toast } from '$lib/toast';
   import type { User, UserForm, PaginationMeta, RoleInfo } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
-  import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
-  import { Button } from '$lib/components/ui/button';
-  import { Alert, AlertDescription } from '$lib/components/ui/alert';
+  import Badge from '../Components/Badge.svelte';
+  import Button from '../Components/Button.svelte';
   import { Users } from '@lucide/svelte';
 
   interface Props {
@@ -157,82 +154,82 @@
 
       <div class="bg-card border border-border rounded-2xl overflow-hidden mb-8" in:fly={{ y: 20, duration: 800, delay: 150 }}>
         {#if users && users.length}
-          <Table>
-            <TableHeader>
-              <TableRow class="border-border">
-                <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">User</TableHead>
-                <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Status</TableHead>
-                <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Roles</TableHead>
-                <TableHead class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {#each users as userItem}
-                <TableRow class="border-border hover:bg-muted/30 transition-colors duration-150">
-                  <TableCell>
-                    <div class="flex items-center gap-3">
-                      <Avatar class="w-8 h-8">
-                        <AvatarFallback class="text-xs font-mono-accent bg-secondary text-foreground">
-                          {userItem.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div class="text-sm font-heading font-semibold">{userItem.name}</div>
-                        <div class="text-xs font-mono-accent text-muted-foreground">{userItem.email}</div>
+          <div class="relative w-full overflow-x-auto">
+            <table class="w-full caption-bottom text-sm">
+              <thead class="[&_tr]:border-b">
+                <tr class="border-border">
+                  <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">User</th>
+                  <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Status</th>
+                  <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Roles</th>
+                  <th class="h-10 px-2 text-end font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="[&_tr:last-child]:border-0">
+                {#each users as userItem}
+                  <tr class="border-border border-b hover:bg-muted/30 transition-colors duration-150">
+                    <td class="p-2 align-middle whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="relative flex w-8 h-8 shrink-0 overflow-hidden rounded-full bg-secondary items-center justify-center">
+                          <span class="text-xs font-mono-accent text-foreground">{userItem.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <div class="text-sm font-heading font-semibold">{userItem.name}</div>
+                          <div class="text-xs font-mono-accent text-muted-foreground">{userItem.email}</div>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {#if userItem.is_verified}
-                      <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">Verified</span>
-                    {:else}
-                      <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-secondary rounded-full text-muted-foreground">Pending</span>
-                    {/if}
-                  </TableCell>
-                  <TableCell>
-                    <div class="flex flex-wrap items-center gap-1.5">
-                      {#each (userItem.roles || []) as roleSlug}
-                        <span class="inline-flex items-center gap-1 font-mono-accent text-[10px] px-2 py-0.5 rounded-full {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}">
-                          {getRoleDisplayName(roleSlug)}
-                        </span>
-                      {/each}
-                      {#if !userItem.roles?.length}
-                        <span class="font-mono-accent text-[10px] text-muted-foreground">No roles</span>
+                    </td>
+                    <td class="p-2 align-middle whitespace-nowrap">
+                      {#if userItem.is_verified}
+                        <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">Verified</span>
+                      {:else}
+                        <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-secondary rounded-full text-muted-foreground">Pending</span>
                       {/if}
-                    </div>
-                  </TableCell>
-                  <TableCell class="text-right">
-                    {#if permissions.canEdit || permissions.canDelete}
-                      <div class="flex justify-end gap-2">
-                        {#if permissions.canEdit}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            class="rounded-full text-xs font-heading font-medium px-4 hover:border-primary/40 hover:text-primary transition-colors duration-200"
-                            onclick={() => openEditUser(userItem)}
-                            disabled={isSubmitting}
-                          >
-                            Edit
-                          </Button>
-                        {/if}
-                        {#if permissions.canDelete}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            class="rounded-full text-xs font-heading font-medium px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                            onclick={() => deleteUser(userItem.id)}
-                            disabled={isSubmitting}
-                          >
-                            Delete
-                          </Button>
+                    </td>
+                    <td class="p-2 align-middle whitespace-nowrap">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        {#each (userItem.roles || []) as roleSlug}
+                          <span class="inline-flex items-center gap-1 font-mono-accent text-[10px] px-2 py-0.5 rounded-full {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}">
+                            {getRoleDisplayName(roleSlug)}
+                          </span>
+                        {/each}
+                        {#if !userItem.roles?.length}
+                          <span class="font-mono-accent text-[10px] text-muted-foreground">No roles</span>
                         {/if}
                       </div>
-                    {/if}
-                  </TableCell>
-                </TableRow>
-              {/each}
-            </TableBody>
-          </Table>
+                    </td>
+                    <td class="p-2 align-middle whitespace-nowrap text-right">
+                      {#if permissions.canEdit || permissions.canDelete}
+                        <div class="flex justify-end gap-2">
+                          {#if permissions.canEdit}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              class="rounded-full text-xs font-heading font-medium px-4 hover:border-primary/40 hover:text-primary transition-colors duration-200"
+                              onclick={() => openEditUser(userItem)}
+                              disabled={isSubmitting}
+                            >
+                              Edit
+                            </Button>
+                          {/if}
+                          {#if permissions.canDelete}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              class="rounded-full text-xs font-heading font-medium px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                              onclick={() => deleteUser(userItem.id)}
+                              disabled={isSubmitting}
+                            >
+                              Delete
+                            </Button>
+                          {/if}
+                        </div>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
         {:else}
           <div class="flex flex-col items-center justify-center py-20 px-8 text-center">
             <div class="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center mb-5">

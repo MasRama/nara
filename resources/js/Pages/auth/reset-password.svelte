@@ -5,10 +5,9 @@
   import { buildCSRFHeaders } from '$lib/csrf';
   import { password_generator } from '$lib/utils/password';
   import { Toast } from '$lib/toast';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+  import Button from '../../Components/Button.svelte';
+  import Input from '../../Components/Input.svelte';
+  import Label from '../../Components/Label.svelte';
 
   interface ResetPasswordForm {
     password: string;
@@ -65,48 +64,44 @@
       <NaraIcon />
     </div>
     
-    <Card class="w-full max-w-md shadow-lg">
-      <CardHeader>
-        <CardTitle class="text-xl md:text-2xl">Reset Password</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form class="space-y-4 md:space-y-6" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
-          <div class="space-y-2">
-            <Label for="password">Password Baru</Label>
-            <Input 
-              bind:value={form.password}
-              type="password" 
-              name="password" 
-              id="password" 
-              placeholder="••••••••" 
-              required
-            />
-            <Button variant="link" type="button" onclick={generatePassword} class="h-auto p-0 text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Generate Password
-            </Button>
-          </div>
-          
-          <div class="space-y-2">
-            <Label for="confirm-password">Konfirmasi Password</Label>
-            <Input 
-              bind:value={form.password_confirmation}
-              type="password" 
-              name="confirm-password" 
-              id="confirm-password" 
-              placeholder="••••••••" 
-              required
-            />
-          </div>
-
-          <Button type="submit" class="w-full">
-            Reset Password
+    <div class="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
+      <h2 class="text-xl font-semibold tracking-tight mb-6">Reset Password</h2>
+      <form class="space-y-4 md:space-y-6" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
+        <div class="space-y-2">
+          <Label for="password">Password Baru</Label>
+          <Input 
+            bind:value={form.password}
+            type="password" 
+            name="password" 
+            id="password" 
+            placeholder="••••••••" 
+            required
+          />
+          <Button variant="link" type="button" onclick={generatePassword} class="h-auto p-0 text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Generate Password
           </Button>
+        </div>
+        
+        <div class="space-y-2">
+          <Label for="confirm-password">Konfirmasi Password</Label>
+          <Input 
+            bind:value={form.password_confirmation}
+            type="password" 
+            name="confirm-password" 
+            id="confirm-password" 
+            placeholder="••••••••" 
+            required
+          />
+        </div>
 
-          <p class="text-sm font-light text-slate-500 dark:text-slate-400">
-            Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-600 dark:text-primary-400 hover:underline">Login disini</a>
-          </p>
-        </form>
-      </CardContent>
-    </Card>
+        <Button type="submit" class="w-full">
+          Reset Password
+        </Button>
+
+        <p class="text-sm font-light text-slate-500 dark:text-slate-400">
+          Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-600 dark:text-primary-400 hover:underline">Login disini</a>
+        </p>
+      </form>
+    </div>
   </div>
 </section>

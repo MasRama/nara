@@ -6,10 +6,9 @@
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
   import { fly } from 'svelte/transition';
 
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Alert, AlertDescription } from '$lib/components/ui/alert';
+  import Button from '../../Components/Button.svelte';
+  import Input from '../../Components/Input.svelte';
+  import Label from '../../Components/Label.svelte';
   import { Eye, EyeOff } from '@lucide/svelte';
 
   interface RegisterForm {
@@ -76,9 +75,9 @@
       </div>
 
       {#if error}
-        <Alert variant="destructive" class="mb-6">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div role="alert" class="mb-6 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+        </div>
       {/if}
 
       <div class="flex flex-col gap-4 mb-8">

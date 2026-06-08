@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toggleMode, mode } from 'mode-watcher';
   import { Sun, Moon } from '@lucide/svelte';
-  import { Button } from '$lib/components/ui/button';
+  import Button from './Button.svelte';
 
   let { onchange = (_isDark: boolean) => {} }: { onchange?: (isDark: boolean) => void } = $props();
 

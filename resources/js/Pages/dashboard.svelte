@@ -2,8 +2,7 @@
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, inertia } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import { Card, CardContent } from '$lib/components/ui/card';
-  import { Badge } from '$lib/components/ui/badge';
+  import Badge from '../Components/Badge.svelte';
   import { Users, Settings, Shield, Activity, ChevronRight, ShieldCheck } from '@lucide/svelte';
   import type { User } from '../types';
 

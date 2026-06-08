@@ -5,11 +5,9 @@
     import axios from "axios";
     import { api } from "$lib/api";
     import { Toast } from "$lib/toast";
-    import { Button } from '$lib/components/ui/button';
-    import { Input } from '$lib/components/ui/input';
-    import { Label } from '$lib/components/ui/label';
-    import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-    import { Alert, AlertDescription } from '$lib/components/ui/alert';
+    import Button from '../../Components/Button.svelte';
+    import Input from '../../Components/Input.svelte';
+    import Label from '../../Components/Label.svelte';
 
     interface ForgotPasswordForm {
         email: string;
@@ -61,41 +59,35 @@
             <NaraIcon />
         </div>
         
-        <Card class="w-full max-w-md shadow-lg">
-            <CardHeader>
-                <CardTitle class="text-xl md:text-2xl">Reset Password</CardTitle>
-            </CardHeader>
-            <CardContent>
-                {#if success}
-                    <Alert class="mb-4 bg-green-50 text-green-900 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-900/50" variant="default">
-                        <AlertDescription>
-                            Link reset password telah dikirim ke email atau nomor telepon Anda.
-                        </AlertDescription>
-                    </Alert>
-                {/if}
+        <div class="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
+            <h2 class="text-xl font-semibold tracking-tight mb-6">Reset Password</h2>
+            {#if success}
+                <div role="alert" class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/50">
+                    Link reset password telah dikirim ke email atau nomor telepon Anda.
+                </div>
+            {/if}
 
-                <form class="space-y-4 md:space-y-6" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
-                    <div class="space-y-2">
-                        <Label for="email">Email atau Nomor Telepon</Label>
-                        <Input
-                            bind:value={form.email}
-                            type="text"
-                            name="email"
-                            id="email"
-                            placeholder="email@example.com atau 08xxxxxxxxxx"
-                            required
-                        />
-                    </div>
+            <form class="space-y-4 md:space-y-6" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
+                <div class="space-y-2">
+                    <Label for="email">Email atau Nomor Telepon</Label>
+                    <Input
+                        bind:value={form.email}
+                        type="text"
+                        name="email"
+                        id="email"
+                        placeholder="email@example.com atau 08xxxxxxxxxx"
+                        required
+                    />
+                </div>
 
-                    <Button type="submit" class="w-full">
-                        Kirim Link Reset Password
-                    </Button>
+                <Button type="submit" class="w-full">
+                    Kirim Link Reset Password
+                </Button>
 
-                    <p class="text-sm font-light text-slate-500 dark:text-slate-400">
-                        Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-600 dark:text-primary-400 hover:underline">Login disini</a>
-                    </p>
-                </form>
-            </CardContent>
-        </Card>
+                <p class="text-sm font-light text-slate-500 dark:text-slate-400">
+                    Ingat password Anda? <a href="/login" use:inertia class="font-medium text-primary-600 dark:text-primary-400 hover:underline">Login disini</a>
+                </p>
+            </form>
+        </div>
     </div>
 </section>

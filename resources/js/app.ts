@@ -3,7 +3,7 @@ import { mount, type Component } from 'svelte'
 import axios from 'axios'
 import { configureAxiosCSRF } from '$lib/csrf'
 import { ModeWatcher } from 'mode-watcher'
-import { Toaster } from '$lib/components/ui/sonner'
+import { Toaster } from 'svelte-sonner'
 
 configureAxiosCSRF(axios)
 

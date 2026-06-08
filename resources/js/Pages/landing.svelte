@@ -2,9 +2,8 @@
   import { inertia, page } from '@inertiajs/svelte'
   import { fade, fly } from 'svelte/transition'
   import DarkModeToggle from '../Components/DarkModeToggle.svelte'
-  import { Card, CardContent } from '$lib/components/ui/card'
-  import { Button } from '$lib/components/ui/button'
-  import { Badge } from '$lib/components/ui/badge'
+  import Button from '../Components/Button.svelte'
+  import Badge from '../Components/Badge.svelte'
 
   interface User {
     id: string;
@@ -459,8 +458,8 @@
       
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+        <div class="group border-none bg-transparent shadow-none">
+          <div class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">HTTP Engine</span>
             </div>
@@ -473,11 +472,11 @@
                 250k+ req/s on uWebSockets.js. Express-compatible API that AI already knows — no custom syntax to learn.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+        <div class="group border-none bg-transparent shadow-none">
+          <div class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Frontend</span>
             </div>
@@ -487,11 +486,11 @@
                 Svelte 5 runes for elegant reactivity. Inertia bridges backend to frontend — no API layer needed, no serialization headaches.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+        <div class="group border-none bg-transparent shadow-none">
+          <div class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Database</span>
             </div>
@@ -501,11 +500,11 @@
                 Zero-config embedded database with WAL mode. Knex migrations for schema control. AI writes raw SQL, Knex handles migrations.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+        <div class="group border-none bg-transparent shadow-none">
+          <div class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Validation</span>
             </div>
@@ -515,11 +514,11 @@
                 Type-safe schema validation with inference. AI generates Zod schemas naturally — they read like documentation.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+        <div class="group border-none bg-transparent shadow-none">
+          <div class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Auth</span>
             </div>
@@ -529,11 +528,11 @@
                 Session-based auth with Google OAuth and role-based access control. Pre-wired, pre-secured, ready to extend.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-primary pl-6 py-2 transition-colors duration-300">
+        <div class="group border-none bg-transparent shadow-none">
+          <div class="p-0 flex flex-col h-full border-l-2 border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
               <span class="text-xs font-mono-accent tracking-wider text-primary">AI Knowledge</span>
             </div>
@@ -546,8 +545,8 @@
                  <span class="opacity-50">$</span> cat AGENTS.md
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
       </div>
     </div>
