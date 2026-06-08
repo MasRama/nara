@@ -4,22 +4,30 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 
-> Full-stack TypeScript starter kit. Performance-first, batteries-included. Built on **ultimate-express**, **Svelte 5**, and **Inertia.js**.
+> AI-first full-stack TypeScript starter kit. Functions over classes, raw SQL over ORM, minimal abstractions. Built on **ultimate-express**, **Svelte 5**, and **Inertia.js**.
 
-> **For AI assistants:** See [README-LLM.md](./README-LLM.md) for optimized context file, or [AGENTS.md](./AGENTS.md) for detailed project knowledge base.
+> **For AI assistants:** See [AGENTS.md](./AGENTS.md) for detailed project knowledge base.
 
 ## What is Nara?
 
-Nara is an opinionated TypeScript starter kit that curates a high-performance stack and ships with everything you need to build full-stack web applications:
+Nara is an opinionated TypeScript starter kit designed for AI-assisted development:
 
 - **Fast server** — ultimate-express (uWebSockets.js) handles 250k+ req/s
 - **Modern frontend** — Svelte 5 + Inertia.js (SPA feel without building an API)
-- **Zero-config database** — SQLite with Active Record models
-- **Auth & RBAC** — session auth, Google OAuth, role-based permissions out of the box
+- **Raw SQL database** — SQLite with direct queries, no ORM
+- **Auth & RBAC** — session auth, Google OAuth, role-based permissions
 - **Security** — CSRF, rate limiting, input sanitization, security headers
-- **CLI scaffolding** — 22 generators for controllers, models, migrations, etc.
+- **AI-first** — minimal abstractions so AI can generate code directly
 
-Not a framework. Not a library. A **curated starting point** that you clone, customize, and ship.
+Not a framework. Not a library. A **curated starting point** that you clone, let AI build features, and ship.
+
+## Philosophy
+
+- **No classes** — Functions only
+- **No comments** — Code is self-documenting
+- **No abstractions** — Inline is fine
+- **Raw SQL** — AI writes SQL, we just execute it
+- **Minimal code** — Less code = less bugs
 
 ## Requirements
 
@@ -52,13 +60,13 @@ cp .env.example .env
 ### 4. Run migrations
 
 ```bash
-node nara db:migrate
+npm run migrate
 ```
 
 ### 5. Seed database (optional)
 
 ```bash
-node nara db:seed
+npm run seed
 ```
 
 ### 6. Start development server
@@ -76,28 +84,21 @@ The application will be available at:
 ```
 my-app/
 ├── app/
-│   ├── authorization/    # RBAC Gates & Policies
-│   ├── config/          # Configuration & constants
-│   ├── controllers/     # HTTP request handlers
-│   ├── core/            # App kernel (Router, App, Errors)
-│   ├── events/          # Event system & listeners
-│   ├── helpers/         # Utility functions
-│   ├── middlewares/     # HTTP middlewares
-│   ├── models/          # Database models (Active Record)
-│   ├── services/        # Business logic services
-│   └── validators/      # Input validation schemas
-├── commands/            # CLI commands
-├── database/            # SQLite database files
-├── migrations/          # Database migrations
-├── resources/
-│   ├── js/             # Svelte components & pages
-│   ├── views/          # HTML templates
-│   └── css/            # Stylesheets
-├── routes/             # Route definitions
-├── seeds/              # Database seeders
-├── public/             # Static assets
-├── storage/            # File uploads
-└── logs/               # Application logs
+│   ├── types/           # TypeScript interfaces
+│   ├── queries/         # Raw SQL functions
+│   ├── handlers/        # Request handlers (functions)
+│   ├── services/        # SQLite, Auth, Logger, Storage
+│   ├── middlewares/     # Auth, CSRF, rate limiting
+│   ├── events/          # Simple event emitter
+│   ├── validators/      # Input validation
+│   ├── config/          # Environment & constants
+│   └── core/            # App, Router, errors, response helpers
+├── routes/              # Route definitions
+├── migrations/          # Database migrations (Knex)
+├── seeds/               # Database seeders
+├── resources/js/        # Svelte 5 frontend
+├── server.ts            # Entry point
+└── knexfile.ts          # DB config
 ```
 
 ## Tech Stack
@@ -107,7 +108,6 @@ my-app/
 | HTTP Server | ultimate-express (uWebSockets.js) | 250k+ req/s, Express-compatible API |
 | Frontend | Svelte 5 + Inertia.js | SPA feel without building an API |
 | Database | SQLite (better-sqlite3) | Zero-config, embedded, fast |
-| Query Builder | Knex.js | Type-safe, migrations included |
 | Bundler | Vite | Fast HMR, modern tooling |
 | Testing | Vitest | Jest-compatible, native ESM |
 
@@ -117,7 +117,6 @@ my-app/
 - Session-based auth with login throttling
 - Google OAuth integration
 - Role-based access control (RBAC) with dynamic permissions
-- Admin dashboard for managing roles & permissions
 
 ### Security (Production-Ready)
 - CSRF protection (Double Submit Cookie)
@@ -127,11 +126,11 @@ my-app/
 - Request ID for distributed tracing
 
 ### Developer Experience
-- 22 CLI generators (`make:controller`, `make:model`, `make:migration`, etc.)
+- Function-based handlers (no class boilerplate)
+- Raw SQL queries (AI-friendly, no ORM to learn)
 - Type-safe routing with middleware arrays
 - Custom validation system (no Zod/Yup/Joi dependency)
-- Event system for decoupled side effects
-- Active Record models with automatic timestamps
+- Simple event system (emit/on/off)
 - Structured logging (Pino) with rotation
 
 ### Frontend
@@ -195,9 +194,7 @@ npm start
 - [ ] Set `NODE_ENV=production`
 - [ ] Configure proper `LOG_LEVEL` (info or warn)
 - [ ] Set up SSL certificate (`HAS_CERTIFICATE=true`)
-- [ ] Run migrations: `node nara db:migrate`
-- [ ] Enable rate limiting in `App.ts`
-- [ ] Review security headers configuration
+- [ ] Run migrations: `npm run migrate`
 
 ## Development
 
@@ -209,21 +206,19 @@ npm start
 | `npm run build` | Build for production |
 | `npm start` | Start production server |
 | `npm run lint` | Run TypeScript type check |
+| `npm run migrate` | Run database migrations |
+| `npm run seed` | Seed database |
 
 ### Path Aliases
 
 Import using aliases (configured in `tsconfig.json`):
 
 ```typescript
-import { BaseController } from '@core';
-import { User } from '@models';
+import { jsonSuccess } from '@core';
+import { findUserById } from '@queries';
 import { Logger } from '@services';
 import Auth from '@middlewares/auth';
 ```
-
-## Roadmap
-
-See [TODO.md](./TODO.md) for planned features and improvements.
 
 ## Contributing
 

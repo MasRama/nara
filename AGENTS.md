@@ -1,476 +1,279 @@
 # Nara - Project Knowledge Base
 
-**Generated:** 2026-06-08
-**Commit:** d4644b6
-**Branch:** (current)
-
 ## Overview
 
-Full-stack TypeScript starter kit. Curates a high-performance stack (ultimate-express, Svelte 5, Inertia.js, SQLite) and ships with auth, RBAC, security, CLI tooling, and a complete user management UI. Clone, customize, ship.
+AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over ORM, minimal abstractions.
 
-## Mental Model (Start Here)
+- **Backend**: ultimate-express (uWebSockets.js) + better-sqlite3
+- **Frontend**: Svelte 5 + Inertia.js
+- **Auth**: Session-based + Google OAuth + RBAC
 
-**If you're an AI reading this project for the first time, start here.**
+## Philosophy
 
-### What is Nara?
+- **No classes** — Functions only
+- **No comments** — Code is self-documenting
+- **No abstractions** — Inline is fine
+- **Raw SQL** — AI writes SQL, we just execute it
+- **Minimal code** — Less code = less bugs
 
-Nara is a **full-stack TypeScript starter kit** — not a framework. It curates a proven stack and ships with everything you need to build web applications:
-- **Backend**: ultimate-express (uWebSockets.js) + Knex.js (SQL query builder)
-- **Frontend**: Svelte 5 + Inertia.js (SPA-like experience without building an API)
-- **Batteries**: Auth, RBAC, CSRF, rate limiting, CLI generators, event system
-
-### Architecture Pattern
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         BROWSER (Svelte 5)                          │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────┐  │
-│  │   Pages/    │◄───│  Components/│    │  $lib/api.ts (axios)    │  │
-│  │  *.svelte   │    │  *.svelte   │    │  - handles CRUD calls   │  │
-│  └──────┬──────┘    └─────────────┘    │  - shows toast alerts   │  │
-│         │                              └────────────┬────────────┘  │
-│         │ router.visit() for navigation             │ axios.get/post│
-└─────────┼───────────────────────────────────────────┼───────────────┘
-          │                                           │
-          ▼                                           ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      SERVER (ultimate-express)                       │
-│                                                                     │
-│  Request ──► Middlewares ──► Router ──► Controller ──► Response    │
-│                  │                         │             │          │
-│                  │                         ▼             │          │
-│                  │                    ┌─────────┐        │          │
-│                  │                    │ Service │        │          │
-│                  │                    └────┬────┘        │          │
-│                  │                         │             │          │
-│                  │                         ▼             │          │
-│                  │                    ┌─────────┐        │          │
-│                  │                    │  Model  │        │          │
-│                  │                    └────┬────┘        │          │
-│                  │                         │             │          │
-│                  │                         ▼             │          │
-│                  │                    ┌─────────┐        │          │
-│                  │                    │  SQLite │        │          │
-│                  │                    └─────────┘        │          │
-│                  │                                       │          │
-│                  ▼                                       ▼          │
-│           ┌────────────┐                         ┌─────────────┐   │
-│           │   auth.ts  │                         │   Inertia   │   │
-│           │  csrf.ts   │                         │    OR       │   │
-│           │ rateLimit  │                         │    JSON     │   │
-│           └────────────┘                         └─────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Two Response Types (CRITICAL)
-
-Every route returns **either** an Inertia response **or** a JSON response — never mix them:
-
-| Route Type | Called By | Returns | Controller Method |
-|------------|-----------|---------|-------------------|
-| **Page route** | Browser navigation (`<a>`, `router.visit()`) | `res.inertia("PageName")` | `page()`, `usersPage()` |
-| **Data route** | `axios.get/post/put/delete` from Svelte | `jsonSuccess()`, `jsonPaginated()` | `index()`, `store()`, `update()`, `destroy()` |
-
-### Data Flow Example
+## Mental Model
 
 ```
-1. User clicks "Users" link
-   └─► router.visit("/users") 
-       └─► GET /users → UserController.page() → res.inertia("users")
-           └─► Renders resources/js/Pages/users.svelte
-
-2. Svelte page loads, needs user data
-   └─► api(() => axios.get("/users/data"))
-       └─► GET /users/data → UserController.index() → jsonPaginated()
-           └─► Returns { success: true, data: [...users], meta: {...} }
-               └─► api() shows toast if error, returns data to Svelte
-
-3. User clicks "Create User", fills form, submits
-   └─► api(() => axios.post("/users", payload))
-       └─► POST /users → UserController.store() → jsonCreated()
-           └─► api() shows success toast, Svelte reloads data
+Browser (Svelte 5 + Inertia)
+  │
+  │  router.visit() for pages
+  │  axios.get/post for data
+  ▼
+Server (ultimate-express)
+  │
+  Request → Middleware → Router → Handler → Response
+                                │
+                                ├── queries/  (raw SQL)
+                                ├── services/ (SQLite, Auth, Logger)
+                                └── types/    (interfaces)
 ```
 
-### Where to Start Reading
+### Two Response Types
 
-| If you want to understand... | Read this file |
-|------------------------------|----------------|
-| How the app boots up | [`app/core/App.ts`](./app/core/AGENTS.md) |
-| How routes are defined | [`routes/AGENTS.md`](./routes/AGENTS.md) |
-| How controllers work | [`app/controllers/AGENTS.md`](./app/controllers/AGENTS.md) |
-| How database models work | [`app/models/AGENTS.md`](./app/models/AGENTS.md) |
-| How frontend pages work | [`resources/js/Pages/AGENTS.md`](./resources/js/Pages/AGENTS.md) |
-| How auth/permissions work | [`app/authorization/AGENTS.md`](./app/authorization/AGENTS.md) |
-| How CLI commands work | [`commands/native/AGENTS.md`](./commands/native/AGENTS.md) |
-
-### Module Dependency Graph
-
-```
-@config (env, constants)
-    │
-    ▼
-@core (App, Router, BaseController, errors, response)
-    │
-    ├──► @services (DB, Logger, Auth, Storage, Paginator)
-    │         │
-    │         ▼
-    │    @models (User, Role, Session, etc.)
-    │
-    ├──► @middlewares (auth, csrf, rateLimit)
-    │
-    ├──► @validators (schemas, validate helpers)
-    │
-    ├──► @events (EventDispatcher)
-    │
-    └──► @authorization (Gates, Policies)
-```
-
-**Import rules:**
-- `@core` can import from `@config`, `@services`
-- `@services` can import from `@config`, `@models`
-- `@models` can import from `@services/DB` only
-- `@controllers` can import from anywhere
-- `@middlewares` can import from `@services`, `@config`
+| Route Type | Called By | Returns |
+|---|---|---|
+| **Page** | Browser navigation | `inertia(res).inertia('pageName', { data })` |
+| **Data** | `axios.get/post` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
 ## Structure
 
 ```
 ./
-├── app/                    # Application source
-│   ├── core/              # App kernel (BaseController, BaseModel, Router, App)
-│   ├── controllers/       # HTTP handlers
-│   ├── models/            # Active Record models
-│   ├── services/          # Business logic (DB, Logger, Auth, GoogleAuth)
-│   ├── middlewares/       # HTTP middleware (auth, rateLimit, csrf)
-│   ├── validators/        # Input validation helpers
-│   ├── requests/          # Form Request classes
-│   ├── http/              # API Resources
-│   ├── events/            # Event dispatcher
-│   ├── authorization/     # RBAC gates & policies
-│   ├── config/            # Environment & constants
-│   └── helpers/            # Utilities
-├── commands/native/        # CLI generators (22 commands)
-├── routes/                 # Web routes
-├── database/
-│   ├── factories/         # Model factories (faker)
-│   └── seeds/             # Seeders (run with db:seed)
-├── resources/js/          # Svelte 5 frontend
-├── migrations/            # Knex migrations (run with db:migrate)
-└── server.ts              # HTTP server entry
+├── app/
+│   ├── types/           # Interfaces (User, Session, Role, Permission)
+│   ├── queries/         # Raw SQL functions (findUserById, createUser, isAdmin)
+│   ├── handlers/        # Request handlers (functions, not classes)
+│   ├── services/        # SQLite, Logger, Auth, Storage, LoginThrottle
+│   ├── middlewares/      # auth, csrf, rateLimit, securityHeaders
+│   ├── events/          # emit/on/off/once (28 lines)
+│   ├── validators/      # Input validation
+│   ├── config/          # Environment & constants
+│   └── core/            # App, Router, errors, response helpers
+├── routes/web.ts        # All routes
+├── migrations/          # Knex migrations
+├── seeds/               # Knex seeders
+├── resources/js/        # Svelte 5 frontend
+├── server.ts            # Entry point
+└── knexfile.ts          # DB config (used by SQLite.ts + migrations)
 ```
 
 ## Entry Points
 
 | File | Purpose |
-|------|---------|
-| `server.ts` | Web server entry (start with `npm run dev`) |
-| `nara` | CLI entry (run `node nara <command>`) |
-| `commands/index.ts` | CLI command handler |
-| `knexfile.ts` | Database config for migrations |
+|---|---|
+| `server.ts` | Web server entry (`npm run dev`) |
+| `knexfile.ts` | DB path config for SQLite + migrations |
 
-## CLI Commands
+## Patterns
 
-```bash
-# Generate
-node nara make:resource Post
-node nara make:controller PostController
-node nara make:model Post
-node nara make:migration create_posts_table
+### Types → Queries → Handlers → Routes
 
-# Database
-node nara db:migrate
-node nara db:rollback
-node nara db:fresh --seed
-node nara db:seed
-node nara db:status
+```typescript
+// types/models.ts
+export interface User { id: string; email: string; /* ... */ }
 
-# Dev
-node nara generate:types
-node nara lint
-node nara doctor
+// queries/users.ts
+import SQLite from '@services/SQLite';
+import type { User } from '@types';
+
+export const findUserById = (id: string): User | undefined =>
+  SQLite.one<User>`SELECT * FROM users WHERE id = ${id}`;
+
+export const createUser = (data: { id: string; email: string }): User => {
+  SQLite.exec`INSERT INTO users (id, email) VALUES (${data.id}, ${data.email})`;
+  return findUserById(data.id)!;
+};
+
+// handlers/users.ts
+import { jsonSuccess, jsonCreated } from '@core';
+import { findUserById, createUser } from '@queries';
+
+export const show = (req: NaraRequest, res: NaraResponse) => {
+  const user = findUserById(req.params.id);
+  return jsonSuccess(res, 'OK', user);
+};
+
+// routes/web.ts
+import * as users from '@handlers/users';
+Route.get('/users/:id', [Auth], users.show);
 ```
+
+### Inertia Page Handler
+
+```typescript
+import { inertia } from '@core';
+import type { NaraRequest, NaraResponse } from '@core';
+
+export const usersPage = (req: NaraRequest, res: NaraResponse) => {
+  const users = SQLite.many<User>`SELECT * FROM users`;
+  return inertia(res).inertia('users', { users });
+};
+```
+
+### Auth Guards (inline in handlers)
+
+```typescript
+if (!req.user) return jsonError(res, 'Unauthorized', 401);
+
+import { isAdmin, hasPermission } from '@queries';
+if (!isAdmin(req.user.id)) return jsonError(res, 'Forbidden', 403);
+if (!hasPermission(req.user.id, 'users.edit')) return jsonError(res, 'Forbidden', 403);
+```
+
+### Events
+
+```typescript
+import { emit, on } from '@events';
+
+emit('user.created', { userId: user.id });
+on('user.created', async ({ userId }) => { /* ... */ });
+```
+
+### Validation (Zod)
+
+```typescript
+// validators/schemas.ts
+import { z } from 'zod';
+
+export const CreateUserSchema = z.object({
+  name: z.string().min(2, 'Nama minimal 2 karakter').max(100),
+  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  phone: z.string().min(10).max(20).optional().nullable(),
+  password: z.string().min(8, 'Password minimal 8 karakter').optional(),
+  is_verified: z.boolean().optional().default(false),
+  roles: z.array(z.string()).optional(),
+});
+
+export type CreateUserInput = z.infer<typeof CreateUserSchema>;
+
+// In handler (JSON endpoint)
+import { CreateUserSchema, zodToErrors } from '@validators';
+import { jsonValidationError } from '@core';
+
+const parsed = CreateUserSchema.safeParse(req.body);
+if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
+const data = parsed.data; // fully typed!
+
+// In handler (Inertia form - redirect with error cookie)
+const parsed = LoginSchema.safeParse(req.body);
+if (!parsed.success) {
+  const msg = Object.values(zodToErrors(parsed.error)).flat().join(', ');
+  return res.cookie('error', msg, { maxAge: 5000 }).redirect('/login');
+}
+```
+
+### Error Handling
+
+Two patterns — pick based on context:
+
+```typescript
+// HANDLERS: return jsonError directly (preferred — explicit control flow)
+import { jsonError, jsonForbidden, jsonNotFound } from '@core';
+
+export const show = (req: NaraRequest, res: NaraResponse) => {
+  if (!req.user) return jsonError(res, 'Unauthorized', 401);
+  const user = findUserById(req.params.id);
+  if (!user) return jsonNotFound(res, 'User not found');
+  return jsonSuccess(res, 'OK', user);
+};
+
+// DEEP SERVICES: throw (bubbles to global error handler in App.ts)
+import { notFoundError, forbiddenError, validationError } from '@core';
+
+throw notFoundError('User not found');
+throw forbiddenError();
+throw validationError({ email: ['Email already exists'] });
+
+// Type guard
+import { isNaraError } from '@core';
+if (isNaraError(error)) { /* handle */ }
+```
+
+## SQLite Usage
+
+```typescript
+import SQLite from '@services/SQLite';
+
+// Static SQL → template literals (preferred)
+const user = SQLite.one<User>`SELECT * FROM users WHERE id = ${id}`;
+const users = SQLite.many<User>`SELECT * FROM users WHERE active = 1`;
+SQLite.exec`INSERT INTO users (id, email) VALUES (${id}, ${email})`;
+
+// Dynamic SQL (variable columns, IN clauses) → string params
+const fields = ['name = ?', 'email = ?'];
+SQLite.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, [name, email, id]);
+const result = SQLite.all<User>(`SELECT * FROM users WHERE id IN (${placeholders})`, ids);
+
+// Transactions
+SQLite.transaction(() => {
+  SQLite.exec`INSERT INTO users ...`;
+  SQLite.exec`INSERT INTO profiles ...`;
+});
+```
+
+## Response Helpers
+
+```typescript
+jsonSuccess(res, 'OK', data);
+jsonCreated(res, 'Created', data);
+jsonError(res, 'Not found', 404);
+jsonError(res, 'Forbidden', 403, 'FORBIDDEN');
+jsonPaginated(res, 'OK', data, { total, page, limit, totalPages, hasNext, hasPrev });
+jsonNoContent(res);                          // 204
+jsonUnauthorized(res);                       // 401
+jsonForbidden(res);                          // 403
+jsonNotFound(res);                           // 404
+jsonValidationError(res, 'Failed', errors);  // 422
+jsonServerError(res);                        // 500
+```
+
+## Middleware
+
+| Middleware | Import | Effect |
+|---|---|---|
+| `Auth` | `@middlewares/auth` | Requires session, loads user + roles + permissions |
+| `strictRateLimit()` | `@middlewares/rateLimit` | 10 req/min per IP |
 
 ## Conventions
 
 - **2-space indent** (.editorconfig)
 - **Strict TypeScript** (strict: true)
-- **Path aliases** - Always use `@core`, `@models`, `@services`, etc.
-- **No external validators** - Use `@validators/validate.ts` (NOT Zod/Yup/Joi)
-- **Password hashing** - Use `Authenticate.hash()` from `@services`, NOT bcrypt directly
+- **Path aliases** — `@core`, `@queries`, `@services`, `@middlewares`, `@handlers/*`, `@types`
+- **Validation** — Zod schemas in `app/validators/schemas.ts`, helper `zodToErrors()` from `@validators`
+- **Password hashing** — `hashPassword()` / `comparePassword()` from `@services/Authenticate`
+- **Inertia pages** — `import { inertia } from '@core'` then `inertia(res).inertia('page', { data })`
 
-## Response Type Rules (CRITICAL)
+## Anti-Patterns
 
-This app is full-stack Inertia.js. There are **two distinct response types** — mixing them causes the error:
-`"All Inertia requests must receive a valid Inertia response, however a plain JSON response was received."`
-
-### Inertia Response — for page navigation (browser visits, `<a>` links, `router.visit()`)
-```typescript
-// controller method that renders a page
-this.requireInertia(response);
-return response.inertia("PageName", { prop1, prop2 });
-```
-- Use for: any route a user navigates TO in the browser
-- NEVER return `jsonSuccess/jsonError/jsonCreated` from these routes
-
-### JSON Response — for CRUD via fetch/AJAX from Svelte components
-```typescript
-// controller method called by fetch() from the frontend
-return jsonSuccess(response, "Data retrieved", data);
-return jsonCreated(response, "Created", record);
-return jsonError(response, "Not found", 404);
-```
-- Use for: `store`, `update`, `destroy`, `index` (data endpoints called by `fetch()` in Svelte)
-- NEVER called directly by browser navigation — always called from `fetch()` inside a component
-
-### How the pattern works in practice
-
-A typical resource has **1 Inertia route** + **N JSON routes**:
-
-```typescript
-// routes/web.ts
-Route.get('/posts', [], PostController.page);          // INERTIA: renders page shell (browser navigation)
-Route.get('/posts/data', [Auth], PostController.index); // JSON: fetch() for table data
-Route.post('/posts', [Auth], PostController.store);     // JSON: fetch() to create
-Route.put('/posts/:id', [Auth], PostController.update); // JSON: fetch() to update
-Route.delete('/posts/:id', [Auth], PostController.destroy); // JSON: fetch() to delete
-```
-
-```typescript
-// PostController.ts
-public async page(req, res) {
-  this.requireInertia(res);
-  return res.inertia("posts/Index"); // renders the page shell — no data needed here
-}
-
-public async index(req, res) {
-  // called by fetch() inside the Svelte page — returns JSON, NOT Inertia
-  const result = await paginate(query, { page, limit });
-  return jsonPaginated(res, "OK", result.data, result.meta);
-}
-
-public async store(req, res) {
-  // called by fetch() from a form in the Svelte page
-  const data = await this.getBody(req, CreatePostSchema);
-  const record = await Post.create({ id: randomUUID(), ...data });
-  return jsonCreated(res, "Created", record);
-}
-```
-
-```svelte
-<!-- resources/js/Pages/posts/Index.svelte -->
-<script lang="ts">
-  import axios from 'axios';
-  import { api } from '$lib/api';
-
-  let posts = $state([]);
-
-  async function loadPosts() {
-    const result = await api(() => axios.get('/posts/data'), { showSuccessToast: false });
-    if (result.success) posts = result.data;
-  }
-
-  async function createPost(payload: Record<string, unknown>) {
-    const result = await api(() => axios.post('/posts', payload));
-    if (result.success) await loadPosts();
-  }
-</script>
-```
-
-## Anti-Patterns (DO NOT)
-
-1. Use Zod/Yup/Joi for validation → use `@validators`
-2. Manual bcrypt hash → use `Authenticate.hash()`
-3. Relative imports for core modules → use `@core`
-4. Forget BaseController extends → auto-binding breaks
-5. Forget BaseModel<T> extends → CRUD methods unavailable
-6. **Return `jsonSuccess/jsonError/jsonPaginated` from a page route** → causes `"All Inertia requests must receive a valid Inertia response, however a plain JSON response was received."` — user only sees raw JSON in the browser
-7. **Call `res.inertia()` from a route called by `fetch()`** → returns wrong format to frontend fetch()
-8. **Pass CRUD list data via `res.inertia()`** → data goes stale; always fetch from a separate JSON `/data` endpoint
-9. **Name a page method `index`** → `index` implies JSON data endpoint; use `page` for Inertia page methods to avoid confusion
-
-## Key Patterns
-
-| Pattern | Location |
-|---------|----------|
-| Controller | `app/controllers/*.ts` - extend `BaseController` |
-| Model | `app/models/*.ts` - extend `BaseModel<T>`, define `tableName` |
-| Middleware | `app/middlewares/*.ts` - function(req, res, next) |
-| Form Request | `app/requests/*.ts` - authorize() + rules() |
-| API Resource | `app/http/resources/*.ts` - toArray() method |
-| Factory | `database/factories/*.ts` - definition() + state modifiers |
-
-## RBAC System (Role-Based Access Control)
-
-Dynamic permission-based access control manageable from admin dashboard.
-
-### Permission List
-
-| Permission | Controls |
-|------------|----------|
-| `users.view` | View users page & list |
-| `users.create` | Create new users |
-| `users.edit` | Edit existing users |
-| `users.delete` | Delete users |
-| `roles.view` | View roles page & list |
-| `roles.create` | Create new roles |
-| `roles.edit` | Edit roles & assign permissions |
-| `roles.delete` | Delete roles |
-| `permissions.assign` | Assign permissions to roles |
-
-### Backend Pattern - requirePermission()
-
-```typescript
-// app/core/BaseController.ts
-protected requirePermission(permission: string, req: Request, res: Response): boolean {
-  const user = req.user;
-  if (!user) return this.deny(res, 'Unauthorized', 401);
-  
-  // Admin bypass - super admin has all permissions
-  if (user.roles?.some((r: any) => r.name === 'admin')) return true;
-  
-  const hasPermission = user.permissions?.includes(permission);
-  if (!hasPermission) return this.deny(res, 'Forbidden', 403);
-  return true;
-}
-
-// Usage in controllers
-public async store(req: Request, res: Response) {
-  if (!this.requirePermission('users.create', req, res)) return;
-  // ... create user logic
-}
-```
-
-### Backend - RoleController
-
-```typescript
-// app/controllers/RoleController.ts
-public async index(req, res) {
-  const roles = await Role.query().withGraphFetched('permissions');
-  return jsonSuccess(res, 'OK', roles);
-}
-
-public async store(req, res) {
-  const data = await this.getBody(req, CreateRoleSchema);
-  const role = await Role.create({ id: randomUUID(), ...data });
-  await role.syncPermissions(data.permissions);
-  return jsonCreated(res, 'Created', role);
-}
-```
-
-### Frontend - Can.svelte Component
-
-```svelte
-<script lang="ts">
-  import { page } from '@inertiajs/svelte';
-  
-  let { permission, children } = $props();
-  
-  const user = $derived(page.props.user);
-  const can = $derived(
-    user?.roles?.some((r: any) => r.name === 'admin') ||
-    user?.permissions?.includes(permission)
-  );
-</script>
-
-{#if can}
-  {@render children()}
-{/if}
-
-<!-- Usage -->
-<Can permission="users.edit">
-  <button>Edit User</button>
-</Can>
-```
-
-### Frontend - /roles Page
-
-```svelte
-<!-- resources/js/Pages/roles.svelte -->
-<script lang="ts">
-  import { api } from '$lib/api';
-  import axios from 'axios';
-  import RoleModal from '../Components/RoleModal.svelte';
-  
-  let roles = $state([]);
-  let showModal = $state(false);
-  let editingRole = $state(null);
-  
-  async function loadRoles() {
-    const result = await api(() => axios.get('/roles/data'));
-    if (result.success) roles = result.data;
-  }
-  
-  async function createRole(data) {
-    const result = await api(() => axios.post('/roles', data));
-    if (result.success) {
-      await loadRoles();
-      showModal = false;
-    }
-  }
-</script>
-
-<Header group="roles" />
-
-<Can permission="roles.create">
-  <Button on:click={() => showModal = true}>Create Role</Button>
-</Can>
-
-{#each roles as role}
-  <Can permission="roles.edit">
-    <Button on:click={() => editRole(role)}>Edit</Button>
-  </Can>
-{/each}
-```
-
-### Form Request with Permission Check
-
-```typescript
-// app/requests/CreateUserRequest.ts
-export class CreateUserRequest extends FormRequest {
-  authorize(): boolean {
-    return this.req.user?.permissions?.includes('users.create') ?? false;
-  }
-  
-  rules() {
-    return {
-      name: 'required|string|min:3',
-      email: 'required|email|unique:users,email',
-      // ...
-    };
-  }
-}
-```
-
-### Auth Middleware - Shared Props
-
-```typescript
-// app/middlewares/auth.ts - roles & permissions shared with Inertia
-res.locals.user = {
-  ...user,
-  roles: user.roles.map(r => ({ id: r.id, name: r.name })),
-  permissions: user.permissions.map(p => p.name)
-};
-
-// Access in Svelte via $page.props.user.permissions
-```
+1. **Don't** use classes — use functions
+2. **Don't** use ORM/query builder — write raw SQL in `queries/`
+3. **Don't** return `jsonSuccess` from a page route — use `inertia(res).inertia()`
+4. **Don't** return `inertia()` from a data route — use `jsonSuccess/jsonError`
+5. **Don't** use relative imports for core modules — use path aliases
 
 ## Build/Test
 
 ```bash
-npm run dev      # Dev server (Vite + nodemon)
-npm run build    # Production build
-npm run lint     # tsc --noEmit
-npm start        # Run production server
+npm run dev          # Dev server (Vite + nodemon)
+npm run build        # Production build
+npm run lint         # tsc --noEmit
+npm run test         # vitest run
+npm run migrate      # npx knex migrate:latest
+npm run seed         # npx knex seed:run
 ```
 
 ## Where to Look
 
 | Task | Location |
-|------|----------|
-| Add new API endpoint | `app/controllers/` + `routes/web.ts` |
-| Add database table | `migrations/` + `app/models/` |
-| Authentication logic | `app/services/Authenticate.ts` |
-| Authorization checks | `app/authorization/` |
-| Validation rules | `app/validators/validate.ts` |
-| CLI command | `commands/native/` |
+|---|---|
+| Add new endpoint | `app/handlers/` + `routes/web.ts` |
+| Add database query | `app/queries/` |
+| Add data model | `app/types/models.ts` + `migrations/` |
+| Auth logic | `app/services/Authenticate.ts` |
+| Permission checks | `app/queries/users.ts` (isAdmin, hasPermission) |
 | Frontend page | `resources/js/Pages/` |
