@@ -18,14 +18,22 @@
   let user = page.props.user as User | undefined
   let scrollY = $state(0);
   let innerHeight = $state(0);
+  let copied = $state(false);
 
   let scrolled = $derived(scrollY > 50);
+
+  function copyCommand() {
+    navigator.clipboard.writeText('git clone https://github.com/MasRama/nara.git my-app');
+    copied = true;
+    setTimeout(() => copied = false, 2000);
+  }
 </script>
 
 <svelte:window bind:scrollY bind:innerHeight />
 
 <div class="min-h-screen bg-background text-foreground font-body transition-colors duration-500 overflow-x-hidden selection:bg-primary/20 selection:text-primary">
   
+  <!-- NAV -->
   <nav class="fixed top-0 left-0 right-0 z-50 px-6 sm:px-12 lg:px-24 flex justify-between items-center transition-all duration-500 {scrolled ? 'bg-background/80 backdrop-blur-md border-b border-border py-4' : 'bg-transparent py-6'}">
     <div class="flex flex-col relative z-10">
       <a href="/" class="text-xl font-heading font-bold tracking-tighter hover:opacity-70 transition-opacity" style="font-feature-settings: 'ss01'">NARA.</a>
@@ -49,157 +57,403 @@
     </div>
   </nav>
 
+  <!-- HERO -->
   <header class="relative min-h-screen flex flex-col justify-center px-6 sm:px-12 lg:px-24 pt-20">
     <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] dark:bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:24px_24px]"></div>
     
     <div class="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-1/3 left-1/6 w-[300px] h-[300px] bg-accent/5 rounded-full blur-[100px] pointer-events-none"></div>
 
-    <div class="max-w-[90rem] mx-auto w-full relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-      <div class="lg:col-span-7 flex flex-col items-start gap-8">
-        
-        <div in:fly={{ y: 20, duration: 1000, delay: 200 }}>
-          <Badge variant="outline" class="font-mono-accent text-xs px-3 py-1 text-primary border-primary/20 bg-primary/5 rounded-full mb-6">
-            v1.0.0 is now available
-          </Badge>
-          
-          <h1 class="text-5xl sm:text-6xl lg:text-7xl font-heading font-bold tracking-tighter leading-[1.1] text-foreground" style="font-feature-settings: 'ss01'">
-            The Right <br />
-            <span class="text-primary">Foundation.</span>
-          </h1>
-        </div>
-
-        <p in:fly={{ y: 20, duration: 1000, delay: 400 }} class="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-xl font-body">
-          A full-stack TypeScript starter kit combining ultimate-express, Svelte 5, and Inertia.js. Batteries included — clone, customize, ship.
-        </p>
-
-        <div in:fly={{ y: 20, duration: 1000, delay: 600 }} class="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-4">
-          {#if !user}
-            <a href="/register" use:inertia>
-              <Button size="lg" class="rounded-full px-8 py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm">
-                Get Started
-              </Button>
-            </a>
-          {:else}
-            <a href="/dashboard" use:inertia>
-              <Button size="lg" class="rounded-full px-8 py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm">
-                Dashboard
-              </Button>
-            </a>
-          {/if}
-          
-          <div class="flex items-center gap-4 text-sm">
-            <span class="w-12 h-px bg-border"></span>
-            <span class="text-muted-foreground font-mono-accent tracking-tight">258k req/s HTTP engine</span>
-          </div>
-        </div>
-      </div>
+    <div class="max-w-[90rem] mx-auto w-full relative z-10 flex flex-col items-center text-center gap-8">
       
-      <div class="lg:col-span-5 hidden lg:grid grid-cols-2 grid-rows-4 gap-3 h-[520px]" in:fly={{ x: 30, duration: 1000, delay: 800 }}>
+      <div in:fly={{ y: 20, duration: 1000, delay: 200 }}>
+        <Badge variant="outline" class="font-mono-accent text-xs px-3 py-1 text-primary border-primary/20 bg-primary/5 rounded-full mb-6">
+          AI-First TypeScript Starter Kit
+        </Badge>
+      </div>
 
-        <div class="row-span-2 bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
-          <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">HTTP Throughput</span>
-          <div>
-            <div class="text-4xl font-heading font-bold tracking-tighter text-foreground group-hover:text-primary transition-colors duration-300">258k</div>
-            <div class="text-xs font-mono-accent text-muted-foreground mt-1">req / second</div>
-          </div>
-          <div class="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
-            <div class="h-full bg-primary rounded-full w-[96%] bento-bar"></div>
-          </div>
-        </div>
+      <h1 in:fly={{ y: 20, duration: 1000, delay: 300 }} class="text-5xl sm:text-6xl lg:text-8xl font-heading font-bold tracking-tighter leading-[1.05] text-foreground" style="font-feature-settings: 'ss01'">
+        Clone it. Prompt it.<br />
+        <span class="text-primary">Ship it.</span>
+      </h1>
 
-        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300">
-          <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Language</span>
-          <div class="flex items-end justify-between">
-            <span class="text-2xl font-heading font-bold tracking-tight text-foreground">TypeScript</span>
-            <svg class="w-6 h-6 text-[#3178c6] shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M1.125 0C.502 0 0 .502 0 1.125v21.75C0 23.498.502 24 1.125 24h21.75c.623 0 1.125-.502 1.125-1.125V1.125C24 .502 23.498 0 22.875 0zm17.363 9.75c.612 0 1.154.037 1.627.111a6.38 6.38 0 0 1 1.306.34v2.458a3.95 3.95 0 0 0-.643-.361 5.093 5.093 0 0 0-.717-.26 5.453 5.453 0 0 0-1.426-.2c-.3 0-.573.028-.819.086a2.1 2.1 0 0 0-.623.242c-.17.104-.3.229-.393.374a.888.888 0 0 0-.14.49c0 .196.053.373.156.529.104.156.252.304.443.444s.423.276.696.41c.273.135.582.274.926.416.47.197.892.407 1.266.628.374.222.695.473.963.753.268.279.472.598.614.957.142.359.214.776.214 1.253 0 .657-.125 1.21-.373 1.656a3.033 3.033 0 0 1-1.012 1.085 4.38 4.38 0 0 1-1.487.596c-.566.12-1.163.18-1.79.18a9.916 9.916 0 0 1-1.84-.164 5.544 5.544 0 0 1-1.512-.493v-2.63a5.033 5.033 0 0 0 3.237 1.2c.333 0 .624-.03.872-.09.249-.06.456-.144.623-.25.166-.108.29-.234.373-.38a1.023 1.023 0 0 0-.074-1.089 2.12 2.12 0 0 0-.537-.5 5.597 5.597 0 0 0-.807-.444 27.72 27.72 0 0 0-1.007-.436c-.918-.383-1.602-.852-2.053-1.405-.45-.553-.676-1.222-.676-2.005 0-.614.123-1.141.369-1.582.246-.441.58-.804 1.004-1.089a4.494 4.494 0 0 1 1.47-.629 7.536 7.536 0 0 1 1.77-.201zm-15.113.188h9.563v2.166H9.506v9.646H6.789v-9.646H3.375z"/></svg>
-          </div>
-        </div>
+      <p in:fly={{ y: 20, duration: 1000, delay: 500 }} class="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl font-body">
+        Most starter kits fight your AI — complex abstractions, deep class hierarchies, magic ORMs. Nara is the opposite: flat patterns, raw SQL, plain functions. AI picks up the conventions and generates working code on the first try.
+      </p>
 
-        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300">
-          <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Pattern</span>
-          <div class="flex flex-col gap-2">
-            <div class="flex items-center gap-2">
-              <span class="font-mono-accent text-[10px] px-2 py-0.5 bg-secondary rounded text-muted-foreground">M</span>
-              <span class="text-xs text-muted-foreground">Model</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="font-mono-accent text-[10px] px-2 py-0.5 bg-secondary rounded text-muted-foreground">V</span>
-              <span class="text-xs text-muted-foreground">View</span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="font-mono-accent text-[10px] px-2 py-0.5 bg-primary/20 rounded text-primary">C</span>
-              <span class="text-xs text-foreground font-medium">Controller</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
-          <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">CLI Commands</span>
-          <div>
-            <div class="text-4xl font-heading font-bold tracking-tighter text-foreground group-hover:text-primary transition-colors duration-300">22</div>
-            <div class="text-xs font-mono-accent text-muted-foreground mt-1">native commands</div>
-          </div>
-        </div>
-
-        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
-          <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">API Layer</span>
-          <div>
-            <div class="text-2xl font-heading font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">Zero<span class="text-primary">.</span></div>
-            <div class="text-xs font-mono-accent text-muted-foreground mt-1 leading-relaxed">No REST API needed — server to UI in one move.</div>
-          </div>
-        </div>
-
-        <div class="col-span-2 bg-primary/5 border border-primary/20 rounded-2xl p-5 flex items-center justify-between hover:bg-primary/10 transition-colors duration-300 group">
-          <div class="flex flex-col gap-1">
-            <span class="font-mono-accent text-[10px] uppercase tracking-widest text-primary">Architecture</span>
-            <span class="text-xl font-heading font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-300">Full Stack<span class="text-primary">.</span></span>
-          </div>
-          <div class="flex items-center gap-2 text-[11px] font-mono-accent text-muted-foreground">
-            <span class="px-2.5 py-1 bg-background/60 border border-border rounded-full text-foreground">Backend</span>
-            <svg class="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="px-2.5 py-1 bg-background/60 border border-border rounded-full text-foreground">Frontend</span>
-            <svg class="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">One Codebase</span>
-          </div>
-        </div>
-
+      <div in:fly={{ y: 20, duration: 1000, delay: 700 }} class="flex flex-col sm:flex-row items-center gap-4 mt-4">
+        {#if !user}
+          <a href="/register" use:inertia>
+            <Button size="lg" class="rounded-full px-8 py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm">
+              Get Started
+            </Button>
+          </a>
+        {:else}
+          <a href="/dashboard" use:inertia>
+            <Button size="lg" class="rounded-full px-8 py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm">
+              Dashboard
+            </Button>
+          </a>
+        {/if}
+        
+        <button onclick={copyCommand} class="group flex items-center gap-3 rounded-full border border-border bg-card/50 backdrop-blur-sm px-4 sm:px-6 py-4 hover:bg-muted/50 hover:border-primary/30 transition-all duration-300 cursor-pointer max-w-full overflow-hidden">
+          <span class="font-mono-accent text-sm text-muted-foreground group-hover:text-foreground transition-colors shrink-0">$</span>
+          <span class="font-mono-accent text-xs sm:text-sm text-foreground truncate">git clone MasRama/nara.git</span>
+          <svg class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            {#if copied}
+              <path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/>
+            {:else}
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+            {/if}
+          </svg>
+        </button>
       </div>
     </div>
   </header>
 
+  <!-- PROBLEM SECTION -->
   <section class="py-32 px-6 sm:px-12 lg:px-24 bg-card/30 border-y border-border">
     <div class="max-w-6xl mx-auto">
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
         <div>
-          <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-6">Philosophy</span>
+          <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-6">The Problem</span>
           <h2 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter leading-tight" style="font-feature-settings: 'ss01'">
-            Deliberate <br/>
-            Craft.
+            Your starter kit <br/>
+            <span class="text-muted-foreground">shouldn't fight</span> your AI.
           </h2>
         </div>
         <div class="space-y-8 text-lg text-muted-foreground font-body leading-relaxed">
           <p>
-            We believe a starter kit should provide a solid foundation without dictating your every move. It should give you everything you need and stay out of the way when you don't.
+            AI assistants hallucinate on complex abstractions. Deep class hierarchies confuse them. Magic ORMs with hidden behaviors produce incorrect code that you end up debugging manually.
           </p>
           <p>
-            Nara curates exceptional tools—ultimate-express for unyielding server performance, SQLite for zero-latency data, Svelte 5 for elegant reactivity—and integrates them seamlessly. No bloated configuration. Just clarity and momentum.
+            Nara is built from the ground up so AI understands every file, every pattern, every convention. Flat structure. Raw SQL. Plain functions. No magic. Your AI assistant picks up the patterns instantly and generates working code on the first try.
           </p>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- DESIGN DECISIONS -->
   <section class="py-32 px-6 sm:px-12 lg:px-24 relative overflow-hidden bg-background">
     <div class="max-w-[90rem] mx-auto">
       <div class="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
          <div>
-           <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">Architecture</span>
+           <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">Design Decisions</span>
            <h3 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter text-foreground" style="font-feature-settings: 'ss01'">
-            The Stack
+            Built for AI.
           </h3>
          </div>
          <p class="text-muted-foreground max-w-md text-base leading-relaxed font-body">
-           Precision tools curated for developers who care about performance, safety, and developer experience.
+           Every architectural choice is intentional — optimized for AI-assisted development, not just human readability.
+         </p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <div class="group bg-background border border-border rounded-2xl p-8 flex flex-col gap-4 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+          <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+            <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-heading font-semibold mb-2 tracking-tight text-foreground">Functions, Not Classes</h4>
+            <p class="text-sm text-muted-foreground font-body leading-relaxed">AI generates standalone functions far more accurately than class hierarchies with inheritance chains and hidden state.</p>
+          </div>
+        </div>
+
+        <div class="group bg-background border border-border rounded-2xl p-8 flex flex-col gap-4 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+          <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+            <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M3 5v14c0 1.657 4.029 3 9 3s9-1.343 9-3V5"/>
+              <path d="M3 12c0 1.657 4.029 3 9 3s9-1.343 9-3"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-heading font-semibold mb-2 tracking-tight text-foreground">Raw SQL, Not ORM</h4>
+            <p class="text-sm text-muted-foreground font-body leading-relaxed">AI writes SQL fluently — no query builder syntax to hallucinate. Every query is explicit, readable, and predictable.</p>
+          </div>
+        </div>
+
+        <div class="group bg-background border border-border rounded-2xl p-8 flex flex-col gap-4 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+          <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+            <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-heading font-semibold mb-2 tracking-tight text-foreground">Flat File Structure</h4>
+            <p class="text-sm text-muted-foreground font-body leading-relaxed">AI finds files by name, not by navigating deep nesting. Types, queries, handlers — all at arm's reach, all obvious.</p>
+          </div>
+        </div>
+
+        <div class="group bg-background border border-border rounded-2xl p-8 flex flex-col gap-4 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+          <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+            <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-heading font-semibold mb-2 tracking-tight text-foreground">No Magic</h4>
+            <p class="text-sm text-muted-foreground font-body leading-relaxed">Every behavior is traceable — no decorators, no implicit middleware, no hidden state. AI can read and reason about the entire flow.</p>
+          </div>
+        </div>
+
+        <div class="group bg-background border border-border rounded-2xl p-8 flex flex-col gap-4 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+          <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+            <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-heading font-semibold mb-2 tracking-tight text-foreground">Minimal Dependencies</h4>
+            <p class="text-sm text-muted-foreground font-body leading-relaxed">Fewer APIs to learn = fewer mistakes from AI and humans alike. Each dependency is purposeful and well-documented.</p>
+          </div>
+        </div>
+
+        <div class="group bg-primary text-primary-foreground rounded-2xl p-8 flex flex-col gap-4 hover:opacity-95 transition-opacity duration-300">
+          <div class="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.378 3.378 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="text-lg font-heading font-semibold mb-2 tracking-tight">The Result?</h4>
+            <p class="text-sm opacity-80 font-body leading-relaxed">AI understands Nara's patterns instantly. No boilerplate generators needed — the pattern <em>is</em> the generator.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- CODE DEMO: ONE PROMPT -->
+  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-card/30 border-t border-border relative overflow-hidden">
+    <div class="absolute top-1/2 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+    
+    <div class="max-w-[90rem] mx-auto relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+        
+        <div>
+          <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">One Prompt</span>
+          <h3 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter text-foreground mb-8" style="font-feature-settings: 'ss01'">
+            Ship a full feature<br/>in a single prompt.
+          </h3>
+          
+          <p class="text-lg text-muted-foreground font-body leading-relaxed mb-8">
+            Tell your AI assistant: <span class="text-foreground font-medium">"Add a products CRUD."</span> That's it. AI picks up Nara's conventions and generates the complete stack — types, queries, handlers, routes, and UI.
+          </p>
+
+          <div class="space-y-4">
+            <div class="flex items-center gap-3 text-sm">
+              <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="text-muted-foreground">No boilerplate generators needed</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="text-muted-foreground">No code generation step or build tooling</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="text-muted-foreground">AI reads existing patterns and replicates them perfectly</span>
+            </div>
+            <div class="flex items-center gap-3 text-sm">
+              <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <svg class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
+              <span class="text-muted-foreground">Working code on the first try — not the third</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code preview -->
+        <div class="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
+          <div class="flex items-center gap-2 px-5 py-3 border-b border-border bg-muted/30">
+            <div class="flex gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-red-400/60"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-400/60"></div>
+              <div class="w-3 h-3 rounded-full bg-green-400/60"></div>
+            </div>
+            <span class="text-xs font-mono-accent text-muted-foreground ml-2">AI Generated Output</span>
+          </div>
+          <div class="p-5 font-mono-accent text-[13px] leading-relaxed overflow-x-auto">
+            <div class="text-muted-foreground mb-3">
+              <span class="text-primary">&gt;</span> "Add a products CRUD"
+            </div>
+            
+            <div class="space-y-1.5">
+              <div class="flex items-start gap-3">
+                <span class="text-primary shrink-0">+</span>
+                <span class="text-muted-foreground">types/</span><span class="text-foreground">models.ts</span>
+              </div>
+              <div class="pl-6 text-muted-foreground text-xs">
+                <span class="text-accent">interface</span> <span class="text-foreground">Product</span> {'{ id: string; name: string; price: number; }'}
+              </div>
+
+              <div class="flex items-start gap-3 mt-3">
+                <span class="text-primary shrink-0">+</span>
+                <span class="text-muted-foreground">queries/</span><span class="text-foreground">products.ts</span>
+              </div>
+              <div class="pl-6 text-muted-foreground text-xs">
+                <span class="text-accent">export const</span> findProductById, createProduct, updateProduct...
+              </div>
+
+              <div class="flex items-start gap-3 mt-3">
+                <span class="text-primary shrink-0">+</span>
+                <span class="text-muted-foreground">handlers/</span><span class="text-foreground">products.ts</span>
+              </div>
+              <div class="pl-6 text-muted-foreground text-xs">
+                index(), show(), store(), update(), destroy()
+              </div>
+
+              <div class="flex items-start gap-3 mt-3">
+                <span class="text-primary shrink-0">+</span>
+                <span class="text-muted-foreground">routes/</span><span class="text-foreground">web.ts</span>
+              </div>
+              <div class="pl-6 text-muted-foreground text-xs">
+                Route.get('/products', [Auth], products.index)
+              </div>
+
+              <div class="flex items-start gap-3 mt-3">
+                <span class="text-primary shrink-0">+</span>
+                <span class="text-muted-foreground">Pages/</span><span class="text-foreground">products.svelte</span>
+              </div>
+              <div class="pl-6 text-muted-foreground text-xs">
+                Full UI with table, forms, toast notifications
+              </div>
+
+              <div class="flex items-start gap-3 mt-3">
+                <span class="text-primary shrink-0">+</span>
+                <span class="text-muted-foreground">validators/</span><span class="text-foreground">schemas.ts</span>
+              </div>
+              <div class="pl-6 text-muted-foreground text-xs">
+                productSchema = z.object({'{ name: z.string(), price: z.number() }'})
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-border flex items-center gap-2 text-xs text-primary">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>7 files generated — full stack, zero errors</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE / PATTERN -->
+  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-background relative overflow-hidden">
+    <div class="max-w-[90rem] mx-auto">
+      <div class="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
+         <div>
+           <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">The Pattern</span>
+           <h3 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter text-foreground" style="font-feature-settings: 'ss01'">
+            Types → Queries →<br/>Handlers → Routes
+          </h3>
+         </div>
+         <p class="text-muted-foreground max-w-md text-base leading-relaxed font-body">
+           A simple, predictable flow that AI replicates perfectly. Every feature follows the same pattern — no surprises.
+         </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="group relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all duration-300">
+          <div class="absolute top-4 right-4 font-mono-accent text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">01</div>
+          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7z"/>
+              <path d="M9 12h6M9 8h6M9 16h3"/>
+            </svg>
+          </div>
+          <h4 class="text-lg font-heading font-semibold tracking-tight text-foreground mb-2">Types</h4>
+          <p class="text-sm text-muted-foreground leading-relaxed">Define your data shape. Pure TypeScript interfaces — no decorators, no metadata.</p>
+          <div class="mt-4 font-mono-accent text-[11px] bg-muted/50 p-2.5 rounded text-muted-foreground">
+            <span class="text-accent">interface</span> Product {'{ ... }'}
+          </div>
+        </div>
+
+        <div class="group relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all duration-300">
+          <div class="absolute top-4 right-4 font-mono-accent text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">02</div>
+          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M3 5v14c0 1.657 4.029 3 9 3s9-1.343 9-3V5"/>
+              <path d="M3 12c0 1.657 4.029 3 9 3s9-1.343 9-3"/>
+            </svg>
+          </div>
+          <h4 class="text-lg font-heading font-semibold tracking-tight text-foreground mb-2">Queries</h4>
+          <p class="text-sm text-muted-foreground leading-relaxed">Raw SQL functions. AI writes SQL fluently — no ORM syntax to hallucinate.</p>
+          <div class="mt-4 font-mono-accent text-[11px] bg-muted/50 p-2.5 rounded text-muted-foreground">
+            <span class="text-accent">export const</span> findById = (id) <span class="text-accent">=&gt;</span> ...
+          </div>
+        </div>
+
+        <div class="group relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all duration-300">
+          <div class="absolute top-4 right-4 font-mono-accent text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">03</div>
+          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h4 class="text-lg font-heading font-semibold tracking-tight text-foreground mb-2">Handlers</h4>
+          <p class="text-sm text-muted-foreground leading-relaxed">Plain functions for each action. No class context needed — just req in, res out.</p>
+          <div class="mt-4 font-mono-accent text-[11px] bg-muted/50 p-2.5 rounded text-muted-foreground">
+            <span class="text-accent">export const</span> index = (req, res) <span class="text-accent">=&gt;</span> ...
+          </div>
+        </div>
+
+        <div class="group relative bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-all duration-300">
+          <div class="absolute top-4 right-4 font-mono-accent text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded">04</div>
+          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h4 class="text-lg font-heading font-semibold tracking-tight text-foreground mb-2">Routes</h4>
+          <p class="text-sm text-muted-foreground leading-relaxed">One-liner registration. Connect URL to handler with optional middleware.</p>
+          <div class="mt-4 font-mono-accent text-[11px] bg-muted/50 p-2.5 rounded text-muted-foreground">
+            Route.get('/products', [Auth], products.index)
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Flow arrows between cards (visible on lg+) -->
+      <div class="hidden lg:flex justify-center items-center gap-0 mt-6 text-muted-foreground">
+        <span class="font-mono-accent text-xs text-muted-foreground/60 px-4">types/models.ts</span>
+        <svg class="w-4 h-4 text-primary/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="font-mono-accent text-xs text-muted-foreground/60 px-4">queries/products.ts</span>
+        <svg class="w-4 h-4 text-primary/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="font-mono-accent text-xs text-muted-foreground/60 px-4">handlers/products.ts</span>
+        <svg class="w-4 h-4 text-primary/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="font-mono-accent text-xs text-muted-foreground/60 px-4">routes/web.ts</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE STACK -->
+  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-card/30 border-y border-border">
+    <div class="max-w-[90rem] mx-auto">
+      <div class="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
+         <div>
+           <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">Stack</span>
+           <h3 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter text-foreground" style="font-feature-settings: 'ss01'">
+            Precision Tools.
+          </h3>
+         </div>
+         <p class="text-muted-foreground max-w-md text-base leading-relaxed font-body">
+           Each tool chosen for performance, simplicity, and AI-compatibility. Nothing bloated, nothing redundant.
          </p>
       </div>
       
@@ -213,24 +467,10 @@
             <div>
               <div class="flex items-center gap-3 mb-3">
                  <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground">ultimate-express</h4>
-                 <Badge variant="outline" class="text-[10px] font-mono-accent px-1.5 py-0">v2</Badge>
+                 <Badge variant="outline" class="text-[10px] font-mono-accent px-1.5 py-0">uWS</Badge>
               </div>
               <p class="text-sm text-muted-foreground leading-relaxed">
-                High-performance HTTP built on uWebSockets — handles 250k+ req/s without a sweat.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
-            <div class="flex justify-between items-start mb-6">
-              <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Routing Bridge</span>
-            </div>
-            <div>
-              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Inertia.js</h4>
-              <p class="text-sm text-muted-foreground leading-relaxed">
-                The bridge connecting backend controllers directly to Svelte pages. Monolithic simplicity with SPA fluidity.
+                250k+ req/s on uWebSockets.js. Express-compatible API that AI already knows — no custom syntax to learn.
               </p>
             </div>
           </CardContent>
@@ -242,23 +482,9 @@
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Frontend</span>
             </div>
             <div>
-              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Svelte 5</h4>
+              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Svelte 5 + Inertia</h4>
               <p class="text-sm text-muted-foreground leading-relaxed">
-                Elegant client-side reactivity using runes. A vanishingly small footprint with no virtual DOM overhead.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card class="group border-none bg-transparent shadow-none">
-          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
-            <div class="flex justify-between items-start mb-6">
-              <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Query Builder</span>
-            </div>
-            <div>
-              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Knex.js</h4>
-              <p class="text-sm text-muted-foreground leading-relaxed">
-                A "batteries included" query builder. Complete SQL control enhanced by precise TypeScript definitions.
+                Svelte 5 runes for elegant reactivity. Inertia bridges backend to frontend — no API layer needed, no serialization headaches.
               </p>
             </div>
           </CardContent>
@@ -270,9 +496,37 @@
               <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Database</span>
             </div>
             <div>
-              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">SQLite</h4>
+              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">SQLite + Knex</h4>
               <p class="text-sm text-muted-foreground leading-relaxed">
-                Zero-configuration local storage. WAL mode enabled by default for remarkable concurrent read performance.
+                Zero-config embedded database with WAL mode. Knex migrations for schema control. AI writes raw SQL, Knex handles migrations.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card class="group border-none bg-transparent shadow-none">
+          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Validation</span>
+            </div>
+            <div>
+              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Zod</h4>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                Type-safe schema validation with inference. AI generates Zod schemas naturally — they read like documentation.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card class="group border-none bg-transparent shadow-none">
+          <CardContent class="p-0 flex flex-col h-full border-l-2 border-border group-hover:border-primary pl-6 py-2 transition-colors duration-300">
+            <div class="flex justify-between items-start mb-6">
+              <span class="text-xs font-mono-accent tracking-wider text-muted-foreground">Auth</span>
+            </div>
+            <div>
+              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Session + OAuth + RBAC</h4>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                Session-based auth with Google OAuth and role-based access control. Pre-wired, pre-secured, ready to extend.
               </p>
             </div>
           </CardContent>
@@ -281,15 +535,15 @@
         <Card class="group border-none bg-transparent shadow-none">
           <CardContent class="p-0 flex flex-col h-full border-l-2 border-primary pl-6 py-2 transition-colors duration-300">
             <div class="flex justify-between items-start mb-6">
-              <span class="text-xs font-mono-accent tracking-wider text-primary">Tooling</span>
+              <span class="text-xs font-mono-accent tracking-wider text-primary">AI Knowledge</span>
             </div>
             <div>
-              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">Nara CLI</h4>
+              <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground mb-3">AGENTS.md</h4>
               <p class="text-sm text-muted-foreground leading-relaxed mb-4">
-                Over 20 native commands to scaffold controllers, models, migrations, and manage database state instantly.
+                Full knowledge base embedded in the repo. AI reads patterns, conventions, and anti-patterns — zero context setup needed.
               </p>
               <div class="font-mono-accent text-[11px] bg-muted/50 p-2 rounded text-muted-foreground inline-block">
-                 <span class="opacity-50">$</span> nara make:resource Post
+                 <span class="opacity-50">$</span> cat AGENTS.md
               </div>
             </div>
           </CardContent>
@@ -299,23 +553,24 @@
     </div>
   </section>
 
-  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-card/30 border-t border-border">
+  <!-- BUILT-IN FEATURES -->
+  <section class="py-32 px-6 sm:px-12 lg:px-24 bg-background">
      <div class="max-w-[90rem] mx-auto">
        <div class="mb-16 flex flex-col lg:flex-row lg:items-end justify-between gap-8">
          <div>
-           <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">Built-in</span>
+           <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-4">Batteries Included</span>
            <h3 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter text-foreground" style="font-feature-settings: 'ss01'">
-             Included by default.
+             Everything, out of the box.
            </h3>
          </div>
          <p class="text-muted-foreground max-w-sm text-base leading-relaxed font-body lg:text-right">
-           Everything you need to ship — no hunting for packages, no glue code.
+           Ship fast without sacrificing quality. Security, auth, logging — all configured and working.
          </p>
        </div>
 
        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -323,48 +578,24 @@
              </svg>
            </div>
            <div>
-             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Authentication</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">Session auth, HTTP-only cookies, RBAC gates, and role-based policies — wired in from day one.</p>
+             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Authentication & RBAC</h4>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">Session auth, Google OAuth, HTTP-only cookies, role-based access control — wired in from day one.</p>
            </div>
          </div>
 
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
-           <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
-             <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke-linecap="round" stroke-linejoin="round"/>
-             </svg>
-           </div>
-           <div>
-             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Real-time</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">Built on uWebSockets.js — broadcast events to thousands of clients with microsecond latency.</p>
-           </div>
-         </div>
-
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke-linecap="round" stroke-linejoin="round"/>
              </svg>
            </div>
            <div>
-             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Security</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">CSRF (Double Submit), rate limiting per IP/user, XSS sanitization, and security headers — all on.</p>
+             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Security First</h4>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">CSRF (Double Submit), rate limiting, XSS sanitization, security headers — all enabled by default.</p>
            </div>
          </div>
 
-         <div class="group bg-primary text-primary-foreground rounded-2xl p-6 flex flex-col gap-6 hover:opacity-95 transition-opacity duration-300">
-           <div class="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center">
-             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-               <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H5C4.46957 17 3.96086 16.7893 3.58579 16.4142C3.21071 16.0391 3 15.5304 3 15M21 15V9C21 8.46957 20.7893 7.96086 20.4142 7.58579C20.0391 7.21071 19.5304 7 19 7H5C4.46957 7 3.96086 7.21071 3.58579 7.58579C3.21071 7.96086 3 8.46957 3 9V15M21 15C21 14.4696 20.7893 13.9609 20.4142 13.5858C20.0391 13.2107 19.5304 13 19 13H5C4.46957 13 3.96086 13.2107 3.58579 13.5858C3.21071 13.9609 3 14.4696 3 15" stroke-linecap="round" stroke-linejoin="round"/>
-             </svg>
-           </div>
-           <div>
-             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight">Job Queues</h4>
-             <p class="text-sm opacity-80 font-body leading-relaxed">Async job processing backed by Redis or in-memory drivers. No extra service needed to get started.</p>
-           </div>
-         </div>
-
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                <path d="M9 3H5C3.89543 3 3 3.89543 3 5V9M9 3H15M9 3V9M15 3H19C20.1046 3 21 3.89543 21 5V9M15 3V9M21 9V15M21 15V19C21 20.1046 20.1046 21 19 21H15M21 15H15M15 21H9M15 21V15M9 21H5C3.89543 21 3 20.1046 3 19V15M9 21V15M3 15V9M3 9H9M9 9H15M9 9V15M15 9H21M15 9V15M9 15H15" stroke-linecap="round" stroke-linejoin="round"/>
@@ -372,11 +603,11 @@
            </div>
            <div>
              <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Event System</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">Decoupled async event dispatcher. Fire events from anywhere, listen from anywhere — clean architecture.</p>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">Decoupled event dispatcher. Fire and listen from anywhere — clean architecture without the ceremony.</p>
            </div>
          </div>
 
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                <path d="M4 17L10 11L4 5M12 19H20" stroke-linecap="round" stroke-linejoin="round"/>
@@ -384,23 +615,47 @@
            </div>
            <div>
              <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">CLI Scaffolding</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">22 native commands for models, controllers, migrations, seeders, and more. Scaffold in seconds.</p>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">22+ commands for models, controllers, migrations, seeders. Scaffold in seconds, ship in minutes.</p>
            </div>
          </div>
 
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+           <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+             <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke-linecap="round" stroke-linejoin="round"/>
+             </svg>
+           </div>
+           <div>
+             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Real-time Ready</h4>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">Built on uWebSockets.js — broadcast events to thousands of clients with microsecond latency.</p>
+           </div>
+         </div>
+
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+           <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
+             <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+               <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H5C4.46957 17 3.96086 16.7893 3.58579 16.4142C3.21071 16.0391 3 15.5304 3 15M21 15V9C21 8.46957 20.7893 7.96086 20.4142 7.58579C20.0391 7.21071 19.5304 7 19 7H5C4.46957 7 3.96086 7.21071 3.58579 7.58579C3.21071 7.96086 3 8.46957 3 9V15M21 15C21 14.4696 20.7893 13.9609 20.4142 13.5858C20.0391 13.2107 19.5304 13 19 13H5C4.46957 13 3.96086 13.2107 3.58579 13.5858C3.21071 13.9609 3 14.4696 3 15" stroke-linecap="round" stroke-linejoin="round"/>
+             </svg>
+           </div>
+           <div>
+             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Job Queues</h4>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">Async job processing backed by Redis or in-memory drivers. No extra service needed to start.</p>
+           </div>
+         </div>
+
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                <path d="M8 9H16M8 13H14M8 17H11M6 3H18C19.1046 3 20 3.89543 20 5V19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19V5C4 3.89543 4.89543 3 6 3Z" stroke-linecap="round" stroke-linejoin="round"/>
              </svg>
            </div>
            <div>
-             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Form Requests</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">Dedicated request classes with authorization logic and typed validation rules, inspired by Laravel.</p>
+             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Structured Logging</h4>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">Pino-powered structured logging. Request logging, query logging, and error tracking — all built in.</p>
            </div>
          </div>
 
-         <div class="group bg-background border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
+         <div class="group bg-card border border-border rounded-2xl p-6 flex flex-col gap-6 hover:border-primary/40 hover:shadow-sm transition-all duration-300">
            <div class="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors duration-300">
              <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                <path d="M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -408,8 +663,8 @@
              </svg>
            </div>
            <div>
-             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Active Record</h4>
-             <p class="text-sm text-muted-foreground font-body leading-relaxed">Typed models with built-in CRUD, auto timestamps, and a fluent Knex query builder underneath.</p>
+             <h4 class="text-base font-heading font-semibold mb-2 tracking-tight text-foreground">Zod Validation</h4>
+             <p class="text-sm text-muted-foreground font-body leading-relaxed">Type-safe request validation with Zod schemas. AI generates them naturally, TypeScript infers the types.</p>
            </div>
          </div>
 
@@ -417,35 +672,49 @@
      </div>
   </section>
 
+  <!-- CTA -->
   <section class="relative bg-background text-foreground overflow-hidden py-40 flex flex-col items-center justify-center transition-colors duration-500">
      <div class="absolute inset-0 opacity-20 dark:opacity-[0.03] bg-[linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:3rem_3rem] dark:bg-[linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]"></div>
      
      <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(var(--color-primary-rgb,16,185,129),0.05),_transparent_60%)] pointer-events-none"></div>
 
      <div class="relative z-10 px-6 max-w-3xl text-center flex flex-col items-center">
+        <Badge variant="outline" class="font-mono-accent text-xs px-3 py-1 text-primary border-primary/20 bg-primary/5 rounded-full mb-8">
+          Ready to ship?
+        </Badge>
+        
         <h2 class="text-4xl sm:text-5xl lg:text-6xl font-heading font-bold tracking-tighter mb-8" style="font-feature-settings: 'ss01'">
-          Begin Your Project
+          Clone. Prompt. Ship.
         </h2>
         
         <p class="text-lg sm:text-xl text-muted-foreground font-body mb-12">
-          A batteries-included starter kit crafted for developer productivity and uncompromised performance.
+          Stop fighting your starter kit. Start prompting your AI and shipping features in minutes — not hours.
         </p>
 
         <div class="flex flex-col sm:flex-row items-center gap-4">
-          <a href="/docs">
+          <a href="https://github.com/MasRama/nara" target="_blank">
             <Button size="lg" class="rounded-full px-8 py-6 font-heading font-medium text-base hover:scale-105 transition-transform duration-300">
-              Read Documentation
+              View on GitHub
             </Button>
           </a>
           
-          <Button variant="outline" size="lg" class="rounded-full px-6 py-6 flex items-center gap-3 bg-background/50 backdrop-blur-sm border-border hover:bg-muted/50 transition-colors" on:click={() => navigator.clipboard.writeText('npm create nara-app@latest')}>
-             <span class="font-mono-accent text-sm text-foreground">$ npm create nara-app@latest</span>
-             <svg class="w-4 h-4 text-muted-foreground ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 17.9291C8 17.9291 9.77123 18.061 11.0264 16.5985C12.2815 15.1361 11.2314 13.9142 11.2314 13.9142C11.2314 13.9142 10.1558 13.4544 11.2314 11.7275C12.3071 10.0007 14.1534 10.0007 14.1534 10.0007M8 17.9291C8 17.9291 6.57703 16.9234 6.57703 14.9234C6.57703 13.3308 7.37873 12.3925 8 11.9649M8 17.9291C8 18.8465 7.15197 19.3465 6.57703 19.3465C5.71453 19.3465 5 18.632 5 17.7695V6.23047C5 5.36797 5.71453 4.65345 6.57703 4.65345C7.15197 4.65345 8 5.15345 8 6.07085M8 6.07085V11.9649M8 6.07085C8 6.07085 9.77123 5.93895 11.0264 7.4014C12.2815 8.86386 11.2314 10.0858 11.2314 10.0858M14.1534 10.0007L16.2305 13.9142M14.1534 10.0007H19V6.23047C19 5.36797 18.2855 4.65345 17.423 4.65345H14.1534" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </Button>
+          <button onclick={copyCommand} class="group flex items-center gap-3 rounded-full border border-border bg-card/50 backdrop-blur-sm px-6 py-4 hover:bg-muted/50 hover:border-primary/30 transition-all duration-300 cursor-pointer">
+            <span class="font-mono-accent text-sm text-muted-foreground">$</span>
+            <span class="font-mono-accent text-sm text-foreground">git clone MasRama/nara.git</span>
+            <svg class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              {#if copied}
+                <path d="M20 6L9 17L4 12" stroke-linecap="round" stroke-linejoin="round"/>
+              {:else}
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              {/if}
+            </svg>
+          </button>
         </div>
      </div>
   </section>
 
+  <!-- FOOTER -->
   <footer class="border-t border-border bg-background py-8">
     <div class="max-w-[90rem] mx-auto px-6 sm:px-12 lg:px-24 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-mono-accent text-muted-foreground uppercase tracking-widest">
        <div class="flex items-center gap-2">
@@ -460,15 +729,6 @@
 </div>
 
 <style>
-  .bento-bar {
-    animation: bar-fill 1.4s cubic-bezier(0.4, 0, 0.2, 1) 1s both;
-  }
-
-  @keyframes bar-fill {
-    from { width: 0%; }
-    to { width: 96%; }
-  }
-
   :global(html) {
     scroll-behavior: smooth;
   }
