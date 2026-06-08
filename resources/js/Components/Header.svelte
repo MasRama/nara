@@ -6,7 +6,7 @@
   import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '$lib/components/ui/dropdown-menu';
   import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
   import { Button } from '$lib/components/ui/button';
-  import { Menu, LogOut } from 'lucide-svelte';
+  import { Menu, LogOut } from '@lucide/svelte';
 
   interface User {
     id: string;

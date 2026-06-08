@@ -60,8 +60,7 @@
     "migrations",
     "seeds",
     "app",
-    "routes",
-    "resources/**/*.svelte"
+    "routes"
   ],
   "exclude": [
     "node_modules",

@@ -14,7 +14,7 @@
   import { Avatar, AvatarFallback } from '$lib/components/ui/avatar';
   import { Button } from '$lib/components/ui/button';
   import { Alert, AlertDescription } from '$lib/components/ui/alert';
-  import { Users } from 'lucide-svelte';
+  import { Users } from '@lucide/svelte';
 
   interface Props {
     users?: User[];

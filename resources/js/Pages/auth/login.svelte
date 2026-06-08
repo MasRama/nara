@@ -9,7 +9,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Alert, AlertDescription } from '$lib/components/ui/alert';
-  import { Eye, EyeOff } from 'lucide-svelte';
+  import { Eye, EyeOff } from '@lucide/svelte';
 
   interface LoginForm {
     email: string;

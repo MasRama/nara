@@ -12,7 +12,7 @@
   import { Label } from '$lib/components/ui/label';
   import { Button } from '$lib/components/ui/button';
   import { Switch } from '$lib/components/ui/switch';
-  import { Loader2, CheckSquare, Square } from 'lucide-svelte';
+  import { Loader2, CheckSquare, Square } from '@lucide/svelte';
   import type { RoleForm, GroupedPermissions } from '../types';
 
   let {

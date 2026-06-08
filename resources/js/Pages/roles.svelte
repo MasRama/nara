@@ -10,7 +10,7 @@
   import { createEmptyRoleForm, roleToForm } from '../types';
   import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
   import { Button } from '$lib/components/ui/button';
-  import { Shield, ShieldCheck, Users, Pencil, Trash2, Plus } from 'lucide-svelte';
+  import { Shield, ShieldCheck, Users, Pencil, Trash2, Plus } from '@lucide/svelte';
 
   interface PagePermissions {
     canCreate: boolean;

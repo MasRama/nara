@@ -4,7 +4,7 @@
   import Header from '../Components/Header.svelte';
   import { Card, CardContent } from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
-  import { Users, Settings, Shield, Activity, ChevronRight, ShieldCheck } from 'lucide-svelte';
+  import { Users, Settings, Shield, Activity, ChevronRight, ShieldCheck } from '@lucide/svelte';
   import type { User } from '../types';
 
   interface Props {
