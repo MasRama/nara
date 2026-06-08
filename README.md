@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 
-> High-performance TypeScript web framework combining **HyperExpress**, **Svelte 5**, and **Inertia.js** for building modern full-stack applications with exceptional developer experience.
+> High-performance TypeScript web framework combining **ultimate-express**, **Svelte 5**, and **Inertia.js** for building modern full-stack applications with exceptional developer experience.
 
 > **For AI assistants:** See [README-LLM.md](./README-LLM.md) for optimized context file, or [AGENTS.md](./AGENTS.md) for detailed project knowledge base.
 

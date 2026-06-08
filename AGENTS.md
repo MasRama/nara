@@ -1,12 +1,12 @@
 # Nara Framework - Project Knowledge Base
 
 **Generated:** 2026-06-07
-**Commit:** df46fa3
+**Commit:** d4644b6
 **Branch:** (current)
 
 ## Overview
 
-TypeScript web framework for building full-stack applications. Powered by HyperExpress + Svelte 5 + Inertia.js. MVC + Events + Services architecture.
+TypeScript web framework for building full-stack applications. Powered by ultimate-express + Svelte 5 + Inertia.js. MVC + Events + Services architecture.
 
 ## Mental Model (Start Here)
 
@@ -15,7 +15,7 @@ TypeScript web framework for building full-stack applications. Powered by HyperE
 ### What is Nara?
 
 Nara is a **TypeScript full-stack framework** for building modern web applications. It combines:
-- **Backend**: HyperExpress (fast HTTP server) + Knex.js (SQL query builder)
+- **Backend**: ultimate-express (Express-compatible uWS server) + Knex.js (SQL query builder)
 - **Frontend**: Svelte 5 + Inertia.js (SPA-like experience without building an API)
 
 ### Architecture Pattern
@@ -33,7 +33,7 @@ Nara is a **TypeScript full-stack framework** for building modern web applicatio
           │                                           │
           ▼                                           ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      SERVER (HyperExpress)                          │
+│                      SERVER (ultimate-express)                       │
 │                                                                     │
 │  Request ──► Middlewares ──► Router ──► Controller ──► Response    │
 │                  │                         │             │          │

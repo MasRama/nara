@@ -1,10 +1,10 @@
-const HyperExpress = require('hyper-express');
-const webserver = new HyperExpress.Server();
+const express = require('ultimate-express');
+const app = express();
 
-webserver.get('*', (request, response) => {
-    response.send("OK")
+app.get('*', (req, res) => {
+    res.send("OK")
 });
-// Activate webserver by calling .listen(port, callback);
-webserver.listen(3006).catch((err) => {
-    console.log(err);
-})
+
+app.listen(3006, () => {
+    console.log('ultimate-express benchmark server running on port 3006');
+});

@@ -35,7 +35,7 @@ app/
 | File | What it does |
 |------|--------------|
 | `App.ts` | Bootstraps server, applies middlewares, handles shutdown |
-| `Router.ts` | Type-safe route registration (wraps HyperExpress.Router) |
+| `Router.ts` | Type-safe route registration (wraps Express Router) |
 | `BaseController.ts` | Base class for controllers (auth guards, validation, pagination) |
 | `FormRequest.ts` | Form request validation (auth + rules) |
 | `errors.ts` | HttpError hierarchy (404, 401, 403, 422, etc) |

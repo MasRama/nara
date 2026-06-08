@@ -62,4 +62,4 @@ const app = createApp({
 });
 ```
 
-Without the adapter, calling `res.inertia()` throws an error. The adapter is what wires Inertia.js server-side rendering into the HyperExpress HTTP layer.
+Without the adapter, calling `res.inertia()` throws an error. The adapter is what wires Inertia.js server-side rendering into the ultimate-express HTTP layer.

@@ -8,7 +8,7 @@
 | Layer | Technology | Language |
 |-------|------------|----------|
 | Runtime | Node.js >= 20 | **TypeScript** |
-| HTTP Server | HyperExpress | TypeScript |
+| HTTP Server | ultimate-express (Express-compatible uWS) | TypeScript |
 | Frontend | Svelte 5 + Inertia.js | TypeScript/Svelte |
 | Database | SQLite (better-sqlite3) | SQL |
 | Query Builder | Knex.js | TypeScript |
@@ -21,7 +21,7 @@
 
 ```
 Nara = TypeScript full-stack framework
-     = HyperExpress (server) + Svelte 5 (frontend) + Inertia.js (glue)
+     = ultimate-express (server) + Svelte 5 (frontend) + Inertia.js (glue)
      = SQLite database with Active Record models
      = MVC architecture with Events and Services
 ```

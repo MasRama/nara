@@ -69,7 +69,7 @@
         </div>
 
         <p in:fly={{ y: 20, duration: 1000, delay: 400 }} class="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-xl font-body">
-          A TypeScript full-stack framework combining HyperExpress, Svelte 5, and Inertia.js. Designed for developers who value clarity, performance, and craftsmanship.
+          A TypeScript full-stack framework combining ultimate-express, Svelte 5, and Inertia.js. Designed for developers who value clarity, performance, and craftsmanship.
         </p>
 
         <div in:fly={{ y: 20, duration: 1000, delay: 600 }} class="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-4">
@@ -182,7 +182,7 @@
             We believe a framework should provide a solid foundation without dictating your every move. It should disappear when you don't need it and provide immense leverage when you do.
           </p>
           <p>
-            Nara curates exceptional tools—HyperExpress for unyielding server performance, SQLite for zero-latency data, Svelte 5 for elegant reactivity—and integrates them seamlessly. No bloated configuration. Just clarity and momentum.
+            Nara curates exceptional tools—ultimate-express for unyielding server performance, SQLite for zero-latency data, Svelte 5 for elegant reactivity—and integrates them seamlessly. No bloated configuration. Just clarity and momentum.
           </p>
         </div>
       </div>
@@ -212,8 +212,8 @@
             </div>
             <div>
               <div class="flex items-center gap-3 mb-3">
-                 <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground">HyperExpress</h4>
-                 <Badge variant="outline" class="text-[10px] font-mono-accent px-1.5 py-0">v6</Badge>
+                 <h4 class="text-xl font-heading font-semibold tracking-tight text-foreground">ultimate-express</h4>
+                 <Badge variant="outline" class="text-[10px] font-mono-accent px-1.5 py-0">v2</Badge>
               </div>
               <p class="text-sm text-muted-foreground leading-relaxed">
                 High-performance HTTP built on uWebSockets — handles 250k+ req/s without a sweat.

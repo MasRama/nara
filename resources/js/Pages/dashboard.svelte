@@ -199,7 +199,7 @@
             <div>
               <p class="text-xs font-mono-accent text-primary mb-1">Framework</p>
               <p class="text-base font-heading font-semibold tracking-tight">Nara Framework</p>
-              <p class="text-sm text-muted-foreground font-body mt-0.5">HyperExpress · Svelte 5 · Inertia.js</p>
+              <p class="text-sm text-muted-foreground font-body mt-0.5">ultimate-express · Svelte 5 · Inertia.js</p>
             </div>
             <span class="font-mono-accent text-[11px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">v1.0.0</span>
           </div>
