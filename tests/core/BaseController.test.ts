@@ -108,7 +108,7 @@ describe('BaseController', () => {
       const req = mockRequest();
       const validData = { name: 'Test', email: 'test@example.com' };
 
-      (req.json as any).mockResolvedValue(validData);
+      (req as any).body = validData;
 
       const schema: Validator<typeof validData> = (data: unknown) => ({
         success: true,
@@ -121,7 +121,7 @@ describe('BaseController', () => {
 
     it('throws ValidationError when validation fails', async () => {
       const req = mockRequest();
-      (req.json as any).mockResolvedValue({ name: '' });
+      (req as any).body = { name: '' };
 
       const schema: Validator<any> = (_data: unknown) => ({
         success: false,
@@ -133,7 +133,7 @@ describe('BaseController', () => {
 
     it('ValidationError contains field errors', async () => {
       const req = mockRequest();
-      (req.json as any).mockResolvedValue({});
+      (req as any).body = {};
 
       const errors = { email: ['Required'], password: ['Too short'] };
       const schema: Validator<any> = () => ({

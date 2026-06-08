@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { NaraRouter, createRouter } from '../../app/core/Router';
 
 /**
- * Helper: extract the underlying HyperExpress router from NaraRouter
+ * Helper: extract the underlying ultimate-express router from NaraRouter
  * We use getRouter() to access it for verification.
  */
 function getInternalRouter(router: NaraRouter) {
@@ -23,7 +23,7 @@ describe('NaraRouter', () => {
       expect(router).toBeInstanceOf(NaraRouter);
     });
 
-    it('has an underlying HyperExpress router', () => {
+    it('has an underlying ultimate-express router', () => {
       const router = createRouter();
       expect(getInternalRouter(router)).toBeDefined();
     });
@@ -224,7 +224,7 @@ describe('NaraRouter', () => {
   });
 
   describe('getRouter', () => {
-    it('returns the underlying HyperExpress router', () => {
+    it('returns the underlying ultimate-express router', () => {
       const router = createRouter();
       const internal = router.getRouter();
 

@@ -22,11 +22,12 @@ export function mockRequest(overrides: Partial<NaraRequest> = {}): NaraRequest {
     query: {} as Record<string, string>,
     params: {} as Record<string, string>,
     cookies: {} as Record<string, string>,
+    body: {} as Record<string, unknown>,
     user: undefined as User | undefined,
     share: undefined as Record<string, unknown> | undefined,
     requestId: undefined as string | undefined,
     json: vi.fn().mockResolvedValue({}),
-    // HyperExpress-specific
+    // Express-compatible
     accepts: vi.fn(),
     header: vi.fn((name: string) => undefined),
     ...overrides,
@@ -80,8 +81,12 @@ export function mockResponse(overrides: Partial<NaraResponse> = {}): NaraRespons
     getHeader(name: string) {
       return res._headers[name];
     },
-    cookie(name: string, value: string, maxAge?: number, options?: Record<string, unknown>) {
-      res._cookies.push({ name, value, maxAge, options });
+    cookie(name: string, value: string, options?: Record<string, unknown>) {
+      res._cookies.push({ name, value, maxAge: options?.maxAge as number, options });
+      return res;
+    },
+    clearCookie(name: string, options?: Record<string, unknown>) {
+      res._cookies.push({ name, value: '', maxAge: 0, options });
       return res;
     },
     redirect(url: string) {

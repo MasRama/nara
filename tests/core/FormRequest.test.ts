@@ -77,7 +77,7 @@ describe('FormRequest', () => {
     it('returns FormRequest with validated data', async () => {
       const req = mockRequest({
         user: mockUser(),
-        json: vi.fn().mockResolvedValue({ title: 'Hello', content: 'World' }),
+        body: { title: 'Hello', content: 'World' },
       } as any);
 
       const formReq = await CreatePostRequest.from(req as any);
@@ -89,7 +89,7 @@ describe('FormRequest', () => {
     it('passes() returns true after successful validation', async () => {
       const req = mockRequest({
         user: mockUser(),
-        json: vi.fn().mockResolvedValue({ title: 'Hello', content: 'World' }),
+        body: { title: 'Hello', content: 'World' },
       } as any);
 
       const formReq = await CreatePostRequest.from(req as any);
@@ -99,7 +99,7 @@ describe('FormRequest', () => {
     it('fails() returns false after successful validation', async () => {
       const req = mockRequest({
         user: mockUser(),
-        json: vi.fn().mockResolvedValue({ title: 'Hello', content: 'World' }),
+        body: { title: 'Hello', content: 'World' },
       } as any);
 
       const formReq = await CreatePostRequest.from(req as any);
@@ -109,7 +109,7 @@ describe('FormRequest', () => {
     it('errors() returns null on success', async () => {
       const req = mockRequest({
         user: mockUser(),
-        json: vi.fn().mockResolvedValue({ title: 'Hello', content: 'World' }),
+        body: { title: 'Hello', content: 'World' },
       } as any);
 
       const formReq = await CreatePostRequest.from(req as any);
@@ -121,7 +121,7 @@ describe('FormRequest', () => {
     it('throws ValidationError when data is invalid', async () => {
       const req = mockRequest({
         user: mockUser(),
-        json: vi.fn().mockResolvedValue({ title: '', content: '' }),
+        body: { title: '', content: '' },
       } as any);
 
       await expect(CreatePostRequest.from(req as any)).rejects.toThrow(ValidationError);
@@ -149,7 +149,7 @@ describe('FormRequest', () => {
     it('throws ForbiddenError when not authorized', async () => {
       const req = mockRequest({
         user: undefined, // not authenticated
-        json: vi.fn().mockResolvedValue({ title: 'Hello', content: 'World' }),
+        body: { title: 'Hello', content: 'World' },
       } as any);
 
       await expect(CreatePostRequest.from(req as any)).rejects.toThrow(ForbiddenError);
@@ -158,7 +158,7 @@ describe('FormRequest', () => {
     it('throws ForbiddenError for insufficient role', async () => {
       const req = mockRequest({
         user: mockUser({ roles: ['user'] }), // not admin
-        json: vi.fn().mockResolvedValue({ title: 'Hello', content: 'World' }),
+        body: { title: 'Hello', content: 'World' },
       } as any);
 
       await expect(AdminOnlyRequest.from(req as any)).rejects.toThrow(ForbiddenError);

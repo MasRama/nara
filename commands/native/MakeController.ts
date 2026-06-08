@@ -83,7 +83,7 @@ class ${className} extends BaseController {
 
     // TODO: Add validation schema
     // const data = await this.getBody(request, Create${modelName}Schema);
-    const data = await request.json();
+    const data = request.body;
 
     try {
       // TODO: Replace with model after creating it
@@ -129,7 +129,7 @@ class ${className} extends BaseController {
     
     // TODO: Add validation schema
     // const data = await this.getBody(request, Update${modelName}Schema);
-    const data = await request.json();
+    const data = request.body;
 
     // TODO: Replace with model after creating it
     // const existing = await ${modelName}.findById(id);

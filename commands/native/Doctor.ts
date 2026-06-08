@@ -98,7 +98,7 @@ class Doctor {
     }
 
     // Check key dependencies
-    const keyDeps = ['hyper-express', 'knex', 'better-sqlite3', 'pino'];
+    const keyDeps = ['ultimate-express', 'knex', 'better-sqlite3', 'pino'];
     const missingDeps: string[] = [];
 
     for (const dep of keyDeps) {
