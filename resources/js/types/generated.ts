@@ -220,11 +220,15 @@ export function createEmptyRoleForm(): RoleForm {
  * Convert Role to RoleForm for editing
  */
 export function roleToForm(role: Role): RoleForm {
+  const permissions = (role.permissions || []).map((p: string | { slug: string }) => 
+    typeof p === 'string' ? p : p.slug
+  );
+  
   return {
     id: role.id,
     name: role.name || '',
     slug: role.slug || '',
     description: role.description || '',
-    permissions: role.permissions || [],
+    permissions,
   };
 }

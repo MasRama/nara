@@ -42,10 +42,10 @@
     ]);
 
     if (rolesRes.success && rolesRes.data) {
-      roles = (rolesRes.data as { roles: Role[] }).roles;
+      roles = rolesRes.data as Role[];
     }
     if (permsRes.success && permsRes.data) {
-      groupedPermissions = (permsRes.data as { permissions: GroupedPermissions }).permissions;
+      groupedPermissions = permsRes.data as GroupedPermissions;
     }
     loading = false;
   }
@@ -114,7 +114,8 @@
   }
 
   function getPermissionCount(role: Role): number {
-    return role.permissions?.length || 0;
+    if (!role.permissions) return 0;
+    return role.permissions.length;
   }
 
   function formatResourceName(resource: string): string {
@@ -208,7 +209,8 @@
                       {#if role.permissions && role.permissions.length > 0}
                         <div class="flex flex-wrap gap-1 mt-1">
                           {#each Object.entries(
-                            role.permissions.reduce((acc, slug) => {
+                            role.permissions.reduce((acc, perm: string | { slug: string }) => {
+                              const slug = typeof perm === 'string' ? perm : perm.slug;
                               const resource = slug.split('.')[0];
                               if (!acc[resource]) acc[resource] = 0;
                               acc[resource]++;
