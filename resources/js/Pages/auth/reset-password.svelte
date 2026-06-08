@@ -51,7 +51,7 @@
               <img src="/public/nara.png" alt="Nara logo" class="h-7 w-7 rounded-lg object-cover" />
               <div class="flex flex-col leading-tight">
                   <span class="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-50">Nara</span>
-                  <span class="text-[10px] uppercase tracking-[0.22em] text-slate-500">TypeScript framework</span>
+                  <span class="text-[10px] uppercase tracking-[0.22em] text-slate-500">TypeScript starter kit</span>
               </div>
           </a>
           <div class="flex items-center gap-3">

@@ -3,12 +3,16 @@
 > This file is optimized for AI assistants (Cursor, Copilot, Claude, etc).
 > For human-readable documentation, see [README.md](./README.md).
 
+## What is Nara?
+
+Nara is a **full-stack TypeScript starter kit** — not a framework, not a library. It's an opinionated, batteries-included starting point that curates a high-performance stack (ultimate-express, Svelte 5, Inertia.js, SQLite) and ships with auth, RBAC, security, CLI generators, and a complete user management UI. You clone it, customize it, and ship it.
+
 ## Tech Stack
 
 | Layer | Technology | Language |
 |-------|------------|----------|
 | Runtime | Node.js >= 20 | **TypeScript** |
-| HTTP Server | ultimate-express (Express-compatible uWS) | TypeScript |
+| HTTP Server | ultimate-express (uWebSockets.js) | TypeScript |
 | Frontend | Svelte 5 + Inertia.js | TypeScript/Svelte |
 | Database | SQLite (better-sqlite3) | SQL |
 | Query Builder | Knex.js | TypeScript |
@@ -20,10 +24,11 @@
 ## Quick Context
 
 ```
-Nara = TypeScript full-stack framework
+Nara = Full-stack TypeScript starter kit
      = ultimate-express (server) + Svelte 5 (frontend) + Inertia.js (glue)
      = SQLite database with Active Record models
      = MVC architecture with Events and Services
+     = Auth, RBAC, security, CLI generators included
 ```
 
 ## Entry Points

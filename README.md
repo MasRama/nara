@@ -4,17 +4,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
 
-> High-performance TypeScript web framework combining **ultimate-express**, **Svelte 5**, and **Inertia.js** for building modern full-stack applications with exceptional developer experience.
+> Full-stack TypeScript starter kit. Performance-first, batteries-included. Built on **ultimate-express**, **Svelte 5**, and **Inertia.js**.
 
 > **For AI assistants:** See [README-LLM.md](./README-LLM.md) for optimized context file, or [AGENTS.md](./AGENTS.md) for detailed project knowledge base.
 
-## Philosophy
+## What is Nara?
 
-Nara is designed for developers who want:
-- **Type safety** from database to frontend
-- **Performance** without compromising developer experience
-- **Batteries included** but not bloated
-- **Modern stack** with proven technologies
+Nara is an opinionated TypeScript starter kit that curates a high-performance stack and ships with everything you need to build full-stack web applications:
+
+- **Fast server** — ultimate-express (uWebSockets.js) handles 250k+ req/s
+- **Modern frontend** — Svelte 5 + Inertia.js (SPA feel without building an API)
+- **Zero-config database** — SQLite with Active Record models
+- **Auth & RBAC** — session auth, Google OAuth, role-based permissions out of the box
+- **Security** — CSRF, rate limiting, input sanitization, security headers
+- **CLI scaffolding** — 22 generators for controllers, models, migrations, etc.
+
+Not a framework. Not a library. A **curated starting point** that you clone, customize, and ship.
 
 ## Requirements
 
@@ -74,7 +79,7 @@ my-app/
 │   ├── authorization/    # RBAC Gates & Policies
 │   ├── config/          # Configuration & constants
 │   ├── controllers/     # HTTP request handlers
-│   ├── core/            # Framework core (Router, App, Errors)
+│   ├── core/            # App kernel (Router, App, Errors)
 │   ├── events/          # Event system & listeners
 │   ├── helpers/         # Utility functions
 │   ├── middlewares/     # HTTP middlewares
@@ -95,94 +100,46 @@ my-app/
 └── logs/               # Application logs
 ```
 
-## Key Features
+## Tech Stack
 
-### Type-Safe Routing
+| Layer | Technology | Why |
+|-------|------------|-----|
+| HTTP Server | ultimate-express (uWebSockets.js) | 250k+ req/s, Express-compatible API |
+| Frontend | Svelte 5 + Inertia.js | SPA feel without building an API |
+| Database | SQLite (better-sqlite3) | Zero-config, embedded, fast |
+| Query Builder | Knex.js | Type-safe, migrations included |
+| Bundler | Vite | Fast HMR, modern tooling |
+| Testing | Vitest | Jest-compatible, native ESM |
 
-Full TypeScript support from request to response:
+## What's Included
 
-```typescript
-// routes/web.ts
-Route.get('/users', [Auth, AdminOnly], UserController.index);
-Route.post('/users', [Auth], UserController.store);
+### Authentication & Authorization
+- Session-based auth with login throttling
+- Google OAuth integration
+- Role-based access control (RBAC) with dynamic permissions
+- Admin dashboard for managing roles & permissions
 
-// Type-safe request handlers
-class UserController extends BaseController {
-  public async store(req: NaraRequest, res: NaraResponse) {
-    const data = await this.getBody(req, CreateUserSchema);
-    const user = await User.create(data);
-    return jsonCreated(res, 'User created', user);
-  }
-}
-```
+### Security (Production-Ready)
+- CSRF protection (Double Submit Cookie)
+- Rate limiting (sliding window, configurable per endpoint)
+- Input sanitization (XSS protection via DOMPurify)
+- Security headers (HSTS, CSP, X-Frame-Options)
+- Request ID for distributed tracing
 
-### Active Record Models
+### Developer Experience
+- 22 CLI generators (`make:controller`, `make:model`, `make:migration`, etc.)
+- Type-safe routing with middleware arrays
+- Custom validation system (no Zod/Yup/Joi dependency)
+- Event system for decoupled side effects
+- Active Record models with automatic timestamps
+- Structured logging (Pino) with rotation
 
-Clean database operations with automatic timestamps:
-
-```typescript
-// Find operations
-const user = await User.findById(id);
-const user = await User.findByEmail(email);
-
-// CRUD operations
-const user = await User.create({ name, email, password });
-await User.update(id, { name: 'New Name' });
-await User.delete(id);
-
-// Query builder
-const users = await User.query()
-  .where('is_verified', true)
-  .orderBy('created_at', 'desc');
-```
-
-### Built-in Security
-
-Production-ready security out of the box:
-
-- **CSRF Protection** - Double Submit Cookie pattern
-- **Rate Limiting** - Sliding window per IP/user
-- **Login Throttling** - Account lockout after failed attempts
-- **Input Sanitization** - XSS protection via DOMPurify
-- **Security Headers** - HSTS, CSP, X-Frame-Options
-- **Request ID** - Distributed tracing for debugging
-
-### Event System
-
-Decoupled architecture with async events:
-
-```typescript
-// Dispatch events
-await event(new UserRegistered({ user }));
-
-// Register listeners
-eventDispatcher.on(UserRegistered, async (event) => {
-  await sendWelcomeEmail(event.payload.user);
-});
-```
-
-### CLI Scaffolding
-
-21+ commands to speed up development:
-
-```bash
-# Create resources
-node nara make:controller UserController
-node nara make:model Post
-node nara make:migration create_posts_table
-node nara make:validator CreatePost
-
-# Database operations
-node nara db:migrate              # Run pending migrations
-node nara db:rollback             # Rollback last batch
-node nara db:fresh --seed         # Reset & seed database
-node nara db:status               # Check migration status
-
-# Development helpers
-node nara doctor                  # Check project health
-node nara generate:types          # Sync types to frontend
-node nara lint                    # TypeScript type check
-```
+### Frontend
+- Svelte 5 with runes (`$state`, `$derived`, `$effect`)
+- Inertia.js for server-driven SPA
+- Tailwind CSS + shadcn-svelte components
+- Toast notifications, API wrapper, CSRF handling
+- Dark mode support
 
 ## Configuration
 

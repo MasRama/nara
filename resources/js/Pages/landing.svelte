@@ -69,7 +69,7 @@
         </div>
 
         <p in:fly={{ y: 20, duration: 1000, delay: 400 }} class="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-xl font-body">
-          A TypeScript full-stack framework combining ultimate-express, Svelte 5, and Inertia.js. Designed for developers who value clarity, performance, and craftsmanship.
+          A full-stack TypeScript starter kit combining ultimate-express, Svelte 5, and Inertia.js. Batteries included — clone, customize, ship.
         </p>
 
         <div in:fly={{ y: 20, duration: 1000, delay: 600 }} class="flex flex-col sm:flex-row items-start sm:items-center gap-6 mt-4">
@@ -179,7 +179,7 @@
         </div>
         <div class="space-y-8 text-lg text-muted-foreground font-body leading-relaxed">
           <p>
-            We believe a framework should provide a solid foundation without dictating your every move. It should disappear when you don't need it and provide immense leverage when you do.
+            We believe a starter kit should provide a solid foundation without dictating your every move. It should give you everything you need and stay out of the way when you don't.
           </p>
           <p>
             Nara curates exceptional tools—ultimate-express for unyielding server performance, SQLite for zero-latency data, Svelte 5 for elegant reactivity—and integrates them seamlessly. No bloated configuration. Just clarity and momentum.
@@ -428,7 +428,7 @@
         </h2>
         
         <p class="text-lg sm:text-xl text-muted-foreground font-body mb-12">
-          Experience a web framework crafted for developer productivity and uncompromised performance.
+          A batteries-included starter kit crafted for developer productivity and uncompromised performance.
         </p>
 
         <div class="flex flex-col sm:flex-row items-center gap-4">

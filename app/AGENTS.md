@@ -13,7 +13,7 @@ The `app/` directory contains all application source code. It follows a layered 
 
 ```
 app/
-├── core/              # Framework kernel (App, Router, BaseController, errors)
+├── core/              # App kernel (App, Router, BaseController, errors)
 ├── controllers/       # HTTP request handlers (extend BaseController)
 ├── models/            # Database models (extend BaseModel, Active Record)
 ├── services/          # Business logic (DB, Logger, Auth, Storage)
@@ -29,7 +29,7 @@ app/
 
 ## Module Responsibilities
 
-### `core/` - Framework Kernel
+### `core/` - App Kernel
 **Purpose:** Foundation classes that power the entire application.
 
 | File | What it does |

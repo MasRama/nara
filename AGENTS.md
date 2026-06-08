@@ -1,12 +1,12 @@
-# Nara Framework - Project Knowledge Base
+# Nara - Project Knowledge Base
 
-**Generated:** 2026-06-07
+**Generated:** 2026-06-08
 **Commit:** d4644b6
 **Branch:** (current)
 
 ## Overview
 
-TypeScript web framework for building full-stack applications. Powered by ultimate-express + Svelte 5 + Inertia.js. MVC + Events + Services architecture.
+Full-stack TypeScript starter kit. Curates a high-performance stack (ultimate-express, Svelte 5, Inertia.js, SQLite) and ships with auth, RBAC, security, CLI tooling, and a complete user management UI. Clone, customize, ship.
 
 ## Mental Model (Start Here)
 
@@ -14,9 +14,10 @@ TypeScript web framework for building full-stack applications. Powered by ultima
 
 ### What is Nara?
 
-Nara is a **TypeScript full-stack framework** for building modern web applications. It combines:
-- **Backend**: ultimate-express (Express-compatible uWS server) + Knex.js (SQL query builder)
+Nara is a **full-stack TypeScript starter kit** — not a framework. It curates a proven stack and ships with everything you need to build web applications:
+- **Backend**: ultimate-express (uWebSockets.js) + Knex.js (SQL query builder)
 - **Frontend**: Svelte 5 + Inertia.js (SPA-like experience without building an API)
+- **Batteries**: Auth, RBAC, CSRF, rate limiting, CLI generators, event system
 
 ### Architecture Pattern
 
@@ -136,7 +137,7 @@ Every route returns **either** an Inertia response **or** a JSON response — ne
 ```
 ./
 ├── app/                    # Application source
-│   ├── core/              # Framework kernel (BaseController, BaseModel, Router, App)
+│   ├── core/              # App kernel (BaseController, BaseModel, Router, App)
 │   ├── controllers/       # HTTP handlers
 │   ├── models/            # Active Record models
 │   ├── services/          # Business logic (DB, Logger, Auth, GoogleAuth)

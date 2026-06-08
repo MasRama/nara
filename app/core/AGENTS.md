@@ -1,4 +1,4 @@
-# app/core - Framework Kernel
+# app/core - App Kernel
 
 **Generated:** 2026-04-04
 
@@ -10,7 +10,7 @@
 
 ## Overview
 
-Framework kernel exporting HTTP abstractions, routing, error handling, and response helpers. Powers the entire application lifecycle.
+App kernel exporting HTTP abstractions, routing, error handling, and response helpers. Powers the entire application lifecycle.
 
 ## Structure
 
