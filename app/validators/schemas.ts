@@ -1,671 +1,103 @@
-/**
- * Validation Schemas
- * 
- * Simple validation functions for all API endpoints.
- * No external dependencies - just plain TypeScript.
- */
-import { ValidationResult, isString, isEmail, isPhone, isUUID, isBoolean, isArray, isObject } from './validate';
-
-// ============================================
-// Type Definitions
-// ============================================
-
-export interface LoginInput {
-  email?: string;
-  phone?: string;
-  password: string;
-}
-
-export interface RegisterInput {
-  name: string;
-  email: string;
-  phone?: string | null;
-  password: string;
-}
-
-export interface ForgotPasswordInput {
-  email?: string;
-  phone?: string;
-}
-
-export interface ResetPasswordInput {
-  id: string;
-  password: string;
-}
-
-export interface ChangePasswordInput {
-  current_password: string;
-  new_password: string;
-}
-
-export interface CreateUserInput {
-  name: string;
-  email: string;
-  phone?: string | null;
-  password?: string;
-  is_verified?: boolean;
-  roles?: string[]; // Array of role slugs
-}
-
-export interface UpdateUserInput {
-  name?: string;
-  email?: string;
-  phone?: string | null;
-  password?: string;
-  is_verified?: boolean;
-  roles?: string[]; // Array of role slugs
-}
-
-export interface DeleteUsersInput {
-  ids: string[];
-}
-
-export interface ChangeProfileInput {
-  name: string;
-  email: string;
-  phone?: string | null;
-}
-
-export interface CreateRoleInput {
-  name: string;
-  slug: string;
-  description?: string | null;
-  permissions?: string[]; // Array of permission slugs
-}
-
-export interface UpdateRoleInput {
-  name?: string;
-  slug?: string;
-  description?: string | null;
-  permissions?: string[]; // Array of permission slugs
-}
-
-
-// ============================================
-// Validator Functions
-// ============================================
-
-/**
- * Login validator
- */
-export function LoginSchema(data: unknown): ValidationResult<LoginInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { email, phone, password } = data as Record<string, unknown>;
-
-  const trimmedEmail = email ? String(email).trim() : undefined;
-  const trimmedPassword = password ? String(password).trim() : '';
-
-  // Email or phone required
-  if (!trimmedEmail && !phone) {
-    errors._root = ['Email atau nomor telepon wajib diisi'];
-  }
-
-  // Validate email if provided
-  if (trimmedEmail !== undefined && trimmedEmail !== null && trimmedEmail !== '') {
-    if (!isEmail(trimmedEmail)) {
-      errors.email = ['Format email tidak valid'];
-    }
-  }
-
-  // Validate phone if provided
-  if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isPhone(phone)) {
-      errors.phone = ['Format nomor telepon tidak valid'];
-    }
-  }
-
-  // Password required
-  if (!isString(trimmedPassword) || trimmedPassword.length === 0) {
-    errors.password = ['Password wajib diisi'];
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      email: trimmedEmail ? trimmedEmail.toLowerCase() : undefined,
-      phone: phone ? String(phone) : undefined,
-      password: String(trimmedPassword),
-    }
-  };
-}
-
-/**
- * Register validator
- */
-export function RegisterSchema(data: unknown): ValidationResult<RegisterInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { name, email, phone, password } = data as Record<string, unknown>;
-
-  const trimmedEmail = String(email).trim();
-  const trimmedPassword = String(password).trim();
-
-  // Name validation
-  if (!isString(name) || name.trim().length < 2) {
-    errors.name = ['Nama minimal 2 karakter'];
-  } else if (name.length > 100) {
-    errors.name = ['Nama maksimal 100 karakter'];
-  }
-
-  // Email validation
-  if (!isEmail(trimmedEmail)) {
-    errors.email = ['Format email tidak valid'];
-  }
-
-  // Phone validation (optional)
-  if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isPhone(phone)) {
-      errors.phone = ['Format nomor telepon tidak valid'];
-    }
-  }
-
-  // Password validation
-  if (!isString(trimmedPassword) || trimmedPassword.length < 8) {
-    errors.password = ['Password minimal 8 karakter'];
-  } else if (trimmedPassword.length > 100) {
-    errors.password = ['Password maksimal 100 karakter'];
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      name: String(name).trim(),
-      email: trimmedEmail.toLowerCase(),
-      phone: phone ? String(phone) : null,
-      password: trimmedPassword,
-    }
-  };
-}
-
-/**
- * Forgot password validator
- */
-export function ForgotPasswordSchema(data: unknown): ValidationResult<ForgotPasswordInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { email, phone } = data as Record<string, unknown>;
-
-  // Email or phone required
-  if (!email && !phone) {
-    errors._root = ['Email atau nomor telepon wajib diisi'];
-  }
-
-  // Validate email if provided
-  if (email !== undefined && email !== null && email !== '') {
-    if (!isEmail(email)) {
-      errors.email = ['Format email tidak valid'];
-    }
-  }
-
-  // Validate phone if provided
-  if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isString(phone) || phone.length < 10) {
-      errors.phone = ['Nomor telepon minimal 10 digit'];
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      email: email ? String(email).toLowerCase() : undefined,
-      phone: phone ? String(phone) : undefined,
-    }
-  };
-}
-
-/**
- * Reset password validator
- */
-export function ResetPasswordSchema(data: unknown): ValidationResult<ResetPasswordInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { id, password } = data as Record<string, unknown>;
-
-  // Token validation
-  if (!isString(id) || id.length === 0) {
-    errors.id = ['Token tidak valid'];
-  }
-
-  // Password validation
-  if (!isString(password) || password.length < 8) {
-    errors.password = ['Password minimal 8 karakter'];
-  } else if (password.length > 100) {
-    errors.password = ['Password maksimal 100 karakter'];
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      id: String(id),
-      password: String(password),
-    }
-  };
-}
-
-/**
- * Change password validator
- */
-export function ChangePasswordSchema(data: unknown): ValidationResult<ChangePasswordInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { current_password, new_password } = data as Record<string, unknown>;
-
-  // Current password validation
-  if (!isString(current_password) || current_password.length === 0) {
-    errors.current_password = ['Password lama wajib diisi'];
-  }
-
-  // New password validation
-  if (!isString(new_password) || new_password.length < 8) {
-    errors.new_password = ['Password minimal 8 karakter'];
-  } else if (new_password.length > 100) {
-    errors.new_password = ['Password maksimal 100 karakter'];
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      current_password: String(current_password),
-      new_password: String(new_password),
-    }
-  };
-}
-
-/**
- * Create user validator
- */
-export function CreateUserSchema(data: unknown): ValidationResult<CreateUserInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { name, email, phone, password, is_verified, roles } = data as Record<string, unknown>;
-
-  // Name validation
-  if (!isString(name) || name.trim().length < 2) {
-    errors.name = ['Nama minimal 2 karakter'];
-  } else if (name.length > 100) {
-    errors.name = ['Nama maksimal 100 karakter'];
-  }
-
-  // Email validation
-  if (!isEmail(email)) {
-    errors.email = ['Format email tidak valid'];
-  }
-
-  // Phone validation (optional)
-  if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isPhone(phone)) {
-      errors.phone = ['Format nomor telepon tidak valid'];
-    }
-  }
-
-  // Password validation (optional)
-  if (password !== undefined && password !== null && password !== '') {
-    if (!isString(password) || password.length < 8) {
-      errors.password = ['Password minimal 8 karakter'];
-    }
-  }
-
-  // Roles validation (optional)
-  if (roles !== undefined && roles !== null) {
-    if (!isArray(roles)) {
-      errors.roles = ['Roles harus berupa array'];
-    } else {
-      const invalidRoles = roles.filter((role: unknown) => !isString(role));
-      if (invalidRoles.length > 0) {
-        errors.roles = ['Setiap role harus berupa string'];
-      }
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      name: String(name).trim(),
-      email: String(email).toLowerCase(),
-      phone: phone ? String(phone) : null,
-      password: password ? String(password) : undefined,
-      is_verified: isBoolean(is_verified) ? is_verified : false,
-      roles: roles ? (roles as string[]) : undefined,
-    }
-  };
-}
-
-/**
- * Update user validator
- */
-export function UpdateUserSchema(data: unknown): ValidationResult<UpdateUserInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { name, email, phone, password, is_verified, roles } = data as Record<string, unknown>;
-
-  // At least one field must be provided
-  const hasAnyField = name !== undefined || email !== undefined || phone !== undefined ||
-                      password !== undefined || is_verified !== undefined || roles !== undefined;
-  
-  if (!hasAnyField) {
-    errors._root = ['Minimal satu field harus diisi untuk update'];
-  }
-
-  // Name validation (optional)
-  if (name !== undefined && name !== null) {
-    if (!isString(name) || name.trim().length < 2) {
-      errors.name = ['Nama minimal 2 karakter'];
-    } else if (name.length > 100) {
-      errors.name = ['Nama maksimal 100 karakter'];
-    }
-  }
-
-  // Email validation (optional)
-  if (email !== undefined && email !== null) {
-    if (!isEmail(email)) {
-      errors.email = ['Format email tidak valid'];
-    }
-  }
-
-  // Phone validation (optional)
-  if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isPhone(phone)) {
-      errors.phone = ['Format nomor telepon tidak valid'];
-    }
-  }
-
-  // Password validation (optional)
-  if (password !== undefined && password !== null && password !== '') {
-    if (!isString(password) || password.length < 8) {
-      errors.password = ['Password minimal 8 karakter'];
-    }
-  }
-
-  // Roles validation (optional)
-  if (roles !== undefined && roles !== null) {
-    if (!isArray(roles)) {
-      errors.roles = ['Roles harus berupa array'];
-    } else {
-      const invalidRoles = roles.filter((role: unknown) => !isString(role));
-      if (invalidRoles.length > 0) {
-        errors.roles = ['Setiap role harus berupa string'];
-      }
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  const result: UpdateUserInput = {};
-  if (name !== undefined) result.name = String(name).trim();
-  if (email !== undefined) result.email = String(email).toLowerCase();
-  if (phone !== undefined) result.phone = phone ? String(phone) : null;
-  if (password !== undefined && password !== '') result.password = String(password);
-  if (is_verified !== undefined) result.is_verified = Boolean(is_verified);
-  if (roles !== undefined) result.roles = roles as string[];
-
-  return { success: true, data: result };
-}
-
-/**
- * Delete users validator
- */
-export function DeleteUsersSchema(data: unknown): ValidationResult<DeleteUsersInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { ids } = data as Record<string, unknown>;
-
-  // IDs validation
-  if (!isArray(ids) || ids.length === 0) {
-    errors.ids = ['Minimal satu ID harus dipilih'];
-  } else {
-    const invalidIds = ids.filter(id => !isUUID(id));
-    if (invalidIds.length > 0) {
-      errors.ids = ['Format ID tidak valid'];
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      ids: (ids as unknown[]).map(id => String(id)),
-    }
-  };
-}
-
-/**
- * Change profile validator
- */
-export function ChangeProfileSchema(data: unknown): ValidationResult<ChangeProfileInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { name, email, phone } = data as Record<string, unknown>;
-
-  // Name validation
-  if (!isString(name) || name.trim().length < 2) {
-    errors.name = ['Nama minimal 2 karakter'];
-  } else if (name.length > 100) {
-    errors.name = ['Nama maksimal 100 karakter'];
-  }
-
-  // Email validation
-  if (!isEmail(email)) {
-    errors.email = ['Format email tidak valid'];
-  }
-
-  // Phone validation (optional)
-  if (phone !== undefined && phone !== null && phone !== '') {
-    if (!isPhone(phone)) {
-      errors.phone = ['Format nomor telepon tidak valid'];
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      name: String(name).trim(),
-      email: String(email).toLowerCase(),
-      phone: phone ? String(phone) : null,
-    }
-  };
-}
-
-/**
- * Create role validator
- */
-export function CreateRoleSchema(data: unknown): ValidationResult<CreateRoleInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { name, slug, description, permissions } = data as Record<string, unknown>;
-
-  // Name validation
-  if (!isString(name) || name.trim().length < 2) {
-    errors.name = ['Nama role minimal 2 karakter'];
-  } else if (name.length > 100) {
-    errors.name = ['Nama role maksimal 100 karakter'];
-  }
-
-  // Slug validation
-  if (!isString(slug) || slug.trim().length < 2) {
-    errors.slug = ['Slug minimal 2 karakter'];
-  } else if (!/^[a-z0-9-]+$/.test(slug.trim())) {
-    errors.slug = ['Slug hanya boleh huruf kecil, angka, dan tanda hubung'];
-  } else if (slug.length > 100) {
-    errors.slug = ['Slug maksimal 100 karakter'];
-  }
-
-  // Description validation (optional)
-  if (description !== undefined && description !== null && description !== '') {
-    if (!isString(description) || description.length > 500) {
-      errors.description = ['Deskripsi maksimal 500 karakter'];
-    }
-  }
-
-  // Permissions validation (optional)
-  if (permissions !== undefined && permissions !== null) {
-    if (!isArray(permissions)) {
-      errors.permissions = ['Permissions harus berupa array'];
-    } else {
-      const invalidPerms = permissions.filter((p: unknown) => !isString(p));
-      if (invalidPerms.length > 0) {
-        errors.permissions = ['Setiap permission harus berupa string'];
-      }
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  return {
-    success: true,
-    data: {
-      name: String(name).trim(),
-      slug: String(slug).trim().toLowerCase(),
-      description: description ? String(description) : null,
-      permissions: permissions ? (permissions as string[]) : [],
-    }
-  };
-}
-
-/**
- * Update role validator
- */
-export function UpdateRoleSchema(data: unknown): ValidationResult<UpdateRoleInput> {
-  const errors: Record<string, string[]> = {};
-  
-  if (!isObject(data)) {
-    return { success: false, errors: { _root: ['Data harus berupa object'] } };
-  }
-
-  const { name, slug, description, permissions } = data as Record<string, unknown>;
-
-  // At least one field must be provided
-  const hasAnyField = name !== undefined || slug !== undefined || 
-                      description !== undefined || permissions !== undefined;
-  
-  if (!hasAnyField) {
-    errors._root = ['Minimal satu field harus diisi untuk update'];
-  }
-
-  // Name validation (optional)
-  if (name !== undefined && name !== null) {
-    if (!isString(name) || name.trim().length < 2) {
-      errors.name = ['Nama role minimal 2 karakter'];
-    } else if (name.length > 100) {
-      errors.name = ['Nama role maksimal 100 karakter'];
-    }
-  }
-
-  // Slug validation (optional)
-  if (slug !== undefined && slug !== null) {
-    if (!isString(slug) || slug.trim().length < 2) {
-      errors.slug = ['Slug minimal 2 karakter'];
-    } else if (!/^[a-z0-9-]+$/.test(slug.trim())) {
-      errors.slug = ['Slug hanya boleh huruf kecil, angka, dan tanda hubung'];
-    } else if (slug.length > 100) {
-      errors.slug = ['Slug maksimal 100 karakter'];
-    }
-  }
-
-  // Description validation (optional)
-  if (description !== undefined && description !== null && description !== '') {
-    if (!isString(description) || description.length > 500) {
-      errors.description = ['Deskripsi maksimal 500 karakter'];
-    }
-  }
-
-  // Permissions validation (optional)
-  if (permissions !== undefined && permissions !== null) {
-    if (!isArray(permissions)) {
-      errors.permissions = ['Permissions harus berupa array'];
-    } else {
-      const invalidPerms = permissions.filter((p: unknown) => !isString(p));
-      if (invalidPerms.length > 0) {
-        errors.permissions = ['Setiap permission harus berupa string'];
-      }
-    }
-  }
-
-  if (Object.keys(errors).length > 0) {
-    return { success: false, errors };
-  }
-
-  const result: UpdateRoleInput = {};
-  if (name !== undefined) result.name = String(name).trim();
-  if (slug !== undefined) result.slug = String(slug).trim().toLowerCase();
-  if (description !== undefined) result.description = description ? String(description) : null;
-  if (permissions !== undefined) result.permissions = permissions as string[];
-
-  return { success: true, data: result };
-}
-
+import { z } from 'zod';
+
+const phoneRegex = /^[0-9+\-\s()]+$/;
+
+export const LoginSchema = z.object({
+  email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
+  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().or(z.literal('')),
+  password: z.string().min(1, 'Password wajib diisi'),
+}).refine(data => data.email || data.phone, {
+  message: 'Email atau nomor telepon wajib diisi',
+  path: ['_root'],
+});
+
+export const RegisterSchema = z.object({
+  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
+  password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
+});
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
+  phone: z.string().min(10, 'Nomor telepon minimal 10 digit').optional().or(z.literal('')),
+}).refine(data => data.email || data.phone, {
+  message: 'Email atau nomor telepon wajib diisi',
+  path: ['_root'],
+});
+
+export const ResetPasswordSchema = z.object({
+  id: z.string().min(1, 'Token tidak valid'),
+  password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
+});
+
+export const ChangePasswordSchema = z.object({
+  current_password: z.string().min(1, 'Password lama wajib diisi'),
+  new_password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
+});
+
+export const CreateUserSchema = z.object({
+  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
+  password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
+  is_verified: z.boolean().optional().default(false),
+  roles: z.array(z.string()).optional(),
+});
+
+export const UpdateUserSchema = z.object({
+  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter').optional(),
+  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()).optional(),
+  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
+  password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
+  is_verified: z.boolean().optional(),
+  roles: z.array(z.string()).optional(),
+}).refine(
+  data => data.name !== undefined || data.email !== undefined || data.phone !== undefined ||
+          data.password !== undefined || data.is_verified !== undefined || data.roles !== undefined,
+  { message: 'Minimal satu field harus diisi untuk update', path: ['_root'] }
+);
+
+export const DeleteUsersSchema = z.object({
+  ids: z.array(z.string().uuid('Format ID tidak valid')).min(1, 'Minimal satu ID harus dipilih'),
+});
+
+export const ChangeProfileSchema = z.object({
+  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
+});
+
+export const CreateRoleSchema = z.object({
+  name: z.string().min(2, 'Nama role minimal 2 karakter').max(100, 'Nama role maksimal 100 karakter'),
+  slug: z.string().min(2, 'Slug minimal 2 karakter').max(100, 'Slug maksimal 100 karakter')
+    .regex(/^[a-z0-9-]+$/, 'Slug hanya boleh huruf kecil, angka, dan tanda hubung')
+    .transform(v => v.toLowerCase()),
+  description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable().or(z.literal('')),
+  permissions: z.array(z.string()).optional().default([]),
+});
+
+export const UpdateRoleSchema = z.object({
+  name: z.string().min(2, 'Nama role minimal 2 karakter').max(100, 'Nama role maksimal 100 karakter').optional(),
+  slug: z.string().min(2, 'Slug minimal 2 karakter').max(100, 'Slug maksimal 100 karakter')
+    .regex(/^[a-z0-9-]+$/, 'Slug hanya boleh huruf kecil, angka, dan tanda hubung')
+    .transform(v => v.toLowerCase()).optional(),
+  description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable().or(z.literal('')),
+  permissions: z.array(z.string()).optional(),
+}).refine(
+  data => data.name !== undefined || data.slug !== undefined ||
+          data.description !== undefined || data.permissions !== undefined,
+  { message: 'Minimal satu field harus diisi untuk update', path: ['_root'] }
+);
+
+export type LoginInput = z.infer<typeof LoginSchema>;
+export type RegisterInput = z.infer<typeof RegisterSchema>;
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+export type CreateUserInput = z.infer<typeof CreateUserSchema>;
+export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
+export type DeleteUsersInput = z.infer<typeof DeleteUsersSchema>;
+export type ChangeProfileInput = z.infer<typeof ChangeProfileSchema>;
+export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
+export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;

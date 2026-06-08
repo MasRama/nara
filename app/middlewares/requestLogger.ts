@@ -1,53 +1,16 @@
-/**
- * Request Logger Middleware
- * 
- * Logs all HTTP requests with timing, status codes, and relevant metadata.
- * Uses the Logger service for structured logging.
- * 
- * Features:
- * - Request timing (latency measurement)
- * - User ID tracking (when authenticated)
- * - IP address logging
- * - Configurable log level based on status code
- * - Skip patterns for health checks and static assets
- * 
- * @example
- * // Basic usage
- * app.use(requestLogger());
- * 
- * // Custom configuration
- * app.use(requestLogger({
- *   skip: (req) => req.path.startsWith('/health'),
- *   includeHeaders: ['user-agent', 'referer'],
- * }));
- */
-
 import Logger from "@services/Logger";
 import type { NaraRequest, NaraResponse, NaraMiddleware } from "@core/types";
 
-/**
- * Request logger configuration options
- */
 export interface RequestLoggerOptions {
-  /** Skip logging for certain requests */
   skip?: (req: NaraRequest) => boolean;
-  /** Headers to include in log (default: user-agent) */
   includeHeaders?: string[];
-  /** Include query parameters in log */
   includeQuery?: boolean;
-  /** Include request body in log (careful with sensitive data!) */
   includeBody?: boolean;
-  /** Log level for successful requests (default: 'info') */
   successLevel?: 'trace' | 'debug' | 'info';
-  /** Log level for client errors 4xx (default: 'warn') */
   clientErrorLevel?: 'info' | 'warn';
-  /** Log level for server errors 5xx (default: 'error') */
   serverErrorLevel?: 'warn' | 'error';
 }
 
-/**
- * Default paths to skip logging
- */
 const DEFAULT_SKIP_PATHS = [
   '/health',
   '/ready',
@@ -55,27 +18,15 @@ const DEFAULT_SKIP_PATHS = [
   '/robots.txt',
 ];
 
-/**
- * Default static asset extensions to skip
- */
 const STATIC_EXTENSIONS = [
   '.js', '.css', '.map', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico',
   '.woff', '.woff2', '.ttf', '.eot', '.webp', '.avif',
 ];
 
-/**
- * Check if path is a static asset
- */
 function isStaticAsset(path: string): boolean {
   return STATIC_EXTENSIONS.some(ext => path.endsWith(ext));
 }
 
-/**
- * Create request logger middleware
- * 
- * @param options - Logger configuration
- * @returns Middleware function
- */
 export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddleware {
   const {
     skip,
@@ -91,7 +42,6 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
     const startTime = process.hrtime.bigint();
     const startTimestamp = Date.now();
     
-    // Check if should skip this request
     const shouldSkip = 
       (skip && skip(req)) ||
       DEFAULT_SKIP_PATHS.includes(req.path) ||
@@ -101,7 +51,6 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
       return next();
     }
     
-    // Store original end method to intercept response
     const originalJson = res.json.bind(res);
     const originalSend = res.send.bind(res);
     const originalRedirect = res.redirect.bind(res);
@@ -116,10 +65,8 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
       const durationNs = Number(endTime - startTime);
       const durationMs = Math.round(durationNs / 1_000_000);
       
-      // Get status code from response
       const status = statusCode || res.statusCode || 200;
       
-      // Build log data
       const logData: Record<string, unknown> = {
         method: req.method,
         path: req.path,
@@ -129,17 +76,14 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
         timestamp: new Date(startTimestamp).toISOString(),
       };
 
-      // Add request ID if available (from requestId middleware)
       if (req.requestId) {
         logData.requestId = req.requestId;
       }
 
-      // Add user ID if authenticated
       if (req.user?.id) {
         logData.userId = req.user.id;
       }
       
-      // Add selected headers
       if (includeHeaders.length > 0) {
         const headers: Record<string, string> = {};
         for (const header of includeHeaders) {
@@ -153,12 +97,10 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
         }
       }
       
-      // Add query parameters
       if (includeQuery && Object.keys(req.query).length > 0) {
         logData.query = req.query;
       }
       
-      // Determine log level based on status code
       let level: 'trace' | 'debug' | 'info' | 'warn' | 'error';
       if (status >= 500) {
         level = serverErrorLevel;
@@ -168,10 +110,8 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
         level = successLevel;
       }
       
-      // Format message
       const message = `${req.method} ${req.path} ${status} ${durationMs}ms`;
       
-      // Log based on level
       switch (level) {
         case 'trace':
           Logger.trace(message, logData);
@@ -191,19 +131,16 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
       }
     };
     
-    // Intercept json() to capture status code
     res.json = (data: unknown) => {
       logRequest();
       return originalJson(data);
     };
     
-    // Intercept send() to capture status code
     res.send = (data: unknown) => {
       logRequest();
       return originalSend(data as Parameters<typeof originalSend>[0]);
     };
 
-    // Intercept redirect() to capture status code (3xx)
     res.redirect = ((...args: any[]) => {
       logRequest(typeof args[0] === 'number' ? args[0] : 302);
       return originalRedirect.apply(res, args as any);
@@ -213,9 +150,6 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
   };
 }
 
-/**
- * Create a verbose request logger for debugging
- */
 export function verboseRequestLogger(): NaraMiddleware {
   return requestLogger({
     includeHeaders: ['user-agent', 'referer', 'content-type', 'accept'],
@@ -224,13 +158,10 @@ export function verboseRequestLogger(): NaraMiddleware {
   });
 }
 
-/**
- * Create a minimal request logger (only errors)
- */
 export function errorOnlyRequestLogger(): NaraMiddleware {
   return requestLogger({
-    skip: (req) => req.method === 'GET', // Skip GET requests
-    successLevel: 'trace', // Effectively skip successful requests
+    skip: (req) => req.method === 'GET',
+    successLevel: 'trace',
     clientErrorLevel: 'warn',
     serverErrorLevel: 'error',
   });

@@ -1,118 +1,74 @@
-/**
- * Environment Configuration & Validation
- * 
- * Validates required environment variables on application startup.
- * Provides typed access to environment configuration.
- * No external dependencies - just plain TypeScript.
- * 
- * Auto-detection: If .env.production exists, it will be loaded automatically
- * and NODE_ENV will be set to 'production' without needing to prefix commands.
- */
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { SERVER, DATABASE, LOGGING } from './constants';
 
-// ============================================
-// Automatic Environment File Loading (runs on first import of @config)
-// This ensures .env / .env.production are loaded into process.env
-// BEFORE any modules read from process.env at their top-level
-// (e.g. Logger service determines LOG_LEVEL on import).
-// ============================================
 function loadEnvironmentFiles(): void {
   const projectRoot = process.cwd();
   const prodEnvPath = join(projectRoot, '.env.production');
   const devEnvPath = join(projectRoot, '.env');
   
-  // Auto-detect: if .env.production exists, use production mode
   const hasProdEnv = existsSync(prodEnvPath);
   
   if (hasProdEnv) {
-    // Load .env.production and force production mode
     require('dotenv').config({ path: prodEnvPath });
     process.env.NODE_ENV = 'production';
   } else {
-    // Load .env for development
     require('dotenv').config({ path: devEnvPath });
-    // Keep NODE_ENV from .env or default to development
     process.env.NODE_ENV = process.env.NODE_ENV || 'development';
   }
 }
 
 loadEnvironmentFiles();
 
-// ============================================
-// Type Definitions
-// ============================================
-
 export interface Env {
-  // Server
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
   VITE_PORT: number;
   APP_URL: string;
   HAS_CERTIFICATE: 'true' | 'false';
   
-  // Database
   DB_CONNECTION: string;
   
-  // Logging
   LOG_LEVEL: typeof LOGGING.LEVELS[number];
   
-  // Google OAuth (optional)
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
   
-  // Backup (optional)
   BACKUP_ENCRYPTION_KEY?: string;
   BACKUP_RETENTION_DAYS: number;
 }
 
-// ============================================
-// Validation Function
-// ============================================
-
-/**
- * Validate environment variables
- * @returns Validated and typed environment object
- * @throws Error if validation fails
- */
 export function validateEnv(): Env {
   const errors: string[] = [];
   const env = process.env;
 
-  // Validate NODE_ENV
   const validNodeEnvs = ['development', 'production', 'test'] as const;
   const nodeEnv = env.NODE_ENV || 'development';
   if (!validNodeEnvs.includes(nodeEnv as any)) {
     errors.push(`  - NODE_ENV: Must be one of ${validNodeEnvs.join(', ')}`);
   }
 
-  // Validate PORT
   const port = parseInt(env.PORT || String(SERVER.DEFAULT_PORT), 10);
   if (isNaN(port) || port <= 0) {
     errors.push('  - PORT: Must be a positive number');
   }
 
-  // Validate VITE_PORT
   const vitePort = parseInt(env.VITE_PORT || String(SERVER.DEFAULT_VITE_PORT), 10);
   if (isNaN(vitePort) || vitePort <= 0) {
     errors.push('  - VITE_PORT: Must be a positive number');
   }
 
-  // Validate LOG_LEVEL
   const logLevel = env.LOG_LEVEL || 'info';
   if (!LOGGING.LEVELS.includes(logLevel as any)) {
     errors.push(`  - LOG_LEVEL: Must be one of ${LOGGING.LEVELS.join(', ')}`);
   }
 
-  // Validate HAS_CERTIFICATE
   const hasCert = env.HAS_CERTIFICATE || 'false';
   if (hasCert !== 'true' && hasCert !== 'false') {
     errors.push('  - HAS_CERTIFICATE: Must be "true" or "false"');
   }
 
-  // Validate BACKUP_RETENTION_DAYS
   const backupDays = parseInt(env.BACKUP_RETENTION_DAYS || '30', 10);
   if (isNaN(backupDays) || backupDays <= 0) {
     errors.push('  - BACKUP_RETENTION_DAYS: Must be a positive number');
@@ -141,18 +97,13 @@ export function validateEnv(): Env {
   };
 }
 
-/**
- * Check if specific features are configured
- */
 export function checkFeatureConfig(env: Env) {
   const warnings: string[] = [];
   
-  // Check Google OAuth (empty string counts as not configured)
   if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
     warnings.push('Google OAuth not configured (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)');
   }
   
-  // Check Backup
   if (!env.BACKUP_ENCRYPTION_KEY) {
     warnings.push('Backup encryption not configured (BACKUP_ENCRYPTION_KEY)');
   }
@@ -160,9 +111,6 @@ export function checkFeatureConfig(env: Env) {
   return warnings;
 }
 
-/**
- * Get environment summary for logging
- */
 export function getEnvSummary(env: Env) {
   return {
     nodeEnv: env.NODE_ENV,
@@ -178,15 +126,8 @@ export function getEnvSummary(env: Env) {
   };
 }
 
-// ============================================
-// Singleton Instance
-// ============================================
-
 let _env: Env | null = null;
 
-/**
- * Get validated environment (lazy initialization)
- */
 export function getEnv(): Env {
   if (!_env) {
     _env = validateEnv();
@@ -194,14 +135,6 @@ export function getEnv(): Env {
   return _env;
 }
 
-/**
- * Initialize environment validation
- * Call this at application startup.
- * 
- * NOTE: Actual .env file loading now happens automatically at the top of this module
- * (on `import ... from '@config'`), which guarantees early loading before Logger etc.
- * This function mainly triggers/returns the validated env.
- */
 export function initEnv(): Env {
   return getEnv();
 }

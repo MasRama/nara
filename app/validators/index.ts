@@ -1,47 +1,31 @@
-/**
- * Validators Module
- * 
- * Re-exports all validation functions and utilities.
- * No external dependencies - just plain TypeScript.
- */
+import type { ZodError } from 'zod';
 
-// Validation utilities
-export { 
-  validateOrFail, 
-  formatErrors, 
-  sendValidationError,
-  isString,
-  isEmail,
-  isPhone,
-  isUUID,
-  isNumber,
-  isBoolean,
-  isArray,
-  isObject,
-} from './validate';
-export type { ValidationResult, Validator } from './validate';
+export function zodToErrors(error: ZodError): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
 
-// All validators
+  for (const issue of error.issues) {
+    const path = issue.path.join('.') || '_root';
+    if (!errors[path]) errors[path] = [];
+    errors[path].push(issue.message);
+  }
+
+  return errors;
+}
+
 export {
-  // Auth
   LoginSchema,
   RegisterSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
   ChangePasswordSchema,
-  
-  // User
   CreateUserSchema,
   UpdateUserSchema,
   DeleteUsersSchema,
   ChangeProfileSchema,
-
-  // Role
   CreateRoleSchema,
   UpdateRoleSchema,
 } from './schemas';
 
-// Type exports
 export type {
   LoginInput,
   RegisterInput,
