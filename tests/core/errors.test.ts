@@ -1,158 +1,155 @@
 import { describe, it, expect } from 'vitest';
 import {
-  HttpError,
-  ValidationError,
-  AuthError,
-  NotFoundError,
-  ForbiddenError,
-  BadRequestError,
-  ConflictError,
-  TooManyRequestsError,
-  InternalError,
-  isHttpError,
+  httpError,
+  validationError,
+  authError,
+  notFoundError,
+  forbiddenError,
+  badRequestError,
+  conflictError,
+  tooManyRequestsError,
+  internalError,
+  isNaraError,
   isValidationError,
 } from '../../app/core/errors';
 
-describe('HttpError', () => {
+describe('httpError', () => {
   it('creates with default values', () => {
-    const err = new HttpError('Something went wrong');
+    const err = httpError('Something went wrong');
     expect(err.message).toBe('Something went wrong');
     expect(err.statusCode).toBe(500);
     expect(err.code).toBe('HTTP_ERROR');
-    expect(err).toBeInstanceOf(Error);
+    expect(err.__nara).toBe(true);
   });
 
   it('creates with custom statusCode and code', () => {
-    const err = new HttpError('Custom error', 418, 'CUSTOM_CODE');
+    const err = httpError('Custom error', 418, 'CUSTOM_CODE');
     expect(err.statusCode).toBe(418);
     expect(err.code).toBe('CUSTOM_CODE');
   });
-
-  it('serializes to JSON', () => {
-    const err = new HttpError('Test', 400, 'TEST');
-    const json = err.toJSON();
-    expect(json).toEqual({ name: 'HttpError', message: 'Test', statusCode: 400, code: 'TEST' });
-  });
 });
 
-describe('ValidationError', () => {
+describe('validationError', () => {
   it('creates with field errors', () => {
     const errors = { email: ['Email is required'], password: ['Too short'] };
-    const err = new ValidationError(errors);
+    const err = validationError(errors);
     expect(err.statusCode).toBe(422);
     expect(err.code).toBe('VALIDATION_ERROR');
     expect(err.errors).toEqual(errors);
   });
 
   it('creates with default message', () => {
-    const err = new ValidationError();
+    const err = validationError();
     expect(err.message).toBe('Validation failed');
     expect(err.errors).toEqual({});
   });
 
-  it('includes errors in toJSON', () => {
-    const errors = { name: ['Required'] };
-    const err = new ValidationError(errors, 'Invalid input');
-    const json = err.toJSON();
-    expect(json.errors).toEqual(errors);
-    expect(json.message).toBe('Invalid input');
+  it('accepts custom message', () => {
+    const err = validationError({ name: ['Required'] }, 'Invalid input');
+    expect(err.message).toBe('Invalid input');
+    expect(err.errors).toEqual({ name: ['Required'] });
   });
 });
 
-describe('AuthError', () => {
+describe('authError', () => {
   it('creates with 401 status', () => {
-    const err = new AuthError();
+    const err = authError();
     expect(err.statusCode).toBe(401);
     expect(err.code).toBe('AUTH_ERROR');
     expect(err.message).toBe('Unauthorized');
   });
 
   it('accepts custom message', () => {
-    const err = new AuthError('Session expired');
+    const err = authError('Session expired');
     expect(err.message).toBe('Session expired');
   });
 });
 
-describe('NotFoundError', () => {
+describe('notFoundError', () => {
   it('creates with 404 status', () => {
-    const err = new NotFoundError();
+    const err = notFoundError();
     expect(err.statusCode).toBe(404);
     expect(err.code).toBe('NOT_FOUND');
   });
 });
 
-describe('ForbiddenError', () => {
+describe('forbiddenError', () => {
   it('creates with 403 status', () => {
-    const err = new ForbiddenError();
+    const err = forbiddenError();
     expect(err.statusCode).toBe(403);
     expect(err.code).toBe('FORBIDDEN');
   });
 });
 
-describe('BadRequestError', () => {
+describe('badRequestError', () => {
   it('creates with 400 status', () => {
-    const err = new BadRequestError();
+    const err = badRequestError();
     expect(err.statusCode).toBe(400);
     expect(err.code).toBe('BAD_REQUEST');
   });
 });
 
-describe('ConflictError', () => {
+describe('conflictError', () => {
   it('creates with 409 status', () => {
-    const err = new ConflictError();
+    const err = conflictError();
     expect(err.statusCode).toBe(409);
     expect(err.code).toBe('CONFLICT');
   });
 });
 
-describe('TooManyRequestsError', () => {
+describe('tooManyRequestsError', () => {
   it('creates with 429 status', () => {
-    const err = new TooManyRequestsError();
+    const err = tooManyRequestsError();
     expect(err.statusCode).toBe(429);
     expect(err.code).toBe('TOO_MANY_REQUESTS');
   });
 
-  it('includes retryAfter in toJSON when provided', () => {
-    const err = new TooManyRequestsError('Slow down', 60);
+  it('includes retryAfter when provided', () => {
+    const err = tooManyRequestsError('Slow down', 60);
     expect(err.retryAfter).toBe(60);
-    expect(err.toJSON().retryAfter).toBe(60);
   });
 
-  it('does not include retryAfter in toJSON when not provided', () => {
-    const err = new TooManyRequestsError();
-    expect(err.toJSON().retryAfter).toBeUndefined();
+  it('does not include retryAfter when not provided', () => {
+    const err = tooManyRequestsError();
+    expect(err.retryAfter).toBeUndefined();
   });
 });
 
-describe('InternalError', () => {
+describe('internalError', () => {
   it('creates with 500 status', () => {
-    const err = new InternalError();
+    const err = internalError();
     expect(err.statusCode).toBe(500);
     expect(err.code).toBe('INTERNAL_ERROR');
   });
 });
 
-describe('isHttpError', () => {
-  it('returns true for HttpError instances', () => {
-    expect(isHttpError(new HttpError('test'))).toBe(true);
-    expect(isHttpError(new AuthError())).toBe(true);
-    expect(isHttpError(new NotFoundError())).toBe(true);
+describe('isNaraError', () => {
+  it('returns true for all Nara errors', () => {
+    expect(isNaraError(httpError('test'))).toBe(true);
+    expect(isNaraError(authError())).toBe(true);
+    expect(isNaraError(notFoundError())).toBe(true);
+    expect(isNaraError(validationError())).toBe(true);
+    expect(isNaraError(forbiddenError())).toBe(true);
   });
 
   it('returns false for plain errors', () => {
-    expect(isHttpError(new Error('plain'))).toBe(false);
-    expect(isHttpError('string')).toBe(false);
-    expect(isHttpError(null)).toBe(false);
+    expect(isNaraError(new Error('plain'))).toBe(false);
+    expect(isNaraError('string')).toBe(false);
+    expect(isNaraError(null)).toBe(false);
+    expect(isNaraError(undefined)).toBe(false);
+    expect(isNaraError({})).toBe(false);
   });
 });
 
 describe('isValidationError', () => {
-  it('returns true for ValidationError instances', () => {
-    expect(isValidationError(new ValidationError())).toBe(true);
+  it('returns true for validation errors', () => {
+    expect(isValidationError(validationError())).toBe(true);
+    expect(isValidationError(validationError({ name: ['Required'] }))).toBe(true);
   });
 
-  it('returns false for other HttpErrors', () => {
-    expect(isValidationError(new AuthError())).toBe(false);
-    expect(isValidationError(new HttpError('test'))).toBe(false);
+  it('returns false for other Nara errors', () => {
+    expect(isValidationError(authError())).toBe(false);
+    expect(isValidationError(httpError('test'))).toBe(false);
+    expect(isValidationError(notFoundError())).toBe(false);
   });
 });

@@ -6,7 +6,8 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { NaraRouter, createRouter } from '../../app/core/Router';
+import type { NaraRouter } from '../../app/core/Router';
+import { createRouter } from '../../app/core/Router';
 
 /**
  * Helper: extract the underlying ultimate-express router from NaraRouter
@@ -20,7 +21,10 @@ describe('NaraRouter', () => {
   describe('createRouter', () => {
     it('creates a new NaraRouter instance', () => {
       const router = createRouter();
-      expect(router).toBeInstanceOf(NaraRouter);
+      expect(router).toBeDefined();
+      expect(typeof router.get).toBe('function');
+      expect(typeof router.post).toBe('function');
+      expect(typeof router.getRouter).toBe('function');
     });
 
     it('has an underlying ultimate-express router', () => {
@@ -148,7 +152,8 @@ describe('NaraRouter', () => {
         .delete('/users/:id', handler);
 
       // No errors thrown = success
-      expect(router).toBeInstanceOf(NaraRouter);
+      expect(router).toBeDefined();
+      expect(typeof router.getRouter).toBe('function');
     });
   });
 
@@ -219,7 +224,8 @@ describe('NaraRouter', () => {
       });
 
       // No errors thrown = success
-      expect(router).toBeInstanceOf(NaraRouter);
+      expect(router).toBeDefined();
+      expect(typeof router.getRouter).toBe('function');
     });
   });
 

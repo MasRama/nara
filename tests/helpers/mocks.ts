@@ -7,7 +7,7 @@
 
 import { vi } from 'vitest';
 import type { NaraRequest, NaraResponse, NaraMiddleware, NaraHandler } from '../../app/core/types';
-import type { User } from '../../app/core/types';
+import type { AuthUser } from '../../app/core/types';
 
 /**
  * Create a mock NaraRequest for testing
@@ -23,7 +23,7 @@ export function mockRequest(overrides: Partial<NaraRequest> = {}): NaraRequest {
     params: {} as Record<string, string>,
     cookies: {} as Record<string, string>,
     body: {} as Record<string, unknown>,
-    user: undefined as User | undefined,
+    user: undefined as AuthUser | undefined,
     share: undefined as Record<string, unknown> | undefined,
     requestId: undefined as string | undefined,
     json: vi.fn().mockResolvedValue({}),
@@ -107,7 +107,7 @@ export function mockResponse(overrides: Partial<NaraResponse> = {}): NaraRespons
 /**
  * Create a mock authenticated user
  */
-export function mockUser(overrides: Partial<User> = {}): User {
+export function mockUser(overrides: Partial<AuthUser> = {}): AuthUser {
   return {
     id: 'user-123',
     name: 'Test User',

@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { CacheStore } from '../../app/services/CacheStore';
-import type { CacheStoreOptions } from '../../app/services/CacheStore';
-
-// ── Helpers ──
+import { createCacheStore } from '../../app/services/CacheStore';
+import type { CacheStoreOptions, CacheStore } from '../../app/services/CacheStore';
 
 function makeStore<V = Buffer>(overrides: Partial<CacheStoreOptions> = {}): CacheStore<V> {
-  return new CacheStore<V>({
+  return createCacheStore<V>({
     maxEntries: 5,
-    maxBytes: 1024, // 1KB
-    defaultTtlMs: 60_000, // 1 min
+    maxBytes: 1024,
+    defaultTtlMs: 60_000,
     ...overrides,
   });
 }
