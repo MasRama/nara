@@ -169,7 +169,7 @@ export abstract class FormRequest<T = unknown> {
     }
 
     // Get request body
-    const body = await this.req.json();
+    const body = this.req.body;
 
     // Validate
     const validator = this.rules();
@@ -290,7 +290,7 @@ export abstract class FormRequest<T = unknown> {
    * @returns The parameter value, or undefined
    */
   param(key: string): string | undefined {
-    return this.req.params[key];
+    return this.req.params[key] as string | undefined;
   }
 
   /**
@@ -320,7 +320,7 @@ export abstract class FormRequest<T = unknown> {
    * @returns Promise<unknown>
    */
   async body(): Promise<unknown> {
-    return this.req.json();
+    return this.req.body;
   }
 
   /**
@@ -330,7 +330,7 @@ export abstract class FormRequest<T = unknown> {
    * @returns The field value, or undefined
    */
   async input(key: string): Promise<unknown> {
-    const body = await this.req.json();
+    const body = this.req.body;
     if (typeof body === 'object' && body !== null) {
       return (body as Record<string, unknown>)[key];
     }
@@ -344,7 +344,7 @@ export abstract class FormRequest<T = unknown> {
    * @returns true if the field exists, false otherwise
    */
   async has(key: string): Promise<boolean> {
-    const body = await this.req.json();
+    const body = this.req.body;
     if (typeof body === 'object' && body !== null) {
       return key in (body as Record<string, unknown>);
     }
@@ -359,7 +359,7 @@ export abstract class FormRequest<T = unknown> {
    * @returns Promise<Record<string, unknown>>
    */
   async all(): Promise<Record<string, unknown>> {
-    const body = await this.req.json();
+    const body = this.req.body;
     return {
       ...this.req.params,
       ...this.req.query,

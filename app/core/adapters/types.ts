@@ -1,4 +1,4 @@
-import type { MiddlewareNext } from "hyper-express";
+import type { NextFunction } from "express";
 import type { NaraRequest, NaraResponse } from "../types";
 
 /**
@@ -7,7 +7,7 @@ import type { NaraRequest, NaraResponse } from "../types";
 export type AdapterMiddlewareHandler = (
   req: NaraRequest,
   res: NaraResponse,
-  next: MiddlewareNext
+  next: NextFunction
 ) => unknown | Promise<unknown>;
 
 /**

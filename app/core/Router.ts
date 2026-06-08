@@ -1,7 +1,7 @@
 /**
  * Nara Router
  * 
- * Type-safe wrapper around HyperExpress.Router.
+ * Type-safe wrapper around Express Router (ultimate-express).
  * Provides proper TypeScript support for Nara's extended Request/Response types.
  * 
  * @example
@@ -13,19 +13,8 @@
  * Route.post('/users', [AuthMiddleware, AdminMiddleware], UserController.create);
  */
 
-import HyperExpress from 'hyper-express';
+import { Router as ExpressRouter } from 'ultimate-express';
 import type { NaraRequest, NaraResponse, NaraMiddleware, NaraHandler, RouteMiddlewares } from './types';
-
-/**
- * HyperExpress compatible types
- */
-type HyperExpressHandler = (
-  req: HyperExpress.Request,
-  res: HyperExpress.Response,
-  next?: () => void
-) => void | Promise<void>;
-
-type HyperExpressMiddleware = HyperExpressHandler;
 
 /**
  * HTTP methods supported by the router
@@ -42,21 +31,21 @@ type RouteArgs =
 /**
  * NaraRouter class
  * 
- * Wraps HyperExpress.Router with type-safe methods that accept
+ * Wraps Express Router with type-safe methods that accept
  * Nara's extended Request and Response types.
  */
 export class NaraRouter {
-  private router: HyperExpress.Router;
+  private router: any;
 
   constructor() {
-    this.router = new HyperExpress.Router();
+    this.router = ExpressRouter();
   }
 
   /**
-   * Get the underlying HyperExpress router
+   * Get the underlying Express router
    * Used when mounting the router to the server
    */
-  getRouter(): HyperExpress.Router {
+  getRouter(): any {
     return this.router;
   }
 
@@ -70,15 +59,15 @@ export class NaraRouter {
     // Normalize middlewares to array
     const middlewareArray = Array.isArray(middlewares) ? middlewares : [middlewares];
 
-    // Cast handlers to HyperExpress types (they're compatible at runtime)
-    const hyperMiddlewares = middlewareArray as HyperExpressMiddleware[];
-    const hyperHandler = handler as HyperExpressHandler;
+    // Cast handlers to Express types (they're compatible at runtime)
+    const expressMiddlewares = middlewareArray as any[];
+    const expressHandler = handler as unknown as any;
 
-    // Register route with HyperExpress
+    // Register route with Express
     if (middlewareArray.length > 0) {
-      this.router[method](path, hyperMiddlewares, hyperHandler);
+      (this.router as any)[method](path, ...expressMiddlewares, expressHandler);
     } else {
-      this.router[method](path, hyperHandler);
+      (this.router as any)[method](path, expressHandler);
     }
 
     return this;
@@ -86,10 +75,6 @@ export class NaraRouter {
 
   /**
    * Register a GET route
-   * 
-   * @example
-   * Route.get('/users', UserController.index);
-   * Route.get('/users/:id', [AuthMiddleware], UserController.show);
    */
   get(path: string, handler: NaraHandler): this;
   get(path: string, middlewares: RouteMiddlewares, handler: NaraHandler): this;
@@ -99,9 +84,6 @@ export class NaraRouter {
 
   /**
    * Register a POST route
-   * 
-   * @example
-   * Route.post('/users', [AuthMiddleware], UserController.create);
    */
   post(path: string, handler: NaraHandler): this;
   post(path: string, middlewares: RouteMiddlewares, handler: NaraHandler): this;
@@ -111,9 +93,6 @@ export class NaraRouter {
 
   /**
    * Register a PUT route
-   * 
-   * @example
-   * Route.put('/users/:id', [AuthMiddleware], UserController.update);
    */
   put(path: string, handler: NaraHandler): this;
   put(path: string, middlewares: RouteMiddlewares, handler: NaraHandler): this;
@@ -123,9 +102,6 @@ export class NaraRouter {
 
   /**
    * Register a PATCH route
-   * 
-   * @example
-   * Route.patch('/users/:id', [AuthMiddleware], UserController.partialUpdate);
    */
   patch(path: string, handler: NaraHandler): this;
   patch(path: string, middlewares: RouteMiddlewares, handler: NaraHandler): this;
@@ -135,9 +111,6 @@ export class NaraRouter {
 
   /**
    * Register a DELETE route
-   * 
-   * @example
-   * Route.delete('/users/:id', [AuthMiddleware, AdminMiddleware], UserController.destroy);
    */
   delete(path: string, handler: NaraHandler): this;
   delete(path: string, middlewares: RouteMiddlewares, handler: NaraHandler): this;
@@ -165,9 +138,6 @@ export class NaraRouter {
 
   /**
    * Register a route for all HTTP methods
-   * 
-   * @example
-   * Route.any('/webhook', WebhookController.handle);
    */
   any(path: string, handler: NaraHandler): this;
   any(path: string, middlewares: RouteMiddlewares, handler: NaraHandler): this;
@@ -176,13 +146,13 @@ export class NaraRouter {
     const middlewares = args.length > 1 ? args[0] as RouteMiddlewares : [];
 
     const middlewareArray = Array.isArray(middlewares) ? middlewares : [middlewares];
-    const hyperMiddlewares = middlewareArray as HyperExpressMiddleware[];
-    const hyperHandler = handler as HyperExpressHandler;
+    const expressMiddlewares = middlewareArray as any[];
+    const expressHandler = handler as unknown as any;
 
     if (middlewareArray.length > 0) {
-      this.router.any(path, hyperMiddlewares, hyperHandler);
+      this.router.all(path, ...expressMiddlewares, expressHandler);
     } else {
-      this.router.any(path, hyperHandler);
+      this.router.all(path, expressHandler);
     }
 
     return this;
@@ -190,30 +160,20 @@ export class NaraRouter {
 
   /**
    * Apply middleware to all routes in this router
-   * 
-   * @example
-   * Route.use(LoggingMiddleware);
-   * Route.use('/api', ApiMiddleware);
    */
   use(middleware: NaraMiddleware): this;
   use(path: string, middleware: NaraMiddleware): this;
   use(pathOrMiddleware: string | NaraMiddleware, middleware?: NaraMiddleware): this {
     if (typeof pathOrMiddleware === 'function') {
-      this.router.use(pathOrMiddleware as HyperExpressMiddleware);
+      this.router.use(pathOrMiddleware as unknown as any);
     } else if (middleware) {
-      this.router.use(pathOrMiddleware, middleware as HyperExpressMiddleware);
+      this.router.use(pathOrMiddleware, middleware as unknown as any);
     }
     return this;
   }
 
   /**
    * Mount a sub-router
-   * 
-   * @example
-   * const apiRouter = createRouter();
-   * apiRouter.get('/users', UserController.index);
-   * 
-   * Route.mount('/api', apiRouter);
    */
   mount(path: string, router: NaraRouter): this {
     this.router.use(path, router.getRouter());
@@ -222,12 +182,6 @@ export class NaraRouter {
 
   /**
    * Create a route group with shared prefix and/or middleware
-   * 
-   * @example
-   * Route.group('/api/v1', [AuthMiddleware], (route) => {
-   *   route.get('/users', UserController.index);
-   *   route.post('/users', UserController.create);
-   * });
    */
   group(prefix: string, callback: (router: NaraRouter) => void): this;
   group(prefix: string, middlewares: RouteMiddlewares, callback: (router: NaraRouter) => void): this;
@@ -260,12 +214,6 @@ export class NaraRouter {
 
 /**
  * Create a new NaraRouter instance
- * 
- * @example
- * import { createRouter } from '@core';
- * 
- * const Route = createRouter();
- * export default Route;
  */
 export function createRouter(): NaraRouter {
   return new NaraRouter();

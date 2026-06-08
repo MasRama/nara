@@ -183,7 +183,7 @@ export abstract class BaseController {
    * }
    */
   protected async getBody<T>(req: NaraRequest, schema: Validator<T>): Promise<T> {
-    const raw = await req.json();
+    const raw = req.body;
     const result: ValidationResult<T> = schema(raw);
     
     if (!result.success) {
@@ -248,7 +248,7 @@ export abstract class BaseController {
    * if (!id) return jsonError(res, 'ID required', 400);
    */
   protected getParam(req: NaraRequest, key: string): string | undefined {
-    return req.params[key];
+    return req.params[key] as string | undefined;
   }
 
   /**
@@ -272,7 +272,7 @@ export abstract class BaseController {
         [key]: [`${key} wajib diisi`]
       }, `Parameter '${key}' is required`);
     }
-    return value;
+    return value as string;
   }
 
   /**

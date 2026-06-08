@@ -4,6 +4,9 @@
  * Central abstraction for bootstrapping and managing the application lifecycle.
  * Wraps environment initialization, server creation, middlewares, routes, and graceful shutdown.
  * 
+ * Powered by ultimate-express (uWebSockets.js) for maximum performance
+ * with full Express API compatibility.
+ * 
  * @example
  * // server.ts
  * import { createApp } from '@core';
@@ -13,10 +16,10 @@
  * app.start();
  */
 
-import HyperExpress from "hyper-express";
+import express from "ultimate-express";
 import cors from "cors";
 import compression from "compression";
-import path from "path";
+import cookieParser from "cookie-parser";
 
 import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "@config";
 import type { Env } from "@config";
@@ -29,38 +32,21 @@ import { inputSanitize } from "@middlewares/inputSanitize";
 import { requestId } from "@middlewares/requestId";
 import { HttpError, ValidationError, isHttpError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
-import type { MiddlewareHandler, MiddlewareNext } from "hyper-express";
 import type { NaraMiddleware, NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
 
 /**
- * Adapts a NaraMiddleware to HyperExpress's MiddlewareHandler.
+ * Adapts a NaraMiddleware to Express's middleware signature.
  *
- * NaraMiddleware extends HyperExpress's Request/Response with additional
+ * NaraMiddleware extends Express's Request/Response with additional
  * properties (user, share, requestId, view, inertia, flash). This adapter
- * is safe because HyperExpress always passes its own Request/Response objects
+ * is safe because Express always passes its own Request/Response objects
  * at runtime, and Nara middleware only reads/writes the extended properties
  * that are set by other Nara middleware earlier in the chain.
  */
-function adapt(middleware: NaraMiddleware): MiddlewareHandler {
-  return (req, res, next: MiddlewareNext) =>
+function adapt(middleware: NaraMiddleware): any {
+  return (req: any, res: any, next: any) =>
     middleware(req as NaraRequest, res as NaraResponse, next);
-}
-
-/**
- * Adapts an Express-style middleware (e.g. compression, cors) to HyperExpress's
- * MiddlewareHandler.
- *
- * Express middleware uses a different Request/Response type hierarchy, but at
- * runtime HyperExpress provides compatible APIs (headers, status, json, etc.).
- * This adapter bridges the type gap without unsafe double-casts.
- */
-function adaptExpress(
-  // Express-style middleware uses incompatible Request/Response types.
-  // We accept any function signature here since the runtime APIs are compatible.
-  middleware: (...args: any[]) => any // eslint-disable-line @typescript-eslint/no-explicit-any
-): MiddlewareHandler {
-  return (req, res, next) => middleware(req, res, next);
 }
 
 /**
@@ -109,23 +95,21 @@ export interface AppOptions {
 
   /**
    * Enable CSRF protection middleware.
-   * Protects POST/PUT/PATCH/DELETE requests using Double Submit Cookie pattern.
    * @default false (opt-in, see docs/SECURITY.md for details)
    */
   csrf?: boolean;
 
   /**
    * Enable input sanitization middleware.
-   * Sanitizes req.body, req.query, req.params to prevent XSS.
    * @default true
    */
   inputSanitize?: boolean;
 
   /**
-   * Application routes (HyperExpress.Router).
+   * Application routes (Express Router).
    * Can also be mounted later via app.mount()
    */
-  routes?: HyperExpress.Router;
+  routes?: any;
 
   /**
    * Graceful shutdown timeout in milliseconds.
@@ -171,7 +155,8 @@ const DEFAULT_OPTIONS: Required<Omit<AppOptions, "routes" | "errorHandler" | "ad
  * - Graceful shutdown
  */
 export class NaraApp {
-  private server: HyperExpress.Server;
+  private app: any;
+  private server: any = null;
   private env: Env;
   private options: Required<Omit<AppOptions, "routes" | "errorHandler" | "adapter">> & Pick<AppOptions, "routes" | "errorHandler" | "adapter">;
   private isShuttingDown = false;
@@ -192,8 +177,8 @@ export class NaraApp {
     // Log environment summary and warnings
     this.logEnvSummary();
 
-    // Create server
-    this.server = this.createServer();
+    // Create express app
+    this.app = this.createServer();
 
     // Setup default error handler
     this.setupErrorHandler();
@@ -206,7 +191,7 @@ export class NaraApp {
 
     // Mount routes if provided
     if (this.options.routes) {
-      this.mount(this.options.routes);
+      this.app.use(this.options.routes);
     }
   }
 
@@ -224,24 +209,41 @@ export class NaraApp {
   }
 
   /**
-   * Create HyperExpress server with appropriate options
+   * Create Express app (ultimate-express / uWebSockets.js)
    */
-  private createServer(): HyperExpress.Server {
-    const serverOptions: {
-      max_body_length: number;
-      key_file_name?: string;
-      cert_file_name?: string;
-    } = {
-      max_body_length: SERVER.MAX_BODY_SIZE,
-    };
+  private createServer(): any {
+    const appOptions: Record<string, unknown> = {};
 
     // Enable HTTPS if configured
     if (this.options.https) {
-      serverOptions.key_file_name = path.join(process.cwd(), "localhost+1-key.pem");
-      serverOptions.cert_file_name = path.join(process.cwd(), "localhost+1.pem");
+      appOptions.uwsOptions = {
+        key_file_name: require("path").join(process.cwd(), "localhost+1-key.pem"),
+        cert_file_name: require("path").join(process.cwd(), "localhost+1.pem"),
+      };
     }
 
-    return new HyperExpress.Server(serverOptions);
+    const app = express(appOptions);
+
+    // Enable case-sensitive routing for uWS native router optimization
+    app.set("case sensitive routing", true);
+
+    // Disable x-powered-by header (security: don't expose server info)
+    app.disable("x-powered-by");
+
+    // Enable automatic async error catching (replaces express-async-errors)
+    app.set("catch async errors", true);
+
+    // Parse body for DELETE requests too (needed for bulk delete endpoints)
+    app.set("body methods", ["POST", "PUT", "PATCH", "DELETE"]);
+
+    // Set max body size
+    app.use(express.json({ limit: `${SERVER.MAX_BODY_SIZE / 1024 / 1024}mb` }));
+    app.use(express.urlencoded({ extended: true, limit: `${SERVER.MAX_BODY_SIZE / 1024 / 1024}mb` }));
+
+    // Parse cookies (required for req.cookies)
+    app.use(cookieParser() as any);
+
+    return app;
   }
 
   /**
@@ -249,46 +251,46 @@ export class NaraApp {
    */
   private applyDefaultMiddlewares(): void {
     // Compression should be first for better performance
-    this.server.use(adaptExpress(compression()));
+    this.app.use(compression());
 
     // Security headers should be first to ensure all responses have them
     if (this.options.securityHeaders) {
-      this.server.use(adapt(securityHeaders()));
+      this.app.use(adapt(securityHeaders()));
     }
 
     // Request ID middleware - must be before requestLogger so requestId is available for logging
-    this.server.use(adapt(requestId()));
+    this.app.use(adapt(requestId()));
 
     // Request logging early to capture all requests
     if (this.options.requestLogging) {
-      this.server.use(adapt(requestLogger()));
+      this.app.use(adapt(requestLogger()));
     }
 
     if (this.options.cors) {
-      this.server.use(cors());
+      this.app.use(cors());
     }
 
     // Rate limiting after CORS but before route handlers
     if (this.options.rateLimit) {
-      this.server.use(adapt(rateLimit()));
+      this.app.use(adapt(rateLimit()));
     }
 
     // CSRF protection after rate limiting but before route handlers
     if (this.options.csrf) {
-      this.server.use(adapt(csrf()));
+      this.app.use(adapt(csrf()));
     }
 
     // Input sanitization after CSRF but before route handlers
     if (this.options.inputSanitize) {
-      this.server.use(adapt(inputSanitize()));
+      this.app.use(adapt(inputSanitize()));
     }
 
     if (this.options.adapter) {
       // Apply adapter middleware
-      this.server.use(adapt(this.options.adapter.middleware()));
+      this.app.use(adapt(this.options.adapter.middleware() as NaraMiddleware));
 
       // Register response extensions
-      this.server.use((_req, res, next) => {
+      this.app.use((_req: any, res: any, next: any) => {
         this.options.adapter?.extendResponse(res as NaraResponse);
         next();
       });
@@ -296,12 +298,13 @@ export class NaraApp {
   }
 
   /**
-   * Setup the global error handler
+   * Setup the global error handler (Express error middleware pattern)
    */
   private setupErrorHandler(): void {
     const customHandler = this.options.errorHandler;
 
-    this.server.set_error_handler((req, res, error: unknown) => {
+    // Express error-handling middleware: (err, req, res, next)
+    this.app.use((error: unknown, req: any, res: any, _next: any) => {
       // Use custom handler if provided
       if (customHandler) {
         return customHandler(req as NaraRequest, res as NaraResponse, error);
@@ -328,13 +331,13 @@ export class NaraApp {
 
           if (isInertia) {
             // For Inertia requests, redirect back with error cookie
-            const referer = req.headers["referer"] || "/";
+            const referer = (req.headers["referer"] as string) || "/";
             const errorMsg = (error.errors && Object.keys(error.errors).length > 0)
               ? Object.values(error.errors).flat().join(", ")
               : error.message;
 
             return (res as NaraResponse)
-              .cookie("error", errorMsg, 5000)
+              .cookie("error", errorMsg, { maxAge: 5000 })
               .setHeader('X-Inertia-Location', referer)
               .redirect(referer);
           }
@@ -403,9 +406,6 @@ export class NaraApp {
 
   /**
    * Graceful shutdown handler
-   * 
-   * Properly closes the server and drains existing connections before exit.
-   * This prevents in-flight requests from being dropped during deploy/restart.
    */
   private async gracefulShutdown(signal: string, exitCode: number = 0): Promise<void> {
     // Prevent multiple shutdown attempts
@@ -429,7 +429,11 @@ export class NaraApp {
     try {
       // Step 1: Stop accepting new connections
       Logger.info("Closing server (stop accepting new connections)...");
-      await this.server.close();
+      if (this.server) {
+        await new Promise<void>((resolve) => {
+          this.server!.close(() => resolve());
+        });
+      }
       Logger.info("Server closed successfully");
 
       // Step 2: Close database connections
@@ -457,48 +461,28 @@ export class NaraApp {
 
   /**
    * Add a middleware to the application
-   * 
-   * @param middleware - Middleware function or path + middleware
-   * @returns this for chaining
-   * 
-   * @example
-   * app.use(myMiddleware);
-   * app.use('/api', apiMiddleware);
    */
-  use(middleware: Parameters<HyperExpress.Server["use"]>[0]): this;
-  use(path: string, middleware: Parameters<HyperExpress.Server["use"]>[0]): this;
-  use(...args: Parameters<HyperExpress.Server["use"]>): this {
-    this.server.use(...args);
+  use(middleware: any): this;
+  use(path: string, middleware: any): this;
+  use(...args: any[]): this {
+    this.app.use(...args);
     return this;
   }
 
   /**
    * Mount a router to the application
-   * 
-   * @param router - HyperExpress router to mount
-   * @param prefix - Optional path prefix
-   * @returns this for chaining
-   * 
-   * @example
-   * app.mount(webRoutes);
-   * app.mount('/api', apiRoutes);
    */
-  mount(router: HyperExpress.Router, prefix?: string): this {
+  mount(router: any, prefix?: string): this {
     if (prefix) {
-      this.server.use(prefix, router);
+      this.app.use(prefix, router);
     } else {
-      this.server.use(router);
+      this.app.use(router);
     }
     return this;
   }
 
   /**
    * Start the application server
-   * 
-   * @returns Promise that resolves when server is listening
-   * 
-   * @example
-   * await app.start();
    */
   async start(): Promise<void> {
     if (this.isStarted) {
@@ -509,7 +493,13 @@ export class NaraApp {
     const port = this.options.port;
 
     try {
-      await this.server.listen(port);
+      await new Promise<void>((resolve, reject) => {
+        this.server = this.app.listen(port, () => {
+          resolve();
+        });
+        this.server!.on("error", reject);
+      });
+
       this.isStarted = true;
 
       const envSummary = getEnvSummary(this.env);
@@ -528,20 +518,16 @@ export class NaraApp {
 
   /**
    * Stop the application server
-   * 
-   * @returns Promise that resolves when server is closed
    */
   async close(): Promise<void> {
     await this.gracefulShutdown("close", 0);
   }
 
   /**
-   * Get the underlying HyperExpress server instance
-   * 
-   * Useful for advanced configuration or testing.
+   * Get the underlying Express app instance
    */
-  getServer(): HyperExpress.Server {
-    return this.server;
+  getApp(): any {
+    return this.app;
   }
 
   /**
@@ -561,31 +547,6 @@ export class NaraApp {
 
 /**
  * Create a new Nara application instance
- * 
- * Factory function for creating NaraApp instances.
- * This is the recommended way to bootstrap a Nara application.
- * 
- * @param options - Application configuration options
- * @returns NaraApp instance
- * 
- * @example
- * // Minimal setup
- * import { createApp } from '@core';
- * import routes from '@routes/web';
- * 
- * const app = createApp({ routes });
- * app.start();
- * 
- * @example
- * // With custom options
- * const app = createApp({
- *   port: 3000,
- *   cors: true,
- *   inertia: true,
- *   routes: webRoutes,
- *   shutdownTimeout: 15000,
- * });
- * app.start();
  */
 export function createApp(options?: AppOptions): NaraApp {
   return new NaraApp(options);

@@ -2,10 +2,12 @@
  * Nara Core Types
  * 
  * Type-safe definitions for Request, Response, Middleware, and Handler.
- * These types extend HyperExpress types with Nara-specific features.
+ * These types extend Express types with Nara-specific features.
+ * 
+ * Powered by ultimate-express (uWebSockets.js) for maximum performance.
  */
 
-import type { Request as HyperRequest, Response as HyperResponse, MiddlewareNext } from "hyper-express";
+import type { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from "ultimate-express";
 
 /**
  * User interface for authenticated requests
@@ -30,7 +32,7 @@ export interface User {
  * @property share - Shared data passed to Inertia views
  * @property requestId - Unique request ID for tracing (set by requestId middleware)
  */
-export interface NaraRequest extends HyperRequest {
+export interface NaraRequest extends ExpressRequest {
   user?: User;
   share?: Record<string, unknown>;
   requestId?: string;
@@ -43,7 +45,7 @@ export interface NaraRequest extends HyperRequest {
  * @method inertia - Render an Inertia component
  * @method flash - Set a flash message cookie
  */
-export interface NaraResponse extends HyperResponse {
+export interface NaraResponse extends ExpressResponse {
   view(template: string, data?: Record<string, unknown>): Promise<unknown>;
   inertia?(
     component: string,
@@ -71,22 +73,11 @@ export interface NaraResponseWithInertia extends NaraResponse {
  * - Modify request/response
  * - Call next() to continue to the next middleware/handler
  * - Return early (e.g., redirect, error response) without calling next()
- * 
- * Note: Return type is `unknown` to allow flexibility in what middlewares return.
- * HyperExpress ignores return values, so this is safe.
- * 
- * @example
- * const authMiddleware: NaraMiddleware = async (req, res, next) => {
- *   if (!req.user) {
- *     return res.status(401).json({ error: 'Unauthorized' });
- *   }
- *   next();
- * };
  */
 export type NaraMiddleware = (
   req: NaraRequest,
   res: NaraResponse,
-  next: MiddlewareNext
+  next: NextFunction
 ) => unknown | Promise<unknown>;
 
 /**
@@ -94,15 +85,6 @@ export type NaraMiddleware = (
  * 
  * Handlers are the final function in the middleware chain.
  * They process the request and send a response.
- * 
- * Note: Return type is `unknown` to allow flexibility in what handlers return.
- * HyperExpress ignores return values, so this is safe.
- * 
- * @example
- * const getUsers: NaraHandler = async (req, res) => {
- *   const users = await DB.from('users').select('*');
- *   res.json({ success: true, data: users });
- * };
  */
 export type NaraHandler = (
   req: NaraRequest,
