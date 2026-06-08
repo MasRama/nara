@@ -1,15 +1,8 @@
-/**
- * Minimal View Service for SPA shell
- * ---------------------------------
- * Loads HTML files from the views directory (mainly inertia.html)
- * and performs simple string replacements instead of using a
- * templating engine like Squirrelly.
- */
 
 import { readFileSync, readdirSync } from "fs";
 import path from "path";
 import { templateCache } from "@services/CacheStore";
-require("dotenv").config();
+import 'dotenv/config';
 
 function getViewsDirectory() {
    return process.env.NODE_ENV === 'development' ? "resources/views" : "dist/views";
@@ -36,10 +29,6 @@ function escapeHtml(value: string): string {
       .replace(/'/g, "&#039;");
 }
 
-/**
- * Escapes JSON string for safe embedding in HTML attributes.
- * This prevents XSS attacks when JSON is placed in data-page attribute.
- */
 function escapeHtmlForJson(jsonString: string): string {
    return jsonString
       .replace(/&/g, "&amp;")
@@ -49,15 +38,10 @@ function escapeHtmlForJson(jsonString: string): string {
       .replace(/'/g, "&#x27;");
 }
 
-/**
- * Renders a basic HTML file with provided data.
- * Currently used for `inertia.html` as the SPA shell.
- */
-export function view(filename: string, view_data?: any) {
+export function view(filename: string, view_data?: Record<string, unknown>) {
    const baseTemplate = loadTemplate(filename);
    let html = baseTemplate;
 
-   // In development, rewrite JS asset URLs to Vite dev server
    if (process.env.NODE_ENV === 'development') {
       const files = readdirSync("resources/js");
 
@@ -75,7 +59,6 @@ export function view(filename: string, view_data?: any) {
       }
 
       if (typeof view_data.page === "string") {
-         // Escape JSON for safe HTML embedding to prevent XSS
          html = html.replace("{{it.page}}", escapeHtmlForJson(view_data.page));
       }
    }

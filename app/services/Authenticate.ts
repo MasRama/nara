@@ -1,30 +1,16 @@
-/**
- * Authentication Service
- * Handles user authentication operations including password hashing, verification,
- * session management, and login/logout functionality.
- */
+import { createSession, deleteSession } from '@queries';
+import type { User } from '@types';
+import type { NaraRequest as Request, NaraResponse as Response } from '@core';
+import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
 
-import { Session, UserRecord } from "@models"; 
-import type { NaraRequest as Request, NaraResponse as Response } from "@core";
-import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from "crypto";
-
-// PBKDF2 configuration
 const ITERATIONS = 100000;
 const KEYLEN = 64;
 const DIGEST = 'sha512';
 const SALT_SIZE = 16;
 
-// Session cookie configuration
 const SESSION_COOKIE_NAME = 'auth_id';
-const SESSION_EXPIRY_MS = 1000 * 60 * 60 * 24 * 60; // 60 days
+const SESSION_EXPIRY_MS = 1000 * 60 * 60 * 24 * 60;
 
-/**
- * Secure cookie options
- * - httpOnly: Prevents JavaScript access (XSS protection)
- * - secure: Only send over HTTPS (in production)
- * - sameSite: Prevents CSRF attacks
- * - path: Cookie valid for entire site
- */
 const getSecureCookieOptions = () => ({
    httpOnly: true,
    secure: process.env.NODE_ENV === 'production',
@@ -32,97 +18,50 @@ const getSecureCookieOptions = () => ({
    path: '/',
 });
 
-/**
- * Authentication class providing core authentication functionality
- */
-class Authenticate {
-   /**
-    * Hashes a plain text password using PBKDF2
-    * @param {string} password - The plain text password to hash
-    * @returns {string} The hashed password with salt (format: salt:hash)
-    */
-   async hash(password: string) {
-      const salt = randomBytes(SALT_SIZE).toString('hex');
-      const hash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
-      return `${salt}:${hash}`;
-   }
+export const hashPassword = (password: string): string => {
+   const salt = randomBytes(SALT_SIZE).toString('hex');
+   const hash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
+   return `${salt}:${hash}`;
+};
 
-   /**
-    * Compares a plain text password with a hashed password
-    * Uses timing-safe comparison to prevent timing attacks
-    * @param {string} password - The plain text password to verify
-    * @param {string} storedHash - The stored password hash with salt (format: salt:hash)
-    * @returns {boolean} True if passwords match, false otherwise
-    */
-   async compare(password: string, storedHash: string) {
-      const [salt, hash] = storedHash.split(':');
-      if (!salt || !hash) return false;
-      
-      const newHash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
-      
-      // Use timing-safe comparison to prevent timing attacks
-      const hashBuffer = Buffer.from(hash, 'hex');
-      const newHashBuffer = Buffer.from(newHash, 'hex');
-      
-      if (hashBuffer.length !== newHashBuffer.length) return false;
-      
-      return timingSafeEqual(hashBuffer, newHashBuffer);
-   }
+export const comparePassword = (password: string, storedHash: string): boolean => {
+   const [salt, hash] = storedHash.split(':');
+   if (!salt || !hash) return false;
+   
+   const newHash = pbkdf2Sync(password, salt, ITERATIONS, KEYLEN, DIGEST).toString('hex');
+   const hashBuffer = Buffer.from(hash, 'hex');
+   const newHashBuffer = Buffer.from(newHash, 'hex');
+   
+   if (hashBuffer.length !== newHashBuffer.length) return false;
+   return timingSafeEqual(hashBuffer, newHashBuffer);
+};
 
-   /**
-    * Processes user login by creating a new session
-    * @param {Object} user - The user object containing user details
-    * @param {Request} request - The HTTP request object
-    * @param {Response} response - The HTTP response object
-    * 
-    * @description
-    * 1. Generates a unique session token
-    * 2. Creates a session record in the database
-    * 3. Sets a secure session cookie with HttpOnly, Secure, SameSite flags
-    * 4. Redirects to the home page
-    */
-   async process(user: UserRecord, request: Request, response: Response) {
-      const token = randomUUID();
+export const processLogin = (user: User, request: Request, response: Response) => {
+   const token = randomUUID();
 
-      await Session.createSession({
-         id: token,
-         user_id: user.id,
-         user_agent: request.headers["user-agent"] || null,
-      });
+   createSession({
+      id: token,
+      user_id: user.id,
+      user_agent: request.headers['user-agent'] || null,
+   });
 
-      const isInertia = request.headers['x-inertia'];
+   const isInertia = request.headers['x-inertia'];
 
-      if (isInertia) {
-         return response
-            .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
-            .setHeader('X-Inertia-Location', '/dashboard')
-            .redirect("/dashboard");
-      }
-
-      response
+   if (isInertia) {
+      return response
          .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
-         .redirect("/dashboard");
+         .setHeader('X-Inertia-Location', '/dashboard')
+         .redirect('/dashboard');
    }
 
-   /**
-    * Handles user logout by removing the session
-    * @param {Request} request - The HTTP request object
-    * @param {Response} response - The HTTP response object
-    * 
-    * @description
-    * 1. Deletes the session from the database
-    * 2. Clears the session cookie with same security options
-    * 3. Redirects to the login page
-    */
-   async logout(request: Request, response: Response) {
-      await Session.delete(request.cookies[SESSION_COOKIE_NAME]);
+   response
+      .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
+      .redirect('/dashboard');
+};
 
-      // Clear cookie with same options to ensure proper deletion
-       response
-          .clearCookie(SESSION_COOKIE_NAME, getSecureCookieOptions())
-          .redirect("/login");
-   }
-}
-
-// Export a singleton instance
-export default new Authenticate();
+export const logout = (request: Request, response: Response) => {
+   deleteSession(request.cookies[SESSION_COOKIE_NAME]);
+   response
+      .clearCookie(SESSION_COOKIE_NAME, getSecureCookieOptions())
+      .redirect('/login');
+};
