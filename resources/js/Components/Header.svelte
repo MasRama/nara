@@ -25,7 +25,7 @@
 
   let { group }: { group: string } = $props();
 
-  let user = $derived($page.props.user as User | undefined);
+  let user = $derived(page.props.user as User | undefined);
   let scrollY = $state(0);
   let isMenuOpen = $state(false);
 

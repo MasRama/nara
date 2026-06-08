@@ -44,7 +44,7 @@
     filter = 'all'
   }: Props = $props();
 
-  const currentUser = $derived($inertiaPage.props.user as User | undefined);
+  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 
   let paginationMeta = $derived({ total, page, limit, totalPages, hasNext, hasPrev } as PaginationMeta);
 

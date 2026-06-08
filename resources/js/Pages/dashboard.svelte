@@ -31,7 +31,7 @@
     hasPrev = false
   }: Props = $props();
 
-  const currentUser = $derived($inertiaPage.props.user as User | undefined);
+  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';

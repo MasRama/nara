@@ -17,7 +17,7 @@
     children: Snippet;
   } = $props();
 
-  let user = $derived($page.props.user as User | undefined);
+  let user = $derived(page.props.user as User | undefined);
   let userRoles = $derived(user?.roles || []);
   let userPermissions = $derived(user?.permissions || []);
   let isAdmin = $derived(userRoles.includes('admin'));

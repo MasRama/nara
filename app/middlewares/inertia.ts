@@ -7,7 +7,8 @@ const inertia = (): NaraMiddleware => {
    return (req: Request, res: Response, next) => { 
       res.inertia = async (component, inertiaProps = {}, viewProps = {}) => {
          
-         const url = `//${req.get("host")}${req.originalUrl}`;
+         const protocol = req.secure ? 'https' : 'http';
+         const url = `${protocol}://${req.get("host")}${req.originalUrl}`;
 
          let props = {
             user: req.user

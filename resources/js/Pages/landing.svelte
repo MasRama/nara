@@ -15,7 +15,7 @@
     is_verified: boolean;
   }
 
-  let user = $page.props.user as User | undefined
+  let user = page.props.user as User | undefined
   let scrollY = $state(0);
   let innerHeight = $state(0);
 
