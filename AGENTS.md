@@ -505,9 +505,8 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 
 - **HTTP**: Always `api(() => axios.method(...))` — never raw `fetch()`
 - **State**: `$state()`, `$derived()`, `$effect()`, `$props()` — never `onMount`, `$:`, `export let`
-- **Navigation**: `router.visit()` for page transitions
-- **Page data**: Pass all data via `res.inertia()` props — lists, permissions, metadata
-- **Mutations**: Use `api(() => axios.post/put/delete())` for create/update/delete, then `router.visit()` to refresh
+- **Navigation**: `router.visit()` for page transitions — NEVER `window.location` or native `<a>` for internal navigation
+- **Mutations**: Use `api(() => axios.post/put/delete())` for CRUD, then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` (bypasses api wrapper, no toast/CSRF)
 - **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.ts`
 - **Toast**: Auto-shown by `api()` — suppress with `{ showSuccessToast: false }`
 - **Inertia page props**: `import { page as inertiaPage } from '@inertiajs/svelte'` then `$derived(inertiaPage.props.user as User)`

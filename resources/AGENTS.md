@@ -89,7 +89,7 @@ resources/
 <script lang="ts">
   import { router } from "@inertiajs/svelte";
 
-  // Navigate to another Inertia page (NOT for CRUD)
+  // ✅ Navigate to another Inertia page (NOT for CRUD)
   function goToDashboard() {
     router.visit("/dashboard");
   }
@@ -99,6 +99,10 @@ resources/
     preserveState: true,
     preserveScroll: true
   });
+
+  // ❌ NEVER use router.post/put/patch/delete — use api(() => axios.method()) instead
+  // ❌ NEVER use window.location or window.location.href — bypasses Inertia, causes full page reload
+  // ❌ NEVER use <a href="/path"> with target="_self" for internal navigation — let Inertia handle it
 </script>
 ```
 
@@ -126,8 +130,8 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 - **Entry point**: `app.ts` (TypeScript)
 - **State management**: Use `$state()` runes — avoid legacy stores
 - **Page data**: All data passed via `res.inertia()` props from handler — lists, permissions, metadata
-- **Mutations**: Use `api(() => axios.post/put/delete())` then `router.visit()` to refresh page
-- **Navigation**: Use `router.visit()` for page transitions
+- **Mutations**: Use `api(() => axios.post/put/delete())` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` (bypasses api wrapper, no toast/CSRF)
+- **Navigation**: Use `router.visit()` for page transitions — NEVER `window.location` or native `<a>` for internal navigation
 - **Authorization**: `<Can permission="users.edit">` component wraps gated UI sections
 - **Dark mode**: Use `dark:` Tailwind prefix on all elements
 - **Types**: Import from `$lib/types` or `../types` (relative)

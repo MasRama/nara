@@ -51,7 +51,10 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
     if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
-  // Page navigation — use router.visit, never fetch/axios
+  // ❌ NEVER use router.post/put/patch/delete — use api(() => axios.method()) instead
+  // ❌ NEVER use window.location — bypasses Inertia, causes full page reload
+
+  // Page navigation — use router.visit, never window.location or fetch/axios
   function goToOtherPage(): void {
     router.visit("/other-page");
   }
@@ -69,8 +72,8 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 | Concept | How it works |
 |---------|-------------|
 | **Page props** | Passed by `res.inertia("PageName", { data })` in handler — includes lists, permissions, metadata |
-| **Mutations** | `api(() => axios.post/put/delete('/resource', ...))` for create/update/delete, then `router.visit()` to refresh |
-| **Navigation** | `router.visit('/path')` for Inertia page transitions |
+| **Mutations** | `api(() => axios.post/put/delete('/resource', ...))` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` |
+| **Navigation** | `router.visit('/path')` for Inertia page transitions — NEVER `window.location` or native `<a>` |
 
 **Page handlers pass ALL data via `res.inertia()`** — including CRUD lists. After mutations, use `router.visit()` to reload the page with fresh data.
 
@@ -100,7 +103,8 @@ CSRF is handled automatically via `configureAxiosCSRF(axios)` called once in `ap
 - Svelte 5 runes: `let x = $state()`, `let y = $derived()`, `$effect(() => {...})` — NEVER `onMount`, NEVER `$:`
 - Page props via `$props()` rune: `let { propName } = $props()` — NEVER `export let propName`
 - User access: `$derived(inertiaPage.props.user as User)` — import `page as inertiaPage` from `@inertiajs/svelte`
-- CRUD mutations: use `api(() => axios.method(...))` then `router.visit()` to refresh — NOT raw `fetch()`
+- CRUD mutations: use `api(() => axios.method(...))` then `router.visit()` to refresh — NOT raw `fetch()`, NOT `router.post/put/patch/delete`
+- Navigation: use `router.visit()` — NEVER `window.location` or native `<a>` for internal navigation
 - CSRF: handled automatically by `configureAxiosCSRF(axios)` in `app.ts` — no manual header needed
 - Auth pages don't include Header
 - Component path: `../Components/ComponentName.svelte` (relative)
