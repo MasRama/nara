@@ -5,7 +5,7 @@
 AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over ORM, minimal abstractions.
 
 - **Backend**: ultimate-express (uWebSockets.js) + better-sqlite3
-- **Frontend**: Svelte 5 + Inertia.js
+- **Frontend**: Svelte 5 + Inertia.js + Zag JS (headless UI)
 - **Auth**: Session-based + Google OAuth + RBAC
 - **Validation**: Zod
 
@@ -62,7 +62,7 @@ Server (ultimate-express)
 ├── seeds/               # Knex seeders
 ├── resources/js/        # Svelte 5 frontend
 │   ├── Pages/           # Route pages (.svelte)
-│   ├── Components/      # Reusable components (Header, Pagination, Can, UserModal)
+│   ├── Components/      # Reusable components (Header, Button, Switch, Modal, etc — Zag JS for interactive UI)
 │   ├── lib/             # api.ts, csrf.ts, toast.ts, utils.ts, hooks/, utils/
 │   └── types/           # generated.ts + index.ts (manually synced with backend)
 ├── tests/               # Vitest tests
@@ -468,6 +468,7 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 - **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.js`
 - **Toast**: Auto-shown by `api()` — suppress with `{ showSuccessToast: false }`
 - **Store access**: Use `$storeName` (Svelte store subscription) inside `$derived()` — e.g. `$derived($inertiaPage.props.user)`
+- **UI components**: Use Zag JS (`@zag-js/*`) for interactive primitives (dialog, menu, switch, tabs) — `useMachine` + `normalizeProps` + spread props pattern
 
 ## Database Schema
 

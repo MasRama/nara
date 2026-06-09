@@ -16,13 +16,14 @@ Svelte 5 frontend powered by Inertia.js for server-side rendering with client-si
 ```
 resources/js/
 ├── app.js                 # Inertia app initialization (entry point)
-├── lib/                   # Utilities & UI components
+├── lib/                   # Utilities & helpers
 │   ├── api.ts             # HTTP client wrapper (axios + toast)
 │   ├── csrf.ts            # CSRF token handling
 │   ├── toast.ts           # Toast notifications (svelte-sonner)
 │   ├── utils.ts           # Helper functions (cn, debounce, etc)
-│   └── components/ui/     # shadcn-svelte UI components
-├── Components/            # Reusable UI components (Header, Pagination, etc)
+│   ├── hooks/             # Svelte actions (click-outside)
+│   └── utils/             # Utility modules (password, debounce)
+├── Components/            # Reusable UI components (Header, Button, Switch, Modal, etc)
 ├── Pages/                 # Route pages (dashboard, users, auth/*)
 └── types/                 # TypeScript definitions
 ```
@@ -33,6 +34,7 @@ resources/js/
 - **Inertia.js** adapter for SSR + client navigation via `router` helper
 - **TypeScript** for type safety (`<script lang="ts">`)
 - **axios** for HTTP requests (wrapped in `api()` helper)
+- **Zag JS** (`@zag-js/*`) for headless UI primitives (dialog, menu, switch, tabs) — styled with Tailwind
 
 ## KEY PATTERNS
 
@@ -128,4 +130,4 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 - **Authorization**: `<Can permission="users.edit">` component wraps gated UI sections
 - **Dark mode**: Use `dark:` Tailwind prefix on all elements
 - **Types**: Import from `$lib/types` or `../types` (relative)
-- **UI components**: Use shadcn-svelte from `$lib/components/ui/`
+- **UI primitives**: Zag JS (`@zag-js/*`) for headless interactive components (dialog, menu, switch, tabs) — styled with Tailwind

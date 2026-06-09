@@ -8,13 +8,18 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 
 | File | Purpose |
 |------|---------|
+| `Badge.svelte` | Inline status/label badge |
+| `Button.svelte` | Reusable button with variant support |
 | `Can.svelte` | Authorization wrapper — shows/hides content based on user permissions/roles |
 | `DarkModeToggle.svelte` | Dark mode toggle, persists to localStorage |
-| `Header.svelte` | Top navigation bar with user menu |
+| `Header.svelte` | Top navigation bar with user menu (Zag JS menu + dialog) |
+| `Input.svelte` | Styled text input |
+| `Label.svelte` | Form label |
 | `NaraIcon.svelte` | Logo/icon SVG component |
 | `Pagination.svelte` | Page navigation for paginated lists |
-| `UserModal.svelte` | Modal for create/edit user form |
-| `RoleModal.svelte` | Modal for create/edit role form |
+| `RoleModal.svelte` | Modal for create/edit role form (Zag JS dialog) |
+| `Switch.svelte` | Toggle switch (Zag JS switch) |
+| `UserModal.svelte` | Modal for create/edit user form (Zag JS dialog) |
 
 ## $lib/* Exports (replaces helper.ts)
 
@@ -121,6 +126,54 @@ Takes a `meta: PaginationMeta` prop (from server). Handles navigation via `route
 <Pagination meta={paginationMeta} />
 ```
 
+## Zag JS Components
+
+Interactive UI components use [Zag JS](https://zagjs.com/) — a headless, framework-agnostic state machine library. Zag provides behavior; styling is done with Tailwind.
+
+**Installed packages:** `@zag-js/dialog`, `@zag-js/menu`, `@zag-js/pagination`, `@zag-js/switch`, `@zag-js/tabs`, `@zag-js/svelte`
+
+### Pattern
+
+Every Zag JS component follows the same 3-step pattern:
+
+```svelte
+<script lang="ts">
+  // 1. Import the machine + Svelte adapter
+  import * as dialog from "@zag-js/dialog";
+  import { useMachine, normalizeProps, portal } from "@zag-js/svelte";
+
+  // 2. Connect the machine to Svelte reactivity
+  const service = useMachine(dialog.machine, { id: crypto.randomUUID() });
+  const api = $derived(dialog.connect(service, normalizeProps));
+</script>
+
+<!-- 3. Spread props onto elements -->
+<div {...api.getPositionerProps()}>
+  <div {...api.getContentProps()}>
+    <button {...api.getCloseTriggerProps()}>Close</button>
+  </div>
+</div>
+```
+
+### Which components use Zag JS
+
+| Component | Zag Package | Used For |
+|-----------|-------------|----------|
+| `Header.svelte` | `@zag-js/menu` + `@zag-js/dialog` | User dropdown menu + logout confirmation |
+| `UserModal.svelte` | `@zag-js/dialog` | Create/edit user modal |
+| `RoleModal.svelte` | `@zag-js/dialog` | Create/edit role modal |
+| `Switch.svelte` | `@zag-js/switch` | Toggle switch (e.g. active/inactive) |
+| `profile.svelte` (page) | `@zag-js/tabs` | Profile tab navigation |
+
+### Rules
+
+- **Always** use `crypto.randomUUID()` for the machine `id` (required by Zag)
+- **Always** derive the API: `const api = $derived(xxx.connect(service, normalizeProps))`
+- **Always** spread Zag props onto elements: `{...api.getRootProps()}`
+- Use `portal` from `@zag-js/svelte` for dialogs/menus that need portal rendering
+- Style with Tailwind — Zag provides no styles, only behavior + ARIA attributes
+- Access state via `api.*` (e.g. `api.checked`, `api.open`) — never reach into the service directly
+
 ## Svelte 5 Component Pattern
 
 ```svelte
@@ -155,6 +208,7 @@ Takes a `meta: PaginationMeta` prop (from server). Handles navigation via `route
 - `<script lang="ts">` on all components
 - Tailwind classes with `dark:` variant for dark mode
 - Transitions from `svelte/transition` (fly, fade, scale)
+- **Interactive components**: Use Zag JS (`@zag-js/*`) for dialogs, menus, switches, tabs — NOT raw HTML or custom implementations
 - Authorization: use `<Can>` component, never manual role checks in templates
 - CRUD mutations: use `api(() => axios.method(...))` — NOT raw `fetch()`
 - CSRF for axios: `configureAxiosCSRF(axios)` called once in `app.js` — interceptor handles all requests automatically

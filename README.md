@@ -75,7 +75,7 @@ Server (ultimate-express / uWebSockets.js)
 | Area | Stack |
 |------|-------|
 | Server | ultimate-express (uWebSockets.js, 250k+ req/s) |
-| Frontend | Svelte 5, Inertia.js, Tailwind CSS, shadcn-svelte |
+| Frontend | Svelte 5, Inertia.js, Tailwind CSS, Zag JS |
 | Database | SQLite via better-sqlite3, Knex migrations |
 | Auth | Session-based + Google OAuth + RBAC |
 | Security | CSRF, rate limiting, XSS sanitization, security headers |
