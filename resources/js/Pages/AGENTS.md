@@ -8,10 +8,11 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 
 | File | Purpose |
 |------|---------|
-| `dashboard.svelte` | Admin dashboard with stats |
+| `dashboard.svelte` | Admin dashboard with user stats + user list |
 | `landing.svelte` | Public landing page |
-| `profile.svelte` | User profile + password change |
-| `users.svelte` | User management (CRUD table) |
+| `profile.svelte` | User profile + password change (Zag JS tabs) |
+| `roles.svelte` | Role management (CRUD table + permissions) |
+| `users.svelte` | User management (CRUD table + role assignment) |
 | `auth/login.svelte` | Login form |
 | `auth/register.svelte` | Registration form |
 | `auth/forgot-password.svelte` | Forgot password |
@@ -31,8 +32,8 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
   // Props from server (passed by res.inertia("PageName", { data }))
   let { items = [], permissions, total }: Props = $props();
 
-  // Current user from Inertia shared props (store subscription with $)
-  const currentUser = $derived($inertiaPage.props.user as User | undefined);
+  // Current user from Inertia shared props
+  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 
   // CRUD via axios mutations, then router.visit() to refresh page data
   async function createItem(payload: Record<string, unknown>): Promise<void> {
@@ -91,17 +92,16 @@ const result = await api(() => axios.get('/posts/data'), { showSuccessToast: fal
 const result = await api(() => fetch('/posts', { method: 'POST', body: ... })); // api() expects axios response shape { data: ... }
 ```
 
-CSRF is handled automatically via `configureAxiosCSRF(axios)` called once in `app.js`.
+CSRF is handled automatically via `configureAxiosCSRF(axios)` called once in `app.ts`.
 
 ## Conventions
 
 - Every page includes `<Header group="..." />`
 - Svelte 5 runes: `let x = $state()`, `let y = $derived()`, `$effect(() => {...})` — NEVER `onMount`, NEVER `$:`
 - Page props via `$props()` rune: `let { propName } = $props()` — NEVER `export let propName`
-- User access: `$derived(inertiaPage.props.user as User)`
+- User access: `$derived(inertiaPage.props.user as User)` — import `page as inertiaPage` from `@inertiajs/svelte`
 - CRUD mutations: use `api(() => axios.method(...))` then `router.visit()` to refresh — NOT raw `fetch()`
-- CSRF: handled automatically by `configureAxiosCSRF(axios)` in `app.js` — no manual header needed
-- Store access: `$derived($inertiaPage.props.user)` — use `$` prefix for Svelte store subscription
+- CSRF: handled automatically by `configureAxiosCSRF(axios)` in `app.ts` — no manual header needed
 - Auth pages don't include Header
 - Component path: `../Components/ComponentName.svelte` (relative)
 - Types from: `../types` (relative)

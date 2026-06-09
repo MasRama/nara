@@ -11,7 +11,25 @@ Frontend TypeScript type definitions. `generated.ts` mirrors backend types.
 
 ## generated.ts
 
-Contains: `User`, `Role`, `Permission`, `Session`, `UserForm`, pagination types, and helper functions that mirror `app/core/types.ts` and `app/types/models.ts`.
+Contains: `User`, `Role`, `Permission`, `Session`, `UserForm`, `RoleForm`, `RoleInfo`, pagination types, API response types, and helper functions.
+
+### Helper Functions
+
+```typescript
+import { createEmptyUserForm, userToForm, createEmptyRoleForm, roleToForm } from '../types';
+import { isApiSuccess, isApiError } from '../types';
+
+// Form factories — create pre-filled form data
+const form = createEmptyUserForm();          // UserForm with defaults (id: null, roles: ['user'])
+const form = userToForm(existingUser);       // UserForm pre-filled from User data
+
+const form = createEmptyRoleForm();          // RoleForm with defaults (id: null, permissions: [])
+const form = roleToForm(existingRole);       // RoleForm pre-filled from Role data
+
+// Type guards — narrow ApiResponse union type
+if (isApiSuccess(response)) { /* response.data is typed */ }
+if (isApiError(response))   { /* response.errors is typed */ }
+```
 
 Manually maintained — when backend types change, update `generated.ts` accordingly.
 

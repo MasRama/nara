@@ -321,6 +321,42 @@ if (isNaraError(error)) { /* error.statusCode, error.code, error.message */ }
 if (isValidationError(error)) { /* error.errors */ }
 ```
 
+### Handler Mutation Pattern (create/update with constraint handling)
+
+```typescript
+import { randomUUID } from 'crypto';
+import { hashPassword } from '@services/Authenticate';
+import Logger from '@services/Logger';
+import { createUser } from '@queries';
+import { CreateUserSchema, zodToErrors } from '@validators';
+import { jsonCreated, jsonError, jsonServerError, jsonValidationError } from '@core';
+
+export const create = (req: NaraRequest, res: NaraResponse) => {
+  if (!req.user) return jsonError(res, 'Unauthorized', 401);
+
+  const parsed = CreateUserSchema.safeParse(req.body);
+  if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
+
+  const { name, email, password } = parsed.data;
+
+  try {
+    const user = createUser({
+      id: randomUUID(),
+      name, email,
+      password: hashPassword(password || email),
+    });
+    return jsonCreated(res, 'User berhasil dibuat', { user });
+  } catch (error: unknown) {
+    // Handle SQLite unique constraint violations
+    if (error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      return jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL');
+    }
+    Logger.error('Failed to create user', error as Error);
+    return jsonServerError(res, 'Gagal membuat user');
+  }
+};
+```
+
 ## File Upload & Storage
 
 ```typescript
@@ -419,6 +455,10 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 
 ## Frontend (Svelte 5 + Inertia)
 
+> **Note**: `inertia` means different things in frontend vs backend:
+> - **Backend**: `import { inertia } from '@core'` — response helper that extends `res` with `.inertia()` method
+> - **Frontend**: `import { page, router, inertia } from '@inertiajs/svelte'` — Inertia client-side navigation
+
 ```svelte
 <script lang="ts">
   import { page as inertiaPage, router } from '@inertiajs/svelte';
@@ -465,9 +505,9 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 - **Navigation**: `router.visit()` for page transitions
 - **Page data**: Pass all data via `res.inertia()` props — lists, permissions, metadata
 - **Mutations**: Use `api(() => axios.post/put/delete())` for create/update/delete, then `router.visit()` to refresh
-- **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.js`
+- **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.ts`
 - **Toast**: Auto-shown by `api()` — suppress with `{ showSuccessToast: false }`
-- **Store access**: Use `$storeName` (Svelte store subscription) inside `$derived()` — e.g. `$derived($inertiaPage.props.user)`
+- **Inertia page props**: `import { page as inertiaPage } from '@inertiajs/svelte'` then `$derived(inertiaPage.props.user as User)`
 - **UI components**: Use Zag JS (`@zag-js/*`) for interactive primitives (dialog, menu, switch, tabs) — `useMachine` + `normalizeProps` + spread props pattern
 
 ## Database Schema

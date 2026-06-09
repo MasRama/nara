@@ -28,9 +28,8 @@ import { api } from '$lib/api';
 import type { ApiResponse } from '$lib/api';
 import { buildCSRFHeaders, getCSRFToken, configureAxiosCSRF } from '$lib/csrf';
 import { Toast } from '$lib/toast';
-import { debounce } from '$lib/utils/debounce';
+import { cn } from '$lib/utils';
 import { password_generator } from '$lib/utils/password';
-import { clickOutside } from '$lib/hooks/click-outside';
 ```
 
 ### `api()` — axios wrapper with auto-toast
@@ -82,7 +81,7 @@ Signature: `Toast(text: string, type: 'success' | 'error' | 'warning' | 'info' =
 ### CSRF helpers
 
 ```typescript
-// For axios — call ONCE at app init (in app.js), NOT per-request
+// For axios — call ONCE at app init (in app.ts), NOT per-request
 import axios from 'axios';
 import { configureAxiosCSRF } from '$lib/csrf';
 configureAxiosCSRF(axios);  // sets interceptor — CSRF auto-included in POST/PUT/DELETE
@@ -94,12 +93,6 @@ const headers = buildCSRFHeaders();  // { 'X-CSRF-Token': '...' } or {}
 ### Other utilities
 
 ```typescript
-// Click outside action for modals/dropdowns
-<div use:clickOutside on:click_outside={closeModal}>
-
-// Debounce for search inputs
-const debouncedSearch = debounce((term: string) => loadData(term), 300);
-
 // Password generator
 const pwd = password_generator(12); // 12-char random password string
 ```
@@ -126,11 +119,109 @@ Takes a `meta: PaginationMeta` prop (from server). Handles navigation via `route
 <Pagination meta={paginationMeta} />
 ```
 
+## Component Primitives
+
+### `cn()` — class merging utility
+
+All components use `cn()` from `$lib/utils.js` to merge Tailwind classes (combines `clsx` + `tailwind-merge`):
+
+```typescript
+import { cn } from "$lib/utils.js";
+
+// Merge classes — later classes override earlier ones
+class={cn("base-classes", className)}
+class={cn("px-4 py-2", isActive && "bg-primary", className)}
+```
+
+### `data-slot` convention
+
+Every component root element includes a `data-slot` attribute for CSS targeting:
+
+```svelte
+<button data-slot="button" class={cn("...", className)}>
+<label data-slot="label" class={cn("...", className)}>
+<span data-slot="badge" class={cn("...", className)}>
+```
+
+### `$bindable()` — two-way binding props
+
+Svelte 5 `$bindable()` rune enables parent-child two-way binding via props:
+
+```svelte
+<script lang="ts">
+  let {
+    checked = $bindable(false),     // parent can bind:checked
+    value = $bindable(),             // parent can bind:value
+    ref = $bindable(null),           // parent can bind:this via ref prop
+  } = $props();
+</script>
+
+<!-- Usage in parent: -->
+<Switch bind:checked={isActive} />
+<Input bind:value={email} type="email" />
+```
+
+### Svelte 5 snippets (`{@render}`) — replaces `<slot />`
+
+Components with children content use Svelte 5 snippets, NOT `<slot />`:
+
+```svelte
+<script lang="ts">
+  let { children, ...restProps }: { children?: import('svelte').Snippet } = $props();
+</script>
+
+<button {...restProps}>
+  {@render children?.()}
+</button>
+```
+
+### `tailwind-variants` (`tv`) — variant system
+
+Components with visual variants use `tailwind-variants` with a **module script** for exports:
+
+```svelte
+<!-- Module script: exports variant definitions (accessible from outside) -->
+<script lang="ts" module>
+  import { type VariantProps, tv } from "tailwind-variants";
+
+  export const buttonVariants = tv({
+    base: "inline-flex items-center justify-center rounded-full text-xs ...",
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-white ...",
+        outline: "border border-border ...",
+      },
+      size: {
+        default: "h-9 px-5 py-2",
+        sm: "h-8 px-3",
+        lg: "h-11 px-7",
+      },
+    },
+    defaultVariants: { variant: "default", size: "default" },
+  });
+
+  export type ButtonVariant = VariantProps<typeof buttonVariants>["variant"];
+  export type ButtonSize = VariantProps<typeof buttonVariants>["size"];
+</script>
+
+<!-- Instance script: uses variants -->
+<script lang="ts">
+  let { variant = "default", size = "default", class: className, children, ...restProps } = $props();
+</script>
+
+<button data-slot="button" class={cn(buttonVariants({ variant, size }), className)} {...restProps}>
+  {@render children?.()}
+</button>
+```
+
+**Currently using `tv`:** `Button.svelte`, `Badge.svelte`
+
 ## Zag JS Components
 
 Interactive UI components use [Zag JS](https://zagjs.com/) — a headless, framework-agnostic state machine library. Zag provides behavior; styling is done with Tailwind.
 
-**Installed packages:** `@zag-js/dialog`, `@zag-js/menu`, `@zag-js/pagination`, `@zag-js/switch`, `@zag-js/tabs`, `@zag-js/svelte`
+**Installed packages:** `@zag-js/dialog`, `@zag-js/menu`, `@zag-js/switch`, `@zag-js/tabs`, `@zag-js/svelte`
 
 ### Pattern
 
@@ -204,12 +295,17 @@ Every Zag JS component follows the same 3-step pattern:
 
 ## Conventions
 
-- **Svelte 5 runes**: `$state`, `$derived`, `$effect`, `$props()` — NEVER use `export let`, `writable()` stores, or `onMount`
-- `<script lang="ts">` on all components
+- **Svelte 5 runes**: `$state`, `$derived`, `$effect`, `$props()`, `$bindable()` — NEVER use `export let`, `writable()` stores, or `onMount`
+- `<script lang="ts">` on all components; `<script lang="ts" module>` for variant exports (`tv`)
 - Tailwind classes with `dark:` variant for dark mode
-- Transitions from `svelte/transition` (fly, fade, scale)
+- **Class merging**: Always use `cn()` from `$lib/utils` — never string concatenation for classes
+- **Data slots**: Every component root element has `data-slot="component-name"` attribute
+- **Children**: Use `{@render children?.()}` (Svelte 5 snippets) — NEVER `<slot />`
+- **Two-way binding**: Use `$bindable()` in `$props()` — parent uses `bind:propName`
+- **Variants**: Use `tailwind-variants` (`tv`) with module script for components with visual variants
 - **Interactive components**: Use Zag JS (`@zag-js/*`) for dialogs, menus, switches, tabs — NOT raw HTML or custom implementations
+- Transitions from `svelte/transition` (fly, fade, scale)
 - Authorization: use `<Can>` component, never manual role checks in templates
 - CRUD mutations: use `api(() => axios.method(...))` — NOT raw `fetch()`
-- CSRF for axios: `configureAxiosCSRF(axios)` called once in `app.js` — interceptor handles all requests automatically
+- CSRF for axios: `configureAxiosCSRF(axios)` called once in `app.ts` — interceptor handles all requests automatically
 - All component files `.svelte` extension (no `.js` components)

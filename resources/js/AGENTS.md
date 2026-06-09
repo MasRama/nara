@@ -15,14 +15,13 @@ Svelte 5 frontend powered by Inertia.js for server-side rendering with client-si
 
 ```
 resources/js/
-├── app.js                 # Inertia app initialization (entry point)
+├── app.ts                 # Inertia app initialization (entry point)
 ├── lib/                   # Utilities & helpers
 │   ├── api.ts             # HTTP client wrapper (axios + toast)
 │   ├── csrf.ts            # CSRF token handling
 │   ├── toast.ts           # Toast notifications (svelte-sonner)
-│   ├── utils.ts           # Helper functions (cn, debounce, etc)
-│   ├── hooks/             # Svelte actions (click-outside)
-│   └── utils/             # Utility modules (password, debounce)
+│   ├── utils.ts           # cn() — class merging (clsx + tailwind-merge)
+│   └── utils/             # Utility modules (password)
 ├── Components/            # Reusable UI components (Header, Button, Switch, Modal, etc)
 ├── Pages/                 # Route pages (dashboard, users, auth/*)
 └── types/                 # TypeScript definitions
@@ -77,8 +76,8 @@ resources/js/
   // Props passed by res.inertia("PageName", { users, permissions, total })
   let { users = [], permissions, total } = $props();
 
-  // Access current user from shared Inertia props (store subscription with $)
-  const currentUser = $derived($inertiaPage.props.user as User | undefined);
+  // Access current user from Inertia shared props
+  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 </script>
 ```
 
@@ -120,9 +119,9 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 ## CONVENTIONS
 
 - **HTTP client**: Always `api(() => axios.method(...))` — never raw `fetch()` or bare `axios`
-- **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.js` — no manual headers needed
+- **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.ts` — no manual headers needed
 - **Components**: Use `.svelte` extension with `<script lang="ts">`
-- **Entry point**: `app.js` (JavaScript, not TypeScript)
+- **Entry point**: `app.ts` (TypeScript)
 - **State management**: Use `$state()` runes — avoid legacy stores
 - **Page data**: All data passed via `res.inertia()` props from handler — lists, permissions, metadata
 - **Mutations**: Use `api(() => axios.post/put/delete())` then `router.visit()` to refresh page

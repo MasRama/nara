@@ -44,3 +44,9 @@ yarn-error.log*
 
 # Task
 todo.md
+
+# Playwright MCP
+.playwright-mcp/
+
+# Screenshots
+landing-*.png
