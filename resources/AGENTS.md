@@ -1,4 +1,4 @@
-# resources/js - Svelte 5 Frontend
+# resources - Frontend
 
 ## OVERVIEW
 
@@ -8,14 +8,16 @@ Svelte 5 frontend powered by Inertia.js for server-side rendering with client-si
 - [`Pages/AGENTS.md`](./Pages/AGENTS.md) - Page component patterns
 - [`Components/AGENTS.md`](./Components/AGENTS.md) - Reusable components
 - [`types/AGENTS.md`](./types/AGENTS.md) - TypeScript type definitions
-- [`../../routes/AGENTS.md`](../../routes/AGENTS.md) - Backend route definitions
-- [`../../app/AGENTS.md`](../../app/AGENTS.md) - Backend handlers & services
+- [`../routes/AGENTS.md`](../routes/AGENTS.md) - Backend route definitions
+- [`../app/AGENTS.md`](../app/AGENTS.md) - Backend handlers & services
 
 ## STRUCTURE
 
 ```
-resources/js/
+resources/
+├── inertia.html           # HTML template (served by View.ts)
 ├── app.ts                 # Inertia app initialization (entry point)
+├── index.css              # Global styles + Tailwind
 ├── lib/                   # Utilities & helpers
 │   ├── api.ts             # HTTP client wrapper (axios + toast)
 │   ├── csrf.ts            # CSRF token handling

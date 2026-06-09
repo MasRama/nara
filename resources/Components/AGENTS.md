@@ -21,80 +21,15 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 | `Switch.svelte` | Toggle switch (Zag JS switch) |
 | `UserModal.svelte` | Modal for create/edit user form (Zag JS dialog) |
 
-## $lib/* Exports (replaces helper.ts)
+## $lib/* Quick Reference
+
+> Full documentation for `$lib/*` utilities: see [`../AGENTS.md`](../AGENTS.md)
 
 ```typescript
-import { api } from '$lib/api';
-import type { ApiResponse } from '$lib/api';
-import { buildCSRFHeaders, getCSRFToken, configureAxiosCSRF } from '$lib/csrf';
-import { Toast } from '$lib/toast';
-import { cn } from '$lib/utils';
+import { api } from '$lib/api';           // HTTP wrapper (axios + toast)
+import { Toast } from '$lib/toast';         // Toast(text, type) — function, NOT object
+import { cn } from '$lib/utils';            // Class merging (clsx + tailwind-merge)
 import { password_generator } from '$lib/utils/password';
-```
-
-### `api()` — axios wrapper with auto-toast
-
-> ⚠️ `api()` wraps **axios** calls, NOT `fetch()`. The callback must return an axios promise.
-
-```typescript
-import axios from 'axios';
-import { api } from '$lib/api';
-
-// POST
-const result = await api(() => axios.post('/users', payload));
-
-// PUT
-const result = await api(() => axios.put(`/users/${id}`, payload));
-
-// DELETE
-const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));
-
-// GET (suppress success toast)
-const result = await api(() => axios.get('/users/data'), { showSuccessToast: false });
-
-// result is ApiResponse<T>
-if (result.success) {
-  console.log(result.data);    // response payload
-} else {
-  console.log(result.errors);  // validation errors Record<string, string[]>
-  // Toast already shown automatically
-}
-```
-
-`api()` automatically shows/hides Toasts — pass `{ showSuccessToast: false }` or `{ showErrorToast: false }` to suppress.
-
-### `Toast()` — notification function
-
-> ⚠️ `Toast` is a **function**, NOT an object. Do NOT use `Toast.success()` — it will throw `TypeError`.
-
-```typescript
-Toast("User created!", "success");   // ✅ correct
-Toast("Something went wrong", "error");
-Toast("Please wait...", "info");
-Toast("Check your input", "warning");
-
-// Toast.success("msg") — ❌ WRONG: TypeError: Toast.success is not a function
-```
-
-Signature: `Toast(text: string, type: 'success' | 'error' | 'warning' | 'info' = 'success', duration?: number)`
-
-### CSRF helpers
-
-```typescript
-// For axios — call ONCE at app init (in app.ts), NOT per-request
-import axios from 'axios';
-import { configureAxiosCSRF } from '$lib/csrf';
-configureAxiosCSRF(axios);  // sets interceptor — CSRF auto-included in POST/PUT/DELETE
-
-// For manual fetch() (rare — prefer axios + configureAxiosCSRF)
-const headers = buildCSRFHeaders();  // { 'X-CSRF-Token': '...' } or {}
-```
-
-### Other utilities
-
-```typescript
-// Password generator
-const pwd = password_generator(12); // 12-char random password string
 ```
 
 ## Can Component

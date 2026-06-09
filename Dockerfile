@@ -52,7 +52,7 @@ COPY --from=build /app/build ./build
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
 
-# Copy resources needed at runtime (views, migrations, etc.)
+# Copy resources needed at runtime (HTML template, migrations, etc.)
 COPY --from=build /app/resources ./resources
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/seeds ./seeds

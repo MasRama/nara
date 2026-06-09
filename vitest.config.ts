@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['tests/**/*.test.ts', 'resources/js/lib/__tests__/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'resources/lib/__tests__/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
@@ -36,8 +36,8 @@ export default defineConfig({
       { find: /^@types\/(.+)$/, replacement: r('app/types/$1') },
       { find: '@root/knexfile', replacement: r('knexfile.ts') },
       { find: /^@\/(.+)$/, replacement: r('app/$1') },
-      { find: /^\$lib\/(.+)$/, replacement: r('resources/js/lib/$1') },
-      { find: '$lib', replacement: r('resources/js/lib') },
+      { find: /^\$lib\/(.+)$/, replacement: r('resources/lib/$1') },
+      { find: '$lib', replacement: r('resources/lib') },
     ],
   },
 });

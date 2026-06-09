@@ -44,8 +44,8 @@
       "@root/knexfile": ["./knexfile.ts"],
       "@events": ["app/events/index.ts"],
       "@events/*": ["app/events/*"],
-      "$lib": ["resources/js/lib/index.ts"],
-      "$lib/*": ["resources/js/lib/*"]
+      "$lib": ["resources/lib/index.ts"],
+      "$lib/*": ["resources/lib/*"]
     }
   },
   "include": [

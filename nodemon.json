@@ -1,5 +1,5 @@
 {
-    "watch": ["app/**","resources/views/**","server.ts","routes/**"],
+    "watch": ["app/**","resources/inertia.html","server.ts","routes/**"],
     "ext": ".ts,.js,.svelte",
     "ignore": [],
     "exec": "npx ts-node -r dotenv/config -r tsconfig-paths/register server.ts"

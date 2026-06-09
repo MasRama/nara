@@ -118,4 +118,4 @@ const user = mockUser({ id: 'custom-id', email: 'custom@test.com' });
 - **Mocks**: Use `tests/helpers/mocks.ts` factories
 - **No real database**: Tests should NOT hit SQLite — mock queries
 - **Async**: Use `async/await` for async code
-- **Frontend tests**: Located in `resources/js/lib/__tests__/`
+- **Frontend tests**: Located in `resources/lib/__tests__/`

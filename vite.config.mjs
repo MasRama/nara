@@ -10,13 +10,12 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const files = readdirSync("resources/views");
+const files = readdirSync("resources").filter(f => f.endsWith('.html'));
 
 let input = {};
 
 for (const filename of files) {
-   if(filename.includes("partial")) continue;
-  input[filename.replace(".html", "")] = resolve(__dirname, `resources/views/${filename}`);
+  input[filename.replace(".html", "")] = resolve(__dirname, `resources/${filename}`);
 }
 
 // Default port from environment or fallback to 3000
@@ -48,7 +47,7 @@ export default defineConfig({
   root: 'resources',
   resolve: {
     alias: {
-      '$lib': resolve(__dirname, 'resources/js/lib'),
+      '$lib': resolve(__dirname, 'resources/lib'),
     },
   },
   server: {

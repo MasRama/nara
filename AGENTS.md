@@ -60,11 +60,14 @@ Server (ultimate-express)
 ├── routes/web.ts        # All route definitions
 ├── migrations/          # Knex migrations
 ├── seeds/               # Knex seeders
-├── resources/js/        # Svelte 5 frontend
-│   ├── Pages/           # Route pages (.svelte)
-│   ├── Components/      # Reusable components (Header, Button, Switch, Modal, etc — Zag JS for interactive UI)
-│   ├── lib/             # api.ts, csrf.ts, toast.ts, utils.ts, hooks/, utils/
-│   └── types/           # generated.ts + index.ts (manually synced with backend)
+├── resources/             # Frontend (Svelte 5 + Inertia)
+│   ├── inertia.html       # HTML template (served by View.ts)
+│   ├── app.ts             # Inertia app entry point
+│   ├── index.css          # Global styles + Tailwind
+│   ├── Pages/             # Route pages (.svelte)
+│   ├── Components/        # Reusable components (Header, Button, Switch, Modal, etc — Zag JS for interactive UI)
+│   ├── lib/               # api.ts, csrf.ts, toast.ts, utils.ts (cn), utils/
+│   └── types/             # generated.ts + index.ts (manually synced with backend)
 ├── tests/               # Vitest tests
 ├── server.ts            # Entry point
 └── knexfile.ts          # DB config (used by SQLite.ts + migrations)
@@ -586,7 +589,7 @@ npm run seed         # npx knex seed:run
 | Auth logic | `app/services/Authenticate.ts` |
 | Permission checks | `app/queries/users.ts` (isAdmin, hasPermission) |
 | File upload | `app/handlers/assets.ts` (multer + sharp + Storage) |
-| Frontend page | `resources/js/Pages/` |
-| Frontend component | `resources/js/Components/` |
+| Frontend page | `resources/Pages/` |
+| Frontend component | `resources/Components/` |
 | Constants | `app/config/constants.ts` |
 | Adapters | `app/core/adapters/` (Svelte/Inertia integration) |

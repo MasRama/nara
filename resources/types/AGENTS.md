@@ -38,13 +38,13 @@ Manually maintained — when backend types change, update `generated.ts` accordi
 Add custom frontend-only types to a new file, then re-export from `index.ts`:
 
 ```typescript
-// resources/js/types/forms.ts
+// resources/types/forms.ts
 export interface CreateProductForm {
   name: string;
   price: number;
 }
 
-// resources/js/types/index.ts
+// resources/types/index.ts
 export * from "./generated";
 export * from "./forms"; // add here
 ```

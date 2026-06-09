@@ -1,11 +1,11 @@
 
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync } from "fs";
 import path from "path";
 import { templateCache } from "@services/CacheStore";
 import 'dotenv/config';
 
 function getViewsDirectory() {
-   return process.env.NODE_ENV === 'development' ? "resources/views" : "dist/views";
+   return process.env.NODE_ENV === 'development' ? "resources" : "dist";
 }
 
 function loadTemplate(filename: string): string {
@@ -43,14 +43,8 @@ export function view(filename: string, view_data?: Record<string, unknown>) {
    let html = baseTemplate;
 
    if (process.env.NODE_ENV === 'development') {
-      const files = readdirSync("resources/js");
-
-      for (const asset of files) {
-         html = html.replace(
-            `/js/${asset}`,
-            `http://localhost:${process.env.VITE_PORT}/js/${asset}`
-         );
-      }
+      const viteUrl = `http://localhost:${process.env.VITE_PORT}`;
+      html = html.replace(/="(\/[^"]+\.(ts|css))"/g, `="${viteUrl}$1"`);
    }
 
    if (view_data) {
