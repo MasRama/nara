@@ -1,5 +1,7 @@
 <script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
+  import axios from 'axios'
+  import { api } from '$lib/api'
   import { Toast } from '$lib/toast';
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
@@ -21,6 +23,7 @@
   });
 
   let showPassword = $state(false);
+  let isLoading = $state(false);
 
   let { error }: { error?: string } = $props();
 
@@ -28,8 +31,11 @@
     if (error) Toast(error, 'error');
   });
 
-  function submitForm(): void {
-    router.post("/login", { email: form.email, password: form.password }, {})
+  async function submitForm(): Promise<void> {
+    isLoading = true;
+    const result = await api(() => axios.post("/login", { email: form.email, password: form.password }));
+    isLoading = false;
+    if (result.success) router.visit("/dashboard");
   }
 </script>
 
@@ -107,8 +113,8 @@
           </div>
         </div>
 
-        <Button type="submit" size="lg" class="w-full rounded-full py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm">
-          Sign In
+        <Button type="submit" disabled={isLoading} size="lg" class="w-full rounded-full py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm">
+          {#if isLoading}Signing in...{:else}Sign In{/if}
         </Button>
 
         <p class="text-center text-muted-foreground font-body text-sm">

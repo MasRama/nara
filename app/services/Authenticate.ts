@@ -45,23 +45,10 @@ export const processLogin = (user: User, request: Request, response: Response) =
       user_agent: request.headers['user-agent'] || null,
    });
 
-   const isInertia = request.headers['x-inertia'];
-
-   if (isInertia) {
-      return response
-         .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
-         .setHeader('X-Inertia-Location', '/dashboard')
-         .redirect('/dashboard');
-   }
-
-   response
-      .cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() })
-      .redirect('/dashboard');
+   response.cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() });
 };
 
 export const logout = (request: Request, response: Response) => {
    deleteSession(request.cookies[SESSION_COOKIE_NAME]);
-   response
-      .clearCookie(SESSION_COOKIE_NAME, getSecureCookieOptions())
-      .redirect('/login');
+   response.clearCookie(SESSION_COOKIE_NAME, getSecureCookieOptions());
 };

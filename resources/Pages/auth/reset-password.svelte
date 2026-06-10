@@ -1,8 +1,9 @@
 <script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
+  import axios from 'axios'
+  import { api } from '$lib/api'
   import NaraIcon from '../../Components/NaraIcon.svelte';
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte';
-  import { buildCSRFHeaders } from '$lib/csrf';
   import { password_generator } from '$lib/utils/password';
   import { Toast } from '$lib/toast';
   import Button from '../../Components/Button.svelte';
@@ -31,15 +32,14 @@
     form.password_confirmation = retVal
   }
 
-  function submitForm(): void {
+  async function submitForm(): Promise<void> {
     if (form.password != form.password_confirmation) {
       Toast("Password dan konfirmasi password harus sama", "error")
       return;
     }
 
-    router.post(`/reset-password`, { ...form, id } as Record<string, unknown>, {
-      headers: buildCSRFHeaders()
-    })
+    const result = await api(() => axios.post(`/reset-password`, { ...form, id }));
+    if (result.success) router.visit('/login');
   }
 </script>
 

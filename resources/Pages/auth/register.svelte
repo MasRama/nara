@@ -1,5 +1,7 @@
 <script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
+  import axios from 'axios'
+  import { api } from '$lib/api'
   import { password_generator } from '$lib/utils/password';
   import { Toast } from '$lib/toast';
   import NaraIcon from '../../Components/NaraIcon.svelte';
@@ -29,6 +31,7 @@
 
   let showPassword = $state(false);
   let showConfirm = $state(false);
+  let isLoading = $state(false);
 
   let { error }: { error?: string } = $props();
 
@@ -36,14 +39,17 @@
     if (error) Toast(error, 'error');
   });
 
-  function submitForm(): void {
+  async function submitForm(): Promise<void> {
     if (form.password != form.password_confirmation) {
       Toast("Password dan konfirmasi password harus sama", "error");
       return;
     }
 
-    form.phone = form.phone.toString()
-    router.post("/register", form as Record<string, unknown>, {})
+    isLoading = true;
+    const payload = { ...form, phone: form.phone.toString() };
+    const result = await api(() => axios.post("/register", payload));
+    isLoading = false;
+    if (result.success) router.visit("/dashboard");
   }
 
   function generatePassword(): void {
@@ -149,8 +155,8 @@
           </Button>
         </div>
 
-        <Button type="submit" size="lg" class="w-full rounded-full py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm mt-2">
-          Create Account
+        <Button type="submit" disabled={isLoading} size="lg" class="w-full rounded-full py-6 font-heading font-semibold tracking-wide hover:scale-105 active:scale-95 transition-transform text-base shadow-sm mt-2">
+          {#if isLoading}Creating account...{:else}Create Account{/if}
         </Button>
 
         <p class="text-center text-muted-foreground font-body text-sm">
