@@ -78,7 +78,7 @@ function checkFile(absPath: string): void {
     if (isHandler && /from\s+['"]@services\/SQLite['"]/.test(line)) {
       violations.push({
         rule: 'L1', file: rel, line: lineNum, text: trimmed,
-        message: 'Handlers must not import @services/SQLite directly — go through @queries',
+        message: 'Handlers must not import @services/SQLite directly. Fix: import query functions from @queries instead. See .agents/skills/sqlite-usage.md',
       });
     }
 
@@ -88,7 +88,7 @@ function checkFile(absPath: string): void {
       if (match && !['Authenticate', 'Logger', 'Storage', 'Session', 'LoginThrottle', 'CacheStore'].includes(match[1])) {
         violations.push({
           rule: 'L2', file: rel, line: lineNum, text: trimmed,
-          message: `Handlers must not import @services/${match[1]} — only Authenticate, Logger, Storage, Session, LoginThrottle, CacheStore allowed`,
+          message: `Handlers must not import @services/${match[1]}. Fix: only Authenticate, Logger, Storage, Session, LoginThrottle, CacheStore are allowed. See .agents/skills/crud-pattern.md`,
         });
       }
     }
@@ -97,7 +97,7 @@ function checkFile(absPath: string): void {
     if (isFrontend && /\bfetch\s*\(/.test(line) && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L5', file: rel, line: lineNum, text: trimmed,
-        message: 'Frontend must not use fetch() — use api(() => axios.method())',
+        message: 'Frontend must not use fetch(). Fix: use api(() => axios.get/post/put/delete(...)). See .agents/skills/inertia-patterns.md',
       });
     }
 
@@ -108,7 +108,7 @@ function checkFile(absPath: string): void {
         && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L6', file: rel, line: lineNum, text: trimmed,
-        message: 'Frontend must not use window.location for navigation — use router.visit()',
+        message: 'Frontend must not use window.location for navigation. Fix: use router.visit("/path"). See .agents/skills/inertia-patterns.md',
       });
     }
 
@@ -116,7 +116,7 @@ function checkFile(absPath: string): void {
     if (isFrontend && /router\.(post|put|patch|delete)\s*\(/.test(line) && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L7', file: rel, line: lineNum, text: trimmed,
-        message: 'Frontend must not use router.post/put/patch/delete — use api(() => axios.method())',
+        message: 'Frontend must not use router.post/put/patch/delete — bypasses api() wrapper (no toast/CSRF). Fix: use api(() => axios.method()). See .agents/skills/inertia-patterns.md',
       });
     }
 
@@ -125,19 +125,19 @@ function checkFile(absPath: string): void {
       if (/onMount\s*\(/.test(line) && !trimmed.startsWith('//')) {
         violations.push({
           rule: 'L8', file: rel, line: lineNum, text: trimmed,
-          message: 'Use $effect() instead of onMount() — Svelte 5 runes',
+          message: 'Use $effect() instead of onMount() — Svelte 5 runes. See .agents/skills/inertia-patterns.md',
         });
       }
       if (/^\s*\$:\s/.test(line) && !trimmed.startsWith('//')) {
         violations.push({
           rule: 'L8', file: rel, line: lineNum, text: trimmed,
-          message: 'Use $derived() instead of $: — Svelte 5 runes',
+          message: 'Use $derived() instead of $: — Svelte 5 runes. See .agents/skills/inertia-patterns.md',
         });
       }
       if (/export\s+let\s+\w+/.test(line) && !trimmed.startsWith('//')) {
         violations.push({
           rule: 'L8', file: rel, line: lineNum, text: trimmed,
-          message: 'Use $props() instead of export let — Svelte 5 runes',
+          message: 'Use $props() instead of export let — Svelte 5 runes. See .agents/skills/inertia-patterns.md',
         });
       }
     }
@@ -148,7 +148,7 @@ function checkFile(absPath: string): void {
     if (isBackend && !isBootstrap && /console\.(log|warn|error|debug|info)\s*\(/.test(line) && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L9', file: rel, line: lineNum, text: trimmed,
-        message: 'Use Logger.info/warn/error instead of console.log',
+        message: 'Use Logger.info/warn/error instead of console.log. Fix: import Logger from @services/Logger. See AGENTS.md anti-pattern #6',
       });
     }
 
@@ -156,19 +156,19 @@ function checkFile(absPath: string): void {
     if (isBackend && /from\s+['"]bcrypt['"]/.test(line) && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L10', file: rel, line: lineNum, text: trimmed,
-        message: 'Use hashPassword/comparePassword from @services/Authenticate — never bcrypt directly',
+        message: 'Use hashPassword/comparePassword from @services/Authenticate — never bcrypt directly. See .agents/skills/auth-rbac.md',
       });
     }
 
     // L11: Handler exports must not use generic REST names (index, show, store, create, update, destroy, remove)
     // These require context to understand — AI must read the file to know what `index` does.
-    // Use descriptive names: listUsers, createUser, updateUser, deleteUsers, landingPage, etc.
+    // Use descriptive names: listUsers, addUser, editUser, removeUsers, landingPage, etc.
     if (isHandler) {
       const match = line.match(/^export\s+const\s+(index|show|store|create|update|destroy|remove|handle|process|run|do|execute)\b/);
       if (match) {
         violations.push({
           rule: 'L11', file: rel, line: lineNum, text: trimmed,
-          message: `Handler export "${match[1]}" is too generic — use a descriptive name (e.g. listUsers, createUser, updateUser, deleteUsers)`,
+          message: `Handler export "${match[1]}" is too generic. Fix: use descriptive name (e.g. listUsers, addUser, editUser, removeUsers). See .agents/skills/crud-pattern.md and docs/decisions/0009-descriptive-handler-names.md`,
         });
       }
     }
@@ -191,7 +191,7 @@ function checkFile(absPath: string): void {
         if (genericVerbs.includes(name) && !isPage && !isMiddleware && !isKnownUtility) {
           violations.push({
             rule: 'L12', file: rel, line: lineNum, text: trimmed,
-            message: `Handler export "${name}" should include the resource name (e.g. ${name}User, ${name}Role)`,
+            message: `Handler export "${name}" should include the resource name. Fix: use ${name}User, ${name}Role, ${name}Product, etc. See .agents/skills/crud-pattern.md`,
           });
         }
       }
@@ -204,7 +204,7 @@ function checkFile(absPath: string): void {
       if (match) {
         violations.push({
           rule: 'L13', file: rel, line: lineNum, text: trimmed,
-          message: `Function name "${match[1]}" is too vague — describe what it does (e.g. processPayment, handleWebhookDelivery)`,
+          message: `Function name "${match[1]}" is too vague. Fix: describe what it does (e.g. processPayment, handleWebhookDelivery, runMigration). See AGENTS.md anti-pattern #11`,
         });
       }
     }

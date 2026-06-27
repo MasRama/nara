@@ -10,6 +10,20 @@ scope: root
 > **Authority:** canon — current source of truth. Agents must follow this.
 > **Skills:** Deep-dive procedures live in [`.agents/skills/`](./.agents/skills/SKILL.md) — load on demand.
 
+## AI Quickstart — First time here?
+
+Read in this order (each builds on the previous):
+
+1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
+2. **This file** — conventions, anti-patterns, structure. ~200 lines.
+3. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
+4. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+
+Then verify your work with one command:
+```bash
+npm run check    # lint + typecheck + layer lint + tests + freshness
+```
+
 ## Overview
 
 AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over ORM, minimal abstractions.
