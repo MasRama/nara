@@ -1,7 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
-scope: root
 ---
 
 # Nara - Project Knowledge Base
@@ -23,7 +21,7 @@ For database schema: `ls migrations/` to see table names, read the specific migr
 
 Then verify your work with one command:
 ```bash
-npm run check    # lint + typecheck + layer lint + tests + freshness
+npm run check    # lint + typecheck + layer lint + tests
 ```
 
 Scaffold a new resource with one command:
@@ -214,12 +212,10 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + typecheck + lint:layers + tests + freshness | No (run manually) |
+| `npm run check` | All-in-one: lint + typecheck + lint:layers + tests | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (7 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
-| `npm run check:freshness` | Check if AGENTS.md files are stale relative to code | No (advisory) |
-| `npm run check:freshness -- --strict` | Same, but fail CI on stale AGENTS.md | Yes (in CI) |
 
 ### CODEMAP.md
 
@@ -248,10 +244,6 @@ Enforces 17 rules from AGENTS.md anti-patterns + import direction:
 
 See `scripts/lint-layers.ts` for the full rule list.
 
-### Freshness Gate
-
-If code in a directory changes but its AGENTS.md is not updated, the freshness gate warns. Advisory by default, strict in CI. See `scripts/check-freshness.ts` for the directory→AGENTS.md mapping.
-
 ### Pre-commit Hook
 
 Install with:
@@ -259,7 +251,7 @@ Install with:
 cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 ```
 
-Runs layer lint (blocking) + freshness check (advisory) on every commit.
+Runs layer lint (blocking) on every commit.
 
 ## Where to Look
 

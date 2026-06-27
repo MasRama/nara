@@ -60,8 +60,8 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 | **Topology** | `CODEMAP.md` (111 files indexed, 278 exports) | The machine knows what exists before searching. Reads one file instead of 111. |
 | **Scaffolding** | `npm run gen:resource` | Seven files scaffolded with correct conventions. The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 254 tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
-| **Verification** | `npm run check` | One command. The machine doesn't need to remember four. |
-| **CI** | 4 steps: typecheck → layer lint → tests → freshness (strict) | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
+| **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
+| **CI** | 3 steps: typecheck → layer lint → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
 | **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
 | **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
 
@@ -127,9 +127,8 @@ Server (ultimate-express / uWebSockets.js)
 npm run gen:resource products -- --fields="name:string,price:number"
 
 # Verification
-npm run check              # lint + typecheck + layer lint + tests + freshness
+npm run check              # lint + typecheck + layer lint + tests
 npm run lint:layers        # 17 layer boundary + naming + import direction rules
-npm run check:freshness    # detect stale AGENTS.md (advisory) or --strict (CI)
 
 # Topology
 npm run codemap            # regenerate CODEMAP.md (111 files, 278 exports)

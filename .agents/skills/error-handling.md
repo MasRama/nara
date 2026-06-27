@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 trigger: Writing error handling in handlers or services, or debugging error flow
 ---
 

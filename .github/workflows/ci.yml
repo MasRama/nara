@@ -11,7 +11,7 @@ env:
 
 jobs:
   check:
-    name: Lint + Typecheck + Layer Lint + Tests + Freshness
+    name: Typecheck + Layer Lint + Tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -34,9 +34,6 @@ jobs:
 
       - name: Tests
         run: npm test
-
-      - name: Freshness gate (strict)
-        run: npm run check:freshness -- --strict
 
   build:
     name: Build

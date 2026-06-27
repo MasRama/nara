@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 trigger: Adding a dependency, or before suggesting a library/package
 ---
 

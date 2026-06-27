@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 trigger: Writing handlers that return JSON, or handling errors in services
 ---
 

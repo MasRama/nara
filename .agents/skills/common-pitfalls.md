@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 trigger: Before writing code — read this to avoid common AI mistakes
 ---
 

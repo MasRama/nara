@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 trigger: Adding a new resource (e.g. products, posts, comments) — full stack from types to UI
 ---
 

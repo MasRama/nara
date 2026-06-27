@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 trigger: Adding auth guards, permission checks, role management, or session handling
 ---
 

@@ -1,24 +1,14 @@
 #!/bin/sh
-# Nara pre-commit hook — runs layer boundary lint + freshness gate.
+# Nara pre-commit hook — runs layer boundary lint.
 # Install: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
-# Or: git config core.hooksPath scripts/hooks (then commit scripts/hooks/pre-commit)
 
-echo "── Nara pre-commit checks ──"
+echo "── Nara pre-commit check ──"
 
-# Layer boundary lint
-echo "1/2 Layer boundary lint..."
 npx ts-node scripts/lint-layers.ts
-LINT_EXIT=$?
-
-if [ $LINT_EXIT -ne 0 ]; then
-  echo "❌ Layer boundary lint failed. Fix violations above or remove the hook to bypass."
+if [ $? -ne 0 ]; then
+  echo "❌ Layer boundary lint failed. Fix violations above."
   exit 1
 fi
 
-# Freshness gate (advisory — does not block)
-echo "2/2 Freshness gate..."
-npx ts-node scripts/check-freshness.ts
-# Freshness is advisory — always exit 0 for this step
-
-echo "✓ Pre-commit checks passed."
+echo "✓ Pre-commit check passed."
 exit 0

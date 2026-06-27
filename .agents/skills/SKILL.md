@@ -1,6 +1,5 @@
 ---
 authority: canon
-last_verified: 2026-06-28
 ---
 
 # Skills Directory
@@ -29,7 +28,6 @@ Each skill file uses this structure:
 ```markdown
 ---
 authority: canon
-last_verified: YYYY-MM-DD
 trigger: <when agent should load this skill>
 ---
 
