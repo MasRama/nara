@@ -22,7 +22,8 @@
     "lint:layers": "npx ts-node scripts/lint-layers.ts",
     "check:freshness": "npx ts-node scripts/check-freshness.ts",
     "check": "npm run lint && npm run lint:layers && npm test && npm run check:freshness",
-    "gen:resource": "npx ts-node scripts/gen-resource.ts"
+    "gen:resource": "npx ts-node scripts/gen-resource.ts",
+    "gen:schema": "npx ts-node scripts/gen-schema.ts"
   },
   "author": "MasRama",
   "license": "ISC",
