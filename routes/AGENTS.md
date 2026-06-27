@@ -25,14 +25,14 @@ const Route = createRouter();
 Route.get('/users', [Auth], users.usersPage);
 
 // JSON data (called by api(() => axios.method()) from Svelte)
-Route.post('/users', [Auth], users.create);
-Route.put('/users/:id', [Auth], users.update);
-Route.delete('/users', [Auth], users.remove);
+Route.post('/users', [Auth], users.addUser);
+Route.put('/users/:id', [Auth], users.editUser);
+Route.delete('/users', [Auth], users.removeUsers);
 
 // Route groups with shared prefix + middleware
 Route.group('/api', [Auth], (r) => {
-  r.get('/items', items.index);
-  r.post('/items', items.store);
+  r.get('/items', items.listItems);
+  r.post('/items', items.addItem);
 });
 
 export default Route.getRouter();
