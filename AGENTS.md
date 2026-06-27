@@ -14,11 +14,12 @@ scope: root
 Read in this order (each builds on the previous):
 
 1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
-2. **[SCHEMA.md](./SCHEMA.md)** — database schema in one read (8 tables, 55 columns). **Read this instead of parsing 8 migration files.** Know table shapes before writing SQL.
-3. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
-4. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
-5. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
-6. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+2. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
+3. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
+4. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
+5. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+
+For database schema: `ls migrations/` to see table names, read the specific migration file for column types and constraints.
 
 Then verify your work with one command:
 ```bash
@@ -215,7 +216,6 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 |---|---|---|
 | `npm run check` | All-in-one: lint + typecheck + lint:layers + tests + freshness | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
-| `npm run gen:schema` | Regenerate `SCHEMA.md` (database schema reference) | No |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (7 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 | `npm run check:freshness` | Check if AGENTS.md files are stale relative to code | No (advisory) |

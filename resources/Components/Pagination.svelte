@@ -20,32 +20,32 @@
   const showStartEllipsis = $derived(getPageNumbers()[0] > 1);
   const showEndEllipsis = $derived(getPageNumbers()[getPageNumbers().length - 1] < meta.totalPages);
 
-  const linkBase = cn("inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 w-9");
-  const navBtn = cn("inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground");
+  const linkBase = cn("inline-flex items-center justify-center whitespace-nowrap rounded-sm text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 w-9");
+  const navBtn = cn("inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-sm text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground");
 </script>
 
 {#if meta.totalPages > 1}
-  <div class="mt-6">
-    <div class="flex items-center justify-between mb-2 text-xs text-muted-foreground">
-      <span>Page {meta.page} of {meta.totalPages} ({meta.total} total)</span>
+  <div class="mt-8">
+    <div class="flex items-center justify-between mb-3 text-xs text-muted-foreground font-heading">
+      <span>Page {meta.page} of {meta.totalPages} &middot; {meta.total} total</span>
     </div>
     <nav class="mx-auto flex w-full justify-center">
       <ul class="flex flex-row items-center gap-1">
         <li>
           <button class={navBtn} onclick={() => goToPage(meta.page - 1)} disabled={!meta.hasPrev} aria-label="Go to previous page">
-            <ChevronLeft class="size-4" /><span>Previous</span>
+            <ChevronLeft class="size-4" /><span>Prev</span>
           </button>
         </li>
 
         {#if showStartEllipsis}
           <li><button class={linkBase} onclick={() => goToPage(1)}>1</button></li>
-          <li><span class="flex h-9 w-9 items-center justify-center text-muted-foreground">…</span></li>
+          <li><span class="flex h-9 w-9 items-center justify-center text-muted-foreground">...</span></li>
         {/if}
 
         {#each getPageNumbers() as pageNum}
           <li>
             <button
-              class={cn(linkBase, pageNum === meta.page ? "bg-primary text-primary-foreground shadow" : "text-foreground hover:bg-muted")}
+              class={cn(linkBase, pageNum === meta.page ? "bg-foreground text-background" : "text-foreground hover:bg-muted border border-border")}
               onclick={() => goToPage(pageNum)}
               aria-current={pageNum === meta.page ? "page" : undefined}
             >{pageNum}</button>
@@ -53,7 +53,7 @@
         {/each}
 
         {#if showEndEllipsis}
-          <li><span class="flex h-9 w-9 items-center justify-center text-muted-foreground">…</span></li>
+          <li><span class="flex h-9 w-9 items-center justify-center text-muted-foreground">...</span></li>
           <li><button class={linkBase} onclick={() => goToPage(meta.totalPages)}>{meta.totalPages}</button></li>
         {/if}
 

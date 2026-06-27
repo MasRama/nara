@@ -6,7 +6,7 @@
   import Switch from './Switch.svelte';
   import * as dialog from "@zag-js/dialog";
   import { useMachine, normalizeProps, portal } from "@zag-js/svelte";
-  import { Loader2 } from '@lucide/svelte';
+  import { Loader2, X } from '@lucide/svelte';
   import type { UserForm, RoleInfo } from '../types';
 
   let {
@@ -62,69 +62,72 @@
   <div use:portal>
     <div {...dialogApi.getBackdropProps()} class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"></div>
     <div {...dialogApi.getPositionerProps()}>
-      <div {...dialogApi.getContentProps()} class="bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-2xl border border-border shadow-lg sm:max-w-md font-body overflow-hidden">
+      <div {...dialogApi.getContentProps()} class="bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-sm border border-border shadow-lg sm:max-w-md font-body overflow-hidden">
 
-        <div class="px-6 pt-6 pb-5 border-b border-border">
-          <span class="text-[10px] font-mono-accent uppercase tracking-widest text-primary mb-2 block">
-            {mode === 'create' ? 'New User' : 'Edit User'}
-          </span>
-          <h2 {...dialogApi.getTitleProps()} class="font-heading font-semibold text-xl tracking-tight" style="font-feature-settings: 'ss01'">
-            {mode === 'create' ? 'Create User' : 'Update User'}
-          </h2>
-          <p {...dialogApi.getDescriptionProps()} class="text-sm text-muted-foreground font-body mt-1">
-            {mode === 'create' ? 'Add a new user to the system.' : 'Make changes to the user profile here.'}
-          </p>
+        <div class="px-6 pt-6 pb-5 border-b border-border flex items-start justify-between gap-4">
+          <div>
+            <p class="font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-2">
+              {mode === 'create' ? 'New user' : 'Edit user'}
+            </p>
+            <h2 {...dialogApi.getTitleProps()} class="font-heading font-semibold text-xl tracking-tight text-foreground">
+              {mode === 'create' ? 'Create a user' : 'Update user'}
+            </h2>
+            <p {...dialogApi.getDescriptionProps()} class="text-sm text-muted-foreground font-body mt-1">
+              {mode === 'create' ? 'Add a new person to the system.' : 'Make changes to this account.'}
+            </p>
+          </div>
+          <button {...dialogApi.getCloseTriggerProps()} class="text-muted-foreground hover:text-foreground transition-colors p-1 -mt-1 -mr-1 shrink-0">
+            <X class="w-5 h-5" />
+            <span class="sr-only">Close</span>
+          </button>
         </div>
 
         <form id="user-form" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-          <div class="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
-            <div class="space-y-2">
-              <Label for="name" class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">Full Name</Label>
-              <Input id="name" type="text" bind:value={form.name} placeholder="Enter full name" class="rounded-xl h-11 bg-background border-border font-body text-sm" required />
+          <div class="px-6 py-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
+            <div class="flex flex-col gap-2">
+              <Label for="name" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Full name</Label>
+              <Input id="name" type="text" bind:value={form.name} placeholder="Enter full name" class="h-11" required />
             </div>
-            <div class="space-y-2">
-              <Label for="email" class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">Email Address</Label>
-              <Input id="email" type="email" bind:value={form.email} placeholder="user@example.com" class="rounded-xl h-11 bg-background border-border font-body text-sm" required />
+            <div class="flex flex-col gap-2">
+              <Label for="email" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Email</Label>
+              <Input id="email" type="email" bind:value={form.email} placeholder="user@example.com" class="h-11" required />
             </div>
-            <div class="space-y-2">
-              <Label for="password" class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">{mode === 'create' ? 'Password' : 'New Password'} <span class="normal-case tracking-normal font-body text-muted-foreground">(optional)</span></Label>
-              <Input id="password" type="password" bind:value={form.password} placeholder={mode === 'create' ? 'Leave empty to use email' : 'Leave empty to keep current'} class="rounded-xl h-11 bg-background border-border font-body text-sm" />
+            <div class="flex flex-col gap-2">
+              <Label for="password" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">
+                {mode === 'create' ? 'Password' : 'New password'} <span class="normal-case tracking-normal text-muted-foreground/70">(optional)</span>
+              </Label>
+              <Input id="password" type="password" bind:value={form.password} placeholder={mode === 'create' ? 'Leave empty to use email' : 'Leave empty to keep current'} class="h-11" />
             </div>
 
-            <div class="space-y-3">
-              <Label class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">Roles</Label>
+            <div class="flex flex-col gap-3">
+              <Label class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Roles</Label>
               <div class="grid grid-cols-2 gap-2">
                 {#each availableRoles as role}
-                  <div class="flex items-center gap-3 bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors duration-200">
+                  <div class="flex items-center gap-3 border border-border rounded-sm p-3 cursor-pointer hover:border-foreground/30 transition-colors">
                     <Switch checked={hasRole(role.slug)} onCheckedChange={(c: boolean) => toggleRole(role.slug, c)} id="role-{role.slug}" />
-                    <div>
-                      <Label for="role-{role.slug}" class="text-sm font-heading font-semibold cursor-pointer capitalize">{role.name}</Label>
+                    <div class="min-w-0">
+                      <Label for="role-{role.slug}" class="text-sm font-heading font-medium cursor-pointer capitalize">{role.name}</Label>
                       {#if role.description}
-                        <p class="text-[10px] font-mono-accent text-muted-foreground mt-0.5 line-clamp-1">{role.description}</p>
+                        <p class="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{role.description}</p>
                       {/if}
                     </div>
                   </div>
                 {/each}
                 {#if availableRoles.length === 0}
-                  <p class="text-xs text-muted-foreground font-mono-accent col-span-2">No roles available</p>
+                  <p class="text-xs text-muted-foreground col-span-2">No roles available</p>
                 {/if}
               </div>
             </div>
           </div>
         </form>
 
-        <div class="px-6 py-4 border-t border-border flex gap-2">
-          <Button variant="outline" onclick={handleClose} disabled={isSubmitting} class="rounded-full font-mono-accent text-xs uppercase tracking-widest border-border hover:border-primary/40 hover:text-primary transition-colors duration-200">Cancel</Button>
-          <Button type="submit" form="user-form" disabled={isSubmitting} class="rounded-full font-mono-accent text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-transform duration-200">
-            {#if isSubmitting}<Loader2 class="mr-2 h-4 w-4 animate-spin" />{/if}
-            {mode === 'create' ? 'Create User' : 'Save Changes'}
+        <div class="px-6 py-4 border-t border-border flex gap-2 justify-end">
+          <Button variant="outline" onclick={handleClose} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" form="user-form" disabled={isSubmitting}>
+            {#if isSubmitting}<Loader2 class="w-4 h-4 animate-spin" />{/if}
+            {mode === 'create' ? 'Create user' : 'Save changes'}
           </Button>
         </div>
-
-        <button {...dialogApi.getCloseTriggerProps()} class="absolute end-4 top-4 rounded-lg opacity-50 transition-opacity hover:opacity-100">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          <span class="sr-only">Close</span>
-        </button>
       </div>
     </div>
   </div>

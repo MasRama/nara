@@ -69,7 +69,7 @@
   async function handleSubmit(event: CustomEvent<RoleForm>): Promise<void> {
     const formData = event.detail;
     if (!formData.name || !formData.slug) {
-      Toast('Nama dan slug wajib diisi', 'error');
+      Toast('Name and slug are required', 'error');
       return;
     }
 
@@ -99,10 +99,10 @@
 
   async function deleteRole(role: Role): Promise<void> {
     if (role.slug === 'admin') {
-      Toast('Role admin tidak bisa dihapus', 'error');
+      Toast('The admin role cannot be deleted', 'error');
       return;
     }
-    if (!confirm(`Yakin ingin menghapus role "${role.name}"?`)) {
+    if (!confirm(`Delete role "${role.name}"? This cannot be undone.`)) {
       return;
     }
 
@@ -128,155 +128,141 @@
 
 <Header group="roles" />
 
-<div class="min-h-screen bg-background text-foreground font-body transition-colors duration-500">
+<div class="min-h-[100dvh] bg-background text-foreground font-body antialiased selection:bg-primary/20 selection:text-primary">
 
-  <section class="relative px-6 sm:px-12 lg:px-24 pt-28 pb-16">
-    <div class="max-w-[90rem] mx-auto">
+  <section class="px-6 sm:px-10 lg:px-16 pt-28 pb-16">
+    <div class="max-w-[1400px] mx-auto">
 
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10" in:fly={{ y: 20, duration: 800 }}>
+      <!-- Header row -->
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12" in:fly={{ y: 20, duration: 800 }}>
         <div>
-          <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-3">Management</span>
-          <h1 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter" style="font-feature-settings: 'ss01'">Roles</h1>
+          <p class="font-heading text-xs uppercase tracking-[0.25em] text-muted-foreground mb-4">Management</p>
+          <h1 class="font-heading font-semibold tracking-[-0.03em] leading-[1] text-[clamp(2.5rem,6vw,4.5rem)] text-foreground">
+            Roles.
+          </h1>
+          <p class="mt-5 text-lg text-muted-foreground leading-relaxed max-w-[52ch]">
+            The shape of what people can do. Define a role, assign permissions, hand it out.
+          </p>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-6 shrink-0">
           <div class="text-right">
-            <p class="text-[10px] font-mono-accent uppercase tracking-widest text-muted-foreground mb-1">Total</p>
-            <p class="text-3xl font-heading font-bold tracking-tighter">{roles.length}</p>
+            <p class="font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-1">Total</p>
+            <p class="font-heading font-semibold text-3xl tracking-[-0.03em] text-foreground">{roles.length}</p>
           </div>
-
-          <div class="h-10 w-px bg-border"></div>
-
           {#if permissions.canCreate}
-            <Button
-              class="rounded-full px-6 font-heading font-semibold text-sm"
-              onclick={openCreateRole}
-              disabled={isSubmitting}
-            >
-              <Plus class="w-4 h-4 mr-2" />
-              Add Role
+            <Button onclick={openCreateRole} disabled={isSubmitting} size="lg">
+              <Plus class="w-4 h-4" />
+              Add role
             </Button>
           {/if}
         </div>
       </div>
 
       {#if loading}
-        <div class="flex items-center justify-center py-20">
+        <div class="flex items-center justify-center py-32">
           <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
-      {:else}
-        <div class="bg-card border border-border rounded-2xl overflow-hidden mb-8" in:fly={{ y: 20, duration: 800, delay: 150 }}>
-          {#if roles.length}
-            <div class="relative w-full overflow-x-auto">
-              <table class="w-full caption-bottom text-sm">
-                <thead class="[&_tr]:border-b">
-                  <tr class="border-border">
-                    <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Role</th>
-                    <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Slug</th>
-                    <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Permissions</th>
-                    <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Users</th>
-                    <th class="h-10 px-2 text-end font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Actions</th>
+      {:else if roles.length}
+        <div class="border border-border rounded-sm overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+          <div class="relative w-full overflow-x-auto">
+            <table class="w-full caption-bottom text-sm">
+              <thead>
+                <tr class="border-b border-border">
+                  <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Role</th>
+                  <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Slug</th>
+                  <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Permissions</th>
+                  <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Users</th>
+                  <th class="h-12 px-5 text-end font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each roles as role}
+                  <tr class="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors duration-150">
+                    <td class="p-5 align-middle whitespace-nowrap">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-sm flex items-center justify-center shrink-0 {role.slug === 'admin' ? 'bg-primary/10 border border-primary/20' : 'bg-muted border border-border'}">
+                          {#if role.slug === 'admin'}
+                            <ShieldCheck class="w-4 h-4 text-primary" />
+                          {:else}
+                            <Shield class="w-4 h-4 text-muted-foreground" />
+                          {/if}
+                        </div>
+                        <div class="min-w-0">
+                          <div class="text-sm font-heading font-semibold tracking-tight text-foreground">{role.name}</div>
+                          {#if role.description}
+                            <div class="text-xs text-muted-foreground line-clamp-1 mt-0.5">{role.description}</div>
+                          {/if}
+                        </div>
+                      </div>
+                    </td>
+                    <td class="p-5 align-middle whitespace-nowrap">
+                      <span class="font-mono-accent text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-sm border border-border">{role.slug}</span>
+                    </td>
+                    <td class="p-5 align-middle whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-heading font-semibold text-foreground">{getPermissionCount(role)}</span>
+                        <span class="text-xs text-muted-foreground">permissions</span>
+                      </div>
+                      {#if role.permissions && role.permissions.length > 0}
+                        <div class="flex flex-wrap gap-1 mt-1.5">
+                          {#each Object.entries(
+                            role.permissions.reduce((acc, perm: string | { slug: string }) => {
+                              const slug = typeof perm === 'string' ? perm : perm.slug;
+                              const resource = slug.split('.')[0];
+                              if (!acc[resource]) acc[resource] = 0;
+                              acc[resource]++;
+                              return acc;
+                            }, {} as Record<string, number>)
+                          ) as [resource, count]}
+                            <span class="text-[10px] px-1.5 py-0.5 bg-muted rounded-sm border border-border text-muted-foreground font-heading">
+                              {formatResourceName(resource)}: {count}
+                            </span>
+                          {/each}
+                        </div>
+                      {/if}
+                    </td>
+                    <td class="p-5 align-middle whitespace-nowrap">
+                      <div class="flex items-center gap-2">
+                        <Users class="w-3.5 h-3.5 text-muted-foreground" />
+                        <span class="text-sm font-heading font-medium text-foreground">{role.user_count || 0}</span>
+                      </div>
+                    </td>
+                    <td class="p-5 align-middle whitespace-nowrap text-right">
+                      {#if permissions.canEdit || (permissions.canDelete && role.slug !== 'admin')}
+                        <div class="flex justify-end gap-2">
+                          {#if permissions.canEdit}
+                            <Button variant="outline" size="sm" onclick={() => openEditRole(role)} disabled={isSubmitting}>
+                              <Pencil class="w-3 h-3" />
+                              Edit
+                            </Button>
+                          {/if}
+                          {#if permissions.canDelete && role.slug !== 'admin'}
+                            <Button variant="ghost" size="sm" class="text-destructive hover:bg-destructive/10 hover:text-destructive" onclick={() => deleteRole(role)} disabled={isSubmitting}>
+                              <Trash2 class="w-3 h-3" />
+                            </Button>
+                          {/if}
+                        </div>
+                      {/if}
+                    </td>
                   </tr>
-                </thead>
-                <tbody class="[&_tr:last-child]:border-0">
-                  {#each roles as role}
-                    <tr class="border-border border-b hover:bg-muted/30 transition-colors duration-150">
-                      <td class="p-2 align-middle whitespace-nowrap">
-                        <div class="flex items-center gap-3">
-                          <div class="w-8 h-8 rounded-lg flex items-center justify-center {role.slug === 'admin' ? 'bg-primary/10' : 'bg-secondary'}">
-                            {#if role.slug === 'admin'}
-                              <ShieldCheck class="w-4 h-4 text-primary" />
-                            {:else}
-                              <Shield class="w-4 h-4 text-muted-foreground" />
-                            {/if}
-                          </div>
-                          <div>
-                            <div class="text-sm font-heading font-semibold">{role.name}</div>
-                            {#if role.description}
-                              <div class="text-xs font-mono-accent text-muted-foreground line-clamp-1">{role.description}</div>
-                            {/if}
-                          </div>
-                        </div>
-                      </td>
-                      <td class="p-2 align-middle whitespace-nowrap">
-                        <span class="font-mono-accent text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">{role.slug}</span>
-                      </td>
-                      <td class="p-2 align-middle whitespace-nowrap">
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm font-heading font-semibold">{getPermissionCount(role)}</span>
-                          <span class="text-xs font-mono-accent text-muted-foreground">permissions</span>
-                        </div>
-                        {#if role.permissions && role.permissions.length > 0}
-                          <div class="flex flex-wrap gap-1 mt-1">
-                            {#each Object.entries(
-                              role.permissions.reduce((acc, perm: string | { slug: string }) => {
-                                const slug = typeof perm === 'string' ? perm : perm.slug;
-                                const resource = slug.split('.')[0];
-                                if (!acc[resource]) acc[resource] = 0;
-                                acc[resource]++;
-                                return acc;
-                              }, {} as Record<string, number>)
-                            ) as [resource, count]}
-                              <span class="font-mono-accent text-[9px] px-1.5 py-0.5 bg-secondary rounded text-muted-foreground">
-                                {formatResourceName(resource)}: {count}
-                              </span>
-                            {/each}
-                          </div>
-                        {/if}
-                      </td>
-                      <td class="p-2 align-middle whitespace-nowrap">
-                        <div class="flex items-center gap-2">
-                          <Users class="w-3.5 h-3.5 text-muted-foreground" />
-                          <span class="text-sm font-heading">{role.user_count || 0}</span>
-                        </div>
-                      </td>
-                      <td class="p-2 align-middle whitespace-nowrap text-right">
-                        {#if permissions.canEdit || (permissions.canDelete && role.slug !== 'admin')}
-                          <div class="flex justify-end gap-2">
-                            {#if permissions.canEdit}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                class="rounded-full text-xs font-heading font-medium px-4 hover:border-primary/40 hover:text-primary transition-colors duration-200"
-                                onclick={() => openEditRole(role)}
-                                disabled={isSubmitting}
-                              >
-                                <Pencil class="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
-                            {/if}
-                            {#if permissions.canDelete && role.slug !== 'admin'}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                class="rounded-full text-xs font-heading font-medium px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                                onclick={() => deleteRole(role)}
-                                disabled={isSubmitting}
-                              >
-                                <Trash2 class="w-3 h-3" />
-                              </Button>
-                            {/if}
-                          </div>
-                        {/if}
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          {:else}
-            <div class="flex flex-col items-center justify-center py-20 px-8 text-center">
-              <div class="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center mb-5">
-                <Shield class="h-5 w-5 text-muted-foreground" />
-              </div>
-              <h3 class="text-base font-heading font-semibold mb-2">No roles yet</h3>
-              <p class="text-sm text-muted-foreground font-body mb-6 max-w-xs">Create your first role to manage user permissions.</p>
-              {#if permissions.canCreate}
-                <Button class="rounded-full px-6 font-heading font-semibold text-sm" onclick={openCreateRole}>
-                  Create First Role
-                </Button>
-              {/if}
-            </div>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {:else}
+        <div class="border border-border rounded-sm bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+          <div class="w-14 h-14 rounded-sm bg-muted border border-border flex items-center justify-center mb-6">
+            <Shield class="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 class="font-heading font-semibold text-xl tracking-tight text-foreground mb-2">No roles yet</h3>
+          <p class="text-sm text-muted-foreground max-w-xs mb-8">Create your first role to start managing permissions.</p>
+          {#if permissions.canCreate}
+            <Button onclick={openCreateRole} size="lg">
+              <Plus class="w-4 h-4" />
+              Create first role
+            </Button>
           {/if}
         </div>
       {/if}

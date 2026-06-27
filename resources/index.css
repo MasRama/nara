@@ -130,11 +130,11 @@
 
 @layer components {
   [data-sonner-toaster] {
-    font-family: 'JetBrains Mono', monospace !important;
+    font-family: 'DM Sans', system-ui, sans-serif !important;
   }
 
   [data-sonner-toast] {
-    border-radius: 14px !important;
+    border-radius: 2px !important;
     border: 1px solid hsl(var(--border)) !important;
     background: hsl(var(--background)) !important;
     color: hsl(var(--foreground)) !important;
@@ -144,14 +144,14 @@
 
   [data-sonner-toast] [data-title] {
     font-family: 'Space Grotesk', system-ui, sans-serif !important;
-    font-size: 0.8125rem !important;
+    font-size: 0.875rem !important;
     font-weight: 600 !important;
     letter-spacing: -0.01em !important;
   }
 
   [data-sonner-toast] [data-description] {
     font-family: 'DM Sans', system-ui, sans-serif !important;
-    font-size: 0.75rem !important;
+    font-size: 0.8125rem !important;
     color: hsl(var(--muted-foreground)) !important;
   }
 
@@ -174,7 +174,7 @@
   [data-sonner-toast] [data-close-button] {
     background: hsl(var(--secondary)) !important;
     border: 1px solid hsl(var(--border)) !important;
-    border-radius: 6px !important;
+    border-radius: 2px !important;
   }
 }
 

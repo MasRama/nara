@@ -9,9 +9,8 @@
   import { Toast } from '$lib/toast';
   import type { User, UserForm, PaginationMeta, RoleInfo } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
-  import Badge from '../Components/Badge.svelte';
   import Button from '../Components/Button.svelte';
-  import { Users } from '@lucide/svelte';
+  import { Users, Plus, Pencil, Trash2, ArrowUpRight } from '@lucide/svelte';
 
   interface Props {
     users?: User[];
@@ -73,7 +72,7 @@
   async function handleSubmit(event: CustomEvent<UserForm>): Promise<void> {
     const formData = event.detail;
     if (!formData.name || !formData.email) {
-      Toast('Nama dan email wajib diisi', 'error');
+      Toast('Name and email are required', 'error');
       return;
     }
 
@@ -99,7 +98,7 @@
   }
 
   async function deleteUser(id: string): Promise<void> {
-    if (!confirm('Yakin ingin menghapus user ini?')) {
+    if (!confirm('Delete this user? This cannot be undone.')) {
       return;
     }
 
@@ -117,97 +116,87 @@
 
 <Header group="users" />
 
-<div class="min-h-screen bg-background text-foreground font-body transition-colors duration-500">
+<div class="min-h-[100dvh] bg-background text-foreground font-body antialiased selection:bg-primary/20 selection:text-primary">
 
-  <section class="relative px-6 sm:px-12 lg:px-24 pt-28 pb-16">
-    <div class="max-w-[90rem] mx-auto">
+  <section class="px-6 sm:px-10 lg:px-16 pt-28 pb-16">
+    <div class="max-w-[1400px] mx-auto">
 
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10" in:fly={{ y: 20, duration: 800 }}>
+      <!-- Header row -->
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12" in:fly={{ y: 20, duration: 800 }}>
         <div>
-          <span class="block text-xs font-mono-accent font-semibold uppercase tracking-widest text-primary mb-3">Management</span>
-          <h1 class="text-4xl sm:text-5xl font-heading font-bold tracking-tighter" style="font-feature-settings: 'ss01'">Users</h1>
+          <p class="font-heading text-xs uppercase tracking-[0.25em] text-muted-foreground mb-4">Management</p>
+          <h1 class="font-heading font-semibold tracking-[-0.03em] leading-[1] text-[clamp(2.5rem,6vw,4.5rem)] text-foreground">
+            Users.
+          </h1>
+          <p class="mt-5 text-lg text-muted-foreground leading-relaxed max-w-[52ch]">
+            Every person who has a seat at the table. Add, edit, or remove them here.
+          </p>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-6 shrink-0">
           <div class="text-right">
-            <p class="text-[10px] font-mono-accent uppercase tracking-widest text-muted-foreground mb-1">Total</p>
-            <p class="text-3xl font-heading font-bold tracking-tighter">{total}</p>
+            <p class="font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-1">Total</p>
+            <p class="font-heading font-semibold text-3xl tracking-[-0.03em] text-foreground">{total}</p>
           </div>
-
-          <div class="h-10 w-px bg-border"></div>
-
           {#if permissions.canCreate}
-            <Button
-              class="rounded-full px-6 font-heading font-semibold text-sm"
-              onclick={openCreateUser}
-              disabled={isSubmitting}
-            >
-              Add User
+            <Button onclick={openCreateUser} disabled={isSubmitting} size="lg">
+              <Plus class="w-4 h-4" />
+              Add user
             </Button>
           {/if}
         </div>
       </div>
 
-      <div class="bg-card border border-border rounded-2xl overflow-hidden mb-8" in:fly={{ y: 20, duration: 800, delay: 150 }}>
-        {#if users && users.length}
+      <!-- Table -->
+      {#if users && users.length}
+        <div class="border border-border rounded-sm overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
           <div class="relative w-full overflow-x-auto">
             <table class="w-full caption-bottom text-sm">
-              <thead class="[&_tr]:border-b">
-                <tr class="border-border">
-                  <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">User</th>
-                  <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Roles</th>
-                  <th class="h-10 px-2 text-end font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Actions</th>
+              <thead>
+                <tr class="border-b border-border">
+                  <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">User</th>
+                  <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Roles</th>
+                  <th class="h-12 px-5 text-end font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody class="[&_tr:last-child]:border-0">
+              <tbody>
                 {#each users as userItem}
-                  <tr class="border-border border-b hover:bg-muted/30 transition-colors duration-150">
-                    <td class="p-2 align-middle whitespace-nowrap">
+                  <tr class="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors duration-150">
+                    <td class="p-5 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-3">
-                        <div class="relative flex w-8 h-8 shrink-0 overflow-hidden rounded-full bg-secondary items-center justify-center">
-                          <span class="text-xs font-mono-accent text-foreground">{userItem.name.charAt(0).toUpperCase()}</span>
+                        <div class="relative flex w-9 h-9 shrink-0 overflow-hidden rounded-full bg-muted border border-border items-center justify-center">
+                          <span class="text-xs font-heading font-medium text-foreground">{userItem.name.charAt(0).toUpperCase()}</span>
                         </div>
-                        <div>
-                          <div class="text-sm font-heading font-semibold">{userItem.name}</div>
-                          <div class="text-xs font-mono-accent text-muted-foreground">{userItem.email}</div>
+                        <div class="min-w-0">
+                          <div class="text-sm font-heading font-semibold tracking-tight text-foreground truncate">{userItem.name}</div>
+                          <div class="text-xs text-muted-foreground truncate">{userItem.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td class="p-2 align-middle whitespace-nowrap">
+                    <td class="p-5 align-middle whitespace-nowrap">
                       <div class="flex flex-wrap items-center gap-1.5">
                         {#each (userItem.roles || []) as roleSlug}
-                          <span class="inline-flex items-center gap-1 font-mono-accent text-[10px] px-2 py-0.5 rounded-full {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}">
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-sm text-[11px] font-heading font-medium capitalize {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-muted text-muted-foreground border border-border'}">
                             {getRoleDisplayName(roleSlug)}
                           </span>
                         {/each}
                         {#if !userItem.roles?.length}
-                          <span class="font-mono-accent text-[10px] text-muted-foreground">No roles</span>
+                          <span class="text-xs text-muted-foreground">No roles</span>
                         {/if}
                       </div>
                     </td>
-                    <td class="p-2 align-middle whitespace-nowrap text-right">
+                    <td class="p-5 align-middle whitespace-nowrap text-right">
                       {#if permissions.canEdit || permissions.canDelete}
                         <div class="flex justify-end gap-2">
                           {#if permissions.canEdit}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              class="rounded-full text-xs font-heading font-medium px-4 hover:border-primary/40 hover:text-primary transition-colors duration-200"
-                              onclick={() => openEditUser(userItem)}
-                              disabled={isSubmitting}
-                            >
+                            <Button variant="outline" size="sm" onclick={() => openEditUser(userItem)} disabled={isSubmitting}>
+                              <Pencil class="w-3 h-3" />
                               Edit
                             </Button>
                           {/if}
                           {#if permissions.canDelete}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              class="rounded-full text-xs font-heading font-medium px-4 text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                              onclick={() => deleteUser(userItem.id)}
-                              disabled={isSubmitting}
-                            >
-                              Delete
+                            <Button variant="ghost" size="sm" class="text-destructive hover:bg-destructive/10 hover:text-destructive" onclick={() => deleteUser(userItem.id)} disabled={isSubmitting}>
+                              <Trash2 class="w-3 h-3" />
                             </Button>
                           {/if}
                         </div>
@@ -218,25 +207,27 @@
               </tbody>
             </table>
           </div>
-        {:else}
-          <div class="flex flex-col items-center justify-center py-20 px-8 text-center">
-            <div class="w-12 h-12 rounded-2xl bg-secondary flex items-center justify-center mb-5">
-              <Users class="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 class="text-base font-heading font-semibold mb-2">No users yet</h3>
-            <p class="text-sm text-muted-foreground font-body mb-6 max-w-xs">Start by adding your first user to the system.</p>
-            {#if permissions.canCreate}
-              <Button class="rounded-full px-6 font-heading font-semibold text-sm" onclick={openCreateUser}>
-                Add First User
-              </Button>
-            {/if}
-          </div>
-        {/if}
-      </div>
+        </div>
 
-      <div in:fly={{ y: 10, duration: 600, delay: 300 }}>
-        <Pagination meta={paginationMeta} />
-      </div>
+        <div in:fly={{ y: 10, duration: 600, delay: 300 }}>
+          <Pagination meta={paginationMeta} />
+        </div>
+      {:else}
+        <!-- Empty state -->
+        <div class="border border-border rounded-sm bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+          <div class="w-14 h-14 rounded-sm bg-muted border border-border flex items-center justify-center mb-6">
+            <Users class="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 class="font-heading font-semibold text-xl tracking-tight text-foreground mb-2">No users yet</h3>
+          <p class="text-sm text-muted-foreground max-w-xs mb-8">Start by adding your first person to the system.</p>
+          {#if permissions.canCreate}
+            <Button onclick={openCreateUser} size="lg">
+              <Plus class="w-4 h-4" />
+              Add first user
+            </Button>
+          {/if}
+        </div>
+      {/if}
 
     </div>
   </section>
