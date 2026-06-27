@@ -21,7 +21,9 @@
     "codemap": "npx ts-node scripts/codemap.ts",
     "lint:layers": "npx ts-node scripts/lint-layers.ts",
     "check:freshness": "npx ts-node scripts/check-freshness.ts",
-    "check": "npm run lint && npm run lint:layers && npm test && npm run check:freshness"
+    "check": "npm run lint && npm run lint:layers && npm test && npm run check:freshness",
+    "gen:resource": "npx ts-node scripts/gen-resource.ts",
+    "gen:routes": "npx ts-node scripts/gen-routes.ts"
   },
   "author": "MasRama",
   "license": "ISC",
