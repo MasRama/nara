@@ -25,7 +25,7 @@ export const registerPage = (req: NaraRequest, res: NaraResponse) => {
   return res.inertia('auth/register');
 };
 
-export const processLogin = (req: NaraRequest, res: NaraResponse) => {
+export const submitLogin = (req: NaraRequest, res: NaraResponse) => {
   const parsed = LoginSchema.safeParse(req.body);
   if (!parsed.success) {
     const errors = zodToErrors(parsed.error);
@@ -65,7 +65,7 @@ export const processLogin = (req: NaraRequest, res: NaraResponse) => {
   return jsonSuccess(res, 'Login berhasil');
 };
 
-export const processRegister = (req: NaraRequest, res: NaraResponse) => {
+export const submitRegister = (req: NaraRequest, res: NaraResponse) => {
   const parsed = RegisterSchema.safeParse(req.body);
   if (!parsed.success) {
     const errors = zodToErrors(parsed.error);

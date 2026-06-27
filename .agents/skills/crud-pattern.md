@@ -117,6 +117,7 @@ import Logger from '@services/Logger';
 import { findProductById, createProduct, getProductsPaginated, updateProduct, deleteProducts } from '@queries';
 import { CreateProductSchema, zodToErrors } from '@validators';
 
+// Page route — renders Inertia page
 export const productsPage = (req: NaraRequest, res: NaraResponse) => {
   const page = queryInt(req, 'page');
   const limit = queryInt(req, 'limit', 10);
@@ -128,7 +129,8 @@ export const productsPage = (req: NaraRequest, res: NaraResponse) => {
   });
 };
 
-export const index = (req: NaraRequest, res: NaraResponse) => {
+// Data route — returns JSON
+export const listProducts = (req: NaraRequest, res: NaraResponse) => {
   const page = queryInt(req, 'page');
   const limit = queryInt(req, 'limit', 10);
   const search = queryString(req, 'search');
@@ -141,7 +143,8 @@ export const index = (req: NaraRequest, res: NaraResponse) => {
   });
 };
 
-export const create = (req: NaraRequest, res: NaraResponse) => {
+// Mutation — create
+export const addProduct = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   const parsed = CreateProductSchema.safeParse(req.body);
   if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
@@ -153,6 +156,28 @@ export const create = (req: NaraRequest, res: NaraResponse) => {
     return jsonServerError(res, 'Failed to create product');
   }
 };
+
+// Mutation — update
+export const editProduct = (req: NaraRequest, res: NaraResponse) => {
+  if (!req.user) return jsonError(res, 'Unauthorized', 401);
+  const parsed = CreateProductSchema.safeParse(req.body);
+  if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
+  try {
+    const product = updateProduct(req.params.id, parsed.data);
+    return jsonSuccess(res, 'Product updated', { product });
+  } catch (error: unknown) {
+    Logger.error('Failed to update product', error as Error);
+    return jsonServerError(res, 'Failed to update product');
+  }
+};
+
+// Mutation — delete
+export const removeProducts = (req: NaraRequest, res: NaraResponse) => {
+  if (!req.user) return jsonError(res, 'Unauthorized', 401);
+  const ids = req.body.ids as string[];
+  deleteProducts(ids);
+  return jsonSuccess(res, 'Products deleted');
+};
 ```
 
 ### 5. Routes
@@ -163,10 +188,10 @@ import * as products from '@handlers/products';
 import Auth from '@middlewares/auth';
 
 Route.get('/products', [Auth], products.productsPage);
-Route.get('/products/data', [Auth], products.index);
-Route.post('/products', [Auth], products.create);
-Route.put('/products/:id', [Auth], products.update);
-Route.delete('/products', [Auth], products.destroy);
+Route.get('/products/data', [Auth], products.listProducts);
+Route.post('/products', [Auth], products.addProduct);
+Route.put('/products/:id', [Auth], products.editProduct);
+Route.delete('/products', [Auth], products.removeProducts);
 ```
 
 ### 6. Page (Svelte 5)
@@ -180,8 +205,10 @@ See [`inertia-patterns.md`](./inertia-patterns.md) for full frontend pattern.
 - **Do** use `SQLite.get`/`SQLite.all`/`SQLite.run` with `?` params for dynamic SQL (IN clauses, variable columns)
 - **Do** return `res.inertia()` from page routes, `jsonSuccess()` from data routes
 - **Do** add `try/catch` only in handlers (mutation), not in queries
+- **Do** use descriptive handler names: `addProduct`, `editProduct`, `removeProducts`, `listProducts` — never generic `index`, `store`, `create`, `update`, `destroy`
 - **Don't** import `SQLite` directly from handlers — go through `@queries`
 - **Don't** use ORM or query builder — raw SQL only
 - **Don't** return `jsonSuccess` from a page route — browser shows raw JSON
 - **Don't** return `inertia()` from a data route — use json helpers
 - **Don't** modify existing migrations — create a new one
+- **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — they require context to understand

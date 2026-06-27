@@ -100,7 +100,7 @@ export const uploadAsset = async (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const distFolder = async (req: NaraRequest, res: NaraResponse) => {
+export const serveDistAsset = async (req: NaraRequest, res: NaraResponse) => {
   const file = req.params.file;
 
   // Path traversal protection
@@ -145,7 +145,7 @@ export const distFolder = async (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const publicFolder = (req: NaraRequest, res: NaraResponse) => {
+export const servePublicAsset = (req: NaraRequest, res: NaraResponse) => {
   const allowed = ['.ico', '.png', '.jpeg', '.jpg', '.gif', '.svg', '.webp',
     '.txt', '.pdf', '.css', '.js', '.woff', '.woff2', '.ttf', '.eot',
     '.mp4', '.webm', '.mp3', '.wav'];

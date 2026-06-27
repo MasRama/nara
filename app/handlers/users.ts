@@ -89,7 +89,7 @@ export const changeProfile = (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const create = (req: NaraRequest, res: NaraResponse) => {
+export const addUser = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'users.create')) {
     return jsonError(res, 'Forbidden', 403);
@@ -129,7 +129,7 @@ export const create = (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const update = (req: NaraRequest, res: NaraResponse) => {
+export const editUser = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
 
   const id = req.params.id;
@@ -181,7 +181,7 @@ export const update = (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const remove = (req: NaraRequest, res: NaraResponse) => {
+export const removeUsers = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'users.delete')) {
     return jsonError(res, 'Forbidden', 403);

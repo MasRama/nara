@@ -140,6 +140,8 @@ Server (ultimate-express)
 7. **Don't** use `fetch()` on frontend — use `api(() => axios.method(...))`
 8. **Don't** use bcrypt directly — use `hashPassword()` from `@services/Authenticate`
 9. **Don't** mix languages in error messages — use Indonesian for user-facing messages
+10. **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — use descriptive names (`createUser`, `updateRole`, `listRoles`)
+11. **Don't** use vague function names (`handle`, `process`, `run`, `do`, `execute` as standalone) — describe what it does (`processPayment`, `handleWebhookDelivery`)
 
 ## Build/Test
 

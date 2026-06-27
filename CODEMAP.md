@@ -6,8 +6,8 @@
 
 ## Stats
 
-- Files indexed: 111
-- Total lines: 10437
+- Files indexed: 113
+- Total lines: 10842
 - Total exports: 278
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -40,13 +40,13 @@
 
 ### app/handlers/
 
-- `assets.ts` (207L) — avatarMiddleware, uploadAsset, distFolder, publicFolder
-- `auth.ts` (134L) — loginPage, registerPage, processLogin, processRegister, logout, changePassword
-- `home.ts` (17L) — index
+- `assets.ts` (207L) — avatarMiddleware, uploadAsset, serveDistAsset, servePublicAsset
+- `auth.ts` (134L) — loginPage, registerPage, submitLogin, submitRegister, logout, changePassword
+- `home.ts` (17L) — landingPage
 - `index.ts` (7L)
 - `oauth.ts` (93L) — googleRedirect, googleCallback
-- `roles.ts` (154L) — rolesPage, index, permissionsData, store, update, destroy
-- `users.ts` (216L) — dashboardPage, usersPage, profilePage, changeProfile, create, update, remove
+- `roles.ts` (154L) — rolesPage, listRoles, permissionsData, addRole, editRole, removeRole
+- `users.ts` (216L) — dashboardPage, usersPage, profilePage, changeProfile, addUser, editUser, removeUsers
 
 ### app/middlewares/
 
@@ -165,7 +165,9 @@
 
 ### scripts/
 
+- `check-freshness.ts` (160L)
 - `codemap.ts` (247L)
+- `lint-layers.ts` (245L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
 
@@ -298,21 +300,21 @@
 
 - `const` **avatarMiddleware**
 - `const` **uploadAsset**
-- `const` **distFolder**
-- `const` **publicFolder**
+- `const` **serveDistAsset**
+- `const` **servePublicAsset**
 
 ### `app/handlers/auth.ts`
 
 - `const` **loginPage**
 - `const` **registerPage**
-- `const` **processLogin**
-- `const` **processRegister**
+- `const` **submitLogin**
+- `const` **submitRegister**
 - `const` **logout**
 - `const` **changePassword**
 
 ### `app/handlers/home.ts`
 
-- `const` **index**
+- `const` **landingPage**
 
 ### `app/handlers/oauth.ts`
 
@@ -322,11 +324,11 @@
 ### `app/handlers/roles.ts`
 
 - `const` **rolesPage**
-- `const` **index**
+- `const` **listRoles**
 - `const` **permissionsData**
-- `const` **store**
-- `const` **update**
-- `const` **destroy**
+- `const` **addRole**
+- `const` **editRole**
+- `const` **removeRole**
 
 ### `app/handlers/users.ts`
 
@@ -334,9 +336,9 @@
 - `const` **usersPage**
 - `const` **profilePage**
 - `const` **changeProfile**
-- `const` **create**
-- `const` **update**
-- `const` **remove**
+- `const` **addUser**
+- `const` **editUser**
+- `const` **removeUsers**
 
 ### `app/middlewares/csrf.ts`
 

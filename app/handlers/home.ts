@@ -1,7 +1,7 @@
 import type { NaraRequest, NaraResponse } from '@core';
 import { findSessionById, findUserById } from '@queries';
 
-export const index = (req: NaraRequest, res: NaraResponse) => {
+export const landingPage = (req: NaraRequest, res: NaraResponse) => {
   let user = {};
 
   if (req.cookies.auth_id) {

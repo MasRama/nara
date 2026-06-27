@@ -23,7 +23,7 @@ export const rolesPage = (req: NaraRequest, res: NaraResponse) => {
   return res.inertia('roles', { permissions });
 };
 
-export const index = (req: NaraRequest, res: NaraResponse) => {
+export const listRoles = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.view')) {
     return jsonError(res, 'Forbidden', 403);
@@ -57,7 +57,7 @@ export const permissionsData = (req: NaraRequest, res: NaraResponse) => {
   return jsonSuccess(res, 'OK', grouped);
 };
 
-export const store = (req: NaraRequest, res: NaraResponse) => {
+export const addRole = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.create')) {
     return jsonError(res, 'Forbidden', 403);
@@ -86,7 +86,7 @@ export const store = (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const update = (req: NaraRequest, res: NaraResponse) => {
+export const editRole = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.edit')) {
     return jsonError(res, 'Forbidden', 403);
@@ -130,7 +130,7 @@ export const update = (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const destroy = (req: NaraRequest, res: NaraResponse) => {
+export const removeRole = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.delete')) {
     return jsonError(res, 'Forbidden', 403);

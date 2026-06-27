@@ -1,7 +1,7 @@
 /**
  * Layer boundary lint — enforces AGENTS.md architectural conventions.
  *
- * Rules (from AGENTS.md anti-patterns):
+ * Rules (from AGENTS.md anti-patterns + naming conventions):
  *   L1. Handlers must NOT import @services/SQLite directly — go through @queries
  *   L2. Handlers must NOT import @services/* except Authenticate, Logger, Storage
  *   L3. Page routes (handlers ending in *Page) must use res.inertia, not jsonSuccess
@@ -12,6 +12,9 @@
  *   L8. Frontend must NOT use onMount, $:, or export let — use Svelte 5 runes
  *   L9. No console.log in backend — use Logger
  *   L10. No bcrypt direct — use hashPassword from @services/Authenticate
+ *   L11. Handler exports must NOT use generic REST names (index, store, create, etc.)
+ *   L12. Handler exports should include resource name (createUser, not just create)
+ *   L13. No vague function names (handle, process, run, do, execute as standalone)
  *
  * Usage: npx ts-node scripts/lint-layers.ts
  *        npm run lint:layers
@@ -155,6 +158,55 @@ function checkFile(absPath: string): void {
         rule: 'L10', file: rel, line: lineNum, text: trimmed,
         message: 'Use hashPassword/comparePassword from @services/Authenticate — never bcrypt directly',
       });
+    }
+
+    // L11: Handler exports must not use generic REST names (index, show, store, create, update, destroy, remove)
+    // These require context to understand — AI must read the file to know what `index` does.
+    // Use descriptive names: listUsers, createUser, updateUser, deleteUsers, landingPage, etc.
+    if (isHandler) {
+      const match = line.match(/^export\s+const\s+(index|show|store|create|update|destroy|remove|handle|process|run|do|execute)\b/);
+      if (match) {
+        violations.push({
+          rule: 'L11', file: rel, line: lineNum, text: trimmed,
+          message: `Handler export "${match[1]}" is too generic — use a descriptive name (e.g. listUsers, createUser, updateUser, deleteUsers)`,
+        });
+      }
+    }
+
+    // L12: Handler exports should include the resource name (e.g. createUser, not just create)
+    // Exception: page handlers ending in "Page" (landingPage, usersPage), middleware (avatarMiddleware),
+    //            and utility handlers (logout, changePassword, changeProfile, serveDistAsset, etc.)
+    if (isHandler) {
+      const match = line.match(/^export\s+const\s+(\w+)\s*=/);
+      if (match) {
+        const name = match[1];
+        const isPage = name.endsWith('Page');
+        const isMiddleware = name.endsWith('Middleware');
+        const isKnownUtility = ['logout', 'changePassword', 'changeProfile', 'submitLogin', 'submitRegister',
+          'loginPage', 'registerPage', 'permissionsData', 'uploadAsset', 'serveDistAsset',
+          'servePublicAsset', 'googleRedirect', 'googleCallback', 'removeUsers', 'addUser', 'editUser',
+          'addRole', 'editRole', 'removeRole'].includes(name);
+        // Check for verb-only names that should include resource (e.g. "create" without "User")
+        const genericVerbs = ['create', 'update', 'delete', 'remove', 'list', 'get', 'find', 'save', 'edit', 'add'];
+        if (genericVerbs.includes(name) && !isPage && !isMiddleware && !isKnownUtility) {
+          violations.push({
+            rule: 'L12', file: rel, line: lineNum, text: trimmed,
+            message: `Handler export "${name}" should include the resource name (e.g. ${name}User, ${name}Role)`,
+          });
+        }
+      }
+    }
+
+    // L13: No banned vague function names anywhere in backend (handle, process, run, do, execute as standalone)
+    // These tell the AI nothing about what the function does
+    if (isBackend) {
+      const match = line.match(/^(?:export\s+)?(?:async\s+)?function\s+(handle|process|run|do|execute)\b/);
+      if (match) {
+        violations.push({
+          rule: 'L13', file: rel, line: lineNum, text: trimmed,
+          message: `Function name "${match[1]}" is too vague — describe what it does (e.g. processPayment, handleWebhookDelivery)`,
+        });
+      }
     }
   });
 }
