@@ -1,7 +1,6 @@
 import type { NaraRequest, NaraResponse } from '@core';
 import { hashPassword, processLogin } from '@services/Authenticate';
 import { findUserByEmail, createUser } from '@queries';
-import { redirectParamsURL } from '@services/GoogleAuth';
 import axios from 'axios';
 import Logger from '@services/Logger';
 import { randomBytes, randomUUID, timingSafeEqual } from 'crypto';
@@ -25,12 +24,26 @@ const isValidState = (expected: string | undefined, received: unknown): boolean 
   return timingSafeEqual(a, b);
 };
 
-export const googleRedirect = (req: NaraRequest, res: NaraResponse) => {
+const buildGoogleAuthURL = (state: string): string => {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID || '',
+    redirect_uri: process.env.GOOGLE_REDIRECT_URI || '',
+    scope: [
+      'https://www.googleapis.com/auth/userinfo.email',
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ].join(' '),
+    response_type: 'code',
+    access_type: 'offline',
+    prompt: 'consent',
+    state,
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+};
+
+export const googleRedirect = (_req: NaraRequest, res: NaraResponse) => {
   const state = randomBytes(32).toString('hex');
-  const params = new URLSearchParams(redirectParamsURL());
-  params.set('state', state);
   res.cookie(OAUTH_STATE_COOKIE, state, { maxAge: OAUTH_STATE_EXPIRY_MS, ...cookieOpts() });
-  return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+  return res.redirect(buildGoogleAuthURL(state));
 };
 
 export const googleCallback = async (req: NaraRequest, res: NaraResponse) => {
@@ -72,7 +85,6 @@ export const googleCallback = async (req: NaraRequest, res: NaraResponse) => {
     email,
     password: hashPassword(email),
     name: userInfo.name,
-    is_verified: userInfo.verified_email,
   });
 
   Logger.logAuth('google_registration_success', { userId: user.id, ip: req.ip });

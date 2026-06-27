@@ -1,10 +1,11 @@
 export { default as Logger } from './Logger';
 export { hashPassword, comparePassword, processLogin, logout } from './Authenticate';
 export { default as LoginThrottle } from './LoginThrottle';
-export { redirectParamsURL as GoogleAuthRedirectParams } from './GoogleAuth';
 export { default as SQLite } from './SQLite';
 export { default as Storage } from './Storage';
 export type { StorageConfig, StoredFile, StoreOptions } from './Storage';
 export { view } from './View';
 export { createCacheStore, assetCache, templateCache } from './CacheStore';
 export type { CacheStoreOptions, CacheStats, CacheStore } from './CacheStore';
+export { default as Migrator } from './Migrator';
+export { default as Seeder } from './Seeder';
