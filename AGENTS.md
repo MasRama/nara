@@ -14,7 +14,7 @@ scope: root
 Read in this order (each builds on the previous):
 
 1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
-2. **[SCHEMA.md](./SCHEMA.md)** — database schema in one read (8 tables, 55 columns). Know table shapes before writing SQL.
+2. **[SCHEMA.md](./SCHEMA.md)** — database schema in one read (8 tables, 55 columns). **Read this instead of parsing 8 migration files.** Know table shapes before writing SQL.
 3. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
 4. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
 5. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
@@ -177,10 +177,35 @@ See [`.agents/skills/common-pitfalls.md`](./.agents/skills/common-pitfalls.md) �
 npm run dev          # Dev server (Vite + nodemon)
 npm run build        # Production build
 npm run lint         # tsc --noEmit
-npm run test         # vitest run
+npm run test         # vitest run (ALL tests — for CI/pre-commit only)
 npm run migrate      # Run pending migrations (ts-node + raw SQL)
 npm run seed         # Run seeders
 ```
+
+### Smart test running (during development)
+
+**Don't run `npm test` on every change.** It runs 258 tests — burns your token budget parsing irrelevant results (TDAD study: this increases regressions by 63%).
+
+Instead, run **only the test file for the layer you touched**:
+
+```bash
+# Touched handlers/roles.ts?
+npx vitest run tests/handlers/roles.test.ts
+
+# Touched queries/users.ts?
+npx vitest run tests/queries/roles.test.ts
+
+# Touched core/response.ts?
+npx vitest run tests/core/
+
+# Touched a middleware?
+npx vitest run tests/middlewares/
+
+# Before commit — THEN run the full suite
+npm run check
+```
+
+Rule: **specific test file during development, full suite before commit.**
 
 ## Agent Tooling
 

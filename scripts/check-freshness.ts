@@ -6,17 +6,10 @@
  * use --strict to fail CI.
  *
  * Mappings (code dir → AGENTS.md that documents it):
- *   app/handlers/*      → app/handlers/AGENTS.md (none yet) OR app/AGENTS.md
- *   app/queries/*       → app/AGENTS.md
- *   app/services/*      → app/AGENTS.md
- *   app/middlewares/*   → app/AGENTS.md
- *   app/core/*          → app/AGENTS.md
- *   app/types/*         → app/AGENTS.md
- *   app/validators/*    → app/AGENTS.md
- *   app/config/*        → app/AGENTS.md
- *   routes/*            → routes/AGENTS.md
+ *   app/*               → AGENTS.md (root — consolidated)
+ *   routes/*            → AGENTS.md (root — consolidated)
  *   migrations/*        → migrations/AGENTS.md
- *   seeds/*             → database/AGENTS.md
+ *   seeds/*             → migrations/AGENTS.md (seed pattern lives there)
  *   resources/Pages/*   → resources/Pages/AGENTS.md
  *   resources/Components/* → resources/Components/AGENTS.md
  *   resources/lib/*     → resources/AGENTS.md
@@ -37,18 +30,20 @@ const ROOT = path.resolve(__dirname, '..');
 const STRICT = process.argv.includes('--strict');
 
 // Map: code path prefix → AGENTS.md file that documents it
+// app/ and routes/ are documented in root AGENTS.md (consolidated)
+// seeds/ is documented in migrations/AGENTS.md (seed pattern lives there)
 const FRESHNESS_MAP: Array<{ prefix: string; agentsFile: string }> = [
-  { prefix: 'app/handlers/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/queries/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/services/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/middlewares/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/core/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/types/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/validators/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'app/config/', agentsFile: 'app/AGENTS.md' },
-  { prefix: 'routes/', agentsFile: 'routes/AGENTS.md' },
+  { prefix: 'app/handlers/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/queries/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/services/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/middlewares/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/core/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/types/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/validators/', agentsFile: 'AGENTS.md' },
+  { prefix: 'app/config/', agentsFile: 'AGENTS.md' },
+  { prefix: 'routes/', agentsFile: 'AGENTS.md' },
   { prefix: 'migrations/', agentsFile: 'migrations/AGENTS.md' },
-  { prefix: 'seeds/', agentsFile: 'database/AGENTS.md' },
+  { prefix: 'seeds/', agentsFile: 'migrations/AGENTS.md' },
   { prefix: 'resources/Pages/', agentsFile: 'resources/Pages/AGENTS.md' },
   { prefix: 'resources/Components/', agentsFile: 'resources/Components/AGENTS.md' },
   { prefix: 'resources/lib/', agentsFile: 'resources/AGENTS.md' },
