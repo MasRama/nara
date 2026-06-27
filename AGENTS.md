@@ -190,19 +190,6 @@ cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 Runs layer lint (blocking) + freshness check (advisory) on every commit.
 
-### Devin Verification Hooks
-
-Project-level hooks in `.devin/hooks.v1.json` — auto-loaded by Devin CLI:
-
-| Hook | Event | Effect |
-|---|---|---|
-| `block-destructive.js` | PreToolUse(exec) | Blocks `rm -rf /`, `git push --force`, `git reset --hard`, `DROP TABLE`, etc. |
-| `post-edit-verify.js` | PostToolUse(edit) | Reminds to run `lint:layers` after editing handlers/components |
-| `post-exec-verify.js` | PostToolUse(exec) | Reminds to run `lint:layers` after build/test passes |
-| `session-start.js` | SessionStart | Orients agent to read CODEMAP.md + AGENTS.md + skills |
-
-Hooks are non-blocking (exit 0) except `block-destructive.js` (exit 2 to block).
-
 ## Where to Look
 
 | Task | Location | Skill |
