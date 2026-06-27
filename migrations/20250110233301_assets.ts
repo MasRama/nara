@@ -1,26 +1,22 @@
-import type { Knex } from "knex";
+export const up = `
+CREATE TABLE IF NOT EXISTS assets (
+  id TEXT PRIMARY KEY,
+  name TEXT,
+  type TEXT NOT NULL,
+  url TEXT NOT NULL,
+  mime_type TEXT,
+  size INTEGER,
+  s3_key TEXT,
+  user_id TEXT,
+  created_at INTEGER,
+  updated_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_assets_user_id ON assets (user_id);
+CREATE INDEX IF NOT EXISTS idx_assets_s3_key ON assets (s3_key);
+`;
 
-export async function up(knex: Knex): Promise<void> {
-    return knex.schema.createTable('assets', (table) => {
-        table.string('id').primary();
-        
-        // Asset Information
-        table.string('name');
-        table.string('type').notNullable(); // image, video, document, etc
-        table.string('url').notNullable();
-        table.string('mime_type');
-        table.integer('size').unsigned(); // file size in bytes
-        table.string('s3_key').nullable().index(); // S
-        // Ownership and Organization 
-        table.string('user_id').index(); 
-        
-         
-        // Timestamps
-        table.timestamp('created_at').defaultTo(knex.fn.now());
-        table.timestamp('updated_at').defaultTo(knex.fn.now());
-    });
-}
-
-export async function down(knex: Knex): Promise<void> {
-    return knex.schema.dropTable('assets');
-}
+export const down = `
+DROP INDEX IF EXISTS idx_assets_user_id;
+DROP INDEX IF EXISTS idx_assets_s3_key;
+DROP TABLE IF EXISTS assets;
+`;

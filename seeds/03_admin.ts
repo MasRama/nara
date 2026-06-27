@@ -1,35 +1,23 @@
-import { Knex } from 'knex';
+import type SQLiteType from '../app/services/SQLite';
 import { randomUUID } from 'crypto';
-import { pbkdf2Sync, randomBytes } from 'crypto';
+import { hashPassword } from '../app/services/Authenticate';
 
-export async function seed(knex: Knex): Promise<void> {
-  await knex('user_roles').del();
-  await knex('users').del();
+export function run(SQLite: typeof SQLiteType): void {
+  const existing = SQLite.one<{ id: string }>`SELECT id FROM users WHERE email = ${'admin@nara.dev'}`;
+  if (existing) return;
 
-  const salt = randomBytes(16).toString('hex');
-  const hash = pbkdf2Sync('admin123', salt, 100000, 64, 'sha512').toString('hex');
-  const password = `${salt}:${hash}`;
+  const id = randomUUID();
+  const now = Date.now();
+  SQLite.exec`
+    INSERT INTO users (id, name, email, password, created_at, updated_at)
+    VALUES (${id}, ${'Admin'}, ${'admin@nara.dev'}, ${hashPassword('admin123')}, ${now}, ${now})
+  `;
 
-  const admin = {
-    id: randomUUID(),
-    name: 'Admin',
-    email: 'admin@nara.dev',
-    password,
-    is_verified: true,
-    created_at: Date.now(),
-    updated_at: Date.now(),
-  };
-
-  await knex('users').insert(admin);
-
-  const adminRole = await knex('roles').where('slug', 'admin').first();
+  const adminRole = SQLite.one<{ id: string }>`SELECT id FROM roles WHERE slug = ${'admin'}`;
   if (adminRole) {
-    await knex('user_roles').insert({
-      id: randomUUID(),
-      user_id: admin.id,
-      role_id: adminRole.id,
-    });
+    SQLite.exec`
+      INSERT INTO user_roles (id, user_id, role_id, created_at)
+      VALUES (${randomUUID()}, ${id}, ${adminRole.id}, ${now})
+    `;
   }
-
-  console.log('✓ Seeded admin user (admin@nara.dev / admin123)');
 }

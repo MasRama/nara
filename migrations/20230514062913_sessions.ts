@@ -1,18 +1,17 @@
-import { Knex } from "knex";
+export const up = `
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  user_agent TEXT,
+  expires_at INTEGER,
+  created_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions (expires_at);
+`;
 
-
-export async function up(knex: Knex): Promise<void> {
-    await knex.schema.createTable('sessions', function (table) {
-        table.string('id').primary();
-        table.string("user_id").index();
-        table.text("user_agent");
-        table.bigInteger('expires_at').nullable().index();
-        table.bigInteger("created_at");
-    });
-}
-
-
-export async function down(knex: Knex): Promise<void> {
-    await knex.schema.dropTable('sessions')
-}
-
+export const down = `
+DROP INDEX IF EXISTS idx_sessions_user_id;
+DROP INDEX IF EXISTS idx_sessions_expires_at;
+DROP TABLE IF EXISTS sessions;
+`;

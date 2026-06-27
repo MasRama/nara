@@ -1,35 +1,38 @@
-import { Knex } from 'knex';
+import type SQLiteType from '../app/services/SQLite';
 import { randomUUID } from 'crypto';
 
-export async function seed(knex: Knex): Promise<void> {
-  await knex('role_permissions').del();
-  await knex('roles').del();
+export function run(SQLite: typeof SQLiteType): void {
+  const now = Date.now();
+  const adminRoleId = randomUUID();
+  const userRoleId = randomUUID();
 
-  const adminRole = { id: randomUUID(), name: 'Admin', slug: 'admin', description: 'Full access to all features' };
-  const userRole = { id: randomUUID(), name: 'User', slug: 'user', description: 'Standard user access' };
-
-  await knex('roles').insert([adminRole, userRole]);
-
-  const allPermissions = await knex('permissions').select('id');
-  await knex('role_permissions').insert(
-    allPermissions.map(p => ({
-      id: randomUUID(),
-      role_id: adminRole.id,
-      permission_id: p.id,
-    }))
+  SQLite.run(
+    'INSERT OR IGNORE INTO roles (id, name, slug, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [adminRoleId, 'Admin', 'admin', 'Full access to all features', now, now]
   );
 
-  const userPermissions = await knex('permissions')
-    .whereIn('slug', ['users.view', 'settings.view'])
-    .select('id');
-  
-  await knex('role_permissions').insert(
-    userPermissions.map(p => ({
-      id: randomUUID(),
-      role_id: userRole.id,
-      permission_id: p.id,
-    }))
+  SQLite.run(
+    'INSERT OR IGNORE INTO roles (id, name, slug, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [userRoleId, 'User', 'user', 'Standard user access', now, now]
   );
 
-  console.log(`✓ Seeded 2 roles (admin: all permissions, user: ${userPermissions.length} permissions)`);
+  // Admin gets all permissions
+  const allPerms = SQLite.all<{ id: string }>('SELECT id FROM permissions');
+  for (const p of allPerms) {
+    SQLite.run(
+      'INSERT OR IGNORE INTO role_permissions (id, role_id, permission_id, created_at) VALUES (?, ?, ?, ?)',
+      [randomUUID(), adminRoleId, p.id, now]
+    );
+  }
+
+  // User gets view-only permissions
+  const viewPerms = SQLite.all<{ id: string }>(
+    "SELECT id FROM permissions WHERE slug IN ('users.view', 'settings.view')"
+  );
+  for (const p of viewPerms) {
+    SQLite.run(
+      'INSERT OR IGNORE INTO role_permissions (id, role_id, permission_id, created_at) VALUES (?, ?, ?, ?)',
+      [randomUUID(), userRoleId, p.id, now]
+    );
+  }
 }

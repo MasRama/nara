@@ -1,24 +1,23 @@
 import 'dotenv/config';
-import config from "@root/knexfile";
+import { existsSync } from 'fs';
+import { resolve } from 'path';
 import Database from 'better-sqlite3';
 import type * as BetterSqlite3 from 'better-sqlite3';
 
-const connectionType = process.env.DB_CONNECTION || 'development';
-const dbConfig = config[connectionType];
-
-interface SQLiteConnectionConfig {
-  filename: string;
+const prodEnvPath = resolve(process.cwd(), '.env.production');
+if (existsSync(prodEnvPath)) {
+  require('dotenv').config({ path: prodEnvPath });
+  process.env.NODE_ENV = 'production';
+} else {
+  require('dotenv').config();
+  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 }
 
-if (!dbConfig || 
-    !dbConfig.connection || 
-    typeof dbConfig.connection !== 'object' || 
-    !('filename' in dbConfig.connection)) {
-  throw new Error(`Invalid database configuration for connection: ${connectionType}`);
-}
-
-const connectionConfig = dbConfig.connection as SQLiteConnectionConfig;
-const nativeDb = new Database(connectionConfig.filename);
+const defaultDbFile = process.env.NODE_ENV === 'production'
+  ? 'database/production.sqlite3'
+  : 'database/dev.sqlite3';
+const dbFile = process.env.DB_FILE || defaultDbFile;
+const nativeDb = new Database(resolve(process.cwd(), dbFile));
 
 nativeDb.pragma('journal_mode = WAL');
 nativeDb.pragma('synchronous = NORMAL');
@@ -78,6 +77,30 @@ const SQLite = {
 
   transaction<T>(fn: () => T): T {
     return nativeDb.transaction(fn)();
+  },
+
+  update(table: string, where: Record<string, unknown>, data: Record<string, unknown>): BetterSqlite3.RunResult {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    for (const [key, value] of Object.entries(data)) {
+      if (value === undefined) continue;
+      fields.push(`${key} = ?`);
+      values.push(typeof value === 'boolean' ? (value ? 1 : 0) : value);
+    }
+
+    if (fields.length === 0) {
+      return { changes: 0, lastInsertRowid: 0 } as BetterSqlite3.RunResult;
+    }
+
+    fields.push('updated_at = ?');
+    values.push(Date.now());
+
+    const whereClauses = Object.keys(where).map(k => `${k} = ?`);
+    const whereValues = Object.values(where);
+    values.push(...whereValues);
+
+    return getStmt(`UPDATE ${table} SET ${fields.join(', ')} WHERE ${whereClauses.join(' AND ')}`).run(...values);
   },
 
   raw(): BetterSqlite3.Database {

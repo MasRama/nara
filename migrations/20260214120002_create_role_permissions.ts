@@ -1,16 +1,13 @@
-import { Knex } from "knex";
+export const up = `
+CREATE TABLE IF NOT EXISTS role_permissions (
+  id TEXT PRIMARY KEY NOT NULL,
+  role_id TEXT NOT NULL,
+  permission_id TEXT NOT NULL,
+  created_at INTEGER,
+  UNIQUE (role_id, permission_id),
+  FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+  FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+);
+`;
 
-export async function up(knex: Knex): Promise<void> {
-    await knex.schema.createTable('role_permissions', function (table) {
-        table.uuid('id').primary().notNullable();
-        table.uuid('role_id').notNullable().references('id').inTable('roles').onDelete('CASCADE');
-        table.uuid('permission_id').notNullable().references('id').inTable('permissions').onDelete('CASCADE');
-        table.bigInteger("created_at");
-
-        table.unique(['role_id', 'permission_id']);
-    });
-}
-
-export async function down(knex: Knex): Promise<void> {
-    await knex.schema.dropTable('role_permissions');
-}
+export const down = `DROP TABLE IF EXISTS role_permissions;`;

@@ -1,15 +1,15 @@
-import { Knex } from "knex";
+export const up = `
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  created_at TEXT DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_email ON password_reset_tokens (email);
+`;
 
-export async function up(knex: Knex): Promise<void> {
-    return knex.schema.createTable('password_reset_tokens', (table) => {
-        table.increments('id').primary();
-        table.string('email').notNullable().index();
-        table.string('token').notNullable().unique();
-        table.timestamp('created_at').defaultTo(knex.fn.now());
-        table.timestamp('expires_at').notNullable();
-    });
-}
-
-export async function down(knex: Knex): Promise<void> {
-    return knex.schema.dropTable('password_reset_tokens');
-}
+export const down = `
+DROP INDEX IF EXISTS idx_password_reset_tokens_email;
+DROP TABLE IF EXISTS password_reset_tokens;
+`;

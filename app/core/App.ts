@@ -14,13 +14,9 @@ import { inputSanitize } from "@middlewares/inputSanitize";
 import { requestId } from "@middlewares/requestId";
 import { isNaraError, isValidationError } from "./errors";
 import { jsonError, jsonValidationError } from "./response";
-import type { NaraMiddleware, NaraRequest, NaraResponse } from "./types";
+import type { NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
-
-function adapt(middleware: NaraMiddleware): any {
-  return (req: any, res: any, next: any) =>
-    middleware(req as NaraRequest, res as NaraResponse, next);
-}
+import { migrate } from "@services/Migrator";
 
 export interface AppOptions {
   port?: number;
@@ -32,6 +28,7 @@ export interface AppOptions {
   rateLimit?: boolean;
   csrf?: boolean;
   inputSanitize?: boolean;
+  autoMigrate?: boolean;
   routes?: any;
   shutdownTimeout?: number;
   errorHandler?: (req: NaraRequest, res: NaraResponse, error: unknown) => void;
@@ -46,6 +43,7 @@ const DEFAULT_OPTIONS = {
   rateLimit: false,
   csrf: false,
   inputSanitize: true,
+  autoMigrate: true,
   shutdownTimeout: 10000,
 };
 
@@ -85,6 +83,10 @@ export function createApp(options?: AppOptions): NaraApp {
   let isStarted = false;
   let isShuttingDown = false;
 
+  if (opts.autoMigrate) {
+    migrate();
+  }
+
   applyDefaultMiddlewares(app, opts);
   setupErrorHandler(app, env, opts.errorHandler);
   setupSignalHandlers();
@@ -118,18 +120,18 @@ export function createApp(options?: AppOptions): NaraApp {
   function applyDefaultMiddlewares(instance: any, o: typeof opts): void {
     instance.use(compression());
 
-    if (o.securityHeaders) instance.use(adapt(securityHeaders()));
-    instance.use(adapt(requestId()));
-    if (o.requestLogging) instance.use(adapt(requestLogger()));
+    if (o.securityHeaders) instance.use(securityHeaders());
+    instance.use(requestId());
+    if (o.requestLogging) instance.use(requestLogger());
     if (o.cors) instance.use(cors());
-    if (o.rateLimit) instance.use(adapt(rateLimit()));
-    if (o.csrf) instance.use(adapt(csrf()));
-    if (o.inputSanitize) instance.use(adapt(inputSanitize()));
+    if (o.rateLimit) instance.use(rateLimit());
+    if (o.csrf) instance.use(csrf());
+    if (o.inputSanitize) instance.use(inputSanitize());
 
     if (o.adapter) {
-      instance.use(adapt(o.adapter.middleware() as NaraMiddleware));
+      instance.use(o.adapter.middleware() as any);
       instance.use((_req: any, res: any, next: any) => {
-        o.adapter?.extendResponse(res as NaraResponse);
+        o.adapter?.extendResponse?.(res as NaraResponse);
         next();
       });
     }
@@ -304,4 +306,36 @@ export function createApp(options?: AppOptions): NaraApp {
   };
 
   return api;
+}
+
+export function createWebApp(options: Omit<AppOptions, 'cors' | 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate'> & {
+  adapter: FrontendAdapter;
+  csrf?: boolean;
+  rateLimit?: boolean;
+}): NaraApp {
+  return createApp({
+    cors: true,
+    securityHeaders: true,
+    requestLogging: true,
+    inputSanitize: true,
+    autoMigrate: true,
+    csrf: true,
+    ...options,
+  });
+}
+
+export function createApiApp(options: Omit<AppOptions, 'cors' | 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate' | 'adapter'> & {
+  rateLimit?: boolean;
+  csrf?: boolean;
+}): NaraApp {
+  return createApp({
+    cors: true,
+    securityHeaders: true,
+    requestLogging: true,
+    inputSanitize: true,
+    autoMigrate: true,
+    rateLimit: true,
+    csrf: false,
+    ...options,
+  });
 }
