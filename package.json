@@ -20,7 +20,8 @@
     "seed": "npx ts-node -r tsconfig-paths/register scripts/seed.ts",
     "codemap": "npx ts-node scripts/codemap.ts",
     "lint:layers": "npx ts-node scripts/lint-layers.ts",
-    "check:freshness": "npx ts-node scripts/check-freshness.ts"
+    "check:freshness": "npx ts-node scripts/check-freshness.ts",
+    "check": "npm run lint && npm run lint:layers && npm test && npm run check:freshness"
   },
   "author": "MasRama",
   "license": "ISC",
