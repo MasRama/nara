@@ -193,17 +193,17 @@ AI must not add dependencies without checking this table. If a category is "Bann
 10. **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — use descriptive names (`createUser`, `updateRole`, `listRoles`)
 11. **Don't** use vague function names (`handle`, `process`, `run`, `do`, `execute` as standalone) — describe what it does (`processPayment`, `handleWebhookDelivery`)
 
-## Common Pitfalls — AI Frequently Gets Wrong
+## Common Pitfalls — Sering Salah di Codebase Ini
 
-These are real mistakes AI agents make in this codebase. Read before coding.
+Mistakes yang AI agent sering buat di Nara. Baca sebelum coding.
 
-### 1. Forgetting to register Inertia page
+### 1. Lupa register Inertia page
 
-**Wrong:** Create `resources/Pages/products.svelte` but don't add it to `resources/app.ts`.
+**Salah:** Bikin `resources/Pages/products.svelte` tapi gak daftar di `resources/app.ts`.
 
-**Result:** Page renders blank — Inertia can't find the component.
+**Akibat:** Page blank — Inertia gak ketemu component-nya.
 
-**Fix:** Always add new pages to the page map in `resources/app.ts`:
+**Fix:** Selalu tambah page baru ke page map di `resources/app.ts`:
 ```typescript
 const pages = {
   // ...existing
@@ -211,61 +211,61 @@ const pages = {
 };
 ```
 
-### 2. Using `router.post()` for mutations instead of `api(() => axios.post())`
+### 2. Pakai `router.post()` untuk mutation instead of `api(() => axios.post())`
 
-**Wrong:** `router.post('/products', data)` — bypasses CSRF, no toast, no error handling.
+**Salah:** `router.post('/products', data)` — bypass CSRF, gak ada toast, gak ada error handling.
 
-**Fix:** `const result = await api(() => axios.post('/products', data))` — handles CSRF, toast, errors.
+**Fix:** `const result = await api(() => axios.post('/products', data))` — handle CSRF, toast, error.
 
-### 3. Importing SQLite directly in handlers
+### 3. Import SQLite langsung di handler
 
-**Wrong:** `import SQLite from '@services/SQLite'` in handler.
+**Salah:** `import SQLite from '@services/SQLite'` di handler.
 
-**Fix:** Import query functions from `@queries` — handlers never touch SQLite.
+**Fix:** Import query functions dari `@queries` — handler gak pernah sentuh SQLite langsung.
 
-### 4. Using `export let` instead of `$props()`
+### 4. Pakai `export let` instead of `$props()`
 
-**Wrong:** `export let value: string` — Svelte 4 syntax.
+**Salah:** `export let value: string` — Svelte 4 syntax.
 
 **Fix:** `let { value }: { value: string } = $props()` — Svelte 5 runes.
 
-### 5. Forgetting `try/catch` on mutations
+### 5. Lupa `try/catch` di mutation
 
-**Wrong:** Call `createProduct()` without try/catch — SQLite constraint errors crash the server.
+**Salah:** Panggil `createProduct()` tanpa try/catch — SQLite constraint error crash server.
 
-**Fix:** Wrap mutations in try/catch, handle `SQLITE_CONSTRAINT_UNIQUE`, return `jsonServerError()` on unexpected errors.
+**Fix:** Wrap mutation di try/catch, handle `SQLITE_CONSTRAINT_UNIQUE`, return `jsonServerError()` untuk unexpected error.
 
-### 6. Using `onMount()` instead of `$effect()`
+### 6. Pakai `onMount()` instead of `$effect()`
 
-**Wrong:** `onMount(() => { ... })` — Svelte 4 lifecycle.
+**Salah:** `onMount(() => { ... })` — Svelte 4 lifecycle.
 
-**Fix:** `$effect(() => { ... })` — Svelte 5 runes. Runs after mount AND on dependency changes.
+**Fix:** `$effect(() => { ... })` — Svelte 5 runes. Jalan setelah mount DAN pas dependency berubah.
 
-### 7. Not checking `req.user` before using it
+### 7. Gak cek `req.user` sebelum pakai
 
-**Wrong:** `const userId = req.user.id` — crashes if user is not authenticated.
+**Salah:** `const userId = req.user.id` — crash kalau user belum login.
 
-**Fix:** `if (!req.user) return jsonError(res, 'Unauthorized', 401)` at the top of handler.
+**Fix:** `if (!req.user) return jsonError(res, 'Unauthorized', 401)` di atas handler.
 
-### 8. Using `parseInt(req.query.x as string) || 1` for pagination
+### 8. Pakai `parseInt(req.query.x as string) || 1` untuk pagination
 
-**Wrong:** Manual parseInt with fallback — verbose, error-prone.
+**Salah:** Manual parseInt + fallback — panjang, gampang salah.
 
-**Fix:** `const page = queryInt(req, 'page')` — handles parsing + default value.
+**Fix:** `const page = queryInt(req, 'page')` — handle parsing + default value.
 
-### 9. Forgetting to update `app/handlers/index.ts` after creating a handler
+### 9. Lupa update `app/handlers/index.ts` setelah bikin handler
 
-**Wrong:** Create `app/handlers/products.ts` but don't export it.
+**Salah:** Bikin `app/handlers/products.ts` tapi gak export.
 
-**Result:** `import * as products from '@handlers/products'` fails.
+**Akibat:** `import * as products from '@handlers/products'` gagal.
 
-**Fix:** Add `export * as products from './products'` to `app/handlers/index.ts`.
+**Fix:** Tambah `export * as products from './products'` ke `app/handlers/index.ts`.
 
-### 10. Using English instead of Indonesian for user-facing messages
+### 10. Pakai English instead of Indonesian untuk user-facing message
 
-**Wrong:** `jsonError(res, 'Email already exists', 400)` — inconsistent UX.
+**Salah:** `jsonError(res, 'Email already exists', 400)` — inconsistent UX.
 
-**Fix:** `jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL')` — see ADR 0010.
+**Fix:** `jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL')` — lihat ADR 0010.
 
 ## Build/Test
 
