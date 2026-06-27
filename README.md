@@ -43,10 +43,12 @@ No boilerplate generators needed. The pattern **is** the generator.
 git clone https://github.com/MasRama/nara.git my-app && cd my-app
 npm install
 cp .env.example .env
-npm run migrate && npm run dev
+npm run dev
 ```
 
 Open [http://localhost:5555](http://localhost:5555). You're live.
+
+> Migrations run automatically on startup. To reset the database: `npm run migrate:fresh`
 
 ## Architecture
 
@@ -58,7 +60,7 @@ Server (ultimate-express / uWebSockets.js)
   │
   ├── Handlers (functions)
   │     ├── Queries (raw SQL via better-sqlite3)
-  │     └── Services (Auth, Logger, Storage)
+  │     └── Services (Auth, Logger, Storage, CacheStore, LoginThrottle)
   │
   └── SQLite (embedded, zero-config)
 ```
@@ -67,7 +69,7 @@ Server (ultimate-express / uWebSockets.js)
 
 | Type | Called by | Returns |
 |------|-----------|---------|
-| Page | Browser navigation | `inertia(res).inertia('pageName', { data })` |
+| Page | Browser navigation | `res.inertia('pageName', { data })` |
 | Data | `axios` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
 ## What's Inside
@@ -75,11 +77,24 @@ Server (ultimate-express / uWebSockets.js)
 | Area | Stack |
 |------|-------|
 | Server | ultimate-express (uWebSockets.js, 250k+ req/s) |
-| Frontend | Svelte 5, Inertia.js, Tailwind CSS, Zag JS |
-| Database | SQLite via better-sqlite3, Knex migrations |
-| Auth | Session-based + Google OAuth + RBAC |
-| Security | CSRF, rate limiting, XSS sanitization, security headers |
+| Frontend | Svelte 5, Inertia.js, Tailwind CSS 4, Zag JS |
+| Database | SQLite via better-sqlite3, raw SQL migrations |
+| Auth | Session-based + Google OAuth + RBAC (roles & permissions) |
+| Security | CSRF (double-submit cookie), rate limiting, XSS sanitization, security headers, timing-safe comparisons, login throttling |
+| Storage | Local file storage with sharp image processing, magic byte validation |
 | DX | Path aliases, structured logging (Pino), Vitest, Docker-ready |
+
+## Database
+
+Migrations are raw SQL strings executed by a lightweight migrator (`app/services/Migrator.ts`). No ORM, no query builder — just SQL.
+
+```bash
+npm run migrate            # Run pending migrations (auto-runs on startup)
+npm run migrate:rollback   # Rollback last batch
+npm run migrate:status     # Show pending/applied
+npm run migrate:fresh      # Drop all + re-migrate + seed
+npm run seed               # Run seeders
+```
 
 ## Deployment
 

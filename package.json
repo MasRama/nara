@@ -1,8 +1,8 @@
 {
   "name": "nara",
-  "version": "1.2.11",
+  "version": "2.0.0",
   "private": true,
-  "description": "Nara is a full-stack TypeScript starter kit built on ultimate-express, Svelte 5, and Inertia.js. Batteries included: auth, RBAC, CSRF, rate limiting, structured logging, CLI generators, and a complete user management UI.",
+  "description": "AI-first TypeScript full-stack starter kit. ultimate-express + Svelte 5 + Inertia.js + SQLite. Raw SQL, plain functions, zero ORM. Auth, RBAC, CSRF, rate limiting, structured logging, file storage, and a complete user management UI.",
   "main": "server.ts",
   "scripts": {
     "dev": "clear && rm -rf dist && rm -rf build && npx concurrently 'vite' 'sleep 1 && npx nodemon --legacy-watch'",

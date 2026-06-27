@@ -20,7 +20,6 @@ const EnvSchema = z.object({
   VITE_PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_VITE_PORT),
   APP_URL: z.string().default(`http://localhost:${process.env.PORT || SERVER.DEFAULT_PORT}`),
   HAS_CERTIFICATE: z.enum(['true', 'false']).default('false'),
-  DB_CONNECTION: z.string().default('development'),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -60,7 +59,6 @@ export function getEnvSummary(envConfig: Env) {
     nodeEnv: envConfig.NODE_ENV,
     port: envConfig.PORT,
     appUrl: envConfig.APP_URL,
-    dbConnection: envConfig.DB_CONNECTION,
     logLevel: envConfig.LOG_LEVEL,
     hasHttps: envConfig.HAS_CERTIFICATE === 'true',
     features: {
