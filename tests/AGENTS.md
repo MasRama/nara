@@ -1,6 +1,5 @@
 ---
 authority: canon
-owner: masrama
 last_verified: 2026-06-28
 scope: tests
 ---
@@ -17,6 +16,8 @@ Unit tests using **Vitest**. Mirror `app/` structure.
 tests/
 ├── conventions.test.ts  # Convention tests (naming, layer isolation, AGENTS.md presence)
 ├── core/                # Router, response helpers, errors
+├── handlers/            # Handler tests (mock @queries, assert response)
+├── queries/             # Query tests (mock SQLite, assert SQL called)
 ├── middlewares/         # csrf, rateLimit, requestId, securityHeaders
 ├── services/            # CacheStore, etc.
 ├── validators/          # Zod schemas
