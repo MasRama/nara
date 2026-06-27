@@ -1,0 +1,48 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "exec",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .devin/hooks/block-destructive.js",
+          "timeout": 5
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "edit",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .devin/hooks/post-edit-verify.js",
+          "timeout": 10
+        }
+      ]
+    },
+    {
+      "matcher": "exec",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .devin/hooks/post-exec-verify.js",
+          "timeout": 10
+        }
+      ]
+    }
+  ],
+  "SessionStart": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "node .devin/hooks/session-start.js",
+          "timeout": 5
+        }
+      ]
+    }
+  ]
+}
