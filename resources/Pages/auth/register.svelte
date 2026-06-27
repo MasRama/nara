@@ -17,7 +17,6 @@
     email: string;
     password: string;
     name: string;
-    phone: string;
     password_confirmation: string;
   }
 
@@ -25,7 +24,6 @@
     email: '',
     password: '',
     name: '',
-    phone: '',
     password_confirmation: '',
   });
 
@@ -46,8 +44,7 @@
     }
 
     isLoading = true;
-    const payload = { ...form, phone: form.phone.toString() };
-    const result = await api(() => axios.post("/register", payload));
+    const result = await api(() => axios.post("/register", form));
     isLoading = false;
     if (result.success) router.visit("/dashboard");
   }

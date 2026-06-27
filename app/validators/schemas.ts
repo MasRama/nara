@@ -1,29 +1,18 @@
 import { z } from 'zod';
 
-const phoneRegex = /^[0-9+\-\s()]+$/;
-
 export const LoginSchema = z.object({
-  email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
-  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().or(z.literal('')),
+  email: z.string().email('Format email tidak valid'),
   password: z.string().min(1, 'Password wajib diisi'),
-}).refine(data => data.email || data.phone, {
-  message: 'Email atau nomor telepon wajib diisi',
-  path: ['_root'],
 });
 
 export const RegisterSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
   email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
-  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
   password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
 });
 
 export const ForgotPasswordSchema = z.object({
-  email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
-  phone: z.string().min(10, 'Nomor telepon minimal 10 digit').optional().or(z.literal('')),
-}).refine(data => data.email || data.phone, {
-  message: 'Email atau nomor telepon wajib diisi',
-  path: ['_root'],
+  email: z.string().email('Format email tidak valid'),
 });
 
 export const ResetPasswordSchema = z.object({
@@ -39,22 +28,18 @@ export const ChangePasswordSchema = z.object({
 export const CreateUserSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
   email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
-  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
   password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
-  is_verified: z.boolean().optional().default(false),
   roles: z.array(z.string()).optional(),
 });
 
 export const UpdateUserSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter').optional(),
   email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()).optional(),
-  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
   password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
-  is_verified: z.boolean().optional(),
   roles: z.array(z.string()).optional(),
 }).refine(
-  data => data.name !== undefined || data.email !== undefined || data.phone !== undefined ||
-          data.password !== undefined || data.is_verified !== undefined || data.roles !== undefined,
+  data => data.name !== undefined || data.email !== undefined ||
+          data.password !== undefined || data.roles !== undefined,
   { message: 'Minimal satu field harus diisi untuk update', path: ['_root'] }
 );
 
@@ -65,7 +50,6 @@ export const DeleteUsersSchema = z.object({
 export const ChangeProfileSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
   email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
-  phone: z.string().regex(phoneRegex, 'Format nomor telepon tidak valid').min(10).max(20).optional().nullable().or(z.literal('')),
 });
 
 export const CreateRoleSchema = z.object({

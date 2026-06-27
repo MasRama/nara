@@ -2,9 +2,7 @@ export interface User {
   id: string;
   name: string | null;
   email: string;
-  phone: string | null;
   avatar: string | null;
-  is_verified: boolean;
   membership_date: string | null;
   password: string;
   remember_me_token: string | null;
@@ -48,8 +46,8 @@ export interface Asset {
   size: number | null;
   s3_key: string | null;
   user_id: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: number;
+  updated_at: number;
 }
 
 export interface UserRole {

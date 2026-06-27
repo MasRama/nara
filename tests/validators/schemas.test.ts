@@ -26,12 +26,7 @@ describe('LoginSchema', () => {
     if (result.success) expect(result.data.email).toBe('USER@EXAMPLE.COM');
   });
 
-  it('accepts valid phone + password', () => {
-    const result = LoginSchema.safeParse({ phone: '08123456789', password: 'secret' });
-    expect(result.success).toBe(true);
-  });
-
-  it('fails when no email and no phone', () => {
+  it('fails when email is missing', () => {
     const result = LoginSchema.safeParse({ password: 'secret' });
     expect(result.success).toBe(false);
   });
@@ -68,16 +63,6 @@ describe('RegisterSchema', () => {
     const result = RegisterSchema.safeParse({ ...valid, password: '123' });
     expect(result.success).toBe(false);
   });
-
-  it('accepts optional phone', () => {
-    const result = RegisterSchema.safeParse({ ...valid, phone: '08123456789' });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects invalid phone when provided', () => {
-    const result = RegisterSchema.safeParse({ ...valid, phone: 'abc' });
-    expect(result.success).toBe(false);
-  });
 });
 
 describe('ChangePasswordSchema', () => {
@@ -109,12 +94,6 @@ describe('CreateUserSchema', () => {
     const result = CreateUserSchema.safeParse({ ...valid, roles: ['admin', 'editor'] });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.roles).toEqual(['admin', 'editor']);
-  });
-
-  it('defaults is_verified to false', () => {
-    const result = CreateUserSchema.safeParse(valid);
-    expect(result.success).toBe(true);
-    if (result.success) expect(result.data.is_verified).toBe(false);
   });
 });
 
@@ -185,12 +164,7 @@ describe('ForgotPasswordSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts phone', () => {
-    const result = ForgotPasswordSchema.safeParse({ phone: '08123456789' });
-    expect(result.success).toBe(true);
-  });
-
-  it('fails when neither email nor phone provided', () => {
+  it('fails when email not provided', () => {
     const result = ForgotPasswordSchema.safeParse({});
     expect(result.success).toBe(false);
   });

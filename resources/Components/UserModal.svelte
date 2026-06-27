@@ -87,10 +87,6 @@
               <Input id="email" type="email" bind:value={form.email} placeholder="user@example.com" class="rounded-xl h-11 bg-background border-border font-body text-sm" required />
             </div>
             <div class="space-y-2">
-              <Label for="phone" class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">Phone <span class="normal-case tracking-normal font-body text-muted-foreground">(optional)</span></Label>
-              <Input id="phone" type="text" bind:value={form.phone} placeholder="+62 xxx xxxx xxxx" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
-            </div>
-            <div class="space-y-2">
               <Label for="password" class="text-xs font-mono-accent uppercase tracking-widest text-muted-foreground">{mode === 'create' ? 'Password' : 'New Password'} <span class="normal-case tracking-normal font-body text-muted-foreground">(optional)</span></Label>
               <Input id="password" type="password" bind:value={form.password} placeholder={mode === 'create' ? 'Leave empty to use email' : 'Leave empty to keep current'} class="rounded-xl h-11 bg-background border-border font-body text-sm" />
             </div>
@@ -112,14 +108,6 @@
                 {#if availableRoles.length === 0}
                   <p class="text-xs text-muted-foreground font-mono-accent col-span-2">No roles available</p>
                 {/if}
-              </div>
-            </div>
-
-            <div class="flex items-center gap-3 bg-card border border-border rounded-xl p-3 cursor-pointer hover:border-primary/40 transition-colors duration-200">
-              <Switch bind:checked={form.is_verified} id="verified-status" />
-              <div>
-                <Label for="verified-status" class="text-sm font-heading font-semibold cursor-pointer">Verified</Label>
-                <p class="text-xs font-mono-accent text-muted-foreground mt-0.5">Email confirmed</p>
               </div>
             </div>
           </div>

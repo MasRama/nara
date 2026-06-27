@@ -15,11 +15,9 @@
     id: string;
     name: string;
     email: string;
-    phone?: string;
     avatar?: string;
     roles: string[];
     permissions: string[];
-    is_verified: boolean;
   }
 
   interface Props { user: User }
@@ -108,16 +106,8 @@
             </div>
             <div class="flex flex-wrap gap-2">
               <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">{user.roles?.includes('admin') ? 'Admin' : 'User'}</span>
-              <span class="font-mono-accent text-[10px] px-2.5 py-1 {user.is_verified ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-secondary text-muted-foreground'} rounded-full">{user.is_verified ? 'Verified' : 'Unverified'}</span>
             </div>
           </div>
-
-          {#if user.phone}
-            <div class="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 transition-colors duration-300">
-              <p class="text-xs font-mono-accent text-muted-foreground mb-1.5">Phone</p>
-              <p class="text-base font-heading font-semibold tracking-tight font-mono-accent">{user.phone}</p>
-            </div>
-          {/if}
 
           <div class="bg-card border border-border rounded-2xl p-5 flex items-start gap-3">
             <div class="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -150,15 +140,9 @@
                 </div>
                 <div class="h-px bg-border mb-6"></div>
                 <form onsubmit={(e) => { e.preventDefault(); changeProfile(); }} class="space-y-5">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div class="space-y-2">
-                      <Label for="name" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Full Name</Label>
-                      <Input id="name" type="text" bind:value={user.name} placeholder="Your full name" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
-                    </div>
-                    <div class="space-y-2">
-                      <Label for="phone" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Phone Number</Label>
-                      <Input id="phone" type="text" bind:value={user.phone} placeholder="+62 xxx xxxx xxxx" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
-                    </div>
+                  <div class="space-y-2">
+                    <Label for="name" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Full Name</Label>
+                    <Input id="name" type="text" bind:value={user.name} placeholder="Your full name" class="rounded-xl h-11 bg-background border-border font-body text-sm" />
                   </div>
                   <div class="space-y-2">
                     <Label for="email" class="text-xs font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Email Address</Label>

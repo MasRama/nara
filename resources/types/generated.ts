@@ -1,78 +1,41 @@
 /**
- * Frontend Types (mirrors backend types)
- * 
- * Manually maintained — update this file when backend types change.
- * 
- * Source: app/core/types.ts, app/types/models.ts
+ * Frontend Types
+ *
+ * Shared types (User, Role, Permission, Session, API responses) are re-exported
+ * from app/types/shared.ts — the single source of truth.
+ *
+ * This file contains only frontend-specific types (forms, helpers, type guards).
  */
 
+// Re-export shared types from backend (single source of truth)
+export type {
+  User,
+  Role,
+  RoleInfo,
+  Permission,
+  GroupedPermissions,
+  Session,
+  PaginationMeta,
+  PaginatedResponse,
+  ApiSuccessResponse,
+  ApiErrorResponse,
+  ApiResponse,
+} from '../../app/types/shared';
+
+import type { User, Role } from '../../app/types/shared';
+
 // =============================================================================
-// User Types (from app/core/types.ts)
+// Form Types (frontend-only)
 // =============================================================================
 
-/**
- * User interface for authenticated requests
- */
-export interface User {
-  id: string;
+export interface UserForm {
+  id: string | null;
   name: string;
   email: string;
-  phone?: string;
-  avatar?: string;
   roles: string[];
-  permissions: string[];
-  is_verified: boolean;
-  created_at?: number;
-  updated_at?: number;
+  password: string;
 }
 
-// =============================================================================
-// Role & Permission Types
-// =============================================================================
-
-/**
- * Role interface
- */
-export interface Role {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  permissions: string[];
-  user_count?: number;
-  created_at?: number;
-  updated_at?: number;
-}
-
-/**
- * Role info (minimal, for dropdowns/lists)
- */
-export interface RoleInfo {
-  name: string;
-  slug: string;
-  description: string | null;
-}
-
-/**
- * Permission interface
- */
-export interface Permission {
-  id: string;
-  name: string;
-  slug: string;
-  resource: string;
-  action: string;
-  description: string | null;
-}
-
-/**
- * Grouped permissions by resource
- */
-export type GroupedPermissions = Record<string, Permission[]>;
-
-/**
- * Form data for creating/editing roles
- */
 export interface RoleForm {
   id: string | null;
   name: string;
@@ -82,126 +45,37 @@ export interface RoleForm {
 }
 
 // =============================================================================
-// Form Types
+// Helper Functions (frontend-only)
 // =============================================================================
 
-/**
- * Form data for creating/editing users
- */
-export interface UserForm {
-  id: string | null;
-  name: string;
-  email: string;
-  phone: string;
-  roles: string[];
-  is_verified: boolean;
-  password: string;
-}
-
-// =============================================================================
-// Pagination Types
-// =============================================================================
-
-/**
- * Pagination metadata from backend
- */
-export interface PaginationMeta {
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
-/**
- * Paginated response wrapper
- */
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: PaginationMeta;
-}
-
-// =============================================================================
-// API Response Types
-// =============================================================================
-
-/**
- * Standard API success response
- */
-export interface ApiSuccessResponse<T = unknown> {
-  success: true;
-  message: string;
-  data?: T;
-  meta?: Record<string, unknown>;
-}
-
-/**
- * Standard API error response
- */
-export interface ApiErrorResponse {
-  success: false;
-  message: string;
-  code?: string;
-  errors?: Record<string, string[]>;
-}
-
-/**
- * Union type for API responses
- */
-export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Create empty user form
- */
 export function createEmptyUserForm(): UserForm {
   return {
     id: null,
     name: '',
     email: '',
-    phone: '',
     roles: ['user'],
-    is_verified: false,
     password: ''
   };
 }
 
-/**
- * Convert User to UserForm for editing
- */
 export function userToForm(user: User): UserForm {
   return {
     id: user.id,
     name: user.name || '',
     email: user.email || '',
-    phone: user.phone || '',
     roles: user.roles || ['user'],
-    is_verified: !!user.is_verified,
     password: ''
   };
 }
 
-/**
- * Type guard to check if response is successful
- */
-export function isApiSuccess<T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> {
+export function isApiSuccess<T>(response: import('../../app/types/shared').ApiResponse<T>): response is import('../../app/types/shared').ApiSuccessResponse<T> {
   return response.success === true;
 }
 
-/**
- * Type guard to check if response is an error
- */
-export function isApiError(response: ApiResponse): response is ApiErrorResponse {
+export function isApiError(response: import('../../app/types/shared').ApiResponse): response is import('../../app/types/shared').ApiErrorResponse {
   return response.success === false;
 }
 
-/**
- * Create empty role form
- */
 export function createEmptyRoleForm(): RoleForm {
   return {
     id: null,
@@ -212,14 +86,11 @@ export function createEmptyRoleForm(): RoleForm {
   };
 }
 
-/**
- * Convert Role to RoleForm for editing
- */
 export function roleToForm(role: Role): RoleForm {
-  const permissions = (role.permissions || []).map((p: string | { slug: string }) => 
+  const permissions = (role.permissions || []).map((p: string | { slug: string }) =>
     typeof p === 'string' ? p : p.slug
   );
-  
+
   return {
     id: role.id,
     name: role.name || '',

@@ -24,21 +24,19 @@
     hasNext?: boolean;
     hasPrev?: boolean;
     search?: string;
-    filter?: string;
   }
 
-  let { 
+  let {
     users = [],
     availableRoles = [],
     permissions = { canCreate: false, canEdit: false, canDelete: false },
-    total = 0, 
-    page = 1, 
-    limit = 10, 
-    totalPages = 1, 
-    hasNext = false, 
+    total = 0,
+    page = 1,
+    limit = 10,
+    totalPages = 1,
+    hasNext = false,
     hasPrev = false,
-    search = '',
-    filter = 'all'
+    search = ''
   }: Props = $props();
 
   const currentUser = $derived(inertiaPage.props.user as User | undefined);
@@ -84,9 +82,7 @@
     const payload = {
       name: formData.name,
       email: formData.email,
-      phone: formData.phone || null,
       roles: formData.roles || [],
-      is_verified: formData.is_verified,
       password: formData.password || undefined
     };
 
@@ -159,7 +155,6 @@
               <thead class="[&_tr]:border-b">
                 <tr class="border-border">
                   <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">User</th>
-                  <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Status</th>
                   <th class="h-10 px-2 text-start font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Roles</th>
                   <th class="h-10 px-2 text-end font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground font-medium whitespace-nowrap">Actions</th>
                 </tr>
@@ -177,13 +172,6 @@
                           <div class="text-xs font-mono-accent text-muted-foreground">{userItem.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td class="p-2 align-middle whitespace-nowrap">
-                      {#if userItem.is_verified}
-                        <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary">Verified</span>
-                      {:else}
-                        <span class="font-mono-accent text-[10px] px-2.5 py-1 bg-secondary rounded-full text-muted-foreground">Pending</span>
-                      {/if}
                     </td>
                     <td class="p-2 align-middle whitespace-nowrap">
                       <div class="flex flex-wrap items-center gap-1.5">

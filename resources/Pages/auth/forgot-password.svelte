@@ -11,12 +11,10 @@
 
     interface ForgotPasswordForm {
         email: string;
-        phone: string;
     }
 
     let form: ForgotPasswordForm = {
         email: "",
-        phone: "",
     };
 
     let success: boolean = $state(false);
@@ -28,11 +26,10 @@
 
     async function submitForm(): Promise<void> {
         const result = await api(() => axios.post("/forgot-password", form));
-        
+
         if (result.success) {
             success = true;
             form.email = "";
-            form.phone = "";
         }
     }
 </script>
@@ -63,19 +60,19 @@
             <h2 class="text-xl font-semibold tracking-tight mb-6">Reset Password</h2>
             {#if success}
                 <div role="alert" class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/50">
-                    Link reset password telah dikirim ke email atau nomor telepon Anda.
+                    Link reset password telah dikirim ke email Anda.
                 </div>
             {/if}
 
             <form class="space-y-4 md:space-y-6" onsubmit={(e) => { e.preventDefault(); submitForm(); }}>
                 <div class="space-y-2">
-                    <Label for="email">Email atau Nomor Telepon</Label>
+                    <Label for="email">Email</Label>
                     <Input
                         bind:value={form.email}
-                        type="text"
+                        type="email"
                         name="email"
                         id="email"
-                        placeholder="email@example.com atau 08xxxxxxxxxx"
+                        placeholder="email@example.com"
                         required
                     />
                 </div>

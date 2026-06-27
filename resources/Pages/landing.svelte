@@ -11,7 +11,6 @@
     email: string;
     roles: string[];
     permissions: string[];
-    is_verified: boolean;
   }
 
   let user = page.props.user as User | undefined

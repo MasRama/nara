@@ -2,14 +2,12 @@
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, inertia } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import Badge from '../Components/Badge.svelte';
   import { Users, Settings, Shield, Activity, ChevronRight, ShieldCheck } from '@lucide/svelte';
   import type { User } from '../types';
 
   interface Props {
     users?: User[];
     search?: string;
-    filter?: string;
     total?: number;
     page?: number;
     limit?: number;
@@ -18,11 +16,10 @@
     hasPrev?: boolean;
   }
 
-  let { 
-    users = [], 
-    search = '', 
-    filter = 'all', 
-    total = 0, 
+  let {
+    users = [],
+    search = '',
+    total = 0,
     page = 1,
     limit = 10,
     totalPages = 1,
@@ -86,17 +83,6 @@
           </div>
         </div>
 
-        <div class="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-primary/40 transition-colors duration-300 group">
-          <div class="flex items-center justify-between mb-4">
-            <span class="font-mono-accent text-[10px] uppercase tracking-widest text-muted-foreground">Filter</span>
-            <Settings class="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors duration-300" />
-          </div>
-          <div>
-            <div class="text-3xl font-heading font-bold tracking-tighter text-foreground capitalize group-hover:text-primary transition-colors duration-300">{filter}</div>
-            <div class="text-xs font-mono-accent text-muted-foreground mt-1">active filter</div>
-          </div>
-        </div>
-
         <div class="bg-primary text-primary-foreground rounded-2xl p-5 flex flex-col justify-between">
           <div class="flex items-center justify-between mb-4">
             <span class="font-mono-accent text-[10px] uppercase tracking-widest opacity-70">Status</span>
@@ -108,7 +94,7 @@
             </div>
             <div class="flex items-center gap-2 mt-1">
               <span class="inline-flex h-1.5 w-1.5 rounded-full bg-primary-foreground animate-pulse"></span>
-              <div class="text-xs font-mono-accent opacity-80">{currentUser?.is_verified ? 'Verified' : 'Unverified'}</div>
+              <div class="text-xs font-mono-accent opacity-80">Active</div>
             </div>
           </div>
         </div>
@@ -120,14 +106,9 @@
         <div class="lg:col-span-5 flex flex-col gap-4">
           <h2 class="text-sm font-mono-accent font-semibold uppercase tracking-widest text-muted-foreground">Account Details</h2>
 
-          <div class="bg-card border border-border rounded-2xl p-6 flex items-center justify-between hover:border-primary/40 transition-colors duration-300">
-            <div>
-              <p class="text-xs font-mono-accent text-muted-foreground mb-1.5">Email Address</p>
-              <p class="text-base font-heading font-semibold tracking-tight">{currentUser?.email}</p>
-            </div>
-            <Badge variant={currentUser?.is_verified ? 'default' : 'secondary'} class="font-mono-accent text-[10px]">
-              {currentUser?.is_verified ? 'Verified' : 'Pending'}
-            </Badge>
+          <div class="bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
+            <p class="text-xs font-mono-accent text-muted-foreground mb-1.5">Email Address</p>
+            <p class="text-base font-heading font-semibold tracking-tight">{currentUser?.email}</p>
           </div>
 
           <div class="bg-card border border-border rounded-2xl p-6 hover:border-primary/40 transition-colors duration-300">
