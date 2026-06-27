@@ -16,8 +16,7 @@ Skills are deep-dive procedures loaded on demand. Each skill focuses on one patt
 | [`sqlite-usage.md`](./sqlite-usage.md) | Writing SQL queries, transactions, dynamic updates |
 | [`auth-rbac.md`](./auth-rbac.md) | Auth guards, permission checks, role management |
 | [`inertia-patterns.md`](./inertia-patterns.md) | Frontend pages, `res.inertia` vs `jsonSuccess`, `router.visit` vs `axios` |
-| [`error-handling.md`](./error-handling.md) | Error responses in handlers vs deep services, NaraError type guards |
-| [`api-contract.md`](./api-contract.md) | Response shapes, response helpers, error codes, pagination meta |
+| [`api-contract.md`](./api-contract.md) | Response shapes, error codes, error handling patterns, Zod validation |
 | [`dependency-policy.md`](./dependency-policy.md) | Allowed vs banned dependencies (16 categories), adding new deps |
 | [`common-pitfalls.md`](./common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |
 

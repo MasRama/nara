@@ -39,7 +39,6 @@ describe('convention: skills index', () => {
     'sqlite-usage.md',
     'auth-rbac.md',
     'inertia-patterns.md',
-    'error-handling.md',
     'api-contract.md',
     'dependency-policy.md',
     'common-pitfalls.md',

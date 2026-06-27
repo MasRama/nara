@@ -56,7 +56,7 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 
 | Layer | What | Why it matters |
 |---|---|---|
-| **Context** | `AGENTS.md` (root + 7 nested) + 8 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
+| **Context** | `AGENTS.md` (root + 7 nested) + 7 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
 | **Topology** | `CODEMAP.md` (111 files indexed, 278 exports) | The machine knows what exists before searching. Reads one file instead of 111. |
 | **Scaffolding** | `npm run gen:resource` | Seven files scaffolded with correct conventions. The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 254 tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
@@ -172,7 +172,7 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 | [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
 | [`CODEMAP.md`](./CODEMAP.md) | Codebase topology (111 files, 278 exports) | Before searching the codebase |
 | [`routes/web.ts`](./routes/web.ts) | All routes (51 lines) | Before adding routes |
-| [`.agents/skills/`](./.agents/skills/SKILL.md) | 8 deep-dive skills (CRUD, SQL, auth, Inertia, errors, API, deps, pitfalls) | When touching that pattern |
+| [`.agents/skills/`](./.agents/skills/SKILL.md) | 7 deep-dive skills (CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls) | When touching that pattern |
 | [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |
 
 ---
