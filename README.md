@@ -3,32 +3,15 @@
 [![CI](https://github.com/MasRama/nara/actions/workflows/ci.yml/badge.svg)](https://github.com/MasRama/nara/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-> **Clone it. Prompt it. Ship it.**
->
-> The TypeScript starter kit designed for AI-assisted development.
+> A quiet foundation for people who build software by talking to machines.
 
-Most starter kits fight your AI — complex abstractions, deep class hierarchies, magic ORMs. AI hallucinates, you debug. Nara is the opposite: flat patterns, raw SQL, plain functions, plus machine-readable docs and enforcement tooling that catches AI mistakes before they ship.
+Most starter kits fight the machine. Layers of abstraction it cannot read. Classes it has to guess. Magic it cannot trace. Nara is the opposite — flat, plain, readable. The machine understands it on the first look, and so do you.
 
-## What Makes Nara AI-First
+---
 
-| Layer | What | Why it matters |
-|---|---|---|
-| **Context** | `AGENTS.md` (root + 9 nested) + 8 skills + 10 ADRs | AI reads conventions, not guesses. Skills loaded on demand to save context window. |
-| **Topology** | `CODEMAP.md` (111 files indexed) + `SCHEMA.md` (8 tables) | AI knows what exists before searching. Reads one file instead of 111. |
-| **Scaffolding** | `npm run gen:resource products -- --fields="name:string,price:number"` | 7 files scaffolded with correct conventions. AI can't make structural mistakes. |
-| **Enforcement** | `npm run lint:layers` (17 rules) + 258 tests + pre-commit hook | AI push violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
-| **Verification** | `npm run check` (lint + typecheck + layer lint + tests + freshness) | One command. AI doesn't need to remember 4 commands. |
-| **CI** | 4 steps: typecheck → layer lint → tests → freshness (strict) | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
-| **Policy** | Dependency policy (16 categories: allowed vs banned) | AI checks table before suggesting a dependency. No Prisma, no JWT, no React. |
-| **Pitfalls** | 10 real mistakes AI makes, with fix | AI reads before coding. Prevents common errors. |
+## The craft of building with machines.
 
-## Ship a Feature in a Single Prompt
-
-Tell your AI assistant:
-
-> *"Add a products CRUD."*
-
-AI reads `AGENTS.md` → loads `crud-pattern.md` skill → runs `gen:resource` or writes code manually → runs `npm run check` → ships.
+You describe what you want. The machine writes the types, the queries, the handlers, the routes, the interface. You read it. You ship it. The pattern *is* the generator.
 
 ```
 types/models.ts          →  interface Product { ... }
@@ -40,13 +23,55 @@ routes/web.ts            →  Route.get/post/put/delete('/products', ...)
 Pages/products.svelte    →  Full UI with table, forms, toast notifications
 ```
 
-Or just run the generator:
+Or just:
 
 ```bash
 npm run gen:resource products -- --fields="name:string,price:number"
 ```
 
-## Quick Start
+Seven files. Correct conventions. No structural mistakes.
+
+---
+
+## Five quiet principles.
+
+Each one removes a reason for the machine to guess.
+
+**01. Flat, by design.**
+Files at arm's reach. No deep nesting to navigate. The machine finds things by name, and so do you.
+
+**02. Functions, not classes.**
+Standalone functions the machine writes accurately. No inheritance to hallucinate, no hidden state to chase.
+
+**03. Raw SQL, not magic.**
+Every query explicit, readable, predictable. The machine writes SQL fluently. No query builder syntax to invent.
+
+**04. No hidden behavior.**
+Traceable end to end. No decorators, no implicit middleware, no magic resolvers.
+
+**05. Few dependencies.**
+Fewer APIs to learn. Fewer mistakes to make. Each one earns its place.
+
+See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each decision was made.
+
+---
+
+## What makes Nara AI-first.
+
+| Layer | What | Why it matters |
+|---|---|---|
+| **Context** | `AGENTS.md` (root + 9 nested) + 8 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
+| **Topology** | `CODEMAP.md` (111 files indexed) + `SCHEMA.md` (8 tables) | The machine knows what exists before searching. Reads one file instead of 111. |
+| **Scaffolding** | `npm run gen:resource` | Seven files scaffolded with correct conventions. The machine can't make structural mistakes. |
+| **Enforcement** | `npm run lint:layers` (17 rules) + 258 tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
+| **Verification** | `npm run check` | One command. The machine doesn't need to remember four. |
+| **CI** | 4 steps: typecheck → layer lint → tests → freshness (strict) | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
+| **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
+| **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
+
+---
+
+## Begin.
 
 ```bash
 git clone https://github.com/MasRama/nara.git my-app && cd my-app
@@ -59,7 +84,9 @@ Open [http://localhost:5555](http://localhost:5555). You're live.
 
 > Migrations run automatically on startup. To reset: `npm run migrate:fresh`
 
-## Architecture
+---
+
+## Architecture.
 
 ```
 Browser (Svelte 5 + Inertia.js)
@@ -81,20 +108,9 @@ Server (ultimate-express / uWebSockets.js)
 | Page | Browser navigation | `res.inertia('pageName', { data })` |
 | Data | `axios` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
-## Design Decisions
+---
 
-| Decision | Why |
-|----------|-----|
-| Functions, not classes | AI generates standalone functions more accurately than class hierarchies |
-| Raw SQL, not ORM | AI writes SQL fluently — no query builder syntax to hallucinate |
-| Flat file structure | AI finds files by name, not by navigating deep nesting |
-| No magic | Every behavior is traceable — AI can read and reason about it |
-| Minimal dependencies | Fewer APIs to learn = fewer mistakes from AI and humans alike |
-| Descriptive handler names | `addUser` not `create` — AI understands intent from the name alone |
-
-See [`docs/decisions/`](./docs/decisions/) for 10 ADRs explaining WHY each decision was made.
-
-## What's Inside
+## What's inside.
 
 | Area | Stack |
 |------|-------|
@@ -106,35 +122,41 @@ See [`docs/decisions/`](./docs/decisions/) for 10 ADRs explaining WHY each decis
 | Storage | Local file storage with sharp image processing, magic byte validation |
 | DX | Path aliases, structured logging (Pino), Vitest, Docker-ready |
 
-## AI-First Tooling
+---
+
+## Tooling.
 
 ```bash
 # Scaffolding
-npm run gen:resource products -- --fields="name:string,price:number"  # Scaffold full-stack resource
+npm run gen:resource products -- --fields="name:string,price:number"
 
 # Verification
-npm run check              # All-in-one: lint + typecheck + layer lint + tests + freshness
+npm run check              # lint + typecheck + layer lint + tests + freshness
 npm run lint:layers        # 17 layer boundary + naming + import direction rules
-npm run check:freshness    # Detect stale AGENTS.md (advisory) or --strict (CI)
+npm run check:freshness    # detect stale AGENTS.md (advisory) or --strict (CI)
 
 # Topology
-npm run codemap            # Regenerate CODEMAP.md (111 files, 278 exports)
-npm run gen:schema         # Regenerate SCHEMA.md (8 tables, 55 columns)
+npm run codemap            # regenerate CODEMAP.md (111 files, 278 exports)
+npm run gen:schema         # regenerate SCHEMA.md (8 tables, 55 columns)
 ```
 
-## Database
+---
+
+## Database.
 
 Migrations are raw SQL strings executed by a lightweight migrator. No ORM, no query builder — just SQL.
 
 ```bash
-npm run migrate            # Run pending migrations (auto-runs on startup)
-npm run migrate:rollback   # Rollback last batch
-npm run migrate:status     # Show pending/applied
-npm run migrate:fresh      # Drop all + re-migrate + seed
-npm run seed               # Run seeders
+npm run migrate            # run pending migrations (auto-runs on startup)
+npm run migrate:rollback   # rollback last batch
+npm run migrate:status     # show pending/applied
+npm run migrate:fresh      # drop all + re-migrate + seed
+npm run seed               # run seeders
 ```
 
-## Deployment
+---
+
+## Deployment.
 
 ```bash
 # Docker
@@ -147,7 +169,9 @@ npm run build && npm start
 
 Set `NODE_ENV=production` and configure SSL for production use. See [.env.production.example](./.env.production.example) for reference.
 
-## Docs
+---
+
+## Read.
 
 | File | For | Read when |
 |---|---|---|
@@ -156,12 +180,14 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 | [`SCHEMA.md`](./SCHEMA.md) | Database schema (8 tables, 55 columns) | Before writing SQL |
 | [`routes/web.ts`](./routes/web.ts) | All routes (51 lines) | Before adding routes |
 | [`.agents/skills/`](./.agents/skills/SKILL.md) | 8 deep-dive skills (CRUD, SQL, auth, Inertia, errors, API, deps, pitfalls) | When touching that pattern |
-| [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining WHY decisions were made | When questioning a convention |
+| [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |
 
-## Requirements
+---
+
+## Requirements.
 
 Node.js >= 20 · npm · That's it. SQLite is embedded.
 
-## License
+## License.
 
 [MIT](./LICENSE) — Built by [MasRama](https://github.com/MasRama)
