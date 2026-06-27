@@ -15,10 +15,11 @@ scope: root
 Read in this order (each builds on the previous):
 
 1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
-2. **This file** — conventions, anti-patterns, dependency policy, structure. ~250 lines.
-3. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
-4. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
-5. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+2. **[SCHEMA.md](./SCHEMA.md)** — database schema in one read (8 tables, 55 columns). Know table shapes before writing SQL.
+3. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
+4. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
+5. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
+6. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
 
 Then verify your work with one command:
 ```bash
@@ -192,6 +193,80 @@ AI must not add dependencies without checking this table. If a category is "Bann
 10. **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — use descriptive names (`createUser`, `updateRole`, `listRoles`)
 11. **Don't** use vague function names (`handle`, `process`, `run`, `do`, `execute` as standalone) — describe what it does (`processPayment`, `handleWebhookDelivery`)
 
+## Common Pitfalls — AI Frequently Gets Wrong
+
+These are real mistakes AI agents make in this codebase. Read before coding.
+
+### 1. Forgetting to register Inertia page
+
+**Wrong:** Create `resources/Pages/products.svelte` but don't add it to `resources/app.ts`.
+
+**Result:** Page renders blank — Inertia can't find the component.
+
+**Fix:** Always add new pages to the page map in `resources/app.ts`:
+```typescript
+const pages = {
+  // ...existing
+  products: () => import('./Pages/products.svelte'),
+};
+```
+
+### 2. Using `router.post()` for mutations instead of `api(() => axios.post())`
+
+**Wrong:** `router.post('/products', data)` — bypasses CSRF, no toast, no error handling.
+
+**Fix:** `const result = await api(() => axios.post('/products', data))` — handles CSRF, toast, errors.
+
+### 3. Importing SQLite directly in handlers
+
+**Wrong:** `import SQLite from '@services/SQLite'` in handler.
+
+**Fix:** Import query functions from `@queries` — handlers never touch SQLite.
+
+### 4. Using `export let` instead of `$props()`
+
+**Wrong:** `export let value: string` — Svelte 4 syntax.
+
+**Fix:** `let { value }: { value: string } = $props()` — Svelte 5 runes.
+
+### 5. Forgetting `try/catch` on mutations
+
+**Wrong:** Call `createProduct()` without try/catch — SQLite constraint errors crash the server.
+
+**Fix:** Wrap mutations in try/catch, handle `SQLITE_CONSTRAINT_UNIQUE`, return `jsonServerError()` on unexpected errors.
+
+### 6. Using `onMount()` instead of `$effect()`
+
+**Wrong:** `onMount(() => { ... })` — Svelte 4 lifecycle.
+
+**Fix:** `$effect(() => { ... })` — Svelte 5 runes. Runs after mount AND on dependency changes.
+
+### 7. Not checking `req.user` before using it
+
+**Wrong:** `const userId = req.user.id` — crashes if user is not authenticated.
+
+**Fix:** `if (!req.user) return jsonError(res, 'Unauthorized', 401)` at the top of handler.
+
+### 8. Using `parseInt(req.query.x as string) || 1` for pagination
+
+**Wrong:** Manual parseInt with fallback — verbose, error-prone.
+
+**Fix:** `const page = queryInt(req, 'page')` — handles parsing + default value.
+
+### 9. Forgetting to update `app/handlers/index.ts` after creating a handler
+
+**Wrong:** Create `app/handlers/products.ts` but don't export it.
+
+**Result:** `import * as products from '@handlers/products'` fails.
+
+**Fix:** Add `export * as products from './products'` to `app/handlers/index.ts`.
+
+### 10. Using English instead of Indonesian for user-facing messages
+
+**Wrong:** `jsonError(res, 'Email already exists', 400)` — inconsistent UX.
+
+**Fix:** `jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL')` — see ADR 0010.
+
 ## Build/Test
 
 ```bash
@@ -211,7 +286,8 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 |---|---|---|
 | `npm run check` | All-in-one: lint + typecheck + lint:layers + tests + freshness | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
-| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (6 files) | No |
+| `npm run gen:schema` | Regenerate `SCHEMA.md` (database schema reference) | No |
+| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (7 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 | `npm run check:freshness` | Check if AGENTS.md files are stale relative to code | No (advisory) |
 | `npm run check:freshness -- --strict` | Same, but fail CI on stale AGENTS.md | Yes (in CI) |

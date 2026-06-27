@@ -15,20 +15,20 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 
 ## Structure
 
-| File | Purpose |
-|------|---------|
-| `Badge.svelte` | Inline status/label badge |
-| `Button.svelte` | Reusable button with variant support |
-| `Can.svelte` | Authorization wrapper — shows/hides content based on user permissions/roles |
-| `DarkModeToggle.svelte` | Dark mode toggle, persists to localStorage |
-| `Header.svelte` | Top navigation bar with user menu (Zag JS menu + dialog) |
-| `Input.svelte` | Styled text input |
-| `Label.svelte` | Form label |
-| `NaraIcon.svelte` | Logo/icon SVG component |
-| `Pagination.svelte` | Page navigation for paginated lists |
-| `RoleModal.svelte` | Modal for create/edit role form (Zag JS dialog) |
-| `Switch.svelte` | Toggle switch (Zag JS switch) |
-| `UserModal.svelte` | Modal for create/edit user form (Zag JS dialog) |
+| File | Purpose | Key Props |
+|------|---------|-----------|
+| `Badge.svelte` | Inline status/label badge | `variant`, `href`, `children` |
+| `Button.svelte` | Button with variants | `variant` (default/destructive/outline), `size` (default/sm/lg), `href`, `type`, `disabled`, `children` |
+| `Can.svelte` | Authorization wrapper | `permission` (string), `role` (string), `children` |
+| `DarkModeToggle.svelte` | Dark mode toggle | `onchange?: (isDark: boolean) => void` |
+| `Header.svelte` | Top nav bar + user menu | `group` (string — active nav section) |
+| `Input.svelte` | Styled text input | `value` (bindable), `type`, `files` (bindable), `className` |
+| `Label.svelte` | Form label | `children` |
+| `NaraIcon.svelte` | Logo SVG | — |
+| `Pagination.svelte` | Page navigation | `meta: PaginationMeta`, `preserveState?: boolean` |
+| `RoleModal.svelte` | Create/edit role modal | Zag JS dialog — open/close via `bind:open` |
+| `Switch.svelte` | Toggle switch | `checked` (bindable), `disabled`, `onCheckedChange` |
+| `UserModal.svelte` | Create/edit user modal | Zag JS dialog — open/close via `bind:open` |
 
 ## $lib/* Quick Reference
 
