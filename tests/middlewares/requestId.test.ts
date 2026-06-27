@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { requestId, requestIdWithOptions } from '../../app/middlewares/requestId';
+import { requestId } from '../../app/middlewares/requestId';
 import { mockRequest, mockResponse, runMiddleware } from '../helpers/mocks';
 
 describe('requestId middleware', () => {
@@ -59,50 +59,5 @@ describe('requestId middleware', () => {
     await runMiddleware(requestId(), req2, res2 as any);
 
     expect(req1.requestId).not.toBe(req2.requestId);
-  });
-});
-
-describe('requestIdWithOptions', () => {
-  it('uses custom header name', async () => {
-    const req = mockRequest({
-      headers: { 'x-trace-id': 'trace-abc' },
-    } as any);
-    const res = mockResponse();
-
-    const mw = requestIdWithOptions({ headerName: 'x-trace-id' });
-    await runMiddleware(mw, req, res as any);
-
-    expect(req.requestId).toBe('trace-abc');
-    expect(res._headers['x-trace-id']).toBe('trace-abc');
-  });
-
-  it('ignores upstream when trustUpstream is false', async () => {
-    const req = mockRequest({
-      headers: { 'x-request-id': 'should-be-ignored' },
-    } as any);
-    const res = mockResponse();
-
-    const mw = requestIdWithOptions({ trustUpstream: false });
-    await runMiddleware(mw, req, res as any);
-
-    expect(req.requestId).not.toBe('should-be-ignored');
-    expect(req.requestId).toBeDefined();
-  });
-
-  it('uses custom generator function', async () => {
-    const req = mockRequest();
-    const res = mockResponse();
-    const customId = 'custom-id-12345';
-
-    const mw = requestIdWithOptions({ generator: () => customId });
-    await runMiddleware(mw, req, res as any);
-
-    expect(req.requestId).toBe(customId);
-  });
-
-  it('calls next() to continue middleware chain', async () => {
-    const mw = requestIdWithOptions({});
-    const result = await runMiddleware(mw);
-    expect(result.nextCalled).toBe(true);
   });
 });

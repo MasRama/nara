@@ -153,8 +153,4 @@ export function resetRateLimit(key: string): void {
   store.delete(key);
 }
 
-export function getRateLimitStoreSize(): number {
-  return store.size;
-}
-
 export default rateLimit;

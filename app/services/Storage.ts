@@ -69,9 +69,6 @@ export const putFile = async (sourcePath: string, options: StoreOptions = {}): P
 export const get = async (relativePath: string): Promise<Buffer> =>
   fs.promises.readFile(path.join(getBasePath(), relativePath));
 
-export const getStream = (relativePath: string): fs.ReadStream =>
-  fs.createReadStream(path.join(getBasePath(), relativePath));
-
 export const exists = async (relativePath: string): Promise<boolean> => {
   try {
     await fs.promises.access(path.join(getBasePath(), relativePath));
@@ -92,95 +89,15 @@ export const del = async (relativePath: string): Promise<boolean> => {
   }
 };
 
-export const move = async (from: string, to: string): Promise<StoredFile> => {
-  const sourcePath = path.join(getBasePath(), from);
-  const destPath = path.join(getBasePath(), to);
-
-  await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
-  await fs.promises.rename(sourcePath, destPath);
-
-  const stats = await fs.promises.stat(destPath);
-
-  return {
-    path: to,
-    fullPath: destPath,
-    url: `${config.publicPath}/${to}`.replace(/\\/g, '/'),
-    size: stats.size,
-    name: path.basename(to),
-  };
-};
-
-export const copy = async (from: string, to: string): Promise<StoredFile> => {
-  const sourcePath = path.join(getBasePath(), from);
-  const destPath = path.join(getBasePath(), to);
-
-  await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
-  await fs.promises.copyFile(sourcePath, destPath);
-
-  const stats = await fs.promises.stat(destPath);
-
-  return {
-    path: to,
-    fullPath: destPath,
-    url: `${config.publicPath}/${to}`.replace(/\\/g, '/'),
-    size: stats.size,
-    name: path.basename(to),
-  };
-};
-
 export const url = (relativePath: string): string =>
   `${config.publicPath}/${relativePath}`.replace(/\\/g, '/');
 
 export const filePath = (relativePath: string): string =>
   path.join(getBasePath(), relativePath);
 
-export const fileSize = async (relativePath: string): Promise<number> => {
-  const stats = await fs.promises.stat(path.join(getBasePath(), relativePath));
-  return stats.size;
-};
-
-export const files = async (directory: string = ''): Promise<string[]> => {
-  try {
-    const entries = await fs.promises.readdir(path.join(getBasePath(), directory), { withFileTypes: true });
-    return entries.filter(e => e.isFile()).map(e => path.join(directory, e.name));
-  } catch {
-    return [];
-  }
-};
-
-export const directories = async (directory: string = ''): Promise<string[]> => {
-  try {
-    const entries = await fs.promises.readdir(path.join(getBasePath(), directory), { withFileTypes: true });
-    return entries.filter(e => e.isDirectory()).map(e => path.join(directory, e.name));
-  } catch {
-    return [];
-  }
-};
-
-export const deleteDirectory = async (directory: string): Promise<boolean> => {
-  try {
-    await fs.promises.rm(path.join(getBasePath(), directory), { recursive: true, force: true });
-    Logger.info(`Directory deleted: ${directory}`);
-    return true;
-  } catch (error) {
-    Logger.error(`Failed to delete directory: ${directory}`, error as Error);
-    return false;
-  }
-};
-
-export const makeDirectory = async (directory: string): Promise<boolean> => {
-  try {
-    await fs.promises.mkdir(path.join(getBasePath(), directory), { recursive: true });
-    return true;
-  } catch {
-    return false;
-  }
-};
-
 const Storage = {
-  configure, put, putFile, get, getStream, exists,
-  delete: del, move, copy, url, path: filePath, size: fileSize,
-  files, directories, deleteDirectory, makeDirectory,
+  configure, put, putFile, get, exists,
+  delete: del, url, path: filePath,
 };
 
 export default Storage;

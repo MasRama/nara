@@ -1,16 +1,13 @@
-
 import { RATE_LIMIT } from "@config";
 import Logger from "@services/Logger";
 
-interface LoginAttemptEntry {
+interface Entry {
   attempts: number;
   firstAttempt: number;
   lockedUntil: number | null;
 }
 
-const attemptStore = new Map<string, LoginAttemptEntry>();
-
-let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+const store = new Map<string, Entry>();
 
 const config = {
   maxAttempts: RATE_LIMIT.MAX_LOGIN_ATTEMPTS,
@@ -18,79 +15,49 @@ const config = {
   windowMs: RATE_LIMIT.LOGIN_LOCKOUT_MS,
 };
 
-function startCleanup(): void {
-  if (cleanupInterval) return;
-  
-  cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    
-    for (const [key, entry] of attemptStore.entries()) {
-      const expireTime = Math.max(
-        entry.firstAttempt + config.windowMs,
-        entry.lockedUntil || 0
-      );
-      
-      if (now > expireTime + 60000) {
-        attemptStore.delete(key);
-      }
-    }
-  }, 60 * 1000);
-  
-  cleanupInterval.unref();
+const cleanup = setInterval(() => {
+  const now = Date.now();
+  for (const [key, e] of store.entries()) {
+    const expire = Math.max(e.firstAttempt + config.windowMs, e.lockedUntil || 0);
+    if (now > expire + 60000) store.delete(key);
+  }
+}, 60_000);
+cleanup.unref();
+
+function getEntry(key: string): Entry {
+  let entry = store.get(key);
+  if (!entry) {
+    entry = { attempts: 0, firstAttempt: Date.now(), lockedUntil: null };
+    store.set(key, entry);
+  }
+  return entry;
 }
 
-startCleanup();
-
-function getEntry(key: string): LoginAttemptEntry {
-  let entry = attemptStore.get(key);
-  
-  if (!entry) {
-    entry = {
-      attempts: 0,
-      firstAttempt: Date.now(),
-      lockedUntil: null,
-    };
-    attemptStore.set(key, entry);
+function resetIfExpired(entry: Entry): void {
+  const now = Date.now();
+  if (now - entry.firstAttempt > config.windowMs) {
+    entry.attempts = 0;
+    entry.firstAttempt = now;
+    entry.lockedUntil = null;
   }
-  
-  return entry;
 }
 
 function isLockedOut(identifier: string, ip: string): boolean {
   const now = Date.now();
-  
-  const identifierKey = `id:${identifier.toLowerCase()}`;
-  const identifierEntry = attemptStore.get(identifierKey);
-  if (identifierEntry?.lockedUntil && identifierEntry.lockedUntil > now) {
-    return true;
-  }
-  
-  const ipKey = `ip:${ip}`;
-  const ipEntry = attemptStore.get(ipKey);
-  if (ipEntry?.lockedUntil && ipEntry.lockedUntil > now) {
-    return true;
-  }
-  
-  return false;
+  const idEntry = store.get(`id:${identifier.toLowerCase()}`);
+  const ipEntry = store.get(`ip:${ip}`);
+  return (idEntry?.lockedUntil != null && idEntry.lockedUntil > now) ||
+         (ipEntry?.lockedUntil != null && ipEntry.lockedUntil > now);
 }
 
 function getRemainingLockoutTime(identifier: string, ip: string): number {
   const now = Date.now();
-  let maxRemaining = 0;
-  
-  const identifierKey = `id:${identifier.toLowerCase()}`;
-  const identifierEntry = attemptStore.get(identifierKey);
-  if (identifierEntry?.lockedUntil && identifierEntry.lockedUntil > now) {
-    maxRemaining = Math.max(maxRemaining, identifierEntry.lockedUntil - now);
-  }
-  
-  const ipKey = `ip:${ip}`;
-  const ipEntry = attemptStore.get(ipKey);
-  if (ipEntry?.lockedUntil && ipEntry.lockedUntil > now) {
-    maxRemaining = Math.max(maxRemaining, ipEntry.lockedUntil - now);
-  }
-  
-  return maxRemaining;
+  let max = 0;
+  const idEntry = store.get(`id:${identifier.toLowerCase()}`);
+  const ipEntry = store.get(`ip:${ip}`);
+  if (idEntry?.lockedUntil && idEntry.lockedUntil > now) max = Math.max(max, idEntry.lockedUntil - now);
+  if (ipEntry?.lockedUntil && ipEntry.lockedUntil > now) max = Math.max(max, ipEntry.lockedUntil - now);
+  return max;
 }
 
 function recordFailedAttempt(identifier: string, ip: string): {
@@ -99,93 +66,53 @@ function recordFailedAttempt(identifier: string, ip: string): {
   lockoutMs: number;
 } {
   const now = Date.now();
-  
-  const identifierKey = `id:${identifier.toLowerCase()}`;
-  const identifierEntry = getEntry(identifierKey);
-  
-  if (now - identifierEntry.firstAttempt > config.windowMs) {
-    identifierEntry.attempts = 0;
-    identifierEntry.firstAttempt = now;
-    identifierEntry.lockedUntil = null;
-  }
-  
-  identifierEntry.attempts++;
-  
-  const ipKey = `ip:${ip}`;
-  const ipEntry = getEntry(ipKey);
-  
-  if (now - ipEntry.firstAttempt > config.windowMs) {
-    ipEntry.attempts = 0;
-    ipEntry.firstAttempt = now;
-    ipEntry.lockedUntil = null;
-  }
-  
+  const idEntry = getEntry(`id:${identifier.toLowerCase()}`);
+  const ipEntry = getEntry(`ip:${ip}`);
+
+  resetIfExpired(idEntry);
+  resetIfExpired(ipEntry);
+
+  idEntry.attempts++;
   ipEntry.attempts++;
-  
-  const maxAttempts = Math.max(identifierEntry.attempts, ipEntry.attempts);
+
+  const maxAttempts = Math.max(idEntry.attempts, ipEntry.attempts);
   let isLocked = false;
   let lockoutMs = 0;
-  
+
   if (maxAttempts >= config.maxAttempts) {
     const lockUntil = now + config.lockoutMs;
-    
-    if (identifierEntry.attempts >= config.maxAttempts) {
-      identifierEntry.lockedUntil = lockUntil;
-    }
-    if (ipEntry.attempts >= config.maxAttempts) {
-      ipEntry.lockedUntil = lockUntil;
-    }
-    
+    if (idEntry.attempts >= config.maxAttempts) idEntry.lockedUntil = lockUntil;
+    if (ipEntry.attempts >= config.maxAttempts) ipEntry.lockedUntil = lockUntil;
     isLocked = true;
     lockoutMs = config.lockoutMs;
-    
     Logger.logSecurity('Login lockout triggered', {
-      identifier,
-      ip,
-      identifierAttempts: identifierEntry.attempts,
+      identifier, ip,
+      identifierAttempts: idEntry.attempts,
       ipAttempts: ipEntry.attempts,
       lockoutMinutes: Math.ceil(config.lockoutMs / 60000),
     });
   } else {
     Logger.logSecurity('Failed login attempt', {
-      identifier,
-      ip,
-      identifierAttempts: identifierEntry.attempts,
+      identifier, ip,
+      identifierAttempts: idEntry.attempts,
       ipAttempts: ipEntry.attempts,
       remainingAttempts: config.maxAttempts - maxAttempts,
     });
   }
-  
-  return {
-    isLocked,
-    remainingAttempts: Math.max(0, config.maxAttempts - maxAttempts),
-    lockoutMs,
-  };
+
+  return { isLocked, remainingAttempts: Math.max(0, config.maxAttempts - maxAttempts), lockoutMs };
 }
 
 function clearAttempts(identifier: string, ip: string): void {
-  const identifierKey = `id:${identifier.toLowerCase()}`;
-  const ipKey = `ip:${ip}`;
-  
-  attemptStore.delete(identifierKey);
-  attemptStore.delete(ipKey);
+  store.delete(`id:${identifier.toLowerCase()}`);
+  store.delete(`ip:${ip}`);
 }
 
-function getAttemptCounts(identifier: string, ip: string): {
-  identifierAttempts: number;
-  ipAttempts: number;
-} {
-  const identifierKey = `id:${identifier.toLowerCase()}`;
-  const ipKey = `ip:${ip}`;
-  
+function getAttemptCounts(identifier: string, ip: string): { identifierAttempts: number; ipAttempts: number } {
   return {
-    identifierAttempts: attemptStore.get(identifierKey)?.attempts || 0,
-    ipAttempts: attemptStore.get(ipKey)?.attempts || 0,
+    identifierAttempts: store.get(`id:${identifier.toLowerCase()}`)?.attempts || 0,
+    ipAttempts: store.get(`ip:${ip}`)?.attempts || 0,
   };
-}
-
-function getStoreSize(): number {
-  return attemptStore.size;
 }
 
 function configure(options: Partial<typeof config>): void {
@@ -198,6 +125,5 @@ export default {
   recordFailedAttempt,
   clearAttempts,
   getAttemptCounts,
-  getStoreSize,
   configure,
 };

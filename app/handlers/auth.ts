@@ -1,11 +1,10 @@
 import type { NaraRequest, NaraResponse } from '@core';
-import { inertia, jsonSuccess, jsonError } from '@core';
+import { jsonSuccess, jsonError, jsonValidationError, isUniqueConstraintError } from '@core';
 import { hashPassword, comparePassword, processLogin as loginSession, logout as endSession } from '@services/Authenticate';
 import LoginThrottle from '@services/LoginThrottle';
 import Logger from '@services/Logger';
-import { findUserByEmailOrPhone, createUser, findUserById, updatePassword } from '@queries';
+import { findUserByEmail, createUser, findUserById, updatePassword, deleteSessionsByUserId } from '@queries';
 import { randomUUID } from 'crypto';
-import { ERROR_MESSAGES } from '@config';
 import { LoginSchema, RegisterSchema, ChangePasswordSchema, zodToErrors } from '@validators';
 
 export const loginPage = (req: NaraRequest, res: NaraResponse) => {
@@ -14,7 +13,7 @@ export const loginPage = (req: NaraRequest, res: NaraResponse) => {
     if (isI) return res.setHeader('X-Inertia-Location', '/dashboard').redirect('/dashboard');
     return res.redirect('/dashboard');
   }
-  return inertia(res).inertia('auth/login');
+  return res.inertia('auth/login');
 };
 
 export const registerPage = (req: NaraRequest, res: NaraResponse) => {
@@ -23,7 +22,7 @@ export const registerPage = (req: NaraRequest, res: NaraResponse) => {
     if (isI) return res.setHeader('X-Inertia-Location', '/dashboard').redirect('/dashboard');
     return res.redirect('/dashboard');
   }
-  return inertia(res).inertia('auth/register');
+  return res.inertia('auth/register');
 };
 
 export const processLogin = (req: NaraRequest, res: NaraResponse) => {
@@ -31,11 +30,11 @@ export const processLogin = (req: NaraRequest, res: NaraResponse) => {
   if (!parsed.success) {
     const errors = zodToErrors(parsed.error);
     const msg = Object.values(errors).flat().join(', ');
-    return jsonError(res, msg, 422, 'VALIDATION_ERROR', errors);
+    return jsonValidationError(res, msg, errors);
   }
 
-  const { email, phone, password } = parsed.data;
-  const identifier = email || phone || '';
+  const { email, password } = parsed.data;
+  const identifier = email;
   const ip = req.ip || 'unknown';
 
   if (LoginThrottle.isLockedOut(identifier, ip)) {
@@ -44,32 +43,26 @@ export const processLogin = (req: NaraRequest, res: NaraResponse) => {
     return jsonError(res, `Terlalu banyak percobaan. Coba lagi dalam ${mins} menit.`, 429, 'RATE_LIMITED');
   }
 
-  const user = findUserByEmailOrPhone(email, phone);
+  const user = findUserByEmail(email);
 
-  if (!user) {
+  // Always run password comparison to prevent timing-based user enumeration
+  // Format: salt:hash (PBKDF2-SHA512, 100k iterations, 64-byte key)
+  const DUMMY_HASH = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6:' + '0'.repeat(128);
+  const valid = user ? comparePassword(password, user.password) : comparePassword(password, DUMMY_HASH);
+
+  if (!user || !valid) {
     const result = LoginThrottle.recordFailedAttempt(identifier, ip);
-    Logger.logSecurity('Login failed - not found', { identifier, ip });
+    Logger.logSecurity('Login failed', { identifier, ip, reason: user ? 'bad_password' : 'not_found' });
     const msg = result.isLocked
       ? `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(result.lockoutMs / 60000)} menit.`
-      : ERROR_MESSAGES.INVALID_CREDENTIALS;
+      : 'Email atau password salah';
     return jsonError(res, msg, 401, 'INVALID_CREDENTIALS');
   }
 
-  const valid = comparePassword(password, user.password);
-
-  if (valid) {
-    LoginThrottle.clearAttempts(identifier, ip);
-    Logger.logAuth('login_success', { userId: user.id, ip });
-    loginSession(user, req, res);
-    return jsonSuccess(res, 'Login berhasil');
-  }
-
-  const result = LoginThrottle.recordFailedAttempt(identifier, ip);
-  Logger.logSecurity('Login failed - bad password', { userId: user.id, ip });
-  const msg = result.isLocked
-    ? `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(result.lockoutMs / 60000)} menit.`
-    : ERROR_MESSAGES.INVALID_CREDENTIALS;
-  return jsonError(res, msg, 401, 'INVALID_CREDENTIALS');
+  LoginThrottle.clearAttempts(identifier, ip);
+  Logger.logAuth('login_success', { userId: user.id, ip });
+  loginSession(user, req, res);
+  return jsonSuccess(res, 'Login berhasil');
 };
 
 export const processRegister = (req: NaraRequest, res: NaraResponse) => {
@@ -77,17 +70,16 @@ export const processRegister = (req: NaraRequest, res: NaraResponse) => {
   if (!parsed.success) {
     const errors = zodToErrors(parsed.error);
     const msg = Object.values(errors).flat().join(', ');
-    return jsonError(res, msg, 422, 'VALIDATION_ERROR', errors);
+    return jsonValidationError(res, msg, errors);
   }
 
-  const { name, email, phone, password } = parsed.data;
+  const { name, email, password } = parsed.data;
 
   try {
     const user = createUser({
       id: randomUUID(),
       name,
       email,
-      phone: phone || null,
       password: hashPassword(password),
     });
 
@@ -95,9 +87,9 @@ export const processRegister = (req: NaraRequest, res: NaraResponse) => {
     loginSession(user, req, res);
     return jsonSuccess(res, 'Registrasi berhasil');
   } catch (error: unknown) {
-    if (error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (isUniqueConstraintError(error)) {
       Logger.logSecurity('Registration failed - duplicate', { email, ip: req.ip });
-      return jsonError(res, ERROR_MESSAGES.EMAIL_EXISTS, 400, 'DUPLICATE_EMAIL');
+      return jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL');
     }
     throw error;
   }
@@ -117,7 +109,7 @@ export const changePassword = (req: NaraRequest, res: NaraResponse) => {
   if (!parsed.success) {
     const errors = zodToErrors(parsed.error);
     const msg = Object.values(errors).flat().join(', ');
-    return jsonError(res, msg, 422, 'VALIDATION_ERROR', errors);
+    return jsonValidationError(res, msg, errors);
   }
 
   const { current_password, new_password } = parsed.data;
@@ -131,6 +123,10 @@ export const changePassword = (req: NaraRequest, res: NaraResponse) => {
   }
 
   updatePassword(req.user.id, hashPassword(new_password));
+  // Invalidate all other sessions (force re-login on other devices)
+  deleteSessionsByUserId(req.user.id);
+  // Re-issue session for current request so user stays logged in
+  loginSession(dbUser, req, res);
   Logger.logAuth('password_changed', { userId: req.user.id, ip: req.ip });
 
   return jsonSuccess(res, 'Password berhasil diubah');

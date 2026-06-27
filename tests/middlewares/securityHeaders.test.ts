@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { securityHeaders, strictSecurityHeaders, devSecurityHeaders } from '../../app/middlewares/securityHeaders';
+import { securityHeaders } from '../../app/middlewares/securityHeaders';
 import { mockRequest, mockResponse, runMiddleware } from '../helpers/mocks';
 
 describe('securityHeaders middleware', () => {
@@ -203,48 +203,5 @@ describe('securityHeaders middleware', () => {
 
       expect(res._headers['Permissions-Policy']).toBeUndefined();
     });
-  });
-});
-
-describe('strictSecurityHeaders', () => {
-  it('returns middleware function', () => {
-    const mw = strictSecurityHeaders();
-    expect(typeof mw).toBe('function');
-  });
-
-  it('sets strict headers', async () => {
-    const req = mockRequest();
-    const res = mockResponse();
-
-    await runMiddleware(strictSecurityHeaders(), req, res as any);
-
-    expect(res._headers['X-Frame-Options']).toBe('DENY');
-    expect(res._headers['Referrer-Policy']).toBe('no-referrer');
-  });
-});
-
-describe('devSecurityHeaders', () => {
-  it('returns middleware function', () => {
-    const mw = devSecurityHeaders();
-    expect(typeof mw).toBe('function');
-  });
-
-  it('does not set HSTS in dev', async () => {
-    process.env.NODE_ENV = 'development';
-    const req = mockRequest();
-    const res = mockResponse();
-
-    await runMiddleware(devSecurityHeaders(), req, res as any);
-
-    expect(res._headers['Strict-Transport-Security']).toBeUndefined();
-  });
-
-  it('sets SAMEORIGIN for X-Frame-Options', async () => {
-    const req = mockRequest();
-    const res = mockResponse();
-
-    await runMiddleware(devSecurityHeaders(), req, res as any);
-
-    expect(res._headers['X-Frame-Options']).toBe('SAMEORIGIN');
   });
 });

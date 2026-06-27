@@ -1,17 +1,16 @@
 import type { NaraRequest, NaraResponse } from '@core';
-import { inertia, jsonSuccess, jsonCreated, jsonError, jsonServerError, jsonValidationError } from '@core';
+import { jsonSuccess, jsonCreated, jsonError, jsonServerError, jsonValidationError, isUniqueConstraintError } from '@core';
 import Logger from '@services/Logger';
-import SQLite from '@services/SQLite';
 import {
   findAllRoles, findRoleById, createRole, updateRole, deleteRole,
-  getRolePermissions, syncRolePermissions, findAllPermissions
+  getRolePermissions, getPermissionsForRoles, getUserCountsForRoles, syncRolePermissions, findAllPermissions
 } from '@queries/roles';
 import { isAdmin, hasPermission } from '@queries/users';
 import { randomUUID } from 'crypto';
 import { CreateRoleSchema, UpdateRoleSchema, zodToErrors } from '@validators';
 
 export const rolesPage = (req: NaraRequest, res: NaraResponse) => {
-  if (!req.user) return inertia(res).inertia('roles', { permissions: { canCreate: false, canEdit: false, canDelete: false, canAssign: false } });
+  if (!req.user) return res.inertia('roles', { permissions: { canCreate: false, canEdit: false, canDelete: false, canAssign: false } });
 
   const userId = req.user.id;
   const permissions = {
@@ -21,22 +20,34 @@ export const rolesPage = (req: NaraRequest, res: NaraResponse) => {
     canAssign: isAdmin(userId) || hasPermission(userId, 'roles.edit'),
   };
 
-  return inertia(res).inertia('roles', { permissions });
+  return res.inertia('roles', { permissions });
 };
 
 export const index = (req: NaraRequest, res: NaraResponse) => {
-  const roles = findAllRoles().map(role => {
-    const userCount = SQLite.one<{ count: number }>`SELECT COUNT(*) as count FROM user_roles WHERE role_id = ${role.id}`;
-    return {
-      ...role,
-      permissions: getRolePermissions(role.id).map(p => p.slug),
-      user_count: userCount?.count || 0,
-    };
-  });
+  if (!req.user) return jsonError(res, 'Unauthorized', 401);
+  if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.view')) {
+    return jsonError(res, 'Forbidden', 403);
+  }
+
+  const allRoles = findAllRoles();
+  const roleIds = allRoles.map(r => r.id);
+  const permsMap = getPermissionsForRoles(roleIds);
+  const userCounts = getUserCountsForRoles(roleIds);
+
+  const roles = allRoles.map(role => ({
+    ...role,
+    permissions: (permsMap.get(role.id) || []).map(p => p.slug),
+    user_count: userCounts.get(role.id) || 0,
+  }));
   return jsonSuccess(res, 'OK', roles);
 };
 
 export const permissionsData = (req: NaraRequest, res: NaraResponse) => {
+  if (!req.user) return jsonError(res, 'Unauthorized', 401);
+  if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.view')) {
+    return jsonError(res, 'Forbidden', 403);
+  }
+
   const permissions = findAllPermissions();
   const grouped = permissions.reduce((acc, p) => {
     if (!acc[p.resource]) acc[p.resource] = [];
@@ -84,23 +95,26 @@ export const update = (req: NaraRequest, res: NaraResponse) => {
   const id = req.params.id;
   if (!id) return jsonError(res, 'ID required', 400);
 
+  // Non-admins cannot edit the admin role (prevent privilege escalation)
+  const existing = findRoleById(id);
+  if (!existing) return jsonError(res, 'Role not found', 404);
+  if (existing.slug === 'admin' && !isAdmin(req.user.id)) {
+    return jsonError(res, 'Tidak dapat mengedit role admin', 403, 'PROTECTED_ROLE');
+  }
+
   const parsed = UpdateRoleSchema.safeParse(req.body);
   if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
 
   const data = parsed.data;
+  const { permissions, ...roleData } = data;
 
   try {
-    const roleData: Record<string, unknown> = {};
-    if (data.name !== undefined) roleData.name = data.name;
-    if (data.slug !== undefined) roleData.slug = data.slug;
-    if (data.description !== undefined) roleData.description = data.description;
-
-    const role = updateRole(id, roleData as any);
+    const role = updateRole(id, roleData);
     if (!role) return jsonError(res, 'Role not found', 404);
 
-    if (data.permissions !== undefined) {
+    if (permissions !== undefined) {
       const allPerms = findAllPermissions();
-      const permIds = data.permissions.map(s => allPerms.find(p => p.slug === s)?.id).filter(Boolean) as string[];
+      const permIds = permissions.map(s => allPerms.find(p => p.slug === s)?.id).filter(Boolean) as string[];
       syncRolePermissions(id, permIds);
     }
 
@@ -108,6 +122,9 @@ export const update = (req: NaraRequest, res: NaraResponse) => {
       role: { ...role, permissions: getRolePermissions(id).map(p => p.slug) }
     });
   } catch (error: unknown) {
+    if (isUniqueConstraintError(error)) {
+      return jsonError(res, 'Slug sudah digunakan', 400, 'DUPLICATE_SLUG');
+    }
     Logger.error('Failed to update role', error as Error);
     return jsonServerError(res, 'Gagal mengupdate role');
   }
@@ -121,6 +138,13 @@ export const destroy = (req: NaraRequest, res: NaraResponse) => {
 
   const id = req.params.id;
   if (!id) return jsonError(res, 'ID required', 400);
+
+  // Prevent deleting protected roles (admin)
+  const existing = findRoleById(id);
+  if (!existing) return jsonError(res, 'Role not found', 404);
+  if (existing.slug === 'admin') {
+    return jsonError(res, 'Tidak dapat menghapus role admin', 400, 'PROTECTED_ROLE');
+  }
 
   const deleted = deleteRole(id);
   if (!deleted) return jsonError(res, 'Role not found', 404);

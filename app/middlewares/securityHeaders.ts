@@ -176,31 +176,4 @@ export function securityHeaders(options: SecurityHeadersOptions = {}): NaraMiddl
   };
 }
 
-export function strictSecurityHeaders(): NaraMiddleware {
-  return securityHeaders({
-    frameOptions: 'DENY',
-    contentTypeOptions: 'nosniff',
-    referrerPolicy: 'no-referrer',
-    xssProtection: '0',
-    csp: {
-      enabled: true,
-      directives: {
-        defaultSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-      },
-    },
-  });
-}
-
-export function devSecurityHeaders(): NaraMiddleware {
-  return securityHeaders({
-    hsts: false,
-    frameOptions: 'SAMEORIGIN',
-    contentTypeOptions: 'nosniff',
-    referrerPolicy: 'strict-origin-when-cross-origin',
-    xssProtection: '0',
-    csp: false,
-  });
-}
-
 export default securityHeaders;

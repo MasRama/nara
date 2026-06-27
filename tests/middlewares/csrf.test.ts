@@ -149,20 +149,7 @@ describe('csrf middleware', () => {
   });
 
   describe('Authorization header bypass', () => {
-    it('skips CSRF check when Authorization header is present', async () => {
-      const req = mockRequest({
-        method: 'POST',
-        cookies: {},
-        headers: { authorization: 'Bearer token123' },
-      } as any);
-      const res = mockResponse();
-
-      const result = await runMiddleware(csrf(), req, res as any);
-
-      expect(result.nextCalled).toBe(true);
-    });
-
-    it('does not skip when skipIfAuthorization is false', async () => {
+    it('does NOT skip CSRF check by default when Authorization header is present', async () => {
       const req = mockRequest({
         method: 'POST',
         cookies: { csrf_token: 'token' },
@@ -170,11 +157,24 @@ describe('csrf middleware', () => {
       } as any);
       const res = mockResponse();
 
-      const mw = csrf({ skipIfAuthorization: false });
+      const result = await runMiddleware(csrf(), req, res as any);
+
+      // Default is now false — Authorization header does not bypass CSRF
+      expect(result.nextCalled).toBe(false);
+    });
+
+    it('skips when skipIfAuthorization is explicitly true', async () => {
+      const req = mockRequest({
+        method: 'POST',
+        cookies: {},
+        headers: { authorization: 'Bearer token123' },
+      } as any);
+      const res = mockResponse();
+
+      const mw = csrf({ skipIfAuthorization: true });
       const result = await runMiddleware(mw, req, res as any);
 
-      // Should still fail because no matching header token
-      expect(result.nextCalled).toBe(false);
+      expect(result.nextCalled).toBe(true);
     });
   });
 

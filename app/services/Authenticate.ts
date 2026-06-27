@@ -1,4 +1,4 @@
-import { createSession, deleteSession } from '@queries';
+import { createSession, deleteSession, deleteSessionsByUserId } from '@queries';
 import type { User } from '@types';
 import type { NaraRequest as Request, NaraResponse as Response } from '@core';
 import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
@@ -37,6 +37,9 @@ export const comparePassword = (password: string, storedHash: string): boolean =
 };
 
 export const processLogin = (user: User, request: Request, response: Response) => {
+   // Prevent session fixation: invalidate all existing sessions for this user
+   deleteSessionsByUserId(user.id);
+
    const token = randomUUID();
 
    createSession({
