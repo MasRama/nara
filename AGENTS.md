@@ -152,6 +152,42 @@ npm run migrate      # Run pending migrations (ts-node + raw SQL)
 npm run seed         # Run seeders
 ```
 
+## Agent Tooling
+
+Nara ships with agent-ergonomic tooling. Run these before committing AI-generated code.
+
+| Command | Purpose | Blocks commit? |
+|---|---|---|
+| `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index for agents) | No |
+| `npm run lint:layers` | Enforce layer boundaries (handlers→queries, no fetch() in frontend, etc.) | Yes (pre-commit) |
+| `npm run check:freshness` | Check if AGENTS.md files are stale relative to code changes | No (advisory) |
+| `npm run check:freshness -- --strict` | Same, but fail CI on stale AGENTS.md | Yes (in CI) |
+
+### CODEMAP.md
+
+Auto-generated index of files, exports, and import graph. Read this BEFORE searching the codebase — it gives topology in one read (~750 tokens). Regenerate after large changes:
+
+```bash
+npm run codemap
+```
+
+### Layer Boundary Lint
+
+Enforces 10 rules from AGENTS.md anti-patterns (handlers must not import SQLite directly, frontend must not use fetch(), no console.log in backend, etc.). See `scripts/lint-layers.ts` for the full rule list.
+
+### Freshness Gate
+
+If code in a directory changes but its AGENTS.md is not updated, the freshness gate warns. Advisory by default, strict in CI. See `scripts/check-freshness.ts` for the directory→AGENTS.md mapping.
+
+### Pre-commit Hook
+
+Install with:
+```bash
+cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+```
+
+Runs layer lint (blocking) + freshness check (advisory) on every commit.
+
 ## Where to Look
 
 | Task | Location | Skill |
