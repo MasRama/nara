@@ -7,17 +7,20 @@
 >
 > The TypeScript starter kit designed for AI-assisted development.
 
-Most starter kits fight your AI — complex abstractions, deep class hierarchies, magic ORMs. AI hallucinates, you debug. Nara is the opposite: flat patterns, raw SQL, plain functions. AI picks up the conventions and generates working code on the first try.
+Most starter kits fight your AI — complex abstractions, deep class hierarchies, magic ORMs. AI hallucinates, you debug. Nara is the opposite: flat patterns, raw SQL, plain functions, plus machine-readable docs and enforcement tooling that catches AI mistakes before they ship.
 
-## Design Decisions
+## What Makes Nara AI-First
 
-| Decision | Why |
-|----------|-----|
-| Functions, not classes | AI generates standalone functions more accurately than class hierarchies |
-| Raw SQL, not ORM | AI writes SQL fluently — no query builder syntax to hallucinate |
-| Flat file structure | AI finds files by name, not by navigating deep nesting |
-| No magic | Every behavior is traceable — AI can read and reason about it |
-| Minimal dependencies | Fewer APIs to learn = fewer mistakes from AI and humans alike |
+| Layer | What | Why it matters |
+|---|---|---|
+| **Context** | `AGENTS.md` (root + 9 nested) + 8 skills + 10 ADRs | AI reads conventions, not guesses. Skills loaded on demand to save context window. |
+| **Topology** | `CODEMAP.md` (111 files indexed) + `SCHEMA.md` (8 tables) | AI knows what exists before searching. Reads one file instead of 111. |
+| **Scaffolding** | `npm run gen:resource products -- --fields="name:string,price:number"` | 7 files scaffolded with correct conventions. AI can't make structural mistakes. |
+| **Enforcement** | `npm run lint:layers` (17 rules) + 258 tests + pre-commit hook | AI push violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
+| **Verification** | `npm run check` (lint + typecheck + layer lint + tests + freshness) | One command. AI doesn't need to remember 4 commands. |
+| **CI** | 4 steps: typecheck → layer lint → tests → freshness (strict) | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
+| **Policy** | Dependency policy (16 categories: allowed vs banned) | AI checks table before suggesting a dependency. No Prisma, no JWT, no React. |
+| **Pitfalls** | 10 real mistakes AI makes, with fix | AI reads before coding. Prevents common errors. |
 
 ## Ship a Feature in a Single Prompt
 
@@ -25,17 +28,23 @@ Tell your AI assistant:
 
 > *"Add a products CRUD."*
 
-That's it. AI picks up Nara's patterns and generates the full stack:
+AI reads `AGENTS.md` → loads `crud-pattern.md` skill → runs `gen:resource` or writes code manually → runs `npm run check` → ships.
 
 ```
-types/models.ts       →  interface Product { ... }
-queries/products.ts   →  findProductById(), createProduct(), ...
-handlers/products.ts  →  index(), show(), store(), update(), destroy()
-routes/web.ts         →  Route.get('/products', [Auth], products.index)
-Pages/products.svelte →  Full UI with table, forms, toast notifications
+types/models.ts          →  interface Product { ... }
+migrations/...ts         →  CREATE TABLE products (...)
+queries/products.ts      →  findProductById(), createProduct(), ...
+validators/schemas.ts    →  CreateProductSchema (Zod)
+handlers/products.ts     →  productsPage, listProducts, addProduct, editProduct, removeProducts
+routes/web.ts            →  Route.get/post/put/delete('/products', ...)
+Pages/products.svelte    →  Full UI with table, forms, toast notifications
 ```
 
-No boilerplate generators needed. The pattern **is** the generator.
+Or just run the generator:
+
+```bash
+npm run gen:resource products -- --fields="name:string,price:number"
+```
 
 ## Quick Start
 
@@ -48,7 +57,7 @@ npm run dev
 
 Open [http://localhost:5555](http://localhost:5555). You're live.
 
-> Migrations run automatically on startup. To reset the database: `npm run migrate:fresh`
+> Migrations run automatically on startup. To reset: `npm run migrate:fresh`
 
 ## Architecture
 
@@ -72,6 +81,19 @@ Server (ultimate-express / uWebSockets.js)
 | Page | Browser navigation | `res.inertia('pageName', { data })` |
 | Data | `axios` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
+## Design Decisions
+
+| Decision | Why |
+|----------|-----|
+| Functions, not classes | AI generates standalone functions more accurately than class hierarchies |
+| Raw SQL, not ORM | AI writes SQL fluently — no query builder syntax to hallucinate |
+| Flat file structure | AI finds files by name, not by navigating deep nesting |
+| No magic | Every behavior is traceable — AI can read and reason about it |
+| Minimal dependencies | Fewer APIs to learn = fewer mistakes from AI and humans alike |
+| Descriptive handler names | `addUser` not `create` — AI understands intent from the name alone |
+
+See [`docs/decisions/`](./docs/decisions/) for 10 ADRs explaining WHY each decision was made.
+
 ## What's Inside
 
 | Area | Stack |
@@ -84,9 +106,25 @@ Server (ultimate-express / uWebSockets.js)
 | Storage | Local file storage with sharp image processing, magic byte validation |
 | DX | Path aliases, structured logging (Pino), Vitest, Docker-ready |
 
+## AI-First Tooling
+
+```bash
+# Scaffolding
+npm run gen:resource products -- --fields="name:string,price:number"  # Scaffold full-stack resource
+
+# Verification
+npm run check              # All-in-one: lint + typecheck + layer lint + tests + freshness
+npm run lint:layers        # 17 layer boundary + naming + import direction rules
+npm run check:freshness    # Detect stale AGENTS.md (advisory) or --strict (CI)
+
+# Topology
+npm run codemap            # Regenerate CODEMAP.md (111 files, 278 exports)
+npm run gen:schema         # Regenerate SCHEMA.md (8 tables, 55 columns)
+```
+
 ## Database
 
-Migrations are raw SQL strings executed by a lightweight migrator (`app/services/Migrator.ts`). No ORM, no query builder — just SQL.
+Migrations are raw SQL strings executed by a lightweight migrator. No ORM, no query builder — just SQL.
 
 ```bash
 npm run migrate            # Run pending migrations (auto-runs on startup)
@@ -111,7 +149,14 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 
 ## Docs
 
-- **[AGENTS.md](./AGENTS.md)** — Full knowledge base: code patterns, path aliases, SQLite API, error handling, anti-patterns.
+| File | For | Read when |
+|---|---|---|
+| [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
+| [`CODEMAP.md`](./CODEMAP.md) | Codebase topology (111 files, 278 exports) | Before searching the codebase |
+| [`SCHEMA.md`](./SCHEMA.md) | Database schema (8 tables, 55 columns) | Before writing SQL |
+| [`routes/web.ts`](./routes/web.ts) | All routes (51 lines) | Before adding routes |
+| [`.agents/skills/`](./.agents/skills/SKILL.md) | 8 deep-dive skills (CRUD, SQL, auth, Inertia, errors, API, deps, pitfalls) | When touching that pattern |
+| [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining WHY decisions were made | When questioning a convention |
 
 ## Requirements
 
