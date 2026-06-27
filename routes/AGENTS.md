@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: routes
+---
+
 # Routes
+
+> **Authority:** canon — current source of truth for route conventions.
 
 Single file: `routes/web.ts`. Uses `createRouter()` from `@core`.
 

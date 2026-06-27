@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: app
+---
+
 # app/ - Backend Modules
+
+> **Authority:** canon — current source of truth for backend module conventions.
 
 > See [../AGENTS.md](../AGENTS.md) for full project knowledge base.
 

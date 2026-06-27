@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: resources/Pages
+---
+
 # Pages
+
+> **Authority:** canon — current source of truth for page conventions.
 
 ## Overview
 

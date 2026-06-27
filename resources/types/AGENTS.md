@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: resources/types
+---
+
 # Types
+
+> **Authority:** canon — current source of truth for frontend type conventions.
 
 Frontend TypeScript type definitions. Shared types are sourced from `app/types/shared.ts` (single source of truth).
 

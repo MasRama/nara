@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: migrations
+---
+
 # Migrations
+
+> **Authority:** canon — current source of truth for migration conventions.
 
 TypeScript migration files containing raw SQL strings. Each file exports `up` (apply) and `down` (rollback) as SQL strings, executed by `app/services/Migrator.ts`.
 

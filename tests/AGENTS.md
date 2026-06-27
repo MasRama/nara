@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: tests
+---
+
 # Tests
+
+> **Authority:** canon — current source of truth for test conventions.
 
 Unit tests using **Vitest**. Mirror `app/` structure.
 

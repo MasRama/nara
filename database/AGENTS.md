@@ -1,4 +1,13 @@
+---
+authority: canon
+owner: masrama
+last_verified: 2026-06-28
+scope: database
+---
+
 # Database
+
+> **Authority:** canon — current source of truth for database file conventions.
 
 Database files. Note: **migrations live at root `/migrations/`**, not here.
 
