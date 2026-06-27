@@ -15,11 +15,12 @@ Unit tests using **Vitest**. Mirror `app/` structure.
 
 ```
 tests/
-├── core/          # Router, response helpers, errors
-├── middlewares/   # csrf, rateLimit, requestId, securityHeaders
-├── services/      # CacheStore, etc.
-├── validators/    # Zod schemas
-└── helpers/       # Mock factories (mocks.ts)
+├── conventions.test.ts  # Convention tests (naming, layer isolation, AGENTS.md presence)
+├── core/                # Router, response helpers, errors
+├── middlewares/         # csrf, rateLimit, requestId, securityHeaders
+├── services/            # CacheStore, etc.
+├── validators/          # Zod schemas
+└── helpers/             # Mock factories (mocks.ts)
 ```
 
 ## Running Tests
