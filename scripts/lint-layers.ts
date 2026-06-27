@@ -15,6 +15,10 @@
  *   L11. Handler exports must NOT use generic REST names (index, store, create, etc.)
  *   L12. Handler exports should include resource name (createUser, not just create)
  *   L13. No vague function names (handle, process, run, do, execute as standalone)
+ *   L14. Queries must NOT import from handlers, validators, middlewares, core
+ *   L15. Services must NOT import from handlers, queries, validators, middlewares
+ *   L16. Validators must NOT import from handlers, queries, services, middlewares, core
+ *   L17. Middlewares must NOT import from handlers, validators
  *
  * Usage: npx ts-node scripts/lint-layers.ts
  *        npm run lint:layers
@@ -66,6 +70,10 @@ function checkFile(absPath: string): void {
   const isHandler = rel.startsWith('app/handlers/') && rel !== 'app/handlers/index.ts';
   const isFrontend = rel.startsWith('resources/') && ext === '.svelte';
   const isBackend = rel.startsWith('app/') && ext === '.ts';
+  const isQuery = rel.startsWith('app/queries/') && rel !== 'app/queries/index.ts';
+  const isService = rel.startsWith('app/services/') && rel !== 'app/services/index.ts';
+  const isMiddleware = rel.startsWith('app/middlewares/') && rel !== 'app/middlewares/index.ts';
+  const isValidator = rel.startsWith('app/validators/') && rel !== 'app/validators/index.ts';
 
   lines.forEach((line, idx) => {
     const lineNum = idx + 1;
@@ -205,6 +213,51 @@ function checkFile(absPath: string): void {
         violations.push({
           rule: 'L13', file: rel, line: lineNum, text: trimmed,
           message: `Function name "${match[1]}" is too vague. Fix: describe what it does (e.g. processPayment, handleWebhookDelivery, runMigration). See AGENTS.md anti-pattern #11`,
+        });
+      }
+    }
+
+    // L14: Queries must only import from @types, @services/SQLite, @config — not handlers, not validators, not middlewares
+    if (isQuery) {
+      const match = line.match(/from\s+['"]@(handlers|validators|middlewares|core)(\/[^'"]*)?['"]/);
+      if (match) {
+        violations.push({
+          rule: 'L14', file: rel, line: lineNum, text: trimmed,
+          message: `Queries must not import @${match[1]} — queries are a bottom layer. Fix: only import from @types, @services/SQLite, @config. See .agents/skills/sqlite-usage.md`,
+        });
+      }
+    }
+
+    // L15: Services must only import from @core, @types, @config, @services — not handlers, not queries, not validators, not middlewares
+    // Exception: Authenticate imports session queries (createSession, deleteSession) — tightly coupled by design
+    if (isService && !rel.includes('Authenticate.ts')) {
+      const match = line.match(/from\s+['"]@(handlers|queries|validators|middlewares)(\/[^'"]*)?['"]/);
+      if (match) {
+        violations.push({
+          rule: 'L15', file: rel, line: lineNum, text: trimmed,
+          message: `Services must not import @${match[1]} — services are below handlers/queries. Fix: only import from @core, @types, @config, @services. See AGENTS.md mental model`,
+        });
+      }
+    }
+
+    // L16: Validators must only import from @types and zod — not handlers, not queries, not services, not middlewares
+    if (isValidator) {
+      const match = line.match(/from\s+['"]@(handlers|queries|services|middlewares|core)(\/[^'"]*)?['"]/);
+      if (match) {
+        violations.push({
+          rule: 'L16', file: rel, line: lineNum, text: trimmed,
+          message: `Validators must not import @${match[1]} — validators are a bottom layer. Fix: only import from @types and 'zod'. See .agents/skills/error-handling.md`,
+        });
+      }
+    }
+
+    // L17: Middlewares must only import from @core, @queries, @config, @services — not handlers, not validators
+    if (isMiddleware) {
+      const match = line.match(/from\s+['"]@(handlers|validators)(\/[^'"]*)?['"]/);
+      if (match) {
+        violations.push({
+          rule: 'L17', file: rel, line: lineNum, text: trimmed,
+          message: `Middlewares must not import @${match[1]} — middlewares run before handlers. Fix: only import from @core, @queries, @config, @services. See AGENTS.md mental model`,
         });
       }
     }

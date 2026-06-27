@@ -15,13 +15,19 @@ scope: root
 Read in this order (each builds on the previous):
 
 1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
-2. **This file** — conventions, anti-patterns, structure. ~200 lines.
-3. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
-4. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+2. **[ROUTES.md](./ROUTES.md)** — API surface in one read (26 routes, all methods + paths + middleware + handlers).
+3. **This file** — conventions, anti-patterns, dependency policy, structure. ~250 lines.
+4. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
+5. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
 
 Then verify your work with one command:
 ```bash
 npm run check    # lint + typecheck + layer lint + tests + freshness
+```
+
+Scaffold a new resource with one command:
+```bash
+npm run gen:resource products -- --fields="name:string,price:number"
 ```
 
 ## Overview
@@ -143,6 +149,35 @@ Server (ultimate-express)
 - **Constants** — use `@config/constants` (SERVER, AUTH, RATE_LIMIT, UPLOAD, CACHE, LOGGING)
 - **IDs** — `crypto.randomUUID()` for all new records
 
+## Dependency Policy
+
+AI must not add dependencies without checking this table. If a category is "Banned", suggest the allowed alternative instead.
+
+| Category | Allowed | Banned | Why |
+|---|---|---|---|
+| Database | `better-sqlite3` | Prisma, Drizzle, Knex, Sequelize, TypeORM | ADR 0001 — raw SQL, AI writes SQL fluently |
+| Framework | `ultimate-express` | Express, Fastify, Koa, Hono | Nara uses uWebSockets.js for performance |
+| Frontend | `svelte`, `@inertiajs/svelte` | React, Vue, Solid, Angular | ADR 0003 — Inertia + Svelte 5 |
+| UI primitives | `@zag-js/*` | Headless UI, Radix, Melt | ADR 0007 — framework-agnostic state machines |
+| Validation | `zod` | Joi, Yup, class-validator, valibot | ADR 0006 — TypeScript-first, type inference |
+| Auth | `@services/Authenticate` (internal) | bcrypt (direct), passport, jsonwebtoken | ADR 0005 — session-based, internal wrapper |
+| HTTP client | `axios` | fetch (in frontend), got, node-fetch | `api()` wrapper handles CSRF + toast |
+| Logging | `pino` (via `@services/Logger`) | winston, morgan, console.log | Structured logging, file rotation built-in |
+| Styling | `tailwindcss`, `clsx`, `tailwind-merge`, `tailwind-variants` | styled-components, emotion, CSS modules | Utility-first, AI generates Tailwind fluently |
+| Icons | `@lucide/svelte` | heroicons, feather-icons, font-awesome | Tree-shakeable, consistent API |
+| Image processing | `sharp` | jimp, canvas, gm | Native binding, fast |
+| File upload | `multer` | formidable, busboy | Memory storage + sharp pipeline |
+| State (frontend) | Svelte 5 runes (`$state`, `$derived`, `$effect`) | Redux, Zustand, Pinia, Svelte stores | ADR 0003 — server is source of truth |
+| Testing | `vitest` | jest, mocha, jasmine | Vite-native, fast, ESM support |
+| Date/time | native `Date`, `Intl` | moment, dayjs, date-fns | Standard library sufficient |
+| Utils | native `crypto`, `path`, `fs` | lodash, underscore, ramda | Standard library sufficient |
+
+### Adding a new dependency
+
+1. Check if the category is in the table above
+2. Check if the need can be met with the allowed dependency or standard library
+3. If a new dependency is truly needed, add it to `package.json`, update this table, and add an ADR explaining why
+
 ## Anti-Patterns
 
 1. **Don't** use classes — use functions
@@ -174,9 +209,12 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index for agents) | No |
-| `npm run lint:layers` | Enforce layer boundaries (handlers→queries, no fetch() in frontend, etc.) | Yes (pre-commit) |
-| `npm run check:freshness` | Check if AGENTS.md files are stale relative to code changes | No (advisory) |
+| `npm run check` | All-in-one: lint + typecheck + lint:layers + tests + freshness | No (run manually) |
+| `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
+| `npm run gen:routes` | Regenerate `ROUTES.md` (API surface catalog) | No |
+| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (6 files) | No |
+| `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
+| `npm run check:freshness` | Check if AGENTS.md files are stale relative to code | No (advisory) |
 | `npm run check:freshness -- --strict` | Same, but fail CI on stale AGENTS.md | Yes (in CI) |
 
 ### CODEMAP.md
@@ -187,9 +225,32 @@ Auto-generated index of files, exports, and import graph. Read this BEFORE searc
 npm run codemap
 ```
 
+### ROUTES.md
+
+Auto-generated catalog of all routes: method, path, middleware, handler. Read this to understand the API surface in one pass. Regenerate after adding/changing routes:
+
+```bash
+npm run gen:routes
+```
+
+### Resource Generator
+
+Scaffold a full-stack resource (types → migration → queries → validator → handler → route → page) following all conventions:
+
+```bash
+npm run gen:resource products -- --fields="name:string,price:number"
+```
+
+Generates 6+ files with correct naming (ADR 0009), raw SQL (ADR 0001), functions (ADR 0002), and descriptive handler names. Zero structural mistakes possible.
+
 ### Layer Boundary Lint
 
-Enforces 10 rules from AGENTS.md anti-patterns (handlers must not import SQLite directly, frontend must not use fetch(), no console.log in backend, etc.). See `scripts/lint-layers.ts` for the full rule list.
+Enforces 17 rules from AGENTS.md anti-patterns + import direction:
+- L1-L10: anti-patterns (no SQLite in handlers, no fetch in frontend, no console.log, etc.)
+- L11-L13: naming conventions (no generic names, include resource, no vague functions)
+- L14-L17: import direction (queries → types only, services → core only, validators → types+zod only, middlewares → core+queries only)
+
+See `scripts/lint-layers.ts` for the full rule list.
 
 ### Freshness Gate
 
