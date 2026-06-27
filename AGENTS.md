@@ -1,6 +1,5 @@
 ---
 authority: canon
-owner: masrama
 last_verified: 2026-06-28
 scope: root
 ---
@@ -152,32 +151,11 @@ Server (ultimate-express)
 
 ## Dependency Policy
 
-AI must not add dependencies without checking this table. If a category is "Banned", suggest the allowed alternative instead.
+See [`.agents/skills/dependency-policy.md`](./.agents/skills/dependency-policy.md) — 16-category table of allowed vs banned dependencies. Check before suggesting a new dependency.
 
-| Category | Allowed | Banned | Why |
-|---|---|---|---|
-| Database | `better-sqlite3` | Prisma, Drizzle, Knex, Sequelize, TypeORM | ADR 0001 — raw SQL, AI writes SQL fluently |
-| Framework | `ultimate-express` | Express, Fastify, Koa, Hono | Nara uses uWebSockets.js for performance |
-| Frontend | `svelte`, `@inertiajs/svelte` | React, Vue, Solid, Angular | ADR 0003 — Inertia + Svelte 5 |
-| UI primitives | `@zag-js/*` | Headless UI, Radix, Melt | ADR 0007 — framework-agnostic state machines |
-| Validation | `zod` | Joi, Yup, class-validator, valibot | ADR 0006 — TypeScript-first, type inference |
-| Auth | `@services/Authenticate` (internal) | bcrypt (direct), passport, jsonwebtoken | ADR 0005 — session-based, internal wrapper |
-| HTTP client | `axios` | fetch (in frontend), got, node-fetch | `api()` wrapper handles CSRF + toast |
-| Logging | `pino` (via `@services/Logger`) | winston, morgan, console.log | Structured logging, file rotation built-in |
-| Styling | `tailwindcss`, `clsx`, `tailwind-merge`, `tailwind-variants` | styled-components, emotion, CSS modules | Utility-first, AI generates Tailwind fluently |
-| Icons | `@lucide/svelte` | heroicons, feather-icons, font-awesome | Tree-shakeable, consistent API |
-| Image processing | `sharp` | jimp, canvas, gm | Native binding, fast |
-| File upload | `multer` | formidable, busboy | Memory storage + sharp pipeline |
-| State (frontend) | Svelte 5 runes (`$state`, `$derived`, `$effect`) | Redux, Zustand, Pinia, Svelte stores | ADR 0003 — server is source of truth |
-| Testing | `vitest` | jest, mocha, jasmine | Vite-native, fast, ESM support |
-| Date/time | native `Date`, `Intl` | moment, dayjs, date-fns | Standard library sufficient |
-| Utils | native `crypto`, `path`, `fs` | lodash, underscore, ramda | Standard library sufficient |
+## Common Pitfalls
 
-### Adding a new dependency
-
-1. Check if the category is in the table above
-2. Check if the need can be met with the allowed dependency or standard library
-3. If a new dependency is truly needed, add it to `package.json`, update this table, and add an ADR explaining why
+See [`.agents/skills/common-pitfalls.md`](./.agents/skills/common-pitfalls.md) — 10 real mistakes AI agents make in this codebase. Read before coding.
 
 ## Anti-Patterns
 
@@ -192,80 +170,6 @@ AI must not add dependencies without checking this table. If a category is "Bann
 9. **Don't** mix languages in error messages — use Indonesian for user-facing messages
 10. **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — use descriptive names (`createUser`, `updateRole`, `listRoles`)
 11. **Don't** use vague function names (`handle`, `process`, `run`, `do`, `execute` as standalone) — describe what it does (`processPayment`, `handleWebhookDelivery`)
-
-## Common Pitfalls — Sering Salah di Codebase Ini
-
-Mistakes yang AI agent sering buat di Nara. Baca sebelum coding.
-
-### 1. Lupa register Inertia page
-
-**Salah:** Bikin `resources/Pages/products.svelte` tapi gak daftar di `resources/app.ts`.
-
-**Akibat:** Page blank — Inertia gak ketemu component-nya.
-
-**Fix:** Selalu tambah page baru ke page map di `resources/app.ts`:
-```typescript
-const pages = {
-  // ...existing
-  products: () => import('./Pages/products.svelte'),
-};
-```
-
-### 2. Pakai `router.post()` untuk mutation instead of `api(() => axios.post())`
-
-**Salah:** `router.post('/products', data)` — bypass CSRF, gak ada toast, gak ada error handling.
-
-**Fix:** `const result = await api(() => axios.post('/products', data))` — handle CSRF, toast, error.
-
-### 3. Import SQLite langsung di handler
-
-**Salah:** `import SQLite from '@services/SQLite'` di handler.
-
-**Fix:** Import query functions dari `@queries` — handler gak pernah sentuh SQLite langsung.
-
-### 4. Pakai `export let` instead of `$props()`
-
-**Salah:** `export let value: string` — Svelte 4 syntax.
-
-**Fix:** `let { value }: { value: string } = $props()` — Svelte 5 runes.
-
-### 5. Lupa `try/catch` di mutation
-
-**Salah:** Panggil `createProduct()` tanpa try/catch — SQLite constraint error crash server.
-
-**Fix:** Wrap mutation di try/catch, handle `SQLITE_CONSTRAINT_UNIQUE`, return `jsonServerError()` untuk unexpected error.
-
-### 6. Pakai `onMount()` instead of `$effect()`
-
-**Salah:** `onMount(() => { ... })` — Svelte 4 lifecycle.
-
-**Fix:** `$effect(() => { ... })` — Svelte 5 runes. Jalan setelah mount DAN pas dependency berubah.
-
-### 7. Gak cek `req.user` sebelum pakai
-
-**Salah:** `const userId = req.user.id` — crash kalau user belum login.
-
-**Fix:** `if (!req.user) return jsonError(res, 'Unauthorized', 401)` di atas handler.
-
-### 8. Pakai `parseInt(req.query.x as string) || 1` untuk pagination
-
-**Salah:** Manual parseInt + fallback — panjang, gampang salah.
-
-**Fix:** `const page = queryInt(req, 'page')` — handle parsing + default value.
-
-### 9. Lupa update `app/handlers/index.ts` setelah bikin handler
-
-**Salah:** Bikin `app/handlers/products.ts` tapi gak export.
-
-**Akibat:** `import * as products from '@handlers/products'` gagal.
-
-**Fix:** Tambah `export * as products from './products'` ke `app/handlers/index.ts`.
-
-### 10. Pakai English instead of Indonesian untuk user-facing message
-
-**Salah:** `jsonError(res, 'Email already exists', 400)` — inconsistent UX.
-
-**Fix:** `jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL')` — lihat ADR 0010.
 
 ## Build/Test
 

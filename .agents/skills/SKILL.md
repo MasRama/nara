@@ -1,6 +1,5 @@
 ---
 authority: canon
-owner: masrama
 last_verified: 2026-06-28
 ---
 
@@ -20,6 +19,8 @@ Skills are deep-dive procedures loaded on demand. Each skill focuses on one patt
 | [`inertia-patterns.md`](./inertia-patterns.md) | Frontend pages, `res.inertia` vs `jsonSuccess`, `router.visit` vs `axios` |
 | [`error-handling.md`](./error-handling.md) | Error responses in handlers vs deep services, NaraError type guards |
 | [`api-contract.md`](./api-contract.md) | Response shapes, response helpers, error codes, pagination meta |
+| [`dependency-policy.md`](./dependency-policy.md) | Allowed vs banned dependencies (16 categories), adding new deps |
+| [`common-pitfalls.md`](./common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |
 
 ## Skill Format
 
@@ -28,7 +29,6 @@ Each skill file uses this structure:
 ```markdown
 ---
 authority: canon
-owner: <github-username>
 last_verified: YYYY-MM-DD
 trigger: <when agent should load this skill>
 ---

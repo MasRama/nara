@@ -1,6 +1,5 @@
 ---
 authority: canon
-owner: masrama
 last_verified: 2026-06-28
 trigger: Writing frontend pages, using Inertia.js navigation, or making API calls from Svelte
 ---

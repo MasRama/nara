@@ -1,6 +1,5 @@
 ---
 authority: canon
-owner: masrama
 last_verified: 2026-06-28
 trigger: Writing SQL queries, transactions, dynamic updates, or any database access
 ---
