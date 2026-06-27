@@ -2,7 +2,7 @@ import { toast } from 'svelte-sonner';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
-export function Toast(text: string, type: ToastType = "success", _duration: number = 3000): void {
+export function Toast(text: string, type: ToastType = "success"): void {
   switch (type) {
     case 'success':
       toast.success(text);

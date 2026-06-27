@@ -1,5 +1,4 @@
 import type { NaraRequest, NaraResponse } from '@core';
-import { inertia } from '@core';
 import { findSessionById, findUserById } from '@queries';
 
 export const index = (req: NaraRequest, res: NaraResponse) => {
@@ -13,5 +12,5 @@ export const index = (req: NaraRequest, res: NaraResponse) => {
     }
   }
 
-  return inertia(res).inertia('landing', { user });
+  return res.inertia('landing', { user });
 };

@@ -18,12 +18,12 @@ Route.get('/login', auth.loginPage);
 Route.post('/login', strictRateLimit(), auth.processLogin);
 Route.get('/register', auth.registerPage);
 Route.post('/register', strictRateLimit(), auth.processRegister);
-Route.post('/logout', auth.logout);
+Route.post('/logout', strictRateLimit(), auth.logout);
 Route.post('/change-password', [Auth], auth.changePassword);
 
 // OAuth
-Route.get('/google/redirect', oauth.googleRedirect);
-Route.get('/google/callback', oauth.googleCallback);
+Route.get('/google/redirect', strictRateLimit(), oauth.googleRedirect);
+Route.get('/google/callback', strictRateLimit(), oauth.googleCallback);
 
 // Protected - Users
 Route.get('/dashboard', [Auth], users.dashboardPage);

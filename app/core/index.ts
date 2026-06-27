@@ -1,11 +1,10 @@
-export { createApp } from './App';
+export { createApp, createWebApp, createApiApp } from './App';
 export type { AppOptions, NaraApp } from './App';
 
 export type {
   AuthUser,
   NaraRequest,
   NaraResponse,
-  NaraResponseWithInertia,
   NaraMiddleware,
   NaraHandler,
   RouteMiddlewares,
@@ -30,6 +29,7 @@ export {
   internalError,
   isNaraError,
   isValidationError,
+  isUniqueConstraintError,
 } from './errors';
 
 export type { NaraError } from './errors';
@@ -45,7 +45,8 @@ export {
   jsonNotFound,
   jsonValidationError,
   jsonServerError,
-  inertia,
+  queryInt,
+  queryString,
 } from './response';
 
 export type {

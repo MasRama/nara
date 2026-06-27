@@ -19,7 +19,8 @@ export const RATE_LIMIT = {
 export const UPLOAD = {
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   AVATAR_DIR: 'avatars',
-} as const;
+  ALLOWED_MIME_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as string[],
+};
 
 export const CACHE = {
   ASSET_STORE_MAX_ENTRIES: 100,
@@ -31,17 +32,4 @@ export const CACHE = {
 
 export const LOGGING = {
   LEVELS: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const,
-  DEFAULT_LEVEL: 'info',
-  LOG_DIR: 'logs',
-  MAX_LOG_SIZE: 10 * 1024 * 1024,
-  MAX_LOG_FILES: 10,
-} as const;
-
-export const DATABASE = {
-  DEFAULT_CONNECTION: 'development',
-} as const;
-
-export const ERROR_MESSAGES = {
-  INVALID_CREDENTIALS: 'Email atau password salah',
-  EMAIL_EXISTS: 'Email sudah digunakan',
 } as const;

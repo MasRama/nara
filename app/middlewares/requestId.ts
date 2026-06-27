@@ -15,31 +15,4 @@ export function requestId(): NaraMiddleware {
   };
 }
 
-export interface RequestIdOptions {
-  headerName?: string;
-  trustUpstream?: boolean;
-  generator?: () => string;
-}
-
-export function requestIdWithOptions(options: RequestIdOptions = {}): NaraMiddleware {
-  const {
-    headerName = REQUEST_ID_HEADER,
-    trustUpstream = true,
-    generator = randomUUID,
-  } = options;
-
-  return (req: NaraRequest, res: NaraResponse, next: () => void) => {
-    const incomingId = trustUpstream
-      ? (req.headers[headerName.toLowerCase()] as string | undefined)
-      : undefined;
-
-    const id = incomingId || generator();
-
-    req.requestId = id;
-    res.header(headerName, id);
-
-    return next();
-  };
-}
-
 export default requestId;

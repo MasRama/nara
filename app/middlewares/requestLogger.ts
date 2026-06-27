@@ -150,21 +150,4 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
   };
 }
 
-export function verboseRequestLogger(): NaraMiddleware {
-  return requestLogger({
-    includeHeaders: ['user-agent', 'referer', 'content-type', 'accept'],
-    includeQuery: true,
-    successLevel: 'debug',
-  });
-}
-
-export function errorOnlyRequestLogger(): NaraMiddleware {
-  return requestLogger({
-    skip: (req) => req.method === 'GET',
-    successLevel: 'trace',
-    clientErrorLevel: 'warn',
-    serverErrorLevel: 'error',
-  });
-}
-
 export default requestLogger;

@@ -12,5 +12,5 @@ export interface FrontendAdapter {
 
   middleware: () => AdapterMiddlewareHandler;
 
-  extendResponse: (res: NaraResponse) => void;
+  extendResponse?: (res: NaraResponse) => void;
 }

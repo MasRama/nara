@@ -10,10 +10,10 @@ export const createAsset = (data: {
   size?: number | null;
   user_id?: string | null;
 }): Asset => {
-  const now = new Date();
+  const now = Date.now();
   SQLite.exec`
     INSERT INTO assets (id, name, type, url, mime_type, size, user_id, created_at, updated_at)
-    VALUES (${data.id}, ${data.name ?? null}, ${data.type}, ${data.url}, ${data.mime_type ?? null}, ${data.size ?? null}, ${data.user_id ?? null}, ${now.toISOString()}, ${now.toISOString()})
+    VALUES (${data.id}, ${data.name ?? null}, ${data.type}, ${data.url}, ${data.mime_type ?? null}, ${data.size ?? null}, ${data.user_id ?? null}, ${now}, ${now})
   `;
   return SQLite.one<Asset>`SELECT * FROM assets WHERE id = ${data.id}`!;
 };

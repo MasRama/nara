@@ -4,16 +4,13 @@ export {
   UPLOAD,
   CACHE,
   RATE_LIMIT,
-  DATABASE,
   LOGGING,
-  ERROR_MESSAGES,
 } from './constants';
 
 export {
-  validateEnv,
+  env,
   checkFeatureConfig,
   getEnvSummary,
-  getEnv,
   initEnv,
 } from './env';
 

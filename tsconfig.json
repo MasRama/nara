@@ -36,14 +36,12 @@
       "@queries/*": ["app/queries/*"],
       "@types": ["app/types/models.ts"],
       "@types/*": ["app/types/*"],
+      "@shared": ["app/types/shared.ts"],
       "@config/*": ["app/config/*"],
       "@config": ["app/config/index.ts"],
       "@routes/*": ["routes/*"],
       "@resources/*": ["resources/*"],
       "@root/*": ["./*"],
-      "@root/knexfile": ["./knexfile.ts"],
-      "@events": ["app/events/index.ts"],
-      "@events/*": ["app/events/*"],
       "$lib": ["resources/lib/index.ts"],
       "$lib/*": ["resources/lib/*"]
     }
@@ -52,6 +50,7 @@
     "./*.ts",
     "migrations",
     "seeds",
+    "scripts",
     "app",
     "routes"
   ],

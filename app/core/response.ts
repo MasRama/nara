@@ -1,4 +1,15 @@
-import type { NaraResponse, NaraResponseWithInertia } from './types';
+import type { NaraRequest, NaraResponse } from './types';
+
+export function queryInt(req: NaraRequest, key: string, defaultValue = 1): number {
+  const raw = req.query[key];
+  const parsed = parseInt(typeof raw === 'string' ? raw : '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
+export function queryString(req: NaraRequest, key: string, defaultValue = ''): string {
+  const raw = req.query[key];
+  return typeof raw === 'string' && raw.length > 0 ? raw : defaultValue;
+}
 
 export interface PaginatedMeta {
   total: number;
@@ -138,6 +149,3 @@ export function jsonServerError(
 ): NaraResponse {
   return jsonError(res, message, 500, 'INTERNAL_ERROR');
 }
-
-export const inertia = (res: NaraResponse): NaraResponseWithInertia =>
-  res as NaraResponseWithInertia;
