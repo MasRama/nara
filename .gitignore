@@ -20,6 +20,9 @@ production.sqlite3
 /build
 /dist
 
+# Test coverage
+coverage/
+
 # Uploads & Storage
 public/uploads
 storage/
