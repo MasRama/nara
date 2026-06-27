@@ -14,11 +14,12 @@ Skills are deep-dive procedures loaded on demand. Each skill focuses on one patt
 
 | Skill | When to load |
 |---|---|
-| [`crud-pattern.md`](./crud-pattern.md) | Adding a new resource (types → queries → handlers → routes → page) |
+| [`crud-pattern.md`](./crud-pattern.md) | Adding a new resource (types → migration → queries → validator → handlers → routes → page) |
 | [`sqlite-usage.md`](./sqlite-usage.md) | Writing SQL queries, transactions, dynamic updates |
 | [`auth-rbac.md`](./auth-rbac.md) | Auth guards, permission checks, role management |
 | [`inertia-patterns.md`](./inertia-patterns.md) | Frontend pages, `res.inertia` vs `jsonSuccess`, `router.visit` vs `axios` |
 | [`error-handling.md`](./error-handling.md) | Error responses in handlers vs deep services, NaraError type guards |
+| [`api-contract.md`](./api-contract.md) | Response shapes, response helpers, error codes, pagination meta |
 
 ## Skill Format
 

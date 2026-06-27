@@ -13,15 +13,24 @@ trigger: Adding a new resource (e.g. products, posts, comments) — full stack f
 
 When adding a new resource to Nara. The pattern is linear and 1:1 — each layer has one file, one responsibility.
 
-## The 5-Layer Stack
+## Fast path
+
+```bash
+npm run gen:resource products -- --fields="name:string,price:number"
+```
+
+Scaffolds all 7 files with correct conventions. Then customize the generated code. Use this skill as reference for what each file does and why.
+
+## The 7-Layer Stack
 
 ```
-1. app/types/models.ts        → interface Product { ... }
-2. migrations/YYYY...ts       → CREATE TABLE products (...)
-3. app/queries/products.ts    → findProductById, createProduct, getProductsPaginated
-4. app/handlers/products.ts   → productsPage, index, show, create, update, destroy
-5. routes/web.ts              → Route.get/post/put/delete('/products', ...)
-6. resources/Pages/products.svelte → table + form + toast
+1. app/types/models.ts          → interface Product { ... }
+2. migrations/YYYY...ts         → CREATE TABLE products (...)
+3. app/queries/products.ts      → findProductById, createProduct, getProductsPaginated
+4. app/validators/schemas.ts    → CreateProductSchema (Zod)
+5. app/handlers/products.ts     → productsPage, listProducts, addProduct, editProduct, removeProducts
+6. routes/web.ts                → Route.get/post/put/delete('/products', ...)
+7. resources/Pages/products.svelte → table + form + toast
 ```
 
 ## Pattern
@@ -106,7 +115,26 @@ export const deleteProducts = (ids: string[]): void => {
 };
 ```
 
-### 4. Handlers
+### 4. Validator (Zod)
+
+```typescript
+// app/validators/schemas.ts (append)
+import { z } from 'zod';
+
+export const CreateProductSchema = z.object({
+  name: z.string().min(1).max(200),
+  price: z.number().min(0),
+});
+export type CreateProductInput = z.infer<typeof CreateProductSchema>;
+```
+
+Rules:
+- One schema per resource, named `Create<Resource>Schema`
+- Export the inferred type as `Create<Resource>Input`
+- Use `safeParse()` in handlers — never `parse()` (throws)
+- Convert errors with `zodToErrors(parsed.error)` → `Record<string, string[]>`
+
+### 5. Handlers
 
 ```typescript
 // app/handlers/products.ts
@@ -180,7 +208,7 @@ export const removeProducts = (req: NaraRequest, res: NaraResponse) => {
 };
 ```
 
-### 5. Routes
+### 6. Routes
 
 ```typescript
 // routes/web.ts
@@ -194,9 +222,29 @@ Route.put('/products/:id', [Auth], products.editProduct);
 Route.delete('/products', [Auth], products.removeProducts);
 ```
 
-### 6. Page (Svelte 5)
+### 7. Page (Svelte 5)
 
 See [`inertia-patterns.md`](./inertia-patterns.md) for full frontend pattern.
+
+### 8. Verify
+
+```bash
+npm run migrate          # run the new migration
+npm run check            # lint + typecheck + lint:layers + tests + freshness
+```
+
+If `lint:layers` fails, read the error message — it includes the fix and skill reference.
+If `check:freshness` warns, update the AGENTS.md for the directory you changed.
+
+### 9. Register Inertia page (if new page)
+
+```typescript
+// resources/app.ts — add the page to Inertia's page map
+const pages = {
+  // ...existing pages
+  products: () => import('./Pages/products.svelte'),
+};
+```
 
 ## Do / Don't
 
