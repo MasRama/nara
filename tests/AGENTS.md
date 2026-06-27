@@ -7,7 +7,6 @@ Unit tests using **Vitest**. Mirror `app/` structure.
 ```
 tests/
 ├── core/          # Router, response helpers, errors
-├── events/        # Event system
 ├── middlewares/   # csrf, rateLimit, requestId, securityHeaders
 ├── services/      # CacheStore, etc.
 ├── validators/    # Zod schemas

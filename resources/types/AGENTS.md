@@ -1,19 +1,21 @@
 # Types
 
-Frontend TypeScript type definitions. `generated.ts` mirrors backend types.
+Frontend TypeScript type definitions. Shared types are sourced from `app/types/shared.ts` (single source of truth).
 
 ## Structure
 
 | File | Purpose |
 |------|---------|
-| `generated.ts` | Backend types synced to frontend (manually updated) |
+| `generated.ts` | Re-exports shared types from `app/types/shared.ts` + frontend-only types (forms, helpers) |
 | `index.ts` | Barrel export + custom frontend types |
 
-## generated.ts
+## Single Source of Truth
 
-Contains: `User`, `Role`, `Permission`, `Session`, `UserForm`, `RoleForm`, `RoleInfo`, pagination types, API response types, and helper functions.
+Shared types (`User`, `Role`, `Permission`, `Session`, `PaginationMeta`, `ApiResponse`, etc.) live in **`app/types/shared.ts`** and are re-exported from `generated.ts`. When backend types change, update `app/types/shared.ts` — the frontend automatically gets the changes.
 
-### Helper Functions
+Database model types with sensitive fields (`password`, `remember_me_token`) stay in `app/types/models.ts` and are **never** exposed to the frontend.
+
+### Helper Functions (frontend-only)
 
 ```typescript
 import { createEmptyUserForm, userToForm, createEmptyRoleForm, roleToForm } from '../types';
@@ -30,8 +32,6 @@ const form = roleToForm(existingRole);       // RoleForm pre-filled from Role da
 if (isApiSuccess(response)) { /* response.data is typed */ }
 if (isApiError(response))   { /* response.errors is typed */ }
 ```
-
-Manually maintained — when backend types change, update `generated.ts` accordingly.
 
 ## Adding Custom Types
 
@@ -58,5 +58,7 @@ import type { User, PaginationMeta, UserForm } from "../types";
 
 ## Conventions
 
+- Shared types → `app/types/shared.ts` (single source for backend + frontend)
+- Frontend-only types (forms, helpers) → `generated.ts` or new `.ts` file
 - Custom types → new `.ts` file → export from `index.ts`
-- Keep `generated.ts` in sync with backend `app/types/models.ts`
+- Database models with sensitive fields → `app/types/models.ts` (backend only, never exposed)

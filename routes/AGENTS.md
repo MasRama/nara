@@ -39,7 +39,7 @@ export default Route.getRouter();
 ## Rules
 
 - Handlers are **functions** imported as namespaces (`import * as users from '@handlers/users'`)
-- Inertia page handler: `inertia(res).inertia('pageName', { data })` — import `inertia` from `@core`
+- Inertia page handler: `res.inertia('pageName', { data })` — set up by renderer middleware, no import needed
 - JSON handler: `jsonSuccess(res, 'OK', data)` / `jsonError(res, 'Not found', 404)`
 - Static/wildcard routes (`/*`) must be registered **last**
 - NEVER return `jsonSuccess` from a page route — browser will show raw JSON

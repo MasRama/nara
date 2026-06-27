@@ -9,9 +9,8 @@ app/
 ├── types/           # Interfaces only (User, Session, Role, Permission)
 ├── queries/         # Raw SQL functions (findUserById, createUser, getUsersPaginated)
 ├── handlers/        # Request handlers (functions, not classes)
-├── services/        # SQLite, Logger, Auth, Storage, CacheStore, GoogleAuth, LoginThrottle
+├── services/        # SQLite, Logger, Auth, Storage, CacheStore, LoginThrottle
 ├── middlewares/     # auth, csrf, rateLimit, securityHeaders, inputSanitize, requestId, requestLogger, inertia
-├── events/          # emit/on/off/once
 ├── validators/      # Zod schemas (schemas.ts) + zodToErrors helper (index.ts)
 ├── config/          # env.ts (environment variables) + constants.ts (SERVER, AUTH, RATE_LIMIT, UPLOAD, CACHE)
 └── core/            # App, Router, errors, response helpers, adapters (Svelte/Inertia)
@@ -24,11 +23,12 @@ app/
 | SQLite | `@services/SQLite` | `one`, `many`, `exec` (template) · `get`, `all`, `run` (string) · `transaction`, `raw`, `close` |
 | Logger | `@services/Logger` | `info`, `warn`, `error`, `fatal`, `debug`, `child`, `logRequest`, `logQuery` |
 | Auth | `@services/Authenticate` | `hashPassword`, `comparePassword`, `processLogin`, `logout` |
-| Storage | `@services` (named) | `put`, `putFile`, `get`, `exists`, `delete`, `move`, `copy`, `url`, `path` |
+| Storage | `@services` (named) | `put`, `putFile`, `get`, `exists`, `delete`, `url`, `path` |
 | CacheStore | `@services/CacheStore` | `createCacheStore()` · pre-built: `assetCache`, `templateCache` |
 | LoginThrottle | `@services/LoginThrottle` | Login attempt tracking + lockout |
-| GoogleAuth | `@services/GoogleAuth` | Google OAuth flow |
 | View | `@services/View` | HTML template rendering (used by Inertia adapter) |
+| Migrator | `@services/Migrator` | Raw SQL migration runner (`migrate()`, `migrateFresh()`, `migrateStatus()`) |
+| Seeder | `@services/Seeder` | Raw SQL seed runner (`seed()`) |
 
 ## Core Quick Reference
 
@@ -57,7 +57,7 @@ import { isNaraError, isValidationError } from '@core';
 2. **No `console.log`** — use `Logger.info/warn/error`
 3. **No ORM** — raw SQL via `SQLite`
 4. **Zod validation** — schemas in `validators/schemas.ts`, use `Schema.safeParse()` + `zodToErrors()`
-5. **Path aliases** — `@core`, `@queries`, `@services`, `@middlewares/*`, `@handlers/*`, `@types`, `@validators`, `@config`, `@events`
+5. **Path aliases** — `@core`, `@queries`, `@services`, `@middlewares/*`, `@handlers/*`, `@types`, `@validators`, `@config`
 6. **Constants** — use `@config/constants` instead of hardcoding values
 7. **IDs** — `crypto.randomUUID()` for all new records
 8. **Password** — `hashPassword()` from `@services/Authenticate`, never bcrypt directly

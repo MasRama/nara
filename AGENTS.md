@@ -31,7 +31,6 @@ Server (ultimate-express)
   ├── services/   (SQLite, Auth, Logger, Storage, CacheStore)
   ├── middlewares/ (auth, csrf, rateLimit, securityHeaders)
   ├── validators/ (Zod schemas)
-  ├── events/     (emit/on/off)
   ├── config/     (env + constants)
   └── types/      (interfaces)
 ```
@@ -40,7 +39,7 @@ Server (ultimate-express)
 
 | Route Type | Called By | Returns |
 |---|---|---|
-| **Page** | Browser navigation | `inertia(res).inertia('pageName', { data })` |
+| **Page** | Browser navigation | `res.inertia('pageName', { data })` |
 | **Data** | `axios` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
 ## Structure
@@ -53,13 +52,12 @@ Server (ultimate-express)
 │   ├── handlers/        # Request handlers (functions, not classes)
 │   ├── services/        # SQLite, Logger, Auth, Storage, CacheStore, LoginThrottle
 │   ├── middlewares/      # auth, csrf, rateLimit, securityHeaders, inputSanitize, requestId
-│   ├── events/          # emit/on/off/once
 │   ├── validators/      # Zod schemas + zodToErrors helper
 │   ├── config/          # Environment (env.ts) & constants (constants.ts)
 │   └── core/            # App, Router, errors, response helpers
 ├── routes/web.ts        # All route definitions
-├── migrations/          # Knex migrations
-├── seeds/               # Knex seeders
+├── migrations/          # TypeScript migrations (raw SQL strings, up/down exports)
+├── seeds/               # TypeScript seeds (run(SQLite) function exports)
 ├── resources/             # Frontend (Svelte 5 + Inertia)
 │   ├── inertia.html       # HTML template (served by View.ts)
 │   ├── app.ts             # Inertia app entry point
@@ -70,7 +68,7 @@ Server (ultimate-express)
 │   └── types/             # generated.ts + index.ts (manually synced with backend)
 ├── tests/               # Vitest tests
 ├── server.ts            # Entry point
-└── knexfile.ts          # DB config (used by SQLite.ts + migrations)
+└── database/            # SQLite database files (dev.sqlite3, production.sqlite3)
 ```
 
 ## Patterns
@@ -140,12 +138,10 @@ export default Route.getRouter();
 ### Inertia Page Handler
 
 ```typescript
-import { inertia } from '@core';
-
 export const usersPage = (req: NaraRequest, res: NaraResponse) => {
-  // Pass ALL page data via inertia — lists, permissions, metadata
+  // Pass ALL page data via res.inertia — lists, permissions, metadata
   const result = getUsersPaginated(page, limit, search);
-  return inertia(res).inertia('users', {
+  return res.inertia('users', {
     users: result.data,
     permissions: { canCreate: true, canEdit: true },
     total: result.total, page, limit,
@@ -172,9 +168,9 @@ export const getUsersPaginated = (page: number, limit: number, search = ''): { d
 
 // handlers/users.ts
 export const index = (req: NaraRequest, res: NaraResponse) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
-  const search = (req.query.search as string) || '';
+  const page = queryInt(req, 'page');
+  const limit = queryInt(req, 'limit', 10);
+  const search = queryString(req, 'search');
   const result = getUsersPaginated(page, limit, search);
   return jsonPaginated(res, 'OK', result.data, {
     total: result.total, page, limit,
@@ -188,24 +184,16 @@ export const index = (req: NaraRequest, res: NaraResponse) => {
 ### Dynamic Update Query
 
 ```typescript
-export const updateUser = (id: string, data: Partial<User>): User | undefined => {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== undefined && key !== 'id' && key !== 'created_at') {
-      fields.push(`${key} = ?`);
-      values.push(typeof value === 'boolean' ? (value ? 1 : 0) : value);
-    }
-  }
-
-  if (fields.length === 0) return findUserById(id);
-  fields.push('updated_at = ?');
-  values.push(Date.now());
-  values.push(id);
-
-  SQLite.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+// SQLite.update(table, where, data) — auto-skips undefined, converts booleans, sets updated_at
+export const updateUser = (id: string, data: Partial<Omit<User, 'id' | 'created_at'>>): User | undefined => {
+  const { id: _id, created_at: _created_at, ...rest } = data as Record<string, unknown>;
+  SQLite.update('users', { id }, rest);
   return findUserById(id);
+};
+
+export const updateRole = (id: string, data: Partial<Pick<Role, 'name' | 'slug' | 'description'>>): Role | undefined => {
+  SQLite.update('roles', { id }, data);
+  return findRoleById(id);
 };
 ```
 
@@ -230,6 +218,9 @@ SQLite.transaction(() => {
   SQLite.exec`INSERT INTO profiles ...`;
 });
 
+// Dynamic update (auto-skips undefined, converts booleans, sets updated_at)
+SQLite.update('users', { id }, { name, email });
+
 // Access native better-sqlite3 database (rare)
 const db = SQLite.raw();
 ```
@@ -237,6 +228,12 @@ const db = SQLite.raw();
 ## Response Helpers
 
 ```typescript
+// Query parsing (use these instead of parseInt(req.query.x as string) || 1)
+queryInt(req, 'page');                  // default 1
+queryInt(req, 'limit', 10);             // custom default
+queryString(req, 'search');             // default ''
+queryString(req, 'filter', 'all');      // custom default
+
 jsonSuccess(res, 'OK', data);
 jsonSuccess(res, 'OK', data, meta, 200);            // with meta + custom status
 jsonCreated(res, 'Created', data);                    // 201
@@ -435,15 +432,6 @@ const stats = cache.stats(); // { entries, totalBytes, hits, misses, evictions, 
 import { assetCache, templateCache } from '@services/CacheStore';
 ```
 
-## Events
-
-```typescript
-import { emit, on } from '@events';
-
-emit('user.created', { userId: user.id });
-on('user.created', async ({ userId }) => { Logger.info('User created', { userId }); });
-```
-
 ## Middleware
 
 | Middleware | Import | Effect |
@@ -459,7 +447,7 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 ## Frontend (Svelte 5 + Inertia)
 
 > **Note**: `inertia` means different things in frontend vs backend:
-> - **Backend**: `import { inertia } from '@core'` — response helper that extends `res` with `.inertia()` method
+> - **Backend**: `res.inertia('pageName', { data })` — method on response, set up by the renderer middleware (no import needed)
 > - **Frontend**: `import { page, router, inertia } from '@inertiajs/svelte'` — Inertia client-side navigation
 
 ```svelte
@@ -516,7 +504,7 @@ on('user.created', async ({ userId }) => { Logger.info('User created', { userId 
 
 | Table | Key Columns | Relations |
 |---|---|---|
-| `users` | id (uuid), email, name, phone, password, avatar, is_verified | has many roles via `user_roles` |
+| `users` | id (uuid), email, name, password, avatar | has many roles via `user_roles` |
 | `sessions` | id (uuid), user_id, user_agent, expires_at | belongs to `users` |
 | `roles` | id (uuid), name, slug, description | has many permissions via `role_permissions` |
 | `permissions` | id (uuid), name, slug, resource, action, description | belongs to roles via `role_permissions` |
@@ -541,6 +529,25 @@ const app = createApp({
 });
 ```
 
+### Presets
+
+For common configurations, use presets instead of `createApp` with all flags:
+
+```typescript
+import { createWebApp, createApiApp, svelteAdapter } from '@core';
+
+// Web app (full-stack with Inertia) — cors, securityHeaders, requestLogging, inputSanitize, autoMigrate, csrf all ON
+const app = createWebApp({
+  routes,
+  adapter: svelteAdapter(),
+});
+
+// API-only app — rateLimit ON, csrf OFF, no adapter needed
+const api = createApiApp({
+  routes,
+});
+```
+
 - `adapters/types.ts` — `FrontendAdapter` interface (middleware, extendResponse)
 - `adapters/svelte.ts` — Svelte/Inertia adapter (shares user/props, renders HTML template)
 - Custom adapters can implement `FrontendAdapter` for other frontend frameworks
@@ -549,7 +556,7 @@ const app = createApp({
 
 - **2-space indent** (.editorconfig)
 - **Strict TypeScript** (strict: true)
-- **Path aliases** — `@core`, `@queries`, `@services`, `@middlewares/*`, `@handlers/*`, `@types`, `@validators`, `@config`, `@events`
+- **Path aliases** — `@core`, `@queries`, `@services`, `@middlewares/*`, `@handlers/*`, `@types`, `@validators`, `@config`
 - **Password hashing** — `hashPassword()` / `comparePassword()` from `@services/Authenticate`
 - **Constants** — use `@config/constants` (SERVER, AUTH, RATE_LIMIT, UPLOAD, CACHE, LOGGING)
 - **IDs** — `crypto.randomUUID()` for all new records
@@ -558,7 +565,7 @@ const app = createApp({
 
 1. **Don't** use classes — use functions
 2. **Don't** use ORM/query builder — write raw SQL in `queries/`
-3. **Don't** return `jsonSuccess` from a page route — use `inertia(res).inertia()`
+3. **Don't** return `jsonSuccess` from a page route — use `res.inertia()`
 4. **Don't** return `inertia()` from a data route — use `jsonSuccess/jsonError`
 5. **Don't** use relative imports for core modules — use path aliases
 6. **Don't** use `console.log` — use `Logger.info/warn/error`
@@ -573,8 +580,8 @@ npm run dev          # Dev server (Vite + nodemon)
 npm run build        # Production build
 npm run lint         # tsc --noEmit
 npm run test         # vitest run
-npm run migrate      # npx knex migrate:latest
-npm run seed         # npx knex seed:run
+npm run migrate      # Run pending migrations (ts-node + raw SQL)
+npm run seed         # Run seeders
 ```
 
 ## Where to Look
