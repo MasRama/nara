@@ -15,8 +15,8 @@ scope: root
 Read in this order (each builds on the previous):
 
 1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
-2. **[ROUTES.md](./ROUTES.md)** — API surface in one read (26 routes, all methods + paths + middleware + handlers).
-3. **This file** — conventions, anti-patterns, dependency policy, structure. ~250 lines.
+2. **This file** — conventions, anti-patterns, dependency policy, structure. ~250 lines.
+3. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
 4. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
 5. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
 
@@ -211,7 +211,6 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 |---|---|---|
 | `npm run check` | All-in-one: lint + typecheck + lint:layers + tests + freshness | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
-| `npm run gen:routes` | Regenerate `ROUTES.md` (API surface catalog) | No |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (6 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 | `npm run check:freshness` | Check if AGENTS.md files are stale relative to code | No (advisory) |
@@ -223,14 +222,6 @@ Auto-generated index of files, exports, and import graph. Read this BEFORE searc
 
 ```bash
 npm run codemap
-```
-
-### ROUTES.md
-
-Auto-generated catalog of all routes: method, path, middleware, handler. Read this to understand the API surface in one pass. Regenerate after adding/changing routes:
-
-```bash
-npm run gen:routes
 ```
 
 ### Resource Generator
