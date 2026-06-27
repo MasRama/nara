@@ -11,7 +11,9 @@ Most starter kits fight the machine. Layers of abstraction it cannot read. Class
 
 ## The craft of building with machines.
 
-You describe what you want. The machine writes the types, the queries, the handlers, the routes, the interface. You read it. You ship it. The pattern *is* the generator.
+Say to your machine: *"Add a products CRUD."*
+
+That's all. The machine reads `AGENTS.md` for conventions, loads the `crud-pattern` skill for the workflow, checks `SCHEMA.md` for table shapes, writes the types, the migration, the queries, the validator, the handlers, the routes, the page — then runs `npm run check` to verify its own work. You review. You ship.
 
 ```
 types/models.ts          →  interface Product { ... }
@@ -23,13 +25,7 @@ routes/web.ts            →  Route.get/post/put/delete('/products', ...)
 Pages/products.svelte    →  Full UI with table, forms, toast notifications
 ```
 
-Or just:
-
-```bash
-npm run gen:resource products -- --fields="name:string,price:number"
-```
-
-Seven files. Correct conventions. No structural mistakes.
+Seven files. Correct conventions. The machine did it all — you just asked.
 
 ---
 
@@ -127,7 +123,7 @@ Server (ultimate-express / uWebSockets.js)
 ## Tooling.
 
 ```bash
-# Scaffolding
+# Scaffolding (optional — the machine can also write files manually)
 npm run gen:resource products -- --fields="name:string,price:number"
 
 # Verification
