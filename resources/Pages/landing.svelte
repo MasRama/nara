@@ -109,7 +109,7 @@
       <div class="lg:col-span-5 relative">
         <div in:fly={{ y: 30, duration: 1100, delay: 300 }} class="relative aspect-[4/5] w-full max-w-md ml-auto overflow-hidden rounded-sm bg-muted">
           <img
-            src="/landing/hero.svg"
+            src="/public/landing/hero.webp"
             alt="A quiet workspace, morning light"
             loading="eager"
             class="w-full h-full object-cover grayscale contrast-105 brightness-95 transition-transform duration-[1.2s] hover:scale-[1.03]"
@@ -138,7 +138,7 @@
     <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
       <div class="relative aspect-[5/6] overflow-hidden rounded-sm bg-muted order-1 lg:order-1">
         <img
-          src="/landing/idea.svg"
+          src="/public/landing/idea.webp"
           alt="A plan sketched on paper"
           loading="lazy"
           class="w-full h-full object-cover grayscale contrast-105 brightness-95"
@@ -150,8 +150,33 @@
           One prompt,<br />a whole feature.
         </h2>
         <p class="text-lg text-muted-foreground leading-relaxed">
-          Describe what you want. The machine writes the types, the queries, the handlers, the routes, the interface. You read it, you ship it. The pattern is the generator.
+          Describe what you want. The machine reads the conventions, loads the right skill, writes every file, verifies its own work. You review the diff. You ship.
         </p>
+
+        <!-- agent log: compact terminal -->
+        <div class="mt-2 rounded-lg border border-border bg-card/40 overflow-hidden font-mono-accent text-xs leading-relaxed">
+          <div class="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/30">
+            <span class="w-2 h-2 rounded-full bg-red-400/50"></span>
+            <span class="w-2 h-2 rounded-full bg-yellow-400/50"></span>
+            <span class="w-2 h-2 rounded-full bg-green-400/50"></span>
+            <span class="ml-1.5 text-[10px] uppercase tracking-widest text-muted-foreground/60">agent session</span>
+          </div>
+          <div class="p-4 space-y-2.5">
+            <p class="text-foreground">
+              <span class="text-primary">$</span> add a products feature. fields: name, price, description.
+            </p>
+            <p class="text-muted-foreground/60 text-[11px]">
+              reads AGENTS.md · loads skill: crud-pattern.md · writes 7 files
+            </p>
+            <div class="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
+              <span>types</span><span>migration</span><span>queries</span><span>validator</span><span>handlers</span><span>routes</span><span>page</span>
+            </div>
+            <p class="text-muted-foreground/60 text-[11px] pt-1 border-t border-border/50">
+              <span class="text-green-500/70">✓</span> lint · typecheck · 17 layer rules · 252 tests — all passed
+            </p>
+          </div>
+        </div>
+
         <button
           onclick={copyCommand}
           class="group inline-flex w-fit items-center gap-3 rounded-full border border-border bg-card/50 px-5 py-3 hover:border-primary/40 hover:bg-muted/50 transition-all duration-300 cursor-pointer"
@@ -178,7 +203,7 @@
         <!-- 01 large, image -->
         <article class="md:col-span-3 md:row-span-2 relative overflow-hidden rounded-sm bg-muted group">
           <img
-            src="/landing/principle.svg"
+            src="/public/landing/principle.webp"
             alt="Flat, open layout"
             loading="lazy"
             class="absolute inset-0 w-full h-full object-cover grayscale contrast-105 brightness-90 transition-transform duration-700 group-hover:scale-105"
@@ -231,7 +256,7 @@
   <!-- ───────────────────────── IMAGE BAND (full-width) ───────────────────────── -->
   <section class="relative h-[60vh] min-h-[420px] overflow-hidden">
     <img
-      src="/landing/band.svg"
+      src="/public/landing/band.webp"
       alt="Hands at work, soft light"
       loading="lazy"
       class="absolute inset-0 w-full h-full object-cover grayscale contrast-110 brightness-90"
