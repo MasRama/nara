@@ -90,10 +90,10 @@
         <div class="lg:col-span-4 flex flex-col gap-6">
 
           <!-- Identity card -->
-          <div class="border border-border rounded-sm bg-card p-6">
+          <div class="border border-border rounded-xl bg-card p-6">
             <div class="flex items-center gap-4 mb-6">
               <div class="relative shrink-0">
-                <div class="w-16 h-16 rounded-sm bg-muted border border-border overflow-hidden">
+                <div class="w-16 h-16 rounded-full bg-muted border border-border overflow-hidden">
                   {#if previewUrl}
                     <img src={previewUrl} alt="Profile" class="aspect-square size-full object-cover" onerror={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                   {/if}
@@ -103,7 +103,7 @@
                     </div>
                   {/if}
                 </div>
-                <label class="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-foreground text-background rounded-sm flex items-center justify-center cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors border border-border">
+                <label class="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-foreground text-background rounded-full flex items-center justify-center cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors border border-border">
                   <Camera class="w-3.5 h-3.5" />
                   <input type="file" accept="image/*" onchange={handleAvatarChange} class="hidden" />
                 </label>
@@ -114,15 +114,15 @@
               </div>
             </div>
             <div class="flex flex-wrap gap-2">
-              <span class="inline-flex items-center px-2.5 py-1 rounded-sm text-[11px] font-heading font-medium capitalize {user.roles?.includes('admin') ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-muted text-muted-foreground border border-border'}">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-heading font-medium capitalize {user.roles?.includes('admin') ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-muted text-muted-foreground border border-border'}">
                 {user.roles?.includes('admin') ? 'Admin' : 'User'}
               </span>
             </div>
           </div>
 
           <!-- Security note -->
-          <div class="border border-border rounded-sm bg-card p-5 flex items-start gap-3">
-            <div class="w-9 h-9 rounded-sm bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+          <div class="border border-border rounded-xl bg-card p-5 flex items-start gap-3">
+            <div class="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
               <Shield class="w-4 h-4 text-primary" />
             </div>
             <div>
@@ -137,18 +137,18 @@
           <div {...tabsApi.getRootProps()} class="flex flex-col gap-2 w-full">
 
             <!-- Tab triggers -->
-            <div {...tabsApi.getListProps()} class="border border-border rounded-sm inline-flex h-auto w-fit items-stretch bg-card p-1 gap-0.5 mb-8">
-              <button {...tabsApi.getTriggerProps({ value: "personal" })} class="data-[state=active]:bg-foreground data-[state=active]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-sm px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
+            <div {...tabsApi.getListProps()} class="border border-border rounded-xl inline-flex h-auto w-fit items-stretch bg-card p-1 gap-0.5 mb-8">
+              <button {...tabsApi.getTriggerProps({ value: "personal" })} class="data-[selected]:bg-foreground data-[selected]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
                 Personal info
               </button>
-              <button {...tabsApi.getTriggerProps({ value: "security" })} class="data-[state=active]:bg-foreground data-[state=active]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-sm px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
+              <button {...tabsApi.getTriggerProps({ value: "security" })} class="data-[selected]:bg-foreground data-[selected]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
                 Security
               </button>
             </div>
 
             <!-- Personal info -->
             <div {...tabsApi.getContentProps({ value: "personal" })} class="flex-1 outline-none">
-              <div class="border border-border rounded-sm bg-card p-6 sm:p-8">
+              <div class="border border-border rounded-xl bg-card p-6 sm:p-8">
                 <div class="mb-6">
                   <h3 class="text-xl font-heading font-semibold tracking-tight text-foreground">Personal information</h3>
                   <p class="text-sm text-muted-foreground mt-1">Update your personal details and public profile.</p>
@@ -156,12 +156,12 @@
                 <div class="h-px bg-border mb-6"></div>
                 <form onsubmit={(e) => { e.preventDefault(); changeProfile(); }} class="flex flex-col gap-5">
                   <div class="flex flex-col gap-2">
-                    <Label for="name" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Full name</Label>
-                    <Input id="name" type="text" bind:value={user.name} placeholder="Your full name" class="h-11" />
+                    <Label for="name" class="text-xs uppercase tracking-[0.2em] font-heading text-muted-foreground">Full name</Label>
+                    <Input id="name" type="text" bind:value={user.name} placeholder="Your full name" class="h-12 rounded-xl" />
                   </div>
                   <div class="flex flex-col gap-2">
-                    <Label for="email" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Email</Label>
-                    <Input id="email" type="email" bind:value={user.email} placeholder="you@example.com" class="h-11" />
+                    <Label for="email" class="text-xs uppercase tracking-[0.2em] font-heading text-muted-foreground">Email</Label>
+                    <Input id="email" type="email" bind:value={user.email} placeholder="you@example.com" class="h-12 rounded-xl" />
                   </div>
                   <div class="flex justify-end pt-2">
                     <Button type="submit" disabled={isLoading} size="lg">
@@ -174,7 +174,7 @@
 
             <!-- Security -->
             <div {...tabsApi.getContentProps({ value: "security" })} class="flex-1 outline-none">
-              <div class="border border-border rounded-sm bg-card p-6 sm:p-8">
+              <div class="border border-border rounded-xl bg-card p-6 sm:p-8">
                 <div class="mb-6">
                   <h3 class="text-xl font-heading font-semibold tracking-tight text-foreground">Change password</h3>
                   <p class="text-sm text-muted-foreground mt-1">Use a long, random password to keep your account secure.</p>
@@ -182,17 +182,17 @@
                 <div class="h-px bg-border mb-6"></div>
                 <form onsubmit={(e) => { e.preventDefault(); changePassword(); }} class="flex flex-col gap-5">
                   <div class="flex flex-col gap-2">
-                    <Label for="current_password" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Current password</Label>
-                    <Input id="current_password" type="password" bind:value={current_password} placeholder="••••••••" class="h-11" />
+                    <Label for="current_password" class="text-xs uppercase tracking-[0.2em] font-heading text-muted-foreground">Current password</Label>
+                    <Input id="current_password" type="password" bind:value={current_password} placeholder="••••••••" class="h-12 rounded-xl" />
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div class="flex flex-col gap-2">
-                      <Label for="new_password" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">New password</Label>
-                      <Input id="new_password" type="password" bind:value={new_password} placeholder="••••••••" class="h-11" />
+                      <Label for="new_password" class="text-xs uppercase tracking-[0.2em] font-heading text-muted-foreground">New password</Label>
+                      <Input id="new_password" type="password" bind:value={new_password} placeholder="••••••••" class="h-12 rounded-xl" />
                     </div>
                     <div class="flex flex-col gap-2">
-                      <Label for="confirm_password" class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Confirm password</Label>
-                      <Input id="confirm_password" type="password" bind:value={confirm_password} placeholder="••••••••" class="h-11" />
+                      <Label for="confirm_password" class="text-xs uppercase tracking-[0.2em] font-heading text-muted-foreground">Confirm password</Label>
+                      <Input id="confirm_password" type="password" bind:value={confirm_password} placeholder="••••••••" class="h-12 rounded-xl" />
                     </div>
                   </div>
                   <div class="flex justify-end pt-2">

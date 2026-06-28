@@ -149,7 +149,7 @@
 
       <!-- Table -->
       {#if users && users.length}
-        <div class="border border-border rounded-sm overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+        <div class="border border-border rounded-xl overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
           <div class="relative w-full overflow-x-auto">
             <table class="w-full caption-bottom text-sm">
               <thead>
@@ -176,7 +176,7 @@
                     <td class="p-5 align-middle whitespace-nowrap">
                       <div class="flex flex-wrap items-center gap-1.5">
                         {#each (userItem.roles || []) as roleSlug}
-                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-sm text-[11px] font-heading font-medium capitalize {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-muted text-muted-foreground border border-border'}">
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-heading font-medium capitalize {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-muted text-muted-foreground border border-border'}">
                             {getRoleDisplayName(roleSlug)}
                           </span>
                         {/each}
@@ -214,8 +214,8 @@
         </div>
       {:else}
         <!-- Empty state -->
-        <div class="border border-border rounded-sm bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
-          <div class="w-14 h-14 rounded-sm bg-muted border border-border flex items-center justify-center mb-6">
+        <div class="border border-border rounded-xl bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+          <div class="w-14 h-14 rounded-full bg-muted border border-border flex items-center justify-center mb-6">
             <Users class="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 class="font-heading font-semibold text-xl tracking-tight text-foreground mb-2">No users yet</h3>

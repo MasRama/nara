@@ -164,7 +164,7 @@
           <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       {:else if roles.length}
-        <div class="border border-border rounded-sm overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+        <div class="border border-border rounded-xl overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
           <div class="relative w-full overflow-x-auto">
             <table class="w-full caption-bottom text-sm">
               <thead>
@@ -181,7 +181,7 @@
                   <tr class="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors duration-150">
                     <td class="p-5 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-sm flex items-center justify-center shrink-0 {role.slug === 'admin' ? 'bg-primary/10 border border-primary/20' : 'bg-muted border border-border'}">
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 {role.slug === 'admin' ? 'bg-primary/10 border border-primary/20' : 'bg-muted border border-border'}">
                           {#if role.slug === 'admin'}
                             <ShieldCheck class="w-4 h-4 text-primary" />
                           {:else}
@@ -197,7 +197,7 @@
                       </div>
                     </td>
                     <td class="p-5 align-middle whitespace-nowrap">
-                      <span class="font-mono-accent text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-sm border border-border">{role.slug}</span>
+                      <span class="font-mono-accent text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">{role.slug}</span>
                     </td>
                     <td class="p-5 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-2">
@@ -215,7 +215,7 @@
                               return acc;
                             }, {} as Record<string, number>)
                           ) as [resource, count]}
-                            <span class="text-[10px] px-1.5 py-0.5 bg-muted rounded-sm border border-border text-muted-foreground font-heading">
+                            <span class="text-[10px] px-1.5 py-0.5 bg-muted rounded-full border border-border text-muted-foreground font-heading">
                               {formatResourceName(resource)}: {count}
                             </span>
                           {/each}
@@ -252,8 +252,8 @@
           </div>
         </div>
       {:else}
-        <div class="border border-border rounded-sm bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
-          <div class="w-14 h-14 rounded-sm bg-muted border border-border flex items-center justify-center mb-6">
+        <div class="border border-border rounded-xl bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+          <div class="w-14 h-14 rounded-full bg-muted border border-border flex items-center justify-center mb-6">
             <Shield class="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 class="font-heading font-semibold text-xl tracking-tight text-foreground mb-2">No roles yet</h3>

@@ -62,7 +62,7 @@
   <div use:portal>
     <div {...dialogApi.getBackdropProps()} class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"></div>
     <div {...dialogApi.getPositionerProps()}>
-      <div {...dialogApi.getContentProps()} class="bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-sm border border-border shadow-lg sm:max-w-md font-body overflow-hidden">
+      <div {...dialogApi.getContentProps()} class="bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-xl border border-border shadow-lg sm:max-w-md font-body overflow-hidden">
 
         <div class="px-6 pt-6 pb-5 border-b border-border flex items-start justify-between gap-4">
           <div>
@@ -103,7 +103,7 @@
               <Label class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Roles</Label>
               <div class="grid grid-cols-2 gap-2">
                 {#each availableRoles as role}
-                  <div class="flex items-center gap-3 border border-border rounded-sm p-3 cursor-pointer hover:border-foreground/30 transition-colors">
+                  <div class="flex items-center gap-3 border border-border rounded-xl p-3 cursor-pointer hover:border-foreground/30 transition-colors">
                     <Switch checked={hasRole(role.slug)} onCheckedChange={(c: boolean) => toggleRole(role.slug, c)} id="role-{role.slug}" />
                     <div class="min-w-0">
                       <Label for="role-{role.slug}" class="text-sm font-heading font-medium cursor-pointer capitalize">{role.name}</Label>

@@ -20,8 +20,8 @@
   const showStartEllipsis = $derived(getPageNumbers()[0] > 1);
   const showEndEllipsis = $derived(getPageNumbers()[getPageNumbers().length - 1] < meta.totalPages);
 
-  const linkBase = cn("inline-flex items-center justify-center whitespace-nowrap rounded-sm text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 w-9");
-  const navBtn = cn("inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-sm text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground");
+  const linkBase = cn("inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 w-9");
+  const navBtn = cn("inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-xl text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground");
 </script>
 
 {#if meta.totalPages > 1}

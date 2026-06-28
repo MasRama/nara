@@ -76,7 +76,7 @@
   <div use:portal>
     <div {...dialogApi.getBackdropProps()} class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"></div>
     <div {...dialogApi.getPositionerProps()}>
-      <div {...dialogApi.getContentProps()} class="bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-sm border border-border shadow-lg sm:max-w-lg font-body overflow-hidden">
+      <div {...dialogApi.getContentProps()} class="bg-background fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] rounded-xl border border-border shadow-lg sm:max-w-lg font-body overflow-hidden">
 
         <div class="px-6 pt-6 pb-5 border-b border-border flex items-start justify-between gap-4">
           <div>
@@ -112,7 +112,7 @@
             <div class="flex flex-col gap-3">
               <Label class="text-xs uppercase tracking-widest font-heading text-muted-foreground">Permissions</Label>
               {#each Object.entries(groupedPermissions) as [resource, perms]}
-                <div class="border border-border rounded-sm overflow-hidden">
+                <div class="border border-border rounded-xl overflow-hidden">
                   <div class="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/30">
                     <button type="button" class="flex items-center gap-2 text-xs font-heading uppercase tracking-widest text-foreground cursor-pointer hover:text-primary transition-colors" onclick={() => toggleResourceAll(resource, !isResourceAllChecked(resource))}>
                       {#if isResourceAllChecked(resource)}<CheckSquare class="w-3.5 h-3.5 text-primary" />
@@ -125,7 +125,7 @@
                   <div class="grid grid-cols-2 gap-0">
                     {#each perms as perm}
                       <label class="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-muted/20 transition-colors border-b border-border/50 last:border-b-0 even:border-r-0">
-                        <input type="checkbox" checked={hasPermission(perm.slug)} onchange={(e) => togglePermission(perm.slug, e.currentTarget.checked)} class="rounded-sm border-border accent-primary w-3.5 h-3.5" />
+                        <input type="checkbox" checked={hasPermission(perm.slug)} onchange={(e) => togglePermission(perm.slug, e.currentTarget.checked)} class="rounded-xl border-border accent-primary w-3.5 h-3.5" />
                         <span class="text-xs font-body text-foreground capitalize">{perm.action}</span>
                       </label>
                     {/each}
