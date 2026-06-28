@@ -192,7 +192,7 @@ function checkFile(absPath: string): void {
         const isMiddleware = name.endsWith('Middleware');
         const isKnownUtility = ['logout', 'changePassword', 'changeProfile', 'submitLogin', 'submitRegister',
           'loginPage', 'registerPage', 'permissionsData', 'uploadAsset', 'serveDistAsset',
-          'servePublicAsset', 'googleRedirect', 'googleCallback', 'removeUsers', 'addUser', 'editUser',
+          'servePublicAsset', 'removeUsers', 'addUser', 'editUser',
           'addRole', 'editRole', 'removeRole'].includes(name);
         // Check for verb-only names that should include resource (e.g. "create" without "User")
         const genericVerbs = ['create', 'update', 'delete', 'remove', 'list', 'get', 'find', 'save', 'edit', 'add'];

@@ -21,9 +21,6 @@ const EnvSchema = z.object({
   APP_URL: z.string().default(`http://localhost:${process.env.PORT || SERVER.DEFAULT_PORT}`),
   HAS_CERTIFICATE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
-  GOOGLE_CLIENT_ID: z.string().optional(),
-  GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_REDIRECT_URI: z.string().optional(),
   BACKUP_ENCRYPTION_KEY: z.string().optional(),
   BACKUP_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
 });
@@ -45,9 +42,6 @@ export const env: Env = parsed.data;
 
 export function checkFeatureConfig(envConfig: Env): string[] {
   const warnings: string[] = [];
-  if (!envConfig.GOOGLE_CLIENT_ID || !envConfig.GOOGLE_CLIENT_SECRET) {
-    warnings.push('Google OAuth not configured (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)');
-  }
   if (!envConfig.BACKUP_ENCRYPTION_KEY) {
     warnings.push('Backup encryption not configured (BACKUP_ENCRYPTION_KEY)');
   }
@@ -62,7 +56,6 @@ export function getEnvSummary(envConfig: Env) {
     logLevel: envConfig.LOG_LEVEL,
     hasHttps: envConfig.HAS_CERTIFICATE === 'true',
     features: {
-      googleOAuth: !!(envConfig.GOOGLE_CLIENT_ID && envConfig.GOOGLE_CLIENT_SECRET),
       backup: !!envConfig.BACKUP_ENCRYPTION_KEY,
     },
   };

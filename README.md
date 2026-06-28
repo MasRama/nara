@@ -113,7 +113,7 @@ Server (ultimate-express / uWebSockets.js)
 | Server | ultimate-express (uWebSockets.js, 250k+ req/s) |
 | Frontend | Svelte 5, Inertia.js, Tailwind CSS 4, Zag JS |
 | Database | SQLite via better-sqlite3, raw SQL migrations |
-| Auth | Session-based + Google OAuth + RBAC (roles & permissions) |
+| Auth | Session-based + RBAC (roles & permissions) |
 | Security | CSRF (double-submit cookie), rate limiting, XSS sanitization, security headers, timing-safe comparisons, login throttling |
 | Storage | Local file storage with sharp image processing, magic byte validation |
 | DX | Path aliases, structured logging (Pino), Vitest, Docker-ready |

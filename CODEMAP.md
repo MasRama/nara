@@ -6,9 +6,9 @@
 
 ## Stats
 
-- Files indexed: 113
-- Total lines: 10842
-- Total exports: 278
+- Files indexed: 115
+- Total lines: 11380
+- Total exports: 289
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
 ## File Tree
@@ -21,7 +21,7 @@
 ### app/config/
 
 - `constants.ts` (36L) — SERVER, AUTH, RATE_LIMIT, UPLOAD, CACHE, LOGGING
-- `env.ts` (72L) — env, initEnv, checkFeatureConfig, getEnvSummary, Env
+- `env.ts` (65L) — env, initEnv, checkFeatureConfig, getEnvSummary, Env
 - `index.ts` (18L)
 
 ### app/core/
@@ -43,8 +43,7 @@
 - `assets.ts` (207L) — avatarMiddleware, uploadAsset, serveDistAsset, servePublicAsset
 - `auth.ts` (134L) — loginPage, registerPage, submitLogin, submitRegister, logout, changePassword
 - `home.ts` (17L) — landingPage
-- `index.ts` (7L)
-- `oauth.ts` (93L) — googleRedirect, googleCallback
+- `index.ts` (6L)
 - `roles.ts` (154L) — rolesPage, listRoles, permissionsData, addRole, editRole, removeRole
 - `users.ts` (216L) — dashboardPage, usersPage, profilePage, changeProfile, addUser, editUser, removeUsers
 
@@ -124,7 +123,7 @@
 ### resources/Pages/
 
 - `dashboard.svelte` (223L)
-- `landing.svelte` (307L)
+- `landing.svelte` (332L)
 - `profile.svelte` (213L)
 - `roles.svelte` (283L)
 - `users.svelte` (245L)
@@ -132,8 +131,8 @@
 ### resources/Pages/auth/
 
 - `forgot-password.svelte` (91L)
-- `login.svelte` (179L)
-- `register.svelte` (223L)
+- `login.svelte` (155L)
+- `register.svelte` (199L)
 - `reset-password.svelte` (107L)
 
 ### resources/lib/
@@ -161,13 +160,13 @@
 
 ### routes/
 
-- `web.ts` ★ (51L)
+- `web.ts` ★ (46L)
 
 ### scripts/
 
-- `check-freshness.ts` (160L)
 - `codemap.ts` (247L)
-- `lint-layers.ts` (245L)
+- `gen-resource.ts` (451L) — up, down, find, create, get, update, delete, list, +5
+- `lint-layers.ts` (298L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
 
@@ -177,11 +176,19 @@
 - `02_roles.ts` (39L) — run
 - `03_admin.ts` (24L) — run
 
+### tests/
+
+- `conventions.test.ts` (63L)
+
 ### tests/core/
 
 - `errors.test.ts` (156L)
 - `response.test.ts` (288L)
 - `Router.test.ts` (243L)
+
+### tests/handlers/
+
+- `roles.test.ts` (135L)
 
 ### tests/helpers/
 
@@ -193,6 +200,10 @@
 - `rateLimit.test.ts` (187L)
 - `requestId.test.ts` (64L)
 - `securityHeaders.test.ts` (208L)
+
+### tests/queries/
+
+- `roles.test.ts` (125L)
 
 ### tests/services/
 
@@ -315,11 +326,6 @@
 ### `app/handlers/home.ts`
 
 - `const` **landingPage**
-
-### `app/handlers/oauth.ts`
-
-- `const` **googleRedirect**
-- `const` **googleCallback**
 
 ### `app/handlers/roles.ts`
 
@@ -638,6 +644,22 @@
 - `iface` **UserForm**
 - `iface` **RoleForm**
 
+### `scripts/gen-resource.ts`
+
+- `const` **up**
+- `const` **down**
+- `const` **find**
+- `const` **create**
+- `const` **get**
+- `const` **update**
+- `const` **delete**
+- `const` **list**
+- `const` **add**
+- `const` **edit**
+- `const` **remove**
+- `const` **Create**
+- `type` **Create**
+
 ### `seeds/01_permissions.ts`
 
 - `fn` **run**
@@ -672,7 +694,6 @@
 - `app/handlers/assets.ts` → `@config/constants`, `@core`, `@queries/assets`, `@queries/users`, `@services`, `@services/CacheStore`, `@services/Logger`
 - `app/handlers/auth.ts` → `@core`, `@queries`, `@services/Authenticate`, `@services/Logger`, `@services/LoginThrottle`, `@validators`
 - `app/handlers/home.ts` → `@core`, `@queries`
-- `app/handlers/oauth.ts` → `@config`, `@core`, `@queries`, `@services/Authenticate`, `@services/Logger`
 - `app/handlers/roles.ts` → `@core`, `@queries/users`, `@services/Logger`, `@validators`
 - `app/handlers/users.ts` → `@core`, `@queries/roles`, `@services/Authenticate`, `@services/Logger`, `@validators`
 - `app/middlewares/auth.ts` → `@core`, `@queries`
@@ -715,7 +736,8 @@
 - `resources/Pages/users.svelte` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../Components/Pagination.svelte`, `../Components/UserModal.svelte`, `../types`, `@inertiajs/svelte`, `@lucide/svelte`
 - `resources/types/generated.ts` → `../../app/types/shared`
 - `resources/types/index.ts` → `./types`
-- `routes/web.ts` → `@core`, `@handlers/assets`, `@handlers/auth`, `@handlers/home`, `@handlers/oauth`, `@handlers/roles`, `@handlers/users`, `@middlewares/auth`, `@middlewares/rateLimit`
+- `routes/web.ts` → `@core`, `@handlers/assets`, `@handlers/auth`, `@handlers/home`, `@handlers/roles`, `@handlers/users`, `@middlewares/auth`, `@middlewares/rateLimit`
+- `scripts/gen-resource.ts` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../types`, `@core`, `@inertiajs/svelte`, `@queries`, `@services/Logger`, `@services/SQLite`, `@types`, `@validators`
 - `scripts/migrate.ts` → `@services/Migrator`
 - `scripts/seed.ts` → `@services/Seeder`
 - `seeds/01_permissions.ts` → `../app/services/SQLite`
@@ -724,11 +746,13 @@
 - `server.ts` → `@core`, `@routes/web`
 - `tests/core/response.test.ts` → `../helpers/mocks`
 - `tests/core/Router.test.ts` → `../../app/core/Router`
+- `tests/handlers/roles.test.ts` → `../../app/handlers/roles`, `../helpers/mocks`, `@queries/roles`, `@queries/users`
 - `tests/helpers/mocks.ts` → `../../app/core/types`
 - `tests/middlewares/csrf.test.ts` → `../../app/middlewares/csrf`, `../helpers/mocks`
 - `tests/middlewares/rateLimit.test.ts` → `../../app/middlewares/rateLimit`, `../helpers/mocks`
 - `tests/middlewares/requestId.test.ts` → `../../app/middlewares/requestId`, `../helpers/mocks`
 - `tests/middlewares/securityHeaders.test.ts` → `../../app/middlewares/securityHeaders`, `../helpers/mocks`
+- `tests/queries/roles.test.ts` → `@services/SQLite`
 - `tests/services/Authenticate.test.ts` → `../../app/services/Authenticate`
 - `tests/services/CacheStore.test.ts` → `../../app/services/CacheStore`
 - `tests/services/Logger.test.ts` → `../../app/services/Logger`

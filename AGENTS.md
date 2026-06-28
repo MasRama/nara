@@ -35,7 +35,7 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 
 - **Backend**: ultimate-express (uWebSockets.js) + better-sqlite3
 - **Frontend**: Svelte 5 + Inertia.js + Zag JS (headless UI)
-- **Auth**: Session-based + Google OAuth + RBAC
+- **Auth**: Session-based + RBAC
 - **Validation**: Zod
 
 ## Philosophy

@@ -3,7 +3,6 @@ import * as home from '@handlers/home';
 import * as auth from '@handlers/auth';
 import * as users from '@handlers/users';
 import * as roles from '@handlers/roles';
-import * as oauth from '@handlers/oauth';
 import * as assets from '@handlers/assets';
 import Auth from '@middlewares/auth';
 import { strictRateLimit } from '@middlewares/rateLimit';
@@ -20,10 +19,6 @@ Route.get('/register', auth.registerPage);
 Route.post('/register', strictRateLimit(), auth.submitRegister);
 Route.post('/logout', strictRateLimit(), auth.logout);
 Route.post('/change-password', [Auth], auth.changePassword);
-
-// OAuth
-Route.get('/google/redirect', strictRateLimit(), oauth.googleRedirect);
-Route.get('/google/callback', strictRateLimit(), oauth.googleCallback);
 
 // Protected - Users
 Route.get('/dashboard', [Auth], users.dashboardPage);

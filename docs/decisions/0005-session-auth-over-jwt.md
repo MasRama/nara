@@ -18,7 +18,6 @@ Use session-based authentication:
 - Session ID in HTTP-only cookie (`auth_id`)
 - `Auth` middleware loads user + roles + permissions onto `req.user`
 - Session expiry configurable in `app/config/constants.ts`
-- Google OAuth supported as alternative login method
 
 ## Consequences
 
