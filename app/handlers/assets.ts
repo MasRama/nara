@@ -46,11 +46,11 @@ export const uploadAsset = async (req: NaraRequest, res: NaraResponse) => {
 
   try {
     const file = (req as any).file as { buffer: Buffer; mimetype: string } | undefined;
-    if (!file) return jsonError(res, 'File avatar wajib diisi', 400, 'FILE_REQUIRED');
+    if (!file) return jsonError(res, 'Avatar file is required', 400, 'FILE_REQUIRED');
 
     if (!validateMagicBytes(file.buffer, file.mimetype)) {
       Logger.logSecurity('Invalid file magic bytes', { mimetype: file.mimetype, ip: req.ip });
-      return jsonError(res, 'File tidak valid', 400, 'INVALID_FILE_TYPE');
+      return jsonError(res, 'Invalid file', 400, 'INVALID_FILE_TYPE');
     }
 
     const id = randomUUID();
@@ -86,7 +86,7 @@ export const uploadAsset = async (req: NaraRequest, res: NaraResponse) => {
 
     updateAvatar(userId, stored.url);
 
-    return jsonSuccess(res, 'Avatar berhasil diupload', { url: stored.url });
+    return jsonSuccess(res, 'Avatar uploaded', { url: stored.url });
   } catch (error) {
     const err = error as Error;
     if (err.message === 'INVALID_FILE_TYPE') {

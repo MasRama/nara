@@ -1,40 +1,40 @@
 import { z } from 'zod';
 
 export const LoginSchema = z.object({
-  email: z.string().email('Format email tidak valid'),
-  password: z.string().min(1, 'Password wajib diisi'),
+  email: z.string().email('Invalid email format'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 export const RegisterSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
-  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
   password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
 });
 
 export const ForgotPasswordSchema = z.object({
-  email: z.string().email('Format email tidak valid'),
+  email: z.string().email('Invalid email format'),
 });
 
 export const ResetPasswordSchema = z.object({
-  id: z.string().min(1, 'Token tidak valid'),
+  id: z.string().min(1, 'Invalid token'),
   password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
 });
 
 export const ChangePasswordSchema = z.object({
-  current_password: z.string().min(1, 'Password lama wajib diisi'),
+  current_password: z.string().min(1, 'Current password is required'),
   new_password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
 });
 
 export const CreateUserSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
-  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
   password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
   roles: z.array(z.string()).optional(),
 });
 
 export const UpdateUserSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter').optional(),
-  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()).optional(),
+  email: z.string().email('Invalid email format').transform(v => v.toLowerCase()).optional(),
   password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
   roles: z.array(z.string()).optional(),
 }).refine(
@@ -44,12 +44,12 @@ export const UpdateUserSchema = z.object({
 );
 
 export const DeleteUsersSchema = z.object({
-  ids: z.array(z.string().uuid('Format ID tidak valid')).min(1, 'Minimal satu ID harus dipilih'),
+  ids: z.array(z.string().uuid('Invalid ID format')).min(1, 'At least one ID must be selected'),
 });
 
 export const ChangeProfileSchema = z.object({
   name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
-  email: z.string().email('Format email tidak valid').transform(v => v.toLowerCase()),
+  email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
 });
 
 export const CreateRoleSchema = z.object({

@@ -52,7 +52,7 @@ export function csrf(options: CSRFOptions = {}): NaraMiddleware {
     cookie = {},
     skip,
     skipIfAuthorization = false,
-    errorMessage = 'Token CSRF tidak valid',
+    errorMessage = 'Invalid CSRF token',
   } = options;
 
   const cookieOpts = buildCookieOptions(cookie);

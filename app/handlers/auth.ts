@@ -62,7 +62,7 @@ export const submitLogin = (req: NaraRequest, res: NaraResponse) => {
   LoginThrottle.clearAttempts(identifier, ip);
   Logger.logAuth('login_success', { userId: user.id, ip });
   loginSession(user, req, res);
-  return jsonSuccess(res, 'Login berhasil');
+  return jsonSuccess(res, 'Login successful');
 };
 
 export const submitRegister = (req: NaraRequest, res: NaraResponse) => {
@@ -85,11 +85,11 @@ export const submitRegister = (req: NaraRequest, res: NaraResponse) => {
 
     Logger.logAuth('registration_success', { userId: user.id, ip: req.ip });
     loginSession(user, req, res);
-    return jsonSuccess(res, 'Registrasi berhasil');
+    return jsonSuccess(res, 'Registration successful');
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
       Logger.logSecurity('Registration failed - duplicate', { email, ip: req.ip });
-      return jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL');
+      return jsonError(res, 'Email already in use', 400, 'DUPLICATE_EMAIL');
     }
     throw error;
   }
@@ -99,7 +99,7 @@ export const logout = (req: NaraRequest, res: NaraResponse) => {
   if (req.cookies.auth_id) {
     endSession(req, res);
   }
-  return jsonSuccess(res, 'Logout berhasil');
+  return jsonSuccess(res, 'Logout successful');
 };
 
 export const changePassword = (req: NaraRequest, res: NaraResponse) => {
@@ -115,11 +115,11 @@ export const changePassword = (req: NaraRequest, res: NaraResponse) => {
   const { current_password, new_password } = parsed.data;
 
   const dbUser = findUserById(req.user.id);
-  if (!dbUser) return jsonError(res, 'User tidak ditemukan', 404);
+  if (!dbUser) return jsonError(res, 'User not found', 404);
 
   const valid = comparePassword(current_password, dbUser.password);
   if (!valid) {
-    return jsonError(res, 'Password saat ini tidak valid', 400, 'INVALID_PASSWORD');
+    return jsonError(res, 'Current password is incorrect', 400, 'INVALID_PASSWORD');
   }
 
   updatePassword(req.user.id, hashPassword(new_password));
@@ -129,5 +129,5 @@ export const changePassword = (req: NaraRequest, res: NaraResponse) => {
   loginSession(dbUser, req, res);
   Logger.logAuth('password_changed', { userId: req.user.id, ip: req.ip });
 
-  return jsonSuccess(res, 'Password berhasil diubah');
+  return jsonSuccess(res, 'Password updated');
 };

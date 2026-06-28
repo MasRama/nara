@@ -77,12 +77,12 @@ export const addRole = (req: NaraRequest, res: NaraResponse) => {
       syncRolePermissions(role.id, permIds);
     }
 
-    return jsonCreated(res, 'Role berhasil dibuat', {
+    return jsonCreated(res, 'Role created', {
       role: { ...role, permissions: getRolePermissions(role.id).map(p => p.slug) }
     });
   } catch (error: unknown) {
     Logger.error('Failed to create role', error as Error);
-    return jsonServerError(res, 'Gagal membuat role');
+    return jsonServerError(res, 'Failed to create role');
   }
 };
 
@@ -99,7 +99,7 @@ export const editRole = (req: NaraRequest, res: NaraResponse) => {
   const existing = findRoleById(id);
   if (!existing) return jsonError(res, 'Role not found', 404);
   if (existing.slug === 'admin' && !isAdmin(req.user.id)) {
-    return jsonError(res, 'Tidak dapat mengedit role admin', 403, 'PROTECTED_ROLE');
+    return jsonError(res, 'Cannot edit the admin role', 403, 'PROTECTED_ROLE');
   }
 
   const parsed = UpdateRoleSchema.safeParse(req.body);
@@ -118,15 +118,15 @@ export const editRole = (req: NaraRequest, res: NaraResponse) => {
       syncRolePermissions(id, permIds);
     }
 
-    return jsonSuccess(res, 'Role berhasil diupdate', {
+    return jsonSuccess(res, 'Role updated', {
       role: { ...role, permissions: getRolePermissions(id).map(p => p.slug) }
     });
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
-      return jsonError(res, 'Slug sudah digunakan', 400, 'DUPLICATE_SLUG');
+      return jsonError(res, 'Slug already in use', 400, 'DUPLICATE_SLUG');
     }
     Logger.error('Failed to update role', error as Error);
-    return jsonServerError(res, 'Gagal mengupdate role');
+    return jsonServerError(res, 'Failed to update role');
   }
 };
 
@@ -143,11 +143,11 @@ export const removeRole = (req: NaraRequest, res: NaraResponse) => {
   const existing = findRoleById(id);
   if (!existing) return jsonError(res, 'Role not found', 404);
   if (existing.slug === 'admin') {
-    return jsonError(res, 'Tidak dapat menghapus role admin', 400, 'PROTECTED_ROLE');
+    return jsonError(res, 'Cannot delete the admin role', 400, 'PROTECTED_ROLE');
   }
 
   const deleted = deleteRole(id);
   if (!deleted) return jsonError(res, 'Role not found', 404);
 
-  return jsonSuccess(res, 'Role berhasil dihapus', { deleted: true });
+  return jsonSuccess(res, 'Role deleted', { deleted: true });
 };

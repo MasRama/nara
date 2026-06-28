@@ -34,7 +34,7 @@
 
   async function submitForm(): Promise<void> {
     if (form.password != form.password_confirmation) {
-      Toast("Password dan konfirmasi password harus sama", "error")
+      Toast("Passwords do not match", "error")
       return;
     }
 

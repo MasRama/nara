@@ -79,13 +79,13 @@ export const changeProfile = (req: NaraRequest, res: NaraResponse) => {
 
   try {
     updateUser(req.user.id, { name, email });
-    return jsonSuccess(res, 'Profil berhasil diupdate');
+    return jsonSuccess(res, 'Profile updated');
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
-      return jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL');
+      return jsonError(res, 'Email already in use', 400, 'DUPLICATE_EMAIL');
     }
     Logger.error('Failed to update profile', error as Error);
-    return jsonServerError(res, 'Gagal mengupdate profil');
+    return jsonServerError(res, 'Failed to update profile');
   }
 };
 
@@ -117,15 +117,15 @@ export const addUser = (req: NaraRequest, res: NaraResponse) => {
     }
 
     const userRoles = getUserRoles(user.id);
-    return jsonCreated(res, 'User berhasil dibuat', {
+    return jsonCreated(res, 'User created', {
       user: { id: user.id, name: user.name, email: user.email, roles: userRoles.map(r => r.slug) }
     });
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
-      return jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL');
+      return jsonError(res, 'Email already in use', 400, 'DUPLICATE_EMAIL');
     }
     Logger.error('Failed to create user', error as Error);
-    return jsonServerError(res, 'Gagal membuat user');
+    return jsonServerError(res, 'Failed to create user');
   }
 };
 
@@ -161,7 +161,7 @@ export const editUser = (req: NaraRequest, res: NaraResponse) => {
       if (isSelf) {
         const adminRole = allRoles.find(r => r.slug === 'admin');
         if (adminRole && !roleIds.includes(adminRole.id)) {
-          return jsonError(res, 'Tidak dapat menghapus role admin dari diri sendiri', 400, 'SELF_DEMOTION');
+          return jsonError(res, 'Cannot remove admin role from yourself', 400, 'SELF_DEMOTION');
         }
       }
 
@@ -169,15 +169,15 @@ export const editUser = (req: NaraRequest, res: NaraResponse) => {
     }
 
     const userRoles = getUserRoles(id);
-    return jsonSuccess(res, 'User berhasil diupdate', {
+    return jsonSuccess(res, 'User updated', {
       user: { id, name: user?.name, email: user?.email, roles: userRoles.map(r => r.slug) }
     });
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
-      return jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL');
+      return jsonError(res, 'Email already in use', 400, 'DUPLICATE_EMAIL');
     }
     Logger.error('Failed to update user', error as Error);
-    return jsonServerError(res, 'Gagal mengupdate user');
+    return jsonServerError(res, 'Failed to update user');
   }
 };
 
@@ -194,7 +194,7 @@ export const removeUsers = (req: NaraRequest, res: NaraResponse) => {
 
   // Prevent self-deletion
   if (ids.includes(req.user.id)) {
-    return jsonError(res, 'Tidak dapat menghapus akun sendiri', 400, 'SELF_DELETE');
+    return jsonError(res, 'Cannot delete your own account', 400, 'SELF_DELETE');
   }
 
   // Prevent deleting the last admin
@@ -204,12 +204,12 @@ export const removeUsers = (req: NaraRequest, res: NaraResponse) => {
     const adminIds = adminUsers.map(u => u.id);
     const remainingAdmins = adminIds.filter(aid => !ids.includes(aid));
     if (remainingAdmins.length === 0) {
-      return jsonError(res, 'Tidak dapat menghapus admin terakhir', 400, 'LAST_ADMIN');
+      return jsonError(res, 'Cannot delete the last admin', 400, 'LAST_ADMIN');
     }
   }
 
   const deleted = deleteUsers(ids);
 
   Logger.warn('Users deleted', { adminId: req.user.id, deletedIds: ids, count: deleted, ip: req.ip });
-  return jsonSuccess(res, 'Users berhasil dihapus', { deleted });
+  return jsonSuccess(res, 'Users deleted', { deleted });
 };
