@@ -109,7 +109,7 @@
       <div class="lg:col-span-5 relative">
         <div in:fly={{ y: 30, duration: 1100, delay: 300 }} class="relative aspect-[4/5] w-full max-w-md ml-auto overflow-hidden rounded-sm bg-muted">
           <img
-            src="https://picsum.photos/seed/nara-quiet-craft-desk/1000/1250"
+            src="/landing/hero.svg"
             alt="A quiet workspace, morning light"
             loading="eager"
             class="w-full h-full object-cover grayscale contrast-105 brightness-95 transition-transform duration-[1.2s] hover:scale-[1.03]"
@@ -138,7 +138,7 @@
     <div class="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
       <div class="relative aspect-[5/6] overflow-hidden rounded-sm bg-muted order-1 lg:order-1">
         <img
-          src="https://picsum.photos/seed/nara-paper-plan/1100/1320"
+          src="/landing/idea.svg"
           alt="A plan sketched on paper"
           loading="lazy"
           class="w-full h-full object-cover grayscale contrast-105 brightness-95"
@@ -178,7 +178,7 @@
         <!-- 01 large, image -->
         <article class="md:col-span-3 md:row-span-2 relative overflow-hidden rounded-sm bg-muted group">
           <img
-            src="https://picsum.photos/seed/nara-flat-structure/900/900"
+            src="/landing/principle.svg"
             alt="Flat, open layout"
             loading="lazy"
             class="absolute inset-0 w-full h-full object-cover grayscale contrast-105 brightness-90 transition-transform duration-700 group-hover:scale-105"
@@ -231,7 +231,7 @@
   <!-- ───────────────────────── IMAGE BAND (full-width) ───────────────────────── -->
   <section class="relative h-[60vh] min-h-[420px] overflow-hidden">
     <img
-      src="https://picsum.photos/seed/nara-making-light/2000/1200"
+      src="/landing/band.svg"
       alt="Hands at work, soft light"
       loading="lazy"
       class="absolute inset-0 w-full h-full object-cover grayscale contrast-110 brightness-90"
