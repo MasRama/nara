@@ -1,7 +1,7 @@
 # ==============================================================================
 # Stage 1: Install ALL dependencies (dev + prod) for building
 # ==============================================================================
-FROM node:20-slim AS deps
+FROM node:22-slim AS deps
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ RUN npm run build
 # ==============================================================================
 # Stage 3: Production image — minimal, secure, production-only
 # ==============================================================================
-FROM node:20-slim AS production
+FROM node:22-slim AS production
 
 WORKDIR /app
 
