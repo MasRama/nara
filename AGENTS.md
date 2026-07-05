@@ -108,7 +108,8 @@ Server (ultimate-express)
 | [`.agents/skills/sqlite-usage.md`](./.agents/skills/sqlite-usage.md) | Writing SQL queries, transactions |
 | [`.agents/skills/auth-rbac.md`](./.agents/skills/auth-rbac.md) | Auth guards, permission checks |
 | [`.agents/skills/inertia-patterns.md`](./.agents/skills/inertia-patterns.md) | Frontend pages, navigation, API calls |
-| [`.agents/skills/error-handling.md`](./.agents/skills/error-handling.md) | Error responses, validation |
+| [`.agents/skills/api-contract.md`](./.agents/skills/api-contract.md) | Error responses, validation, API contract |
+| [`.agents/skills/pentest-pattern.md`](./.agents/skills/pentest-pattern.md) | OWASP Top 10 security testing, POCs, finding format |
 
 ## Database Schema
 
@@ -259,7 +260,7 @@ Runs layer lint (blocking) on every commit.
 | Add new endpoint | `app/handlers/` + `routes/web.ts` | [`crud-pattern.md`](./.agents/skills/crud-pattern.md) |
 | Add database query | `app/queries/` | [`sqlite-usage.md`](./.agents/skills/sqlite-usage.md) |
 | Add data model | `app/types/models.ts` + `migrations/` | [`crud-pattern.md`](./.agents/skills/crud-pattern.md) |
-| Add Zod schema | `app/validators/schemas.ts` + export from `index.ts` | [`error-handling.md`](./.agents/skills/error-handling.md) |
+| Add Zod schema | `app/validators/schemas.ts` + export from `index.ts` | [`api-contract.md`](./.agents/skills/api-contract.md) |
 | Auth logic | `app/services/Authenticate.ts` | [`auth-rbac.md`](./.agents/skills/auth-rbac.md) |
 | Permission checks | `app/queries/users.ts` (isAdmin, hasPermission) | [`auth-rbac.md`](./.agents/skills/auth-rbac.md) |
 | File upload | `app/handlers/assets.ts` (multer + sharp + Storage) | — |

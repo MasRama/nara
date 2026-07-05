@@ -19,6 +19,7 @@ Skills are deep-dive procedures loaded on demand. Each skill focuses on one patt
 | [`api-contract.md`](./api-contract.md) | Response shapes, error codes, error handling patterns, Zod validation |
 | [`dependency-policy.md`](./dependency-policy.md) | Allowed vs banned dependencies (16 categories), adding new deps |
 | [`common-pitfalls.md`](./common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |
+| [`pentest-pattern.md`](./pentest-pattern.md) | OWASP Top 10 security testing — POCs, mitigation inventory, finding format |
 
 ## Skill Format
 

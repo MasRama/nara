@@ -45,6 +45,7 @@ describe('convention: skills index', () => {
     'api-contract.md',
     'dependency-policy.md',
     'common-pitfalls.md',
+    'pentest-pattern.md',
   ];
 
   it('all skill files exist', () => {
