@@ -3,7 +3,7 @@
  *
  * Rules (from AGENTS.md anti-patterns + naming conventions):
  *   L1. Handlers must NOT import @services/SQLite directly — go through @queries
- *   L2. Handlers must NOT import @services/* except Authenticate, Logger, Storage
+ *   L2. Handlers must NOT import @services/* except Authenticate, Logger, Storage, LoginThrottle, CacheStore
  *   L3. Page handlers (exports ending in *Page) must return res.inertia, not jsonSuccess/jsonError
  *   L4. Data handlers (exports NOT ending in *Page) must return jsonSuccess/jsonError/jsonCreated/etc., not res.inertia
  *   L5. Frontend must NOT use fetch() — use api(() => axios.method())
@@ -93,10 +93,10 @@ function checkFile(absPath: string): void {
     // L2: Handlers must NOT import @services/* except Authenticate, Logger, Storage
     if (isHandler) {
       const match = line.match(/from\s+['"]@services\/(\w+)['"]/);
-      if (match && !['Authenticate', 'Logger', 'Storage', 'Session', 'LoginThrottle', 'CacheStore'].includes(match[1])) {
+      if (match && !['Authenticate', 'Logger', 'Storage', 'LoginThrottle', 'CacheStore'].includes(match[1])) {
         violations.push({
           rule: 'L2', file: rel, line: lineNum, text: trimmed,
-          message: `Handlers must not import @services/${match[1]}. Fix: only Authenticate, Logger, Storage, Session, LoginThrottle, CacheStore are allowed. See .agents/skills/crud-pattern.md`,
+          message: `Handlers must not import @services/${match[1]}. Fix: only Authenticate, Logger, Storage, LoginThrottle, CacheStore are allowed. See .agents/skills/crud-pattern.md`,
         });
       }
     }
