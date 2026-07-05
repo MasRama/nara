@@ -7,7 +7,7 @@
 ## Stats
 
 - Files indexed: 115
-- Total lines: 11339
+- Total lines: 11385
 - Total exports: 289
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -165,7 +165,7 @@
 ### scripts/
 
 - `codemap.ts` (247L)
-- `gen-resource.ts` (453L) — up, down, find, create, get, update, delete, list, +5
+- `gen-resource.ts` (499L) — up, down, find, create, get, update, delete, list, +5
 - `lint-layers.ts` (298L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
@@ -737,7 +737,7 @@
 - `resources/types/generated.ts` → `../../app/types/shared`
 - `resources/types/index.ts` → `./types`
 - `routes/web.ts` → `@core`, `@handlers/assets`, `@handlers/auth`, `@handlers/home`, `@handlers/roles`, `@handlers/users`, `@middlewares/auth`, `@middlewares/rateLimit`
-- `scripts/gen-resource.ts` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../types`, `@core`, `@inertiajs/svelte`, `@queries`, `@services/Logger`, `@services/SQLite`, `@types`, `@validators`
+- `scripts/gen-resource.ts` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../types`, `@core`, `@handlers/${camelPlural}`, `@inertiajs/svelte`, `@queries`, `@services/Logger`, `@services/SQLite`, `@types`, `@validators`
 - `scripts/migrate.ts` → `@services/Migrator`
 - `scripts/seed.ts` → `@services/Seeder`
 - `seeds/01_permissions.ts` → `../app/services/SQLite`
