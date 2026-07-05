@@ -17,7 +17,9 @@ function readFile(relPath: string): string {
 describe('convention: AGENTS.md presence', () => {
   const expectedDirs = [
     '',                    // root
+    'app/core',
     'app/handlers',
+    'app/middlewares',
     'app/queries',
     'app/services',
     'migrations',
