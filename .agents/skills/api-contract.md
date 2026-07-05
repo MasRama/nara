@@ -19,7 +19,7 @@ Every JSON endpoint returns one of two shapes. No exceptions.
 { success: false, message: string, code?: string, errors?: Record<string, string[]> }
 ```
 
-Messages: Indonesian for user-facing (ADR 0010).
+Messages: English for user-facing (ADR 0010).
 
 ## Response Helpers (handlers)
 
@@ -78,8 +78,8 @@ Don't invent new codes — use these.
 | `CONFLICT` | 409 | `throw conflictError('Email exists')` |
 | `TOO_MANY_REQUESTS` | 429 | `throw tooManyRequestsError('Slow down', 60)` |
 | `INTERNAL_ERROR` | 500 | `jsonServerError(res)` |
-| `DUPLICATE_EMAIL` | 400 | `jsonError(res, 'Email sudah digunakan', 400, 'DUPLICATE_EMAIL')` |
-| `DUPLICATE_ROLE` | 400 | `jsonError(res, 'Role sudah ada', 400, 'DUPLICATE_ROLE')` |
+| `DUPLICATE_EMAIL` | 400 | `jsonError(res, 'Email already in use', 400, 'DUPLICATE_EMAIL')` |
+| `DUPLICATE_ROLE` | 400 | `jsonError(res, 'Role already exists', 400, 'DUPLICATE_ROLE')` |
 | `RATE_LIMIT_EXCEEDED` | 429 | Auto-set by rateLimit middleware |
 
 ## Type Guards
@@ -98,8 +98,8 @@ isUniqueConstraintError(error)  // checks SQLITE_CONSTRAINT_UNIQUE
 export const editProduct = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   const product = findProductById(req.params.id);
-  if (!product) return jsonNotFound(res, 'Produk tidak ditemukan');
-  return jsonSuccess(res, 'Produk berhasil diupdate', { product });
+  if (!product) return jsonNotFound(res, 'Product not found');
+  return jsonSuccess(res, 'Product updated', { product });
 };
 ```
 
@@ -125,13 +125,13 @@ export const addProduct = (req: NaraRequest, res: NaraResponse) => {
 
   try {
     const product = createProduct({ id: randomUUID(), ...parsed.data });
-    return jsonCreated(res, 'Produk berhasil dibuat', { product });
+    return jsonCreated(res, 'Product created', { product });
   } catch (error: unknown) {
     if (isUniqueConstraintError(error)) {
-      return jsonError(res, 'Produk sudah ada', 400, 'DUPLICATE_PRODUCT');
+      return jsonError(res, 'Product already exists', 400, 'DUPLICATE_PRODUCT');
     }
     Logger.error('Failed to create product', error as Error);
-    return jsonServerError(res, 'Gagal membuat produk');
+    return jsonServerError(res, 'Failed to create product');
   }
 };
 ```
@@ -178,5 +178,5 @@ Toast notifications fire automatically unless `{ showSuccessToast: false }` is p
 - **Do** use Zod schemas for all input validation
 - **Don't** catch errors in queries — let them bubble to handlers
 - **Don't** use `console.log` — use `Logger`
-- **Don't** mix languages — Indonesian for user-facing messages
+- **Don't** mix languages — English for user-facing messages (ADR 0010)
 - **Don't** expose internal error details (stack traces, SQL) in responses

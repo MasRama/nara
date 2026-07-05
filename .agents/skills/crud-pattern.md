@@ -109,7 +109,9 @@ export const updateProduct = (id: string, data: Partial<Omit<Product, 'id' | 'cr
 };
 
 export const deleteProducts = (ids: string[]): void => {
-  SQLite.all<Product>('DELETE FROM products WHERE id IN (?)', ids);
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  SQLite.run(`DELETE FROM products WHERE id IN (${placeholders})`, ids);
 };
 ```
 
@@ -228,21 +230,14 @@ See [`inertia-patterns.md`](./inertia-patterns.md) for full frontend pattern.
 
 ```bash
 npm run migrate          # run the new migration
-npm run check            # lint + typecheck + lint:layers + tests + freshness
+npm run check            # lint + typecheck + lint:layers + tests
 ```
 
 If `lint:layers` fails, read the error message — it includes the fix and skill reference.
-If `check:freshness` warns, update the AGENTS.md for the directory you changed.
 
-### 9. Register Inertia page (if new page)
+### 9. Inertia pages are auto-discovered
 
-```typescript
-// resources/app.ts — add the page to Inertia's page map
-const pages = {
-  // ...existing pages
-  products: () => import('./Pages/products.svelte'),
-};
-```
+`resources/app.ts` uses `import.meta.glob('./Pages/**/*.svelte', { eager: true })` — any `.svelte` file under `resources/Pages/` is automatically registered as an Inertia page by filename. No manual page map registration needed. Just create the `.svelte` file and reference its name (without extension) in `res.inertia('pagename', { ... })`.
 
 ## Do / Don't
 

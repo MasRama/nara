@@ -17,7 +17,7 @@ Any handler that needs to check if a user is logged in, has a role, or has a per
 import { jsonError } from '@core';
 import { isAdmin, hasPermission } from '@queries';
 
-export const show = (req: NaraRequest, res: NaraResponse) => {
+export const showProfile = (req: NaraRequest, res: NaraResponse) => {
   // 1. Check login
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
 
