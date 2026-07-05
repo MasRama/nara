@@ -21,8 +21,6 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 | `users.svelte` | User management (CRUD table + role assignment) |
 | `auth/login.svelte` | Login form |
 | `auth/register.svelte` | Registration form |
-| `auth/forgot-password.svelte` | Forgot password |
-| `auth/reset-password.svelte` | Password reset |
 
 ## Page Pattern (Svelte 5 + Inertia + axios)
 

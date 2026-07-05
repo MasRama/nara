@@ -121,7 +121,6 @@ Server (ultimate-express)
 | `user_roles` | id (uuid), user_id, role_id, created_at | junction: `users` ↔ `roles` |
 | `role_permissions` | id (uuid), role_id, permission_id, created_at | junction: `roles` ↔ `permissions` |
 | `assets` | id (uuid), name, type, url, mime_type, size, s3_key, user_id | belongs to `users` |
-| `password_reset_tokens` | id (auto), email, token, expires_at, used | standalone |
 
 - All IDs: `crypto.randomUUID()` (except auto-increment tables)
 - All timestamps: `biginteger` unix milliseconds via `Date.now()`
