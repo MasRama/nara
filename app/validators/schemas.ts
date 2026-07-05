@@ -6,9 +6,9 @@ export const LoginSchema = z.object({
 });
 
 export const RegisterSchema = z.object({
-  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
   email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
-  password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be at most 100 characters'),
 });
 
 export const ForgotPasswordSchema = z.object({
@@ -17,30 +17,30 @@ export const ForgotPasswordSchema = z.object({
 
 export const ResetPasswordSchema = z.object({
   id: z.string().min(1, 'Invalid token'),
-  password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be at most 100 characters'),
 });
 
 export const ChangePasswordSchema = z.object({
   current_password: z.string().min(1, 'Current password is required'),
-  new_password: z.string().min(8, 'Password minimal 8 karakter').max(100, 'Password maksimal 100 karakter'),
+  new_password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be at most 100 characters'),
 });
 
 export const CreateUserSchema = z.object({
-  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
   email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
-  password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
   roles: z.array(z.string()).optional(),
 });
 
 export const UpdateUserSchema = z.object({
-  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter').optional(),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters').optional(),
   email: z.string().email('Invalid email format').transform(v => v.toLowerCase()).optional(),
-  password: z.string().min(8, 'Password minimal 8 karakter').optional().or(z.literal('')),
+  password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
   roles: z.array(z.string()).optional(),
 }).refine(
   data => data.name !== undefined || data.email !== undefined ||
           data.password !== undefined || data.roles !== undefined,
-  { message: 'Minimal satu field harus diisi untuk update', path: ['_root'] }
+  { message: 'At least one field is required to update', path: ['_root'] }
 );
 
 export const DeleteUsersSchema = z.object({
@@ -48,30 +48,30 @@ export const DeleteUsersSchema = z.object({
 });
 
 export const ChangeProfileSchema = z.object({
-  name: z.string().min(2, 'Nama minimal 2 karakter').max(100, 'Nama maksimal 100 karakter'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
   email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
 });
 
 export const CreateRoleSchema = z.object({
-  name: z.string().min(2, 'Nama role minimal 2 karakter').max(100, 'Nama role maksimal 100 karakter'),
-  slug: z.string().min(2, 'Slug minimal 2 karakter').max(100, 'Slug maksimal 100 karakter')
-    .regex(/^[a-z0-9-]+$/, 'Slug hanya boleh huruf kecil, angka, dan tanda hubung')
+  name: z.string().min(2, 'Role name must be at least 2 characters').max(100, 'Role name must be at most 100 characters'),
+  slug: z.string().min(2, 'Slug must be at least 2 characters').max(100, 'Slug must be at most 100 characters')
+    .regex(/^[a-z0-9-]+$/, 'Slug may only contain lowercase letters, numbers, and hyphens')
     .transform(v => v.toLowerCase()),
-  description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable().or(z.literal('')),
+  description: z.string().max(500, 'Description must be at most 500 characters').optional().nullable().or(z.literal('')),
   permissions: z.array(z.string()).optional().default([]),
 });
 
 export const UpdateRoleSchema = z.object({
-  name: z.string().min(2, 'Nama role minimal 2 karakter').max(100, 'Nama role maksimal 100 karakter').optional(),
-  slug: z.string().min(2, 'Slug minimal 2 karakter').max(100, 'Slug maksimal 100 karakter')
-    .regex(/^[a-z0-9-]+$/, 'Slug hanya boleh huruf kecil, angka, dan tanda hubung')
+  name: z.string().min(2, 'Role name must be at least 2 characters').max(100, 'Role name must be at most 100 characters').optional(),
+  slug: z.string().min(2, 'Slug must be at least 2 characters').max(100, 'Slug must be at most 100 characters')
+    .regex(/^[a-z0-9-]+$/, 'Slug may only contain lowercase letters, numbers, and hyphens')
     .transform(v => v.toLowerCase()).optional(),
-  description: z.string().max(500, 'Deskripsi maksimal 500 karakter').optional().nullable().or(z.literal('')),
+  description: z.string().max(500, 'Description must be at most 500 characters').optional().nullable().or(z.literal('')),
   permissions: z.array(z.string()).optional(),
 }).refine(
   data => data.name !== undefined || data.slug !== undefined ||
           data.description !== undefined || data.permissions !== undefined,
-  { message: 'Minimal satu field harus diisi untuk update', path: ['_root'] }
+  { message: 'At least one field is required to update', path: ['_root'] }
 );
 
 export type LoginInput = z.infer<typeof LoginSchema>;
