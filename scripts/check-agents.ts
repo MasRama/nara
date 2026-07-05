@@ -21,7 +21,9 @@ interface Check {
 
 // Directories with an AGENTS.md whose "Structure" table lists source files.
 const CHECKS: Check[] = [
+  { agentsFile: 'app/core/AGENTS.md', dir: 'app/core', ext: ['.ts'] },
   { agentsFile: 'app/handlers/AGENTS.md', dir: 'app/handlers', ext: ['.ts'] },
+  { agentsFile: 'app/middlewares/AGENTS.md', dir: 'app/middlewares', ext: ['.ts'] },
   { agentsFile: 'app/queries/AGENTS.md', dir: 'app/queries', ext: ['.ts'] },
   { agentsFile: 'app/services/AGENTS.md', dir: 'app/services', ext: ['.ts'] },
   { agentsFile: 'resources/Components/AGENTS.md', dir: 'resources/Components', ext: ['.svelte'] },

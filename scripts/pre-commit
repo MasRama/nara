@@ -1,5 +1,5 @@
 #!/bin/sh
-# Nara pre-commit hook — runs layer boundary lint.
+# Nara pre-commit hook — runs layer boundary lint + AGENTS.md accuracy.
 # Install: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 
 echo "── Nara pre-commit check ──"
@@ -7,6 +7,12 @@ echo "── Nara pre-commit check ──"
 npx ts-node scripts/lint-layers.ts
 if [ $? -ne 0 ]; then
   echo "❌ Layer boundary lint failed. Fix violations above."
+  exit 1
+fi
+
+npx ts-node scripts/check-agents.ts
+if [ $? -ne 0 ]; then
+  echo "❌ AGENTS.md accuracy check failed. Update the Structure table(s) above."
   exit 1
 fi
 
