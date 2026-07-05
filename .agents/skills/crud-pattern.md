@@ -17,18 +17,21 @@ When adding a new resource to Nara. The pattern is linear and 1:1 — each layer
 npm run gen:resource products -- --fields="name:string,price:number"
 ```
 
-Scaffolds all 7 files with correct conventions. Then customize the generated code. Use this skill as reference for what each file does and why.
+Scaffolds all 10 files with correct conventions. Then customize the generated code. Use this skill as reference for what each file does and why.
 
-## The 7-Layer Stack
+## The 10-File Stack
 
 ```
 1. app/types/models.ts          → interface Product { ... }
 2. migrations/YYYY...ts         → CREATE TABLE products (...)
 3. app/queries/products.ts      → findProductById, createProduct, getProductsPaginated
 4. app/validators/schemas.ts    → CreateProductSchema (Zod)
-5. app/handlers/products.ts     → productsPage, listProducts, addProduct, editProduct, removeProducts
-6. routes/web.ts                → Route.get/post/put/delete('/products', ...)
-7. resources/Pages/products.svelte → table + form + toast
+5. app/validators/index.ts      → barrel export (updated)
+6. app/handlers/products.ts     → productsPage, listProducts, addProduct, editProduct, removeProducts
+7. routes/web.ts                → Route.get/post/put/delete('/products', ...)
+8. resources/Pages/products.svelte → table + form + toast
+9. app/handlers/index.ts        → barrel export (updated)
+10. app/queries/index.ts        → barrel export (updated)
 ```
 
 ## Pattern

@@ -25,7 +25,7 @@ routes/web.ts            →  Route.get/post/put/delete('/products', ...)
 Pages/products.svelte    →  Full UI with table, forms, toast notifications
 ```
 
-Seven files. Correct conventions. The machine did it all — you just asked.
+Ten files. Correct conventions. The machine did it all — you just asked.
 
 ---
 
@@ -56,9 +56,9 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 
 | Layer | What | Why it matters |
 |---|---|---|
-| **Context** | `AGENTS.md` (root + 9 nested) + 7 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
-| **Topology** | `CODEMAP.md` (auto-generated, ~290 exports) | The machine knows what exists before searching. Reads one file instead of the whole tree. |
-| **Scaffolding** | `npm run gen:resource` | Seven files scaffolded with correct conventions. The machine can't make structural mistakes. |
+| **Context** | `AGENTS.md` (root + 11 nested) + 9 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
+| **Topology** | `CODEMAP.md` (auto-generated index) | The machine knows what exists before searching. Reads one file instead of the whole tree. |
+| **Scaffolding** | `npm run gen:resource` | Ten files scaffolded with correct conventions. The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 200+ tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
 | **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
 | **CI** | 5 steps: typecheck → layer lint → AGENTS accuracy → security baseline → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
@@ -78,6 +78,48 @@ npm run dev
 Open [http://localhost:5555](http://localhost:5555). You're live.
 
 > Migrations run automatically on startup. To reset: `npm run migrate:fresh`
+
+---
+
+## How to talk to the machine.
+
+Nara is built to be driven by natural language. The machine reads `AGENTS.md` for conventions, loads skills on demand, and verifies its own work with `npm run check`. A good prompt is short and names the resource + fields.
+
+**Add a full-stack resource:**
+
+```
+Add a products CRUD with name (string), price (number), and description (text).
+```
+
+The machine runs `npm run gen:resource products -- --fields="name:string,price:number,description:text"`, then `npm run migrate`, then `npm run check`. You review the diff.
+
+**Add a field to an existing resource:**
+
+```
+Add an is_active boolean column to users. Default true. Update the form and table.
+```
+
+**Fix a bug:**
+
+```
+The /users page shows raw JSON instead of HTML. Fix it.
+```
+
+The machine reads `lint:layers` rule L3, finds the handler returning `jsonSuccess` from a `*Page` handler, switches to `res.inertia()`.
+
+**Security audit:**
+
+```
+Run an OWASP Top 10 audit on the auth flow. Report findings in the standard format.
+```
+
+The machine loads the `pentest-pattern` skill and runs the POCs against the running server.
+
+**Rules of thumb:**
+- Name the resource and fields — don't say "add a thing"
+- One resource per prompt — the machine stays focused
+- Let the machine run `npm run check` itself — don't paste the output back
+- Review the diff, don't just trust it
 
 ---
 
@@ -170,8 +212,8 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 |---|---|---|
 | [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
 | [`CODEMAP.md`](./CODEMAP.md) | Codebase topology (auto-generated index) | Before searching the codebase |
-| [`routes/web.ts`](./routes/web.ts) | All routes (46 lines) | Before adding routes |
-| [`.agents/skills/`](./.agents/skills/SKILL.md) | 7 deep-dive skills (CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls) | When touching that pattern |
+| [`routes/web.ts`](./routes/web.ts) | All routes in one file | Before adding routes |
+| [`.agents/skills/`](./.agents/skills/SKILL.md) | 9 deep-dive skills (CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls, pentest, testing) | When touching that pattern |
 | [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |
 
 ---

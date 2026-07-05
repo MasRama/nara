@@ -11,9 +11,9 @@ authority: canon
 
 Read in this order (each builds on the previous):
 
-1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read (111 files, 278 exports). Know what exists before searching.
+1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read. Know what exists before searching.
 2. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
-3. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file (51 lines). API surface at a glance.
+3. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file. API surface at a glance.
 4. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
 5. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
 
@@ -215,7 +215,7 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 |---|---|---|
 | `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security baseline + tests | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
-| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (7 files) | No |
+| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (10 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 
 ### CODEMAP.md
