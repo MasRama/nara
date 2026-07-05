@@ -38,6 +38,9 @@ jobs:
       - name: Security baseline
         run: npm run check:security
 
+      - name: Markdown links
+        run: npm run check:links
+
       - name: CODEMAP freshness
         run: |
           npm run codemap
