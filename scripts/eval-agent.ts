@@ -42,6 +42,7 @@ const CREATED_FILES = [
   'app/queries/evaltests.ts',
   'app/handlers/evaltests.ts',
   'resources/Pages/evaltests.svelte',
+  'tests/handlers/evaltests.test.ts',
 ];
 
 // Migration file has a timestamp prefix — matched by glob.
@@ -128,6 +129,7 @@ function verifyFiles(): void {
   record('queries file created', fileExists('app/queries/evaltests.ts'), 'app/queries/evaltests.ts');
   record('handlers file created', fileExists('app/handlers/evaltests.ts'), 'app/handlers/evaltests.ts');
   record('page file created', fileExists('resources/Pages/evaltests.svelte'), 'resources/Pages/evaltests.svelte');
+  record('test file created', fileExists('tests/handlers/evaltests.test.ts'), 'tests/handlers/evaltests.test.ts');
 
   // Migration file (timestamp-prefixed)
   const migDir = path.join(ROOT, 'migrations');
@@ -154,6 +156,7 @@ function verifyFiles(): void {
 function verifyConventions(): void {
   const handlerContent = fs.readFileSync(path.join(ROOT, 'app/handlers/evaltests.ts'), 'utf-8');
   const queryContent = fs.readFileSync(path.join(ROOT, 'app/queries/evaltests.ts'), 'utf-8');
+  const testContent = fs.readFileSync(path.join(ROOT, 'tests/handlers/evaltests.test.ts'), 'utf-8');
 
   // Handler naming: descriptive, not generic
   record('handler has evaltestsPage', /export const evaltestsPage/.test(handlerContent), 'evaltestsPage');
@@ -177,6 +180,14 @@ function verifyConventions(): void {
 
   // IN-clause pattern
   record('IN-clause builds placeholders', /placeholders.*map.*\?/.test(queryContent), 'manual placeholder build');
+
+  // Test file: mocks pre-wired, covers auth + validation + happy path
+  record('test mocks @queries/evaltests', /vi\.mock\('@queries\/evaltests'/.test(testContent), 'vi.mock @queries/evaltests');
+  record('test mocks @queries/users', /vi\.mock\('@queries\/users'/.test(testContent), 'vi.mock @queries/users');
+  record('test mocks @services/Logger', /vi\.mock\('@services\/Logger'/.test(testContent), 'vi.mock @services/Logger');
+  record('test covers 401 auth guard', /returns 401 if no user/.test(testContent), '401 auth guard test');
+  record('test covers 422 validation', /returns 422 if validation fails/.test(testContent), '422 validation test');
+  record('test covers 201 create happy path', /creates .+ and returns 201/.test(testContent), '201 create test');
 }
 
 function verifyGates(): void {

@@ -16,6 +16,12 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+npx ts-node scripts/check-types.ts
+if [ $? -ne 0 ]; then
+  echo "❌ Type safety check failed. New \`any\` detected — use proper types or update baseline."
+  exit 1
+fi
+
 npx ts-node scripts/codemap.ts >/dev/null 2>&1
 if ! git diff --exit-code CODEMAP.md >/dev/null 2>&1; then
   git add CODEMAP.md

@@ -58,10 +58,10 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 |---|---|---|
 | **Context** | `AGENTS.md` (root + 11 nested) + 9 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
 | **Topology** | `CODEMAP.md` (auto-generated index) | The machine knows what exists before searching. Reads one file instead of the whole tree. |
-| **Scaffolding** | `npm run gen:resource` | Ten files scaffolded with correct conventions. The machine can't make structural mistakes. |
+| **Scaffolding** | `npm run gen:resource` | Eleven files scaffolded with correct conventions (including test stub). The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 200+ tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
 | **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
-| **CI** | 7 steps: typecheck → layer lint → AGENTS accuracy → security → links → file size → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
+| **CI** | 9 steps: typecheck → layer lint → AGENTS accuracy → security → links → file size → type safety → eval harness → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
 | **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
 | **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
 ---
@@ -139,6 +139,7 @@ npm run check
   ├── check:security         (7 dangerous pattern checks)
   ├── check:links            (markdown links resolve)
   ├── check:filesize         (no file over 500 lines)
+  ├── check:types            (no new `any` beyond baseline)
   └── vitest                 (266 tests)
   │
   ├── All green → commit
@@ -153,7 +154,9 @@ The error messages are written for the agent, not just the human. Each violation
 npm run eval
 ```
 
-Runs a full end-to-end test of the AI-first tooling: generates a resource with `gen:resource`, verifies all 10 files follow conventions (naming, barrel exports, route entries, raw SQL, no ORM), runs the gates on the generated code, then cleans up — leaving zero trace. 32 checks, all must pass.
+Runs a full end-to-end test of the AI-first tooling: generates a resource with `gen:resource`, verifies all 11 files follow conventions (naming, barrel exports, route entries, raw SQL, no ORM, test stub with pre-wired mocks), runs the gates on the generated code, then cleans up — leaving zero trace. 39 checks, all must pass.
+
+This runs in CI on every push — if `gen:resource` or any gate breaks, CI fails before merge.
 
 ---
 

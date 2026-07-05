@@ -59,6 +59,7 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 12. **CODEMAP stays fresh** — regenerated after any source change. Stale CODEMAP blocks CI. (check:freshness)
 13. **Files stay small** — source files under 500 lines. Split before they grow into monsters. (check:filesize)
 14. **Docs links resolve** — no broken markdown links in AGENTS.md, skills, or ADRs. (check:links)
+15. **No new `any`** — type safety is non-negotiable. Existing `any` is baselined; new `any` blocks CI. Use proper types. (check:types)
 
 ## Mental Model
 
@@ -227,10 +228,12 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security + links + file size + tests | No (run manually) |
+| `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
-| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (10 files) | No |
+| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (11 files incl. test stub) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
+| `npm run check:types` | Block new `any`/`as any`/`@ts-ignore` beyond baseline. Update: `--update` flag. | Yes (CI) |
+| `npm run eval` | End-to-end eval: generate resource → verify conventions → run gates → cleanup (39 checks). Runs in CI. | Yes (CI) |
 
 ### CODEMAP.md
 
@@ -242,13 +245,13 @@ npm run codemap
 
 ### Resource Generator
 
-Scaffold a full-stack resource (types → migration → queries → validator → handler → route → page) following all conventions:
+Scaffold a full-stack resource (types → migration → queries → validator → handler → route → page → test stub) following all conventions:
 
 ```bash
 npm run gen:resource products -- --fields="name:string,price:number"
 ```
 
-Generates 6+ files with correct naming (ADR 0009), raw SQL (ADR 0001), functions (ADR 0002), and descriptive handler names. Zero structural mistakes possible.
+Generates 11 files with correct naming (ADR 0009), raw SQL (ADR 0001), functions (ADR 0002), descriptive handler names, and a test stub with pre-wired mocks. Zero structural mistakes possible.
 
 ### Layer Boundary Lint
 

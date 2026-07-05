@@ -17,6 +17,7 @@
  *   8. resources/Pages/<name>.svelte → table + form page
  *   9. app/handlers/index.ts         → barrel export (updated)
  *  10. app/queries/index.ts          → barrel export (updated)
+ *  11. tests/handlers/<name>.test.ts → handler test stub with pre-wired mocks
  *
  * All names follow ADR 0009 (descriptive handler names).
  * All SQL follows ADR 0001 (raw SQL, no ORM).
@@ -347,6 +348,119 @@ export type Create${singular}Input = z.infer<typeof Create${singular}Schema>;
 `;
 }
 
+function generateTest(name: string, fields: Field[]): string {
+  const singular = toPascal(singularize(name));
+  const camelSingular = toCamel(singularize(name));
+  const camelPlural = toCamel(name);
+  const firstField = fields[0];
+  const sampleBody = firstField
+    ? `{ ${firstField.name}: ${firstField.type === 'number' ? '42' : firstField.type === 'boolean' ? 'true' : "'test'"} }`
+    : '{}';
+
+  return `/**
+ * Handler tests — ${camelPlural}.ts
+ *
+ * Pattern mirrors tests/handlers/roles.test.ts:
+ * 1. Mock @queries/${camelPlural} + @queries (handlers depend on queries, not real DB)
+ * 2. Use mockRequest/mockResponse from tests/helpers/mocks
+ * 3. Call handler, assert _status + _body
+ * 4. Cover: auth guard, validation, happy path, error path
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mockRequest, mockResponse, mockUser } from '../helpers/mocks';
+
+vi.mock('@queries/${camelPlural}', () => ({
+  find${singular}ById: vi.fn(),
+  create${singular}: vi.fn(),
+  get${singular}sPaginated: vi.fn(() => ({ data: [], total: 0 })),
+  update${singular}: vi.fn(),
+  delete${singular}s: vi.fn(() => undefined),
+}));
+
+vi.mock('@queries/users', () => ({
+  isAdmin: vi.fn(() => false),
+  hasPermission: vi.fn(() => false),
+}));
+
+vi.mock('@queries', () => ({
+  findSessionById: vi.fn(),
+  findUserById: vi.fn(),
+}));
+
+vi.mock('@services/Logger', () => ({
+  default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}));
+
+import { list${singular}s, add${singular}, edit${singular}, remove${singular}s } from '../../app/handlers/${camelPlural}';
+import { create${singular}, update${singular}, delete${singular}s } from '@queries/${camelPlural}';
+import { isAdmin, hasPermission } from '@queries/users';
+
+describe('${camelPlural} handler', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  describe('list${singular}s', () => {
+    it('returns 401 if no user', () => {
+      const req = mockRequest();
+      const res = mockResponse();
+      list${singular}s(req as any, res as any);
+      expect(res._status).toBe(401);
+    });
+
+    it('returns paginated data', () => {
+      const req = mockRequest({ user: mockUser() });
+      const res = mockResponse();
+      (isAdmin as any).mockReturnValue(true);
+      list${singular}s(req as any, res as any);
+      expect(res._status).toBe(200);
+      expect(res._body.success).toBe(true);
+    });
+  });
+
+  describe('add${singular}', () => {
+    it('returns 401 if no user', () => {
+      const req = mockRequest({ body: ${sampleBody} });
+      const res = mockResponse();
+      add${singular}(req as any, res as any);
+      expect(res._status).toBe(401);
+    });
+
+    it('returns 422 if validation fails', () => {
+      const req = mockRequest({ user: mockUser(), body: {} });
+      const res = mockResponse();
+      add${singular}(req as any, res as any);
+      expect(res._status).toBe(422);
+    });
+
+    it('creates ${camelSingular} and returns 201', () => {
+      const req = mockRequest({ user: mockUser(), body: ${sampleBody} });
+      const res = mockResponse();
+      (isAdmin as any).mockReturnValue(true);
+      (create${singular} as any).mockReturnValue({ id: 'test-id', created_at: Date.now(), updated_at: Date.now() });
+      add${singular}(req as any, res as any);
+      expect(res._status).toBe(201);
+      expect(res._body.success).toBe(true);
+    });
+  });
+
+  describe('remove${singular}s', () => {
+    it('returns 401 if no user', () => {
+      const req = mockRequest();
+      const res = mockResponse();
+      remove${singular}s(req as any, res as any);
+      expect(res._status).toBe(401);
+    });
+
+    it('returns 400 if no ids', () => {
+      const req = mockRequest({ user: mockUser() });
+      const res = mockResponse();
+      remove${singular}s(req as any, res as any);
+      expect(res._status).toBe(400);
+    });
+  });
+});
+`;
+}
+
 function appendToFile(filePath: string, content: string): void {
   const full = path.join(ROOT, filePath);
   if (fs.existsSync(full)) {
@@ -503,7 +617,12 @@ function main(): void {
   updateAgentsStructureTable('resources/Pages/AGENTS.md', `${camelPlural}.svelte`, `${camelPlural} management (CRUD table)`);
   console.log(`  ✓ resources/Pages/AGENTS.md (added Structure row)`);
 
-  // 8. Update handler index
+  // 8. Test file
+  const testFile = `tests/handlers/${camelPlural}.test.ts`;
+  writeFileSync(testFile, generateTest(name, fields));
+  console.log(`  ✓ ${testFile}`);
+
+  // 9. Update handler index
   const indexPath = path.join(ROOT, 'app/handlers/index.ts');
   let indexContent = fs.readFileSync(indexPath, 'utf-8');
   if (!indexContent.includes(`'./${camelPlural}'`)) {
@@ -512,7 +631,7 @@ function main(): void {
     console.log(`  ✓ app/handlers/index.ts (added export)`);
   }
 
-  // 9. Update queries index
+  // 10. Update queries index
   const queriesIndexPath = path.join(ROOT, 'app/queries/index.ts');
   if (fs.existsSync(queriesIndexPath)) {
     let qIndex = fs.readFileSync(queriesIndexPath, 'utf-8');

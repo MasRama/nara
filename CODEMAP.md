@@ -10,8 +10,8 @@
 
 ## Stats
 
-- Files indexed: 119
-- Total lines: 12320
+- Files indexed: 120
+- Total lines: 12630
 - Total exports: 289
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -170,9 +170,10 @@
 - `check-freshness.ts` (61L)
 - `check-links.ts` (126L)
 - `check-security.ts` (166L)
+- `check-types.ts` (180L)
 - `codemap.ts` (274L)
-- `eval-agent.ts` (259L) — evaltestsPage, listEvaltests, addEvaltest, editEvaltest, removeEvaltests, Evaltest
-- `gen-resource.ts` (534L) — up, down, find, create, get, update, delete, list, +5
+- `eval-agent.ts` (270L) — evaltestsPage, listEvaltests, addEvaltest, editEvaltest, removeEvaltests, Evaltest
+- `gen-resource.ts` (653L) — up, down, find, create, get, update, delete, list, +5
 - `lint-layers.ts` (335L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
@@ -744,7 +745,7 @@
 - `resources/types/index.ts` → `./types`
 - `routes/web.ts` → `@core`, `@handlers/assets`, `@handlers/auth`, `@handlers/home`, `@handlers/roles`, `@handlers/users`, `@middlewares/auth`, `@middlewares/rateLimit`
 - `scripts/eval-agent.ts` → `@handlers/evaltests`
-- `scripts/gen-resource.ts` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../types`, `@core`, `@handlers/${camelPlural}`, `@inertiajs/svelte`, `@queries`, `@services/Logger`, `@services/SQLite`, `@types`, `@validators`
+- `scripts/gen-resource.ts` → `../../app/handlers/${camelPlural}`, `../Components/Button.svelte`, `../Components/Header.svelte`, `../helpers/mocks`, `../types`, `@core`, `@handlers/${camelPlural}`, `@inertiajs/svelte`, `@queries`, `@queries/${camelPlural}`, `@queries/users`, `@services/Logger`, `@services/SQLite`, `@types`, `@validators`
 - `scripts/migrate.ts` → `@services/Migrator`
 - `scripts/seed.ts` → `@services/Seeder`
 - `seeds/01_permissions.ts` → `../app/services/SQLite`
