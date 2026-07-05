@@ -13,7 +13,7 @@ Most starter kits fight the machine. Layers of abstraction it cannot read. Class
 
 Say to your machine: *"Add a products CRUD."*
 
-That's all. The machine reads `AGENTS.md` for conventions, loads the `crud-pattern` skill for the workflow, checks `SCHEMA.md` for table shapes, writes the types, the migration, the queries, the validator, the handlers, the routes, the page — then runs `npm run check` to verify its own work. You review. You ship.
+That's all. The machine reads `AGENTS.md` for conventions, loads the `crud-pattern` skill for the workflow, checks `migrations/` for table shapes, writes the types, the migration, the queries, the validator, the handlers, the routes, the page — then runs `npm run check` to verify its own work. You review. You ship.
 
 ```
 types/models.ts          →  interface Product { ... }
@@ -57,14 +57,13 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 | Layer | What | Why it matters |
 |---|---|---|
 | **Context** | `AGENTS.md` (root + 7 nested) + 7 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
-| **Topology** | `CODEMAP.md` (111 files indexed, 278 exports) | The machine knows what exists before searching. Reads one file instead of 111. |
+| **Topology** | `CODEMAP.md` (auto-generated, ~290 exports) | The machine knows what exists before searching. Reads one file instead of the whole tree. |
 | **Scaffolding** | `npm run gen:resource` | Seven files scaffolded with correct conventions. The machine can't make structural mistakes. |
-| **Enforcement** | `npm run lint:layers` (17 rules) + 254 tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
+| **Enforcement** | `npm run lint:layers` (17 rules) + 252 tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
 | **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
 | **CI** | 3 steps: typecheck → layer lint → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
 | **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
 | **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
-
 ---
 
 ## Begin.
@@ -131,7 +130,7 @@ npm run check              # lint + typecheck + layer lint + tests
 npm run lint:layers        # 17 layer boundary + naming + import direction rules
 
 # Topology
-npm run codemap            # regenerate CODEMAP.md (111 files, 278 exports)
+npm run codemap            # regenerate CODEMAP.md (auto-indexed)
 ```
 
 ---
@@ -170,8 +169,8 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 | File | For | Read when |
 |---|---|---|
 | [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
-| [`CODEMAP.md`](./CODEMAP.md) | Codebase topology (111 files, 278 exports) | Before searching the codebase |
-| [`routes/web.ts`](./routes/web.ts) | All routes (51 lines) | Before adding routes |
+| [`CODEMAP.md`](./CODEMAP.md) | Codebase topology (auto-generated index) | Before searching the codebase |
+| [`routes/web.ts`](./routes/web.ts) | All routes (46 lines) | Before adding routes |
 | [`.agents/skills/`](./.agents/skills/SKILL.md) | 7 deep-dive skills (CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls) | When touching that pattern |
 | [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |
 
