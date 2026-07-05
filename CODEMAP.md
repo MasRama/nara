@@ -6,9 +6,9 @@
 
 ## Stats
 
-- Files indexed: 115
-- Total lines: 11385
-- Total exports: 289
+- Files indexed: 112
+- Total lines: 11123
+- Total exports: 283
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
 ## File Tree
@@ -83,18 +83,17 @@
 ### app/types/
 
 - `models.ts` (66L) — User, Session, Role, Permission, Asset, UserRole, RolePermission
-- `shared.ts` (86L) — User, Role, RoleInfo, Permission, Session, PaginationMeta, PaginatedResponse, ApiSuccessResponse, +3
+- `shared.ts` (84L) — User, Role, RoleInfo, Permission, Session, PaginationMeta, PaginatedResponse, ApiSuccessResponse, +3
 
 ### app/validators/
 
-- `index.ts` (42L) — zodToErrors
-- `schemas.ts` (88L) — LoginSchema, RegisterSchema, ForgotPasswordSchema, ResetPasswordSchema, ChangePasswordSchema, CreateUserSchema, UpdateUserSchema, DeleteUsersSchema, +14
+- `index.ts` (38L) — zodToErrors
+- `schemas.ts` (77L) — LoginSchema, RegisterSchema, ChangePasswordSchema, CreateUserSchema, UpdateUserSchema, DeleteUsersSchema, ChangeProfileSchema, CreateRoleSchema, +10
 
 ### migrations/
 
 - `20230513055909_users.ts` (16L) — up, down
 - `20230514062913_sessions.ts` (18L) — up, down
-- `20240101000001_create_password_reset_tokens.ts` (16L) — up, down
 - `20250110233301_assets.ts` (23L) — up, down
 - `20260214120000_create_roles.ts` (13L) — up, down
 - `20260214120001_create_permissions.ts` (15L) — up, down
@@ -130,10 +129,8 @@
 
 ### resources/Pages/auth/
 
-- `forgot-password.svelte` (91L)
-- `login.svelte` (134L)
+- `login.svelte` (131L)
 - `register.svelte` (178L)
-- `reset-password.svelte` (107L)
 
 ### resources/lib/
 
@@ -178,7 +175,7 @@
 
 ### tests/
 
-- `conventions.test.ts` (63L)
+- `conventions.test.ts` (66L)
 
 ### tests/core/
 
@@ -216,7 +213,7 @@
 
 ### tests/validators/
 
-- `schemas.test.ts` (172L)
+- `schemas.test.ts` (141L)
 
 
 ## Public API Index
@@ -537,8 +534,6 @@
 
 - `const` **LoginSchema**
 - `const` **RegisterSchema**
-- `const` **ForgotPasswordSchema**
-- `const` **ResetPasswordSchema**
 - `const` **ChangePasswordSchema**
 - `const` **CreateUserSchema**
 - `const` **UpdateUserSchema**
@@ -548,8 +543,6 @@
 - `const` **UpdateRoleSchema**
 - `type` **LoginInput**
 - `type` **RegisterInput**
-- `type` **ForgotPasswordInput**
-- `type` **ResetPasswordInput**
 - `type` **ChangePasswordInput**
 - `type` **CreateUserInput**
 - `type` **UpdateUserInput**
@@ -564,11 +557,6 @@
 - `const` **down**
 
 ### `migrations/20230514062913_sessions.ts`
-
-- `const` **up**
-- `const` **down**
-
-### `migrations/20240101000001_create_password_reset_tokens.ts`
 
 - `const` **up**
 - `const` **down**
@@ -716,7 +704,7 @@
 - `app/services/Seeder.ts` → `./Logger`, `./SQLite`
 - `app/services/Storage.ts` → `./Logger`
 - `app/services/View.ts` → `@services/CacheStore`
-- `app/types/shared.ts` → `../../app/types/shared`, `@types/shared`
+- `app/types/shared.ts` → `../types`
 - `resources/app.ts` → `@inertiajs/svelte`
 - `resources/Components/Can.svelte` → `@inertiajs/svelte`
 - `resources/Components/DarkModeToggle.svelte` → `./Button.svelte`, `@lucide/svelte`
@@ -725,10 +713,8 @@
 - `resources/Components/RoleModal.svelte` → `../types`, `./Button.svelte`, `./Input.svelte`, `./Label.svelte`, `./Switch.svelte`, `@lucide/svelte`, `@zag-js/dialog`, `@zag-js/svelte`
 - `resources/Components/Switch.svelte` → `@zag-js/svelte`, `@zag-js/switch`
 - `resources/Components/UserModal.svelte` → `../types`, `./Button.svelte`, `./Input.svelte`, `./Label.svelte`, `./Switch.svelte`, `@lucide/svelte`, `@zag-js/dialog`, `@zag-js/svelte`
-- `resources/Pages/auth/forgot-password.svelte` → `../../Components/Button.svelte`, `../../Components/DarkModeToggle.svelte`, `../../Components/Input.svelte`, `../../Components/Label.svelte`, `../../Components/NaraIcon.svelte`, `@inertiajs/svelte`
 - `resources/Pages/auth/login.svelte` → `../../Components/Button.svelte`, `../../Components/DarkModeToggle.svelte`, `../../Components/Input.svelte`, `../../Components/Label.svelte`, `@inertiajs/svelte`, `@lucide/svelte`
 - `resources/Pages/auth/register.svelte` → `../../Components/Button.svelte`, `../../Components/DarkModeToggle.svelte`, `../../Components/Input.svelte`, `../../Components/Label.svelte`, `@inertiajs/svelte`, `@lucide/svelte`
-- `resources/Pages/auth/reset-password.svelte` → `../../Components/Button.svelte`, `../../Components/DarkModeToggle.svelte`, `../../Components/Input.svelte`, `../../Components/Label.svelte`, `../../Components/NaraIcon.svelte`, `@inertiajs/svelte`
 - `resources/Pages/dashboard.svelte` → `../Components/Header.svelte`, `../types`, `@inertiajs/svelte`, `@lucide/svelte`
 - `resources/Pages/landing.svelte` → `../Components/Button.svelte`, `../Components/DarkModeToggle.svelte`, `@inertiajs/svelte`, `@lucide/svelte`
 - `resources/Pages/profile.svelte` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../Components/Input.svelte`, `../Components/Label.svelte`, `@lucide/svelte`, `@zag-js/svelte`, `@zag-js/tabs`
