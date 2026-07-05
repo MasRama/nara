@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "Request middlewares — auth, csrf, rateLimit, securityHeaders, inputSanitize, requestId, requestLogger, renderer. Wiring order and per-route usage"
+tags: [middlewares, auth, csrf, rate-limit, security-headers, xss, sanitize, logging]
 ---
 
 # Middlewares

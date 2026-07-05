@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "TypeScript migration files with raw SQL strings. Each exports up/down. Naming: YYYYMMDDHHMMSS_description.ts"
+tags: [migrations, sql, schema, database, ddl]
 ---
 
 # Migrations

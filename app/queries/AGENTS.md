@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "Raw SQL functions — the only layer that touches SQLite. Static SQL via template literals, dynamic SQL via ? params, IN-clause and pagination patterns"
+tags: [queries, sql, sqlite, database, crud, pagination, transactions]
 ---
 
 # Queries

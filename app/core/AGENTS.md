@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "Framework foundation — App bootstrap, Router, response helpers, error helpers, request/response types, Inertia adapter"
+tags: [core, app, router, response, errors, types, adapter, bootstrap]
 ---
 
 # Core

@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "Reusable Svelte 5 UI components — Button, Input, Label, Switch, Badge, Modal, Header, Pagination, Can. Zag JS for interactive primitives"
+tags: [components, svelte, ui, zag-js, button, modal, header, pagination]
 ---
 
 # Components

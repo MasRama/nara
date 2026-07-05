@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "Frontend TypeScript types. Shared types re-exported from app/types/shared.ts. Frontend-only form mappers and type guards in forms.ts"
+tags: [types, frontend, forms, type-guards, shared-types, typescript]
 ---
 
 # Types

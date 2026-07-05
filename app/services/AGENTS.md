@@ -1,5 +1,7 @@
 ---
 authority: canon
+description: "Infrastructure services — SQLite wrapper, Authenticate, Logger, Storage, CacheStore, LoginThrottle, View, Migrator, Seeder. Functions, no classes"
+tags: [services, sqlite, auth, logger, storage, cache, migration, seed, infrastructure]
 ---
 
 # Services
