@@ -56,7 +56,7 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 
 | Layer | What | Why it matters |
 |---|---|---|
-| **Context** | `AGENTS.md` (root + 7 nested) + 7 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
+| **Context** | `AGENTS.md` (root + 9 nested) + 7 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
 | **Topology** | `CODEMAP.md` (auto-generated, ~290 exports) | The machine knows what exists before searching. Reads one file instead of the whole tree. |
 | **Scaffolding** | `npm run gen:resource` | Seven files scaffolded with correct conventions. The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 252 tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
