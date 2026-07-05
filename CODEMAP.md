@@ -10,8 +10,8 @@
 
 ## Stats
 
-- Files indexed: 116
-- Total lines: 11782
+- Files indexed: 117
+- Total lines: 11935
 - Total exports: 283
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -165,10 +165,11 @@
 
 ### scripts/
 
-- `check-agents.ts` (122L)
+- `check-agents.ts` (124L)
 - `check-freshness.ts` (61L)
+- `check-links.ts` (126L)
 - `check-security.ts` (166L)
-- `codemap.ts` (251L)
+- `codemap.ts` (274L)
 - `gen-resource.ts` (503L) — up, down, find, create, get, update, delete, list, +5
 - `lint-layers.ts` (335L)
 - `migrate.ts` (35L)
@@ -182,7 +183,7 @@
 
 ### tests/
 
-- `conventions.test.ts` (68L)
+- `conventions.test.ts` (70L)
 
 ### tests/core/
 
@@ -754,3 +755,16 @@
 - `tests/services/LoginThrottle.test.ts` → `../../app/services/LoginThrottle`
 - `tests/services/SQLite.test.ts` → `../../app/services/SQLite`
 - `tests/services/Storage.test.ts` → `../../app/services/Storage`
+
+## ADR Index
+
+- [`docs/decisions/0001-raw-sql-over-orm.md`](docs/decisions/0001-raw-sql-over-orm.md) — ADR 0001: Raw SQL over ORM
+- [`docs/decisions/0002-functions-over-classes.md`](docs/decisions/0002-functions-over-classes.md) — ADR 0002: Functions over classes
+- [`docs/decisions/0003-inertia-over-separate-api.md`](docs/decisions/0003-inertia-over-separate-api.md) — ADR 0003: Inertia.js over separate API + SPA
+- [`docs/decisions/0004-sqlite-over-postgres.md`](docs/decisions/0004-sqlite-over-postgres.md) — ADR 0004: SQLite over PostgreSQL for starter kit
+- [`docs/decisions/0005-session-auth-over-jwt.md`](docs/decisions/0005-session-auth-over-jwt.md) — ADR 0005: Session-based auth over JWT
+- [`docs/decisions/0006-zod-over-joi.md`](docs/decisions/0006-zod-over-joi.md) — ADR 0006: Zod over Joi for validation
+- [`docs/decisions/0007-zag-js-over-custom-ui.md`](docs/decisions/0007-zag-js-over-custom-ui.md) — ADR 0007: Zag JS over custom UI primitives
+- [`docs/decisions/0008-agents-md-over-readme.md`](docs/decisions/0008-agents-md-over-readme.md) — ADR 0008: AGENTS.md as primary AI context
+- [`docs/decisions/0009-descriptive-handler-names.md`](docs/decisions/0009-descriptive-handler-names.md) — ADR 0009: Descriptive handler names over REST conventions
+- [`docs/decisions/0010-english-error-messages.md`](docs/decisions/0010-english-error-messages.md) — ADR 0010: English for user-facing messages

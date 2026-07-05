@@ -188,6 +188,25 @@ function formatImportGraph(entries: FileEntry[]): string {
   return lines.join('\n');
 }
 
+function collectAdrs(): Array<{ file: string; title: string }> {
+  const dir = path.join(ROOT, 'docs', 'decisions');
+  let entries: fs.Dirent[] = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return []; }
+  const out: Array<{ file: string; title: string }> = [];
+  for (const e of entries) {
+    if (!e.isFile() || !e.name.endsWith('.md') || e.name === 'README.md') continue;
+    const content = fs.readFileSync(path.join(dir, e.name), 'utf-8');
+    const titleMatch = content.match(/^#\s+(ADR\s+\d+:\s*.+)$/m);
+    out.push({ file: `docs/decisions/${e.name}`, title: titleMatch ? titleMatch[1] : e.name });
+  }
+  return out.sort((a, b) => a.file.localeCompare(b.file));
+}
+
+function formatAdrIndex(adrs: Array<{ file: string; title: string }>): string {
+  if (adrs.length === 0) return '_(no ADRs found)_';
+  return adrs.map(a => `- [\`${a.file}\`](${a.file}) — ${a.title}`).join('\n');
+}
+
 function main(): void {
   const files = walk(ROOT).sort();
   const entries: FileEntry[] = [];
@@ -240,6 +259,10 @@ ${formatPublicApi(entries)}
 ## Internal Import Graph
 
 ${formatImportGraph(entries) || '_(no internal imports)_'}
+
+## ADR Index
+
+${formatAdrIndex(collectAdrs())}
 `;
 
   fs.writeFileSync(OUTPUT, md);
