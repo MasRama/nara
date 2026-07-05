@@ -10,5 +10,11 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+npx ts-node scripts/codemap.ts >/dev/null 2>&1
+if ! git diff --exit-code CODEMAP.md >/dev/null 2>&1; then
+  git add CODEMAP.md
+  echo "✓ CODEMAP.md regenerated and staged (was stale)."
+fi
+
 echo "✓ Pre-commit check passed."
 exit 0

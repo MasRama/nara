@@ -32,6 +32,11 @@ jobs:
       - name: Layer boundary lint (17 rules)
         run: npm run lint:layers
 
+      - name: CODEMAP freshness
+        run: |
+          npm run codemap
+          git diff --exit-code CODEMAP.md || (echo "::error::CODEMAP.md is stale. Run 'npm run codemap' locally and commit." && exit 1)
+
       - name: Tests
         run: npm test
 
