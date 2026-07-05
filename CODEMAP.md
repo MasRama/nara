@@ -11,7 +11,7 @@
 ## Stats
 
 - Files indexed: 119
-- Total lines: 12317
+- Total lines: 12320
 - Total exports: 289
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -80,7 +80,7 @@
 - `LoginThrottle.ts` (130L)
 - `Migrator.ts` (141L) — migrate, migrateRollback, migrateStatus, migrateFresh
 - `Seeder.ts` (51L) — seed
-- `SQLite.ts` (117L)
+- `SQLite.ts` (120L)
 - `Storage.ts` (104L) — configure, put, putFile, get, exists, del, url, filePath, +3
 - `View.ts` (62L) — view
 

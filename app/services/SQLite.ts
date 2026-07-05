@@ -15,10 +15,13 @@ if (existsSync(prodEnvPath)) {
 
 const defaultDbFile = process.env.NODE_ENV === 'production'
   ? 'database/production.sqlite3'
-  : 'database/dev.sqlite3';
+  : process.env.NODE_ENV === 'test'
+    ? ':memory:'
+    : 'database/dev.sqlite3';
 const dbFile = process.env.DB_FILE || defaultDbFile;
-const nativeDb = new Database(resolve(process.cwd(), dbFile));
+const nativeDb = new Database(dbFile === ':memory:' ? ':memory:' : resolve(process.cwd(), dbFile));
 
+nativeDb.pragma('busy_timeout = 5000');
 nativeDb.pragma('journal_mode = WAL');
 nativeDb.pragma('synchronous = NORMAL');
 nativeDb.pragma('foreign_keys = ON');
