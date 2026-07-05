@@ -1,6 +1,6 @@
 {
   "name": "nara",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "AI-first TypeScript full-stack starter kit. ultimate-express + Svelte 5 + Inertia.js + SQLite. Raw SQL, plain functions, zero ORM. Auth, RBAC, CSRF, rate limiting, structured logging, file storage, and a complete user management UI.",
   "main": "server.ts",
