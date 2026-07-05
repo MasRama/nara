@@ -159,7 +159,9 @@ export const update${singular} = (id: string, data: Partial<Omit<${singular}, 'i
 };
 
 export const delete${singular}s = (ids: string[]): void => {
-  SQLite.all<${singular}>('DELETE FROM ${tableName} WHERE id IN (?)', ids);
+  if (ids.length === 0) return;
+  const placeholders = ids.map(() => '?').join(',');
+  SQLite.run(\`DELETE FROM ${tableName} WHERE id IN (\${placeholders})\`, ids);
 };
 `;
 }
@@ -208,10 +210,10 @@ export const add${singular} = (req: NaraRequest, res: NaraResponse) => {
   if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
   try {
     const item = create${singular}({ id: randomUUID(), ...parsed.data });
-    return jsonCreated(res, '${singular} berhasil dibuat', { item });
+    return jsonCreated(res, '${singular} created', { item });
   } catch (error: unknown) {
     Logger.error('Failed to create ${camelSingular}', error as Error);
-    return jsonServerError(res, 'Gagal membuat ${camelSingular}');
+    return jsonServerError(res, 'Failed to create ${camelSingular}');
   }
 };
 
@@ -223,10 +225,10 @@ export const edit${singular} = (req: NaraRequest, res: NaraResponse) => {
   if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
   try {
     const item = update${singular}(id, parsed.data);
-    return jsonSuccess(res, '${singular} berhasil diupdate', { item });
+    return jsonSuccess(res, '${singular} updated', { item });
   } catch (error: unknown) {
     Logger.error('Failed to update ${camelSingular}', error as Error);
-    return jsonServerError(res, 'Gagal mengupdate ${camelSingular}');
+    return jsonServerError(res, 'Failed to update ${camelSingular}');
   }
 };
 
@@ -236,10 +238,10 @@ export const remove${singular}s = (req: NaraRequest, res: NaraResponse) => {
   if (!ids || !Array.isArray(ids)) return jsonError(res, 'IDs required', 400);
   try {
     delete${singular}s(ids);
-    return jsonSuccess(res, '${singular}s berhasil dihapus');
+    return jsonSuccess(res, '${singular}s deleted');
   } catch (error: unknown) {
     Logger.error('Failed to delete ${camelPlural}', error as Error);
-    return jsonServerError(res, 'Gagal menghapus ${camelSingular}');
+    return jsonServerError(res, 'Failed to delete ${camelSingular}');
   }
 };
 `;
@@ -270,7 +272,7 @@ function generatePage(name: string): string {
   import Header from '../Components/Header.svelte';
   import axios from 'axios';
   import { api } from '$lib/api';
-  import type { ${singular}, PaginationMeta } from '../types';
+  import type { ${singular}, PaginationMeta, User } from '../types';
   import Button from '../Components/Button.svelte';
 
   interface Props {
@@ -281,7 +283,7 @@ function generatePage(name: string): string {
   }
 
   let { ${camelPlural} = [], total = 0, page = 1, limit = 10 }: Props = $props();
-  const currentUser = $derived(inertiaPage.props.user as any);
+  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 
   let items = $state<${singular}[]>(${camelPlural});
   let isLoading = $state(false);
