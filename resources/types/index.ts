@@ -7,8 +7,8 @@
  * import { User, UserForm, PaginationMeta } from './types';
  */
 
-// Generated types from backend
-export * from './generated';
+// Shared types re-exported from backend + frontend-only form helpers
+export * from './forms';
 
 // Add custom frontend-only types below
 // export * from './custom';

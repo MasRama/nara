@@ -12,12 +12,12 @@ Frontend TypeScript type definitions. Shared types are sourced from `app/types/s
 
 | File | Purpose |
 |------|---------|
-| `generated.ts` | Re-exports shared types from `app/types/shared.ts` + frontend-only types (forms, helpers) |
+| `forms.ts` | Re-exports shared types from `app/types/shared.ts` + frontend-only types (forms, helpers) |
 | `index.ts` | Barrel export + custom frontend types |
 
 ## Single Source of Truth
 
-Shared types (`User`, `Role`, `Permission`, `Session`, `PaginationMeta`, `ApiResponse`, etc.) live in **`app/types/shared.ts`** and are re-exported from `generated.ts`. When backend types change, update `app/types/shared.ts` — the frontend automatically gets the changes.
+Shared types (`User`, `Role`, `Permission`, `Session`, `PaginationMeta`, `ApiResponse`, etc.) live in **`app/types/shared.ts`** and are re-exported from `forms.ts`. When backend types change, update `app/types/shared.ts` — the frontend automatically gets the changes.
 
 Database model types with sensitive fields (`password`, `remember_me_token`) stay in `app/types/models.ts` and are **never** exposed to the frontend.
 
@@ -51,8 +51,7 @@ export interface CreateProductForm {
 }
 
 // resources/types/index.ts
-export * from "./generated";
-export * from "./forms"; // add here
+export * from "./forms";
 ```
 
 ## Import Pattern
@@ -65,6 +64,6 @@ import type { User, PaginationMeta, UserForm } from "../types";
 ## Conventions
 
 - Shared types → `app/types/shared.ts` (single source for backend + frontend)
-- Frontend-only types (forms, helpers) → `generated.ts` or new `.ts` file
+- Frontend-only types (forms, helpers) → `forms.ts` or new `.ts` file
 - Custom types → new `.ts` file → export from `index.ts`
 - Database models with sensitive fields → `app/types/models.ts` (backend only, never exposed)
