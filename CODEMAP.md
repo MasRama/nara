@@ -10,9 +10,9 @@
 
 ## Stats
 
-- Files indexed: 118
-- Total lines: 12027
-- Total exports: 283
+- Files indexed: 119
+- Total lines: 12317
+- Total exports: 289
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
 ## File Tree
@@ -171,7 +171,8 @@
 - `check-links.ts` (126L)
 - `check-security.ts` (166L)
 - `codemap.ts` (274L)
-- `gen-resource.ts` (503L) — up, down, find, create, get, update, delete, list, +5
+- `eval-agent.ts` (259L) — evaltestsPage, listEvaltests, addEvaltest, editEvaltest, removeEvaltests, Evaltest
+- `gen-resource.ts` (534L) — up, down, find, create, get, update, delete, list, +5
 - `lint-layers.ts` (335L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
@@ -642,6 +643,15 @@
 - `iface` **UserForm**
 - `iface` **RoleForm**
 
+### `scripts/eval-agent.ts`
+
+- `const` **evaltestsPage**
+- `const` **listEvaltests**
+- `const` **addEvaltest**
+- `const` **editEvaltest**
+- `const` **removeEvaltests**
+- `iface` **Evaltest**
+
 ### `scripts/gen-resource.ts`
 
 - `const` **up**
@@ -733,6 +743,7 @@
 - `resources/types/forms.ts` → `../../app/types/shared`
 - `resources/types/index.ts` → `./types`
 - `routes/web.ts` → `@core`, `@handlers/assets`, `@handlers/auth`, `@handlers/home`, `@handlers/roles`, `@handlers/users`, `@middlewares/auth`, `@middlewares/rateLimit`
+- `scripts/eval-agent.ts` → `@handlers/evaltests`
 - `scripts/gen-resource.ts` → `../Components/Button.svelte`, `../Components/Header.svelte`, `../types`, `@core`, `@handlers/${camelPlural}`, `@inertiajs/svelte`, `@queries`, `@services/Logger`, `@services/SQLite`, `@types`, `@validators`
 - `scripts/migrate.ts` → `@services/Migrator`
 - `scripts/seed.ts` → `@services/Seeder`

@@ -123,6 +123,40 @@ The machine loads the `pentest-pattern` skill and runs the POCs against the runn
 
 ---
 
+## The verification loop.
+
+The machine writes code, then verifies its own work. You don't trust the diff — the gates do.
+
+```
+Agent writes code
+  │
+  ▼
+npm run check
+  ├── tsc --noEmit           (typecheck)
+  ├── lint:layers            (17 architectural rules)
+  ├── check:freshness        (CODEMAP not stale)
+  ├── check:agents           (AGENTS.md Structure tables accurate)
+  ├── check:security         (7 dangerous pattern checks)
+  ├── check:links            (markdown links resolve)
+  ├── check:filesize         (no file over 500 lines)
+  └── vitest                 (266 tests)
+  │
+  ├── All green → commit
+  └── Any red → agent reads the error, fixes, re-runs check
+```
+
+The error messages are written for the agent, not just the human. Each violation includes the fix and a link to the relevant skill. This is the maker-verifier pattern: the agent that wrote the code is not the one grading it — the gates are independent and deterministic.
+
+**Prove it works:**
+
+```bash
+npm run eval
+```
+
+Runs a full end-to-end test of the AI-first tooling: generates a resource with `gen:resource`, verifies all 10 files follow conventions (naming, barrel exports, route entries, raw SQL, no ORM), runs the gates on the generated code, then cleans up — leaving zero trace. 32 checks, all must pass.
+
+---
+
 ## Architecture.
 
 ```
