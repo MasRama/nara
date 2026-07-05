@@ -36,7 +36,6 @@
       "@queries/*": ["app/queries/*"],
       "@types": ["app/types/models.ts"],
       "@types/*": ["app/types/*"],
-      "@shared": ["app/types/shared.ts"],
       "@config/*": ["app/config/*"],
       "@config": ["app/config/index.ts"],
       "@routes/*": ["routes/*"],

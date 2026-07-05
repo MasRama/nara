@@ -1,11 +1,9 @@
 /**
- * Shared types — single source of truth for backend + frontend.
+ * Shared types — frontend-safe (no password/sensitive fields).
  *
- * Backend imports: `import type { User, Role } from '@types/shared'`
- * Frontend imports: `import type { User, Role } from '../../app/types/shared'`
- *
- * Database model types (with sensitive fields like password) stay in `models.ts`.
- * Frontend-specific types (forms, helpers) stay in `resources/types/`.
+ * Backend queries/handlers use `@types` (maps to models.ts — has password etc).
+ * Frontend uses shared.ts via resources/types/generated.ts re-export.
+ * Import: `import type { User, Role } from '../types'` in frontend pages.
  */
 
 export interface User {
