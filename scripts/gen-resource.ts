@@ -356,6 +356,24 @@ function appendToFile(filePath: string, content: string): void {
   }
 }
 
+function updateAgentsStructureTable(agentsFile: string, fileName: string, purpose: string): void {
+  const fullPath = path.join(ROOT, agentsFile);
+  if (!fs.existsSync(fullPath)) return;
+  let content = fs.readFileSync(fullPath, 'utf-8');
+  // Skip if already mentioned
+  if (content.includes(`\`${fileName}\``)) return;
+  // Insert before the `index.ts` row (or before the first blank line after the table header)
+  const indexRowRegex = /(\| `index\.ts` \|[^\n]*\n)/;
+  const newRow = `| \`${fileName}\` | ${purpose} |\n`;
+  if (indexRowRegex.test(content)) {
+    content = content.replace(indexRowRegex, newRow + '$1');
+  } else {
+    // Fallback: insert after the last table row before a blank line
+    content = content.replace(/(\|[^\n]*\|\n)(\n)/, `$1${newRow}\n`);
+  }
+  fs.writeFileSync(fullPath, content);
+}
+
 function writeFileSync(filePath: string, content: string): void {
   const full = path.join(ROOT, filePath);
   const dir = path.dirname(full);
@@ -380,6 +398,7 @@ function main(): void {
   }
 
   const singular = toPascal(singularize(name));
+  const camelSingular = toCamel(singularize(name));
   const camelPlural = toCamel(name);
   const ts = timestamp();
 
@@ -399,6 +418,10 @@ function main(): void {
   const queriesFile = `app/queries/${camelPlural}.ts`;
   writeFileSync(queriesFile, generateQueries(name, fields));
   console.log(`  ✓ ${queriesFile}`);
+
+  // 3b. Update queries AGENTS.md Structure table
+  updateAgentsStructureTable('app/queries/AGENTS.md', `${camelPlural}.ts`, `CRUD + pagination for ${camelPlural}`);
+  console.log(`  ✓ app/queries/AGENTS.md (added Structure row)`);
 
   // 4. Validator — append to schemas.ts
   const validatorContent = generateValidator(name, fields);
@@ -442,6 +465,10 @@ function main(): void {
   writeFileSync(handlerFile, generateHandlers(name, fields));
   console.log(`  ✓ ${handlerFile}`);
 
+  // 5b. Update handlers AGENTS.md Structure table
+  updateAgentsStructureTable('app/handlers/AGENTS.md', `${camelPlural}.ts`, `${camelSingular} page + list + add + edit + remove`);
+  console.log(`  ✓ app/handlers/AGENTS.md (added Structure row)`);
+
   // 6. Routes — append import + routes to web.ts (before export)
   const routesFile = 'routes/web.ts';
   const routesContent = generateRoutes(name);
@@ -471,6 +498,10 @@ function main(): void {
   const pageFile = `resources/Pages/${camelPlural}.svelte`;
   writeFileSync(pageFile, generatePage(name));
   console.log(`  ✓ ${pageFile}`);
+
+  // 7b. Update Pages AGENTS.md Structure table
+  updateAgentsStructureTable('resources/Pages/AGENTS.md', `${camelPlural}.svelte`, `${camelPlural} management (CRUD table)`);
+  console.log(`  ✓ resources/Pages/AGENTS.md (added Structure row)`);
 
   // 8. Update handler index
   const indexPath = path.join(ROOT, 'app/handlers/index.ts');
