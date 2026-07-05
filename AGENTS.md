@@ -110,6 +110,7 @@ Server (ultimate-express)
 | [`.agents/skills/inertia-patterns.md`](./.agents/skills/inertia-patterns.md) | Frontend pages, navigation, API calls |
 | [`.agents/skills/api-contract.md`](./.agents/skills/api-contract.md) | Error responses, validation, API contract |
 | [`.agents/skills/pentest-pattern.md`](./.agents/skills/pentest-pattern.md) | OWASP Top 10 security testing, POCs, finding format |
+| [`.agents/skills/testing-pattern.md`](./.agents/skills/testing-pattern.md) | Handler/query/middleware/validator test patterns, mock helpers |
 
 ## Database Schema
 
@@ -183,7 +184,7 @@ npm run seed         # Run seeders
 
 ### Smart test running (during development)
 
-**Don't run `npm test` on every change.** It runs 258 tests — burns your token budget parsing irrelevant results (TDAD study: this increases regressions by 63%).
+**Don't run `npm test` on every change.** It runs the full suite (200+ tests) — burns your token budget parsing irrelevant results (TDAD study: this increases regressions by 63%).
 
 Instead, run **only the test file for the layer you touched**:
 
@@ -212,7 +213,7 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + typecheck + lint:layers + tests | No (run manually) |
+| `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security baseline + tests | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (7 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |

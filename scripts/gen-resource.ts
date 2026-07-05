@@ -6,13 +6,17 @@
  *   npx ts-node scripts/gen-resource.ts posts --fields="title:string,body:text"
  *   npm run gen:resource products
  *
- * Generates 6 files following all AGENTS.md conventions:
- *   1. app/types/models.ts          → interface (appended)
+ * Generates a full-stack resource following all AGENTS.md conventions:
+ *   1. app/types/models.ts           → interface (appended)
  *   2. migrations/NNNN_*.ts          → CREATE TABLE
  *   3. app/queries/<name>.ts         → CRUD query functions
- *   4. app/handlers/<name>.ts        → page + list + add + edit + remove handlers
- *   5. routes/web.ts                 → route entries (appended)
- *   6. resources/Pages/<name>.svelte → table + form page
+ *   4. app/validators/schemas.ts     → Create<Resource>Schema (appended)
+ *   5. app/validators/index.ts       → barrel exports (updated)
+ *   6. app/handlers/<name>.ts        → page + list + add + edit + remove handlers
+ *   7. routes/web.ts                 → route entries (appended)
+ *   8. resources/Pages/<name>.svelte → table + form page
+ *   9. app/handlers/index.ts         → barrel export (updated)
+ *  10. app/queries/index.ts          → barrel export (updated)
  *
  * All names follow ADR 0009 (descriptive handler names).
  * All SQL follows ADR 0001 (raw SQL, no ORM).
