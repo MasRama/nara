@@ -1,7 +1,5 @@
 # Architecture Decision Records (ADR)
 
-> **Authority:** canon — current source of truth for architectural rationale.
->
 > ADRs explain WHY decisions were made, not just WHAT the rules are.
 > AGENTS.md tells you the rules; ADRs tell you the reasoning.
 

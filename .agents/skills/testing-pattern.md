@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Writing or modifying tests — handler tests, query tests, middleware tests, validator tests
 ---
 
 # Testing Pattern
 
-> **Authority:** canon — current source of truth for test conventions and patterns.
 
 ## When to use
 

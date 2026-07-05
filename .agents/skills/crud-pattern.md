@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Adding a new resource (e.g. products, posts, comments) — full stack from types to UI
 ---
 
 # CRUD Pattern: Types → Queries → Handlers → Routes → Page
 
-> **Authority:** canon — current source of truth for full-stack resource creation.
 
 ## When to use
 

@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Request handlers — functions that receive NaraRequest/NaraResponse and return a response. Two route types: page (inertia) vs data (json)"
 tags: [handlers, api, routes, mutations, inertia, json, crud]
 ---
 
 # Handlers
 
-> **Authority:** canon — current source of truth for handler conventions.
 
 Request handlers — functions that receive `NaraRequest` / `NaraResponse` and return a response. Never classes, never raw SQL.
 

@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Writing SQL queries, transactions, dynamic updates, or any database access
 ---
 
 # SQLite Usage
 
-> **Authority:** canon — current source of truth for SQLite access patterns.
 
 ## When to use
 

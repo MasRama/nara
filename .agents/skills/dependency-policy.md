@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Adding a dependency, or before suggesting a library/package
 ---
 
 # Dependency Policy
 
-> **Authority:** canon — current source of truth for dependency decisions.
 
 AI must not add dependencies without checking this table. If a category is "Banned", suggest the allowed alternative instead.
 

@@ -1,10 +1,5 @@
----
-authority: canon
----
-
 # Nara - Project Knowledge Base
 
-> **Authority:** canon — current source of truth. Agents must follow this.
 > **Skills:** Deep-dive procedures live in [`.agents/skills/`](./.agents/skills/SKILL.md) — load on demand.
 
 ## AI Quickstart — First time here?

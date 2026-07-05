@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "TypeScript migration files with raw SQL strings. Each exports up/down. Naming: YYYYMMDDHHMMSS_description.ts"
 tags: [migrations, sql, schema, database, ddl]
 ---
 
 # Migrations
 
-> **Authority:** canon — current source of truth for migration conventions.
 
 TypeScript migration files containing raw SQL strings. Each file exports `up` (apply) and `down` (rollback) as SQL strings, executed by `app/services/Migrator.ts`.
 

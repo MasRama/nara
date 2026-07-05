@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Writing frontend pages, using Inertia.js navigation, or making API calls from Svelte
 ---
 
 # Inertia Patterns (Frontend)
 
-> **Authority:** canon — current source of truth for frontend Inertia.js patterns.
 
 ## When to use
 

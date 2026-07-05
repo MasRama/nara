@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Inertia.js pages rendered by Svelte 5. Each page is a route destination — server renders shell, page fetches data via axios to /data endpoints"
 tags: [pages, inertia, svelte, routes, frontend, dashboard, landing, auth]
 ---
 
 # Pages
 
-> **Authority:** canon — current source of truth for page conventions.
 
 ## Overview
 

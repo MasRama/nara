@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Raw SQL functions — the only layer that touches SQLite. Static SQL via template literals, dynamic SQL via ? params, IN-clause and pagination patterns"
 tags: [queries, sql, sqlite, database, crud, pagination, transactions]
 ---
 
 # Queries
 
-> **Authority:** canon — current source of truth for query layer conventions.
 
 Raw SQL functions in `app/queries/`. The only layer that touches `SQLite`. Handlers call these — never import `SQLite` directly.
 

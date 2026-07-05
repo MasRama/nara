@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Adding auth guards, permission checks, role management, or session handling
 ---
 
 # Auth & RBAC
 
-> **Authority:** canon — current source of truth for authentication and authorization patterns.
 
 ## When to use
 

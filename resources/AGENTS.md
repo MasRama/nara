@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Svelte 5 + Inertia.js frontend. Runes ($state/$derived/$effect/$props), api() wrapper for HTTP, router.visit() for navigation, Zag JS for UI primitives"
 tags: [frontend, svelte, inertia, runes, tailwind, zag-js, axios, ui]
 ---
 
 # resources - Frontend
 
-> **Authority:** canon — current source of truth for frontend conventions.
 
 ## OVERVIEW
 

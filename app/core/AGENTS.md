@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Framework foundation — App bootstrap, Router, response helpers, error helpers, request/response types, Inertia adapter"
 tags: [core, app, router, response, errors, types, adapter, bootstrap]
 ---
 
 # Core
 
-> **Authority:** canon — current source of truth for core layer conventions.
 
 The framework foundation: app bootstrap, router, request/response types, error helpers, and response helpers. Everything else builds on this layer.
 

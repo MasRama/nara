@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Writing handlers that return JSON, handling errors, or writing validation
 ---
 
 # API Contract & Error Handling
 
-> **Authority:** canon — current source of truth for response shapes, error codes, and error handling patterns.
 
 ## Response Shapes
 

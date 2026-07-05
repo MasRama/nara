@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Vitest tests mirroring app/ structure. Mock @queries in handler tests, mock SQLite in query tests. Helpers in tests/helpers/mocks.ts"
 tags: [tests, vitest, mocks, handlers, queries, middlewares, validators, conventions]
 ---
 
 # Tests
 
-> **Authority:** canon — current source of truth for test conventions.
 
 Unit tests using **Vitest**. Mirror `app/` structure.
 

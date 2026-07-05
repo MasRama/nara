@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Infrastructure services — SQLite wrapper, Authenticate, Logger, Storage, CacheStore, LoginThrottle, View, Migrator, Seeder. Functions, no classes"
 tags: [services, sqlite, auth, logger, storage, cache, migration, seed, infrastructure]
 ---
 
 # Services
 
-> **Authority:** canon — current source of truth for service layer conventions.
 
 Infrastructure code wrapped in functions. No classes, no singletons. Each service is a module of related functions.
 

@@ -1,11 +1,9 @@
 ---
-authority: canon
 trigger: Before writing code — read this to avoid common AI mistakes
 ---
 
 # Common Pitfalls
 
-> **Authority:** canon — current source of truth for avoiding common mistakes.
 
 Mistakes AI agents make in Nara. Read before coding.
 

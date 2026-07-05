@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Request middlewares — auth, csrf, rateLimit, securityHeaders, inputSanitize, requestId, requestLogger, renderer. Wiring order and per-route usage"
 tags: [middlewares, auth, csrf, rate-limit, security-headers, xss, sanitize, logging]
 ---
 
 # Middlewares
 
-> **Authority:** canon — current source of truth for middleware layer conventions.
 
 Request middlewares — run before handlers. Each is a function `(req, res, next) => void`. Wired in `App.ts` (global) or per-route in `routes/web.ts`.
 

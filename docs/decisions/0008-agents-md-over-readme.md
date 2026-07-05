@@ -22,7 +22,7 @@ Structure:
 - `app/AGENTS.md`, `routes/AGENTS.md`, etc. — directory-specific conventions
 - `.agents/skills/*.md` — on-demand deep dives (crud-pattern, sqlite-usage, auth-rbac, etc.)
 - `CODEMAP.md` — auto-generated codebase topology index
-- YAML frontmatter with `authority: canon` and `last_verified` date
+- YAML frontmatter with `description` and `tags` for progressive disclosure (AGENTS.md v1.1 spec)
 
 ## Consequences
 

@@ -1,12 +1,10 @@
 ---
-authority: canon
 description: "Frontend TypeScript types. Shared types re-exported from app/types/shared.ts. Frontend-only form mappers and type guards in forms.ts"
 tags: [types, frontend, forms, type-guards, shared-types, typescript]
 ---
 
 # Types
 
-> **Authority:** canon — current source of truth for frontend type conventions.
 
 Frontend TypeScript type definitions. Shared types are sourced from `app/types/shared.ts` (single source of truth).
 

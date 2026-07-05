@@ -1,10 +1,4 @@
----
-authority: canon
----
-
 # Skills Directory
-
-> **Authority:** canon — current source of truth for skill file conventions.
 
 Skills are deep-dive procedures loaded on demand. Each skill focuses on one pattern with detailed rules, code examples, and do/don't lists. The agent reads these when it needs to follow a specific pattern.
 
@@ -28,13 +22,10 @@ Each skill file uses this structure:
 
 ```markdown
 ---
-authority: canon
 trigger: <when agent should load this skill>
 ---
 
 # <Skill Name>
-
-> **Authority:** canon — current source of truth for <topic>.
 
 ## When to use
 ## Pattern
