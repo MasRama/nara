@@ -46,6 +46,25 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 - **Raw SQL** — AI writes SQL, we just execute it
 - **Minimal code** — less code = less bugs
 
+## Golden Principles
+
+> Opinionated, mechanical rules that keep the codebase legible for agents. Enforced by lint:layers, check:agents, check:security, or convention tests. Violations block commit.
+
+1. **Functions over classes** — `export const fn = () => ...` or `export function fn()`. Never `class`. (ADR 0002, enforced structurally)
+2. **Raw SQL over ORM** — write SQL in `queries/`, never use Prisma/Drizzle/Knex. (ADR 0001, dependency policy)
+3. **Descriptive handler names** — `createUser`, `addRole`, `listProducts`. Never generic `index`/`store`/`create`/`update`/`destroy`. (ADR 0009, L11-L12)
+4. **Layer boundaries are hard** — handlers → queries → services → core. Import direction enforced. Queries never import handlers. Validators never import services. (L14-L17)
+5. **Two response types, never mixed** — page routes return `res.inertia()`, data routes return `jsonSuccess()`/`jsonError()`. (L3-L4)
+6. **`api()` wrapper for all frontend HTTP** — never raw `fetch()`, never bare `axios`, never `router.post/put/patch/delete`. (L5-L7)
+7. **Svelte 5 runes only** — `$state`, `$derived`, `$effect`, `$props`. Never `onMount`, `$:`, `export let`, or Svelte stores. (L8)
+8. **Logger, not console** — `Logger.info/warn/error`. `console.log` only in bootstrap files where Logger isn't initialized. (L9)
+9. **`hashPassword()` from Authenticate, never bcrypt direct** — the wrapper enforces the correct cost factor. (L10)
+10. **English for all user-facing messages** — error messages, toast, validation. (ADR 0010)
+11. **AGENTS.md stays in sync with code** — every documented directory has an AGENTS.md, every Structure table matches the actual files. (check:agents, convention test)
+12. **CODEMAP stays fresh** — regenerated after any source change. Stale CODEMAP blocks CI. (check:freshness)
+13. **Files stay small** — source files under 500 lines. Split before they grow into monsters. (check:filesize)
+14. **Docs links resolve** — no broken markdown links in AGENTS.md, skills, or ADRs. (check:links)
+
 ## Mental Model
 
 ```
@@ -213,7 +232,7 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security baseline + tests | No (run manually) |
+| `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security + links + file size + tests | No (run manually) |
 | `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (10 files) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
