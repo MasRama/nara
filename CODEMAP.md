@@ -7,7 +7,7 @@
 ## Stats
 
 - Files indexed: 115
-- Total lines: 11380
+- Total lines: 11339
 - Total exports: 289
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -122,7 +122,7 @@
 
 ### resources/Pages/
 
-- `dashboard.svelte` (223L)
+- `dashboard.svelte` (222L)
 - `landing.svelte` (332L)
 - `profile.svelte` (213L)
 - `roles.svelte` (283L)
@@ -131,8 +131,8 @@
 ### resources/Pages/auth/
 
 - `forgot-password.svelte` (91L)
-- `login.svelte` (155L)
-- `register.svelte` (199L)
+- `login.svelte` (134L)
+- `register.svelte` (178L)
 - `reset-password.svelte` (107L)
 
 ### resources/lib/
@@ -165,7 +165,7 @@
 ### scripts/
 
 - `codemap.ts` (247L)
-- `gen-resource.ts` (451L) — up, down, find, create, get, update, delete, list, +5
+- `gen-resource.ts` (453L) — up, down, find, create, get, update, delete, list, +5
 - `lint-layers.ts` (298L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
