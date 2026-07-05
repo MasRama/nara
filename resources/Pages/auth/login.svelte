@@ -91,9 +91,6 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between">
             <Label for="password" class="text-xs uppercase tracking-[0.2em] font-heading text-white/50">Password</Label>
-            <a href="/forgot-password" use:inertia class="text-xs text-white/40 hover:text-primary transition-colors">
-              Forgot?
-            </a>
           </div>
           <div class="relative">
             <Input bind:value={form.password} required type={showPassword ? 'text' : 'password'} name="password" id="password" placeholder="••••••••" class="pr-10 rounded-xl h-12 text-base text-white bg-white/5 border-white/15 backdrop-blur-md placeholder:text-white/30 focus-visible:border-primary focus-visible:ring-primary/30" />

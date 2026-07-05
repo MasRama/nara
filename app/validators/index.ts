@@ -15,8 +15,6 @@ export function zodToErrors(error: ZodError): Record<string, string[]> {
 export {
   LoginSchema,
   RegisterSchema,
-  ForgotPasswordSchema,
-  ResetPasswordSchema,
   ChangePasswordSchema,
   CreateUserSchema,
   UpdateUserSchema,
@@ -29,8 +27,6 @@ export {
 export type {
   LoginInput,
   RegisterInput,
-  ForgotPasswordInput,
-  ResetPasswordInput,
   ChangePasswordInput,
   CreateUserInput,
   UpdateUserInput,

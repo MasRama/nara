@@ -7,8 +7,6 @@ import {
   UpdateUserSchema,
   DeleteUsersSchema,
   ChangeProfileSchema,
-  ResetPasswordSchema,
-  ForgotPasswordSchema,
 } from '../../app/validators/schemas';
 
 describe('LoginSchema', () => {
@@ -138,34 +136,5 @@ describe('ChangeProfileSchema', () => {
     const result = ChangeProfileSchema.safeParse({ name: 'Bob', email: 'BOB@EXAMPLE.COM' });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.email).toBe('bob@example.com');
-  });
-});
-
-describe('ResetPasswordSchema', () => {
-  it('accepts valid token and password', () => {
-    const result = ResetPasswordSchema.safeParse({ id: 'some-token-123', password: 'newpassword' });
-    expect(result.success).toBe(true);
-  });
-
-  it('fails with empty token', () => {
-    const result = ResetPasswordSchema.safeParse({ id: '', password: 'newpassword' });
-    expect(result.success).toBe(false);
-  });
-
-  it('fails with short password', () => {
-    const result = ResetPasswordSchema.safeParse({ id: 'token', password: 'short' });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe('ForgotPasswordSchema', () => {
-  it('accepts email', () => {
-    const result = ForgotPasswordSchema.safeParse({ email: 'user@example.com' });
-    expect(result.success).toBe(true);
-  });
-
-  it('fails when email not provided', () => {
-    const result = ForgotPasswordSchema.safeParse({});
-    expect(result.success).toBe(false);
   });
 });

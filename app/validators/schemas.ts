@@ -11,15 +11,6 @@ export const RegisterSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be at most 100 characters'),
 });
 
-export const ForgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email format'),
-});
-
-export const ResetPasswordSchema = z.object({
-  id: z.string().min(1, 'Invalid token'),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be at most 100 characters'),
-});
-
 export const ChangePasswordSchema = z.object({
   current_password: z.string().min(1, 'Current password is required'),
   new_password: z.string().min(8, 'Password must be at least 8 characters').max(100, 'Password must be at most 100 characters'),
@@ -76,8 +67,6 @@ export const UpdateRoleSchema = z.object({
 
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
-export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>;
-export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
