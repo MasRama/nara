@@ -32,6 +32,12 @@ jobs:
       - name: Layer boundary lint (17 rules)
         run: npm run lint:layers
 
+      - name: AGENTS.md accuracy
+        run: npm run check:agents
+
+      - name: Security baseline
+        run: npm run check:security
+
       - name: CODEMAP freshness
         run: |
           npm run codemap
