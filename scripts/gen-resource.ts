@@ -335,8 +335,7 @@ function generateValidator(name: string, fields: Field[]): string {
     return `  ${f.name}: z.string().min(1),`;
   }).join('\n');
 
-  return `import { z } from 'zod';
-
+  return `
 export const Create${singular}Schema = z.object({
 ${fieldLines}
 });
@@ -402,16 +401,64 @@ function main(): void {
   appendToFile('app/validators/schemas.ts', validatorContent);
   console.log(`  ✓ app/validators/schemas.ts (appended Create${singular}Schema)`);
 
+  // 4b. Update validators index.ts — add to both value and type export blocks
+  const validatorsIndexPath = path.join(ROOT, 'app/validators/index.ts');
+  if (fs.existsSync(validatorsIndexPath)) {
+    let vIndex = fs.readFileSync(validatorsIndexPath, 'utf-8');
+    const schemaExport = `Create${singular}Schema`;
+    const typeExport = `Create${singular}Input`;
+    let modified = false;
+
+    // Add to value export block: after the last "  XxxSchema," line, before "} from './schemas';"
+    if (!vIndex.includes(`  ${schemaExport},`)) {
+      vIndex = vIndex.replace(
+        /(  \w+Schema,\n)(} from '\.\/schemas';)/,
+        `$1  ${schemaExport},\n$2`
+      );
+      modified = true;
+    }
+
+    // Add to type export block: after the last "  XxxInput," line, before "} from './schemas';"
+    if (!vIndex.includes(`  ${typeExport},`)) {
+      vIndex = vIndex.replace(
+        /(  \w+Input,\n)(} from '\.\/schemas';)/,
+        `$1  ${typeExport},\n$2`
+      );
+      modified = true;
+    }
+
+    if (modified) {
+      fs.writeFileSync(validatorsIndexPath, vIndex);
+      console.log(`  ✓ app/validators/index.ts (added exports)`);
+    }
+  }
+
   // 5. Handlers
   const handlerFile = `app/handlers/${camelPlural}.ts`;
   writeFileSync(handlerFile, generateHandlers(name, fields));
   console.log(`  ✓ ${handlerFile}`);
 
-  // 6. Routes — append to web.ts (before export)
+  // 6. Routes — append import + routes to web.ts (before export)
   const routesFile = 'routes/web.ts';
   const routesContent = generateRoutes(name);
   const routePath = path.join(ROOT, routesFile);
   let routeSrc = fs.readFileSync(routePath, 'utf-8');
+
+  // Add handler import if missing
+  const importLine = `import * as ${camelPlural} from '@handlers/${camelPlural}';`;
+  if (!routeSrc.includes(importLine)) {
+    // Insert after the last existing @handlers import
+    const handlerImportRegex = /import\s+\*\s+as\s+\w+\s+from\s+['"]@handlers\/\w+['"];?\n/g;
+    const matches = [...routeSrc.matchAll(handlerImportRegex)];
+    if (matches.length > 0) {
+      const lastMatch = matches[matches.length - 1];
+      const insertAt = lastMatch.index! + lastMatch[0].length;
+      routeSrc = routeSrc.slice(0, insertAt) + importLine + '\n' + routeSrc.slice(insertAt);
+    } else {
+      routeSrc = importLine + '\n' + routeSrc;
+    }
+  }
+
   routeSrc = routeSrc.replace('export default Route.getRouter();', routesContent + '\nexport default Route.getRouter();');
   fs.writeFileSync(routePath, routeSrc);
   console.log(`  ✓ ${routesFile} (appended ${camelPlural} routes)`);
@@ -446,7 +493,6 @@ function main(): void {
   console.log(`  1. Review generated files and customize fields`);
   console.log(`  2. Run: npm run migrate`);
   console.log(`  3. Run: npm run check`);
-  console.log(`  4. Add the page to resources/app.ts if needed (Inertia page registration)`);
 }
 
 main();
