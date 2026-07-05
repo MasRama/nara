@@ -4,8 +4,8 @@
  * Rules (from AGENTS.md anti-patterns + naming conventions):
  *   L1. Handlers must NOT import @services/SQLite directly — go through @queries
  *   L2. Handlers must NOT import @services/* except Authenticate, Logger, Storage
- *   L3. Page routes (handlers ending in *Page) must use res.inertia, not jsonSuccess
- *   L4. Data routes must use jsonSuccess/jsonError, not res.inertia
+ *   L3. Page handlers (exports ending in *Page) must return res.inertia, not jsonSuccess/jsonError
+ *   L4. Data handlers (exports NOT ending in *Page) must return jsonSuccess/jsonError/jsonCreated/etc., not res.inertia
  *   L5. Frontend must NOT use fetch() — use api(() => axios.method())
  *   L6. Frontend must NOT use window.location for internal navigation
  *   L7. Frontend must NOT use router.post/put/patch/delete — use api() + axios
@@ -98,6 +98,43 @@ function checkFile(absPath: string): void {
           rule: 'L2', file: rel, line: lineNum, text: trimmed,
           message: `Handlers must not import @services/${match[1]}. Fix: only Authenticate, Logger, Storage, Session, LoginThrottle, CacheStore are allowed. See .agents/skills/crud-pattern.md`,
         });
+      }
+    }
+
+    // L3/L4: Page handlers must use res.inertia; data handlers must use json* helpers.
+    // Evaluated once per export (when we are on the export line).
+    if (isHandler && /^export\s+const\s+\w+\s*=/.test(line)) {
+      const exportMatch = line.match(/^export\s+const\s+(\w+)\s*=/);
+      if (exportMatch) {
+        const name = exportMatch[1];
+        const isPage = name.endsWith('Page');
+        // Collect this export's body: from current line to next `export const` or EOF.
+        const bodyLines: string[] = [];
+        for (let j = idx; j < lines.length; j++) {
+          const l = lines[j];
+          if (j > idx && /^export\s+(const|async|function)\s/.test(l)) break;
+          bodyLines.push(l);
+        }
+        // Strip comment lines before regex testing to avoid false positives.
+        const codeOnly = bodyLines.filter(l => !l.trim().startsWith('//') && !l.trim().startsWith('*')).join('\n');
+        if (isPage) {
+          // L3: page handler must use res.inertia, not a json* helper
+          if (/\bjson(Success|Error|Created|NoContent|Paginated|ServerError|ValidationError|Unauthorized|Forbidden|NotFound)\s*\(/.test(codeOnly)) {
+            violations.push({
+              rule: 'L3', file: rel, line: lineNum, text: trimmed,
+              message: `Page handler "${name}" must use res.inertia(), not a json* helper. Fix: return res.inertia('pageName', { data }). See .agents/skills/inertia-patterns.md`,
+            });
+          }
+        } else {
+          // L4: data handler must use json* helpers, not res.inertia
+          // Exception: page-less handlers that only redirect (e.g. logout returns res.redirect) are not flagged for inertia alone.
+          if (/res\.inertia\s*\(/.test(codeOnly)) {
+            violations.push({
+              rule: 'L4', file: rel, line: lineNum, text: trimmed,
+              message: `Data handler "${name}" must use a json* helper, not res.inertia(). Fix: use jsonSuccess/jsonError/jsonCreated from @core. See .agents/skills/api-contract.md`,
+            });
+          }
+        }
       }
     }
 
@@ -246,7 +283,7 @@ function checkFile(absPath: string): void {
       if (match) {
         violations.push({
           rule: 'L16', file: rel, line: lineNum, text: trimmed,
-          message: `Validators must not import @${match[1]} — validators are a bottom layer. Fix: only import from @types and 'zod'. See .agents/skills/error-handling.md`,
+          message: `Validators must not import @${match[1]} — validators are a bottom layer. Fix: only import from @types and 'zod'. See .agents/skills/api-contract.md`,
         });
       }
     }

@@ -6,8 +6,8 @@
 
 ## Stats
 
-- Files indexed: 112
-- Total lines: 11123
+- Files indexed: 114
+- Total lines: 11485
 - Total exports: 283
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -45,7 +45,7 @@
 - `home.ts` (17L) — landingPage
 - `index.ts` (6L)
 - `roles.ts` (154L) — rolesPage, listRoles, permissionsData, addRole, editRole, removeRole
-- `users.ts` (216L) — dashboardPage, usersPage, profilePage, changeProfile, addUser, editUser, removeUsers
+- `users.ts` (221L) — dashboardPage, usersPage, profilePage, changeProfile, addUser, editUser, removeUsers
 
 ### app/middlewares/
 
@@ -161,9 +161,10 @@
 
 ### scripts/
 
+- `check-freshness.ts` (61L)
 - `codemap.ts` (247L)
 - `gen-resource.ts` (499L) — up, down, find, create, get, update, delete, list, +5
-- `lint-layers.ts` (298L)
+- `lint-layers.ts` (335L)
 - `migrate.ts` (35L)
 - `seed.ts` (10L)
 
@@ -175,7 +176,7 @@
 
 ### tests/
 
-- `conventions.test.ts` (66L)
+- `conventions.test.ts` (67L)
 
 ### tests/core/
 
@@ -186,6 +187,7 @@
 ### tests/handlers/
 
 - `roles.test.ts` (135L)
+- `users.test.ts` (258L)
 
 ### tests/helpers/
 
@@ -733,6 +735,7 @@
 - `tests/core/response.test.ts` → `../helpers/mocks`
 - `tests/core/Router.test.ts` → `../../app/core/Router`
 - `tests/handlers/roles.test.ts` → `../../app/handlers/roles`, `../helpers/mocks`, `@queries/roles`, `@queries/users`
+- `tests/handlers/users.test.ts` → `../../app/handlers/users`, `../helpers/mocks`, `@queries`, `@queries/roles`, `@services/Authenticate`
 - `tests/helpers/mocks.ts` → `../../app/core/types`
 - `tests/middlewares/csrf.test.ts` → `../../app/middlewares/csrf`, `../helpers/mocks`
 - `tests/middlewares/rateLimit.test.ts` → `../../app/middlewares/rateLimit`, `../helpers/mocks`

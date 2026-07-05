@@ -35,8 +35,13 @@ export const usersPage = (req: NaraRequest, res: NaraResponse) => {
 
   const userId = req.user.id;
   const admin = isAdmin(userId);
-  if (!admin && !hasPermission(userId, 'users.view')) {
-    return jsonError(res, 'Forbidden', 403);
+  const canView = admin || hasPermission(userId, 'users.view');
+  if (!canView) {
+    return res.inertia('users', {
+      users: [], availableRoles: [],
+      permissions: { canCreate: false, canEdit: false, canDelete: false },
+      total: 0, page: 1, limit: 10, search: '',
+    });
   }
 
   const page = queryInt(req, 'page');
