@@ -61,7 +61,7 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 | **Scaffolding** | `npm run gen:resource` | Ten files scaffolded with correct conventions. The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 200+ tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
 | **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
-| **CI** | 5 steps: typecheck → layer lint → AGENTS accuracy → security baseline → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
+| **CI** | 7 steps: typecheck → layer lint → AGENTS accuracy → security → links → file size → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
 | **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
 | **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
 ---

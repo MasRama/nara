@@ -10,8 +10,8 @@
 
 ## Stats
 
-- Files indexed: 117
-- Total lines: 11935
+- Files indexed: 118
+- Total lines: 12027
 - Total exports: 283
 - Entry points (★): `app/core/index.ts`, `resources/app.ts`, `routes/web.ts`, `server.ts`
 
@@ -166,6 +166,7 @@
 ### scripts/
 
 - `check-agents.ts` (124L)
+- `check-filesize.ts` (92L)
 - `check-freshness.ts` (61L)
 - `check-links.ts` (126L)
 - `check-security.ts` (166L)

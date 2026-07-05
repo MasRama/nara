@@ -41,6 +41,9 @@ jobs:
       - name: Markdown links
         run: npm run check:links
 
+      - name: File size
+        run: npm run check:filesize
+
       - name: CODEMAP freshness
         run: |
           npm run codemap

@@ -24,7 +24,8 @@
     "check:agents": "npx ts-node scripts/check-agents.ts",
     "check:security": "npx ts-node scripts/check-security.ts",
     "check:links": "npx ts-node scripts/check-links.ts",
-    "check": "npm run lint && npm run lint:layers && npm run check:freshness && npm run check:agents && npm run check:security && npm run check:links && npm test",
+    "check:filesize": "npx ts-node scripts/check-filesize.ts",
+    "check": "npm run lint && npm run lint:layers && npm run check:freshness && npm run check:agents && npm run check:security && npm run check:links && npm run check:filesize && npm test",
     "gen:resource": "npx ts-node scripts/gen-resource.ts"
   },
   "author": "MasRama",
