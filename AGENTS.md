@@ -119,6 +119,7 @@ Server (ultimate-express)
 
 | Skill | When to load |
 |---|---|
+| [`.agents/skills/new-world.md`](./.agents/skills/new-world.md) | Creating a new project from the starter (PRD/TODO in `.nara/`, rename, bootstrap) |
 | [`.agents/skills/crud-pattern.md`](./.agents/skills/crud-pattern.md) | Adding a new resource (full stack) |
 | [`.agents/skills/sqlite-usage.md`](./.agents/skills/sqlite-usage.md) | Writing SQL queries, transactions |
 | [`.agents/skills/auth-rbac.md`](./.agents/skills/auth-rbac.md) | Auth guards, permission checks |
