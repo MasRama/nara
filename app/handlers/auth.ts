@@ -40,7 +40,7 @@ export const submitLogin = (req: NaraRequest, res: NaraResponse) => {
   if (LoginThrottle.isLockedOut(identifier, ip)) {
     const mins = Math.ceil(LoginThrottle.getRemainingLockoutTime(identifier, ip) / 60000);
     Logger.logSecurity('Login blocked - locked', { identifier, ip });
-    return jsonError(res, `Terlalu banyak percobaan. Coba lagi dalam ${mins} menit.`, 429, 'RATE_LIMITED');
+    return jsonError(res, `Too many attempts. Try again in ${mins} minutes.`, 429, 'RATE_LIMITED');
   }
 
   const user = findUserByEmail(email);
@@ -54,8 +54,8 @@ export const submitLogin = (req: NaraRequest, res: NaraResponse) => {
     const result = LoginThrottle.recordFailedAttempt(identifier, ip);
     Logger.logSecurity('Login failed', { identifier, ip, reason: user ? 'bad_password' : 'not_found' });
     const msg = result.isLocked
-      ? `Terlalu banyak percobaan. Coba lagi dalam ${Math.ceil(result.lockoutMs / 60000)} menit.`
-      : 'Email atau password salah';
+      ? `Too many attempts. Try again in ${Math.ceil(result.lockoutMs / 60000)} minutes.`
+      : 'Invalid email or password';
     return jsonError(res, msg, 401, 'INVALID_CREDENTIALS');
   }
 

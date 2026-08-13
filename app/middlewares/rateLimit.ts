@@ -84,7 +84,7 @@ export function rateLimit(options: RateLimitOptions = {}): NaraMiddleware {
     windowMs = RATE_LIMIT.WINDOW_MS,
     keyGenerator = (req: NaraRequest) => req.ip || 'unknown',
     skip,
-    message = 'Terlalu banyak permintaan, coba lagi nanti',
+    message = 'Too many requests, please try again later',
     headers = true,
     name = 'default',
   } = options;
