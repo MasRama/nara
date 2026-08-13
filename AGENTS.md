@@ -6,11 +6,10 @@
 
 Read in this order (each builds on the previous):
 
-1. **[CODEMAP.md](./CODEMAP.md)** — codebase topology in one read. Know what exists before searching.
-2. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
-3. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file. API surface at a glance.
-4. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
-5. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+1. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
+2. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file. API surface at a glance.
+3. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
+4. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
 
 For database schema: `ls migrations/` to see table names, read the specific migration file for column types and constraints.
 
@@ -56,10 +55,9 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 9. **`hashPassword()` from Authenticate, never bcrypt direct** — the wrapper enforces the correct cost factor. (L10)
 10. **English for all user-facing messages** — error messages, toast, validation. (ADR 0010)
 11. **AGENTS.md stays in sync with code** — every documented directory has an AGENTS.md, every Structure table matches the actual files. (check:agents, convention test)
-12. **CODEMAP stays fresh** — regenerated after any source change. Stale CODEMAP blocks CI. (check:freshness)
-13. **Files stay small** — source files under 500 lines. Split before they grow into monsters. (check:filesize)
-14. **Docs links resolve** — no broken markdown links in AGENTS.md, skills, or ADRs. (check:links)
-15. **No new `any`** — type safety is non-negotiable. Existing `any` is baselined; new `any` blocks CI. Use proper types. (check:types)
+12. **Files stay small** — source files under 500 lines. Split before they grow into monsters. (check:filesize)
+13. **Docs links resolve** — no broken markdown links in AGENTS.md, skills, or ADRs. (check:links)
+14. **No new `any`** — type safety is non-negotiable. Existing `any` is baselined; new `any` blocks CI. Use proper types. (check:types)
 
 ## Mental Model
 
@@ -229,20 +227,11 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + typecheck + lint:layers + freshness + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
-| `npm run codemap` | Regenerate `CODEMAP.md` (codebase topology index) | No |
+| `npm run check` | All-in-one: lint + typecheck + lint:layers + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (11 files incl. test stub) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 | `npm run check:types` | Block new `any`/`as any`/`@ts-ignore` beyond baseline. Update: `--update` flag. | Yes (CI) |
 | `npm run eval` | End-to-end eval: generate resource → verify conventions → run gates → cleanup (39 checks). Runs in CI. | Yes (CI) |
-
-### CODEMAP.md
-
-Auto-generated index of files, exports, and import graph. Read this BEFORE searching the codebase — it gives topology in one read (~750 tokens). Regenerate after large changes:
-
-```bash
-npm run codemap
-```
 
 ### Resource Generator
 

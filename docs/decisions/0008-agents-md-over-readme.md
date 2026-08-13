@@ -21,7 +21,6 @@ Structure:
 - `AGENTS.md` (root) — orientation, conventions, anti-patterns, skill index (<200 lines)
 - `app/AGENTS.md`, `routes/AGENTS.md`, etc. — directory-specific conventions
 - `.agents/skills/*.md` — on-demand deep dives (crud-pattern, sqlite-usage, auth-rbac, etc.)
-- `CODEMAP.md` — auto-generated codebase topology index
 - YAML frontmatter with `description` and `tags` for progressive disclosure (AGENTS.md v1.1 spec)
 
 ## Consequences
@@ -29,11 +28,11 @@ Structure:
 Positive:
 - Universal — AGENTS.md is read by Claude, Cursor, Windsurf, Devin, and Copilot
 - Layered — AI reads root for orientation, loads skills only when relevant (saves context window)
-- Verifiable — `npm run check:freshness` detects stale docs, `npm run lint:layers` enforces conventions
+- Verifiable — `npm run check:agents` and convention tests keep AGENTS.md accurate, `npm run lint:layers` enforces conventions
 - Self-documenting — the conventions ARE the documentation, no separate wiki needed
 
 Negative:
-- Maintenance burden — AGENTS.md must be updated when conventions change (mitigated by freshness gate)
+- Maintenance burden — AGENTS.md must be updated when conventions change (mitigated by check:agents + convention tests)
 - Not standardized — AGENTS.md format varies by project (mitigated by YAML frontmatter + authority metadata)
 - Duplicates some README content — acceptable, different audiences
 

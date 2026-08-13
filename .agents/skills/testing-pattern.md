@@ -13,7 +13,7 @@ When adding a new handler/query/middleware/validator and you need to write tests
 
 ```
 tests/
-├── conventions.test.ts     # Structural conventions (AGENTS.md presence, skills index, CODEMAP freshness)
+├── conventions.test.ts     # Structural conventions (AGENTS.md presence, skills index)
 ├── core/                   # Router, response helpers, errors
 ├── handlers/{name}.test.ts # Mock @queries + assert response shape
 ├── queries/{name}.test.ts  # Mock @services/SQLite + assert SQL called
@@ -35,7 +35,7 @@ npx vitest run tests/core/
 npx vitest run tests/middlewares/
 
 # Before commit — full suite
-npm run check    # lint + typecheck + layer lint + freshness + tests
+npm run check    # lint + typecheck + layer lint + tests
 ```
 
 Do NOT run `npm test` on every change — it runs the full suite and burns context budget parsing irrelevant results.
@@ -225,7 +225,6 @@ describe('CreateProductSchema', () => {
 `tests/conventions.test.ts` asserts structural invariants that `lint:layers` cannot check:
 - Every documented directory has an `AGENTS.md`
 - All 8 skill files exist
-- `CODEMAP.md` exists and has stats
 
 When you add a new AGENTS.md or skill, add it to the expected list in this file.
 

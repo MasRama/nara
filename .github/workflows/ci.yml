@@ -47,11 +47,6 @@ jobs:
       - name: Type safety
         run: npm run check:types
 
-      - name: CODEMAP freshness
-        run: |
-          npm run codemap
-          git diff --exit-code CODEMAP.md || (echo "::error::CODEMAP.md is stale. Run 'npm run codemap' locally and commit." && exit 1)
-
       - name: Agent eval harness
         run: npm run eval
 

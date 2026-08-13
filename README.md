@@ -57,7 +57,6 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 | Layer | What | Why it matters |
 |---|---|---|
 | **Context** | `AGENTS.md` (root + 11 nested) + 9 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
-| **Topology** | `CODEMAP.md` (auto-generated index) | The machine knows what exists before searching. Reads one file instead of the whole tree. |
 | **Scaffolding** | `npm run gen:resource` | Eleven files scaffolded with correct conventions (including test stub). The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 200+ tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
 | **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
@@ -134,7 +133,6 @@ Agent writes code
 npm run check
   ├── tsc --noEmit           (typecheck)
   ├── lint:layers            (17 architectural rules)
-  ├── check:freshness        (CODEMAP not stale)
   ├── check:agents           (AGENTS.md Structure tables accurate)
   ├── check:security         (7 dangerous pattern checks)
   ├── check:links            (markdown links resolve)
@@ -207,9 +205,6 @@ npm run gen:resource products -- --fields="name:string,price:number"
 # Verification
 npm run check              # lint + typecheck + layer lint + tests
 npm run lint:layers        # 17 layer boundary + naming + import direction rules
-
-# Topology
-npm run codemap            # regenerate CODEMAP.md (auto-indexed)
 ```
 
 ---
@@ -248,7 +243,6 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 | File | For | Read when |
 |---|---|---|
 | [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
-| [`CODEMAP.md`](./CODEMAP.md) | Codebase topology (auto-generated index) | Before searching the codebase |
 | [`routes/web.ts`](./routes/web.ts) | All routes in one file | Before adding routes |
 | [`.agents/skills/`](./.agents/skills/SKILL.md) | 9 deep-dive skills (CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls, pentest, testing) | When touching that pattern |
 | [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |

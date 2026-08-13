@@ -2,17 +2,13 @@
  * Convention tests — verify structural conventions that lint:layers doesn't cover.
  *
  * lint:layers.ts covers: handler naming, import direction, no classes, layer boundaries.
- * These tests cover: AGENTS.md presence, skills index, CODEMAP freshness.
+ * These tests cover: AGENTS.md presence, skills index.
  */
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const ROOT = path.resolve(__dirname, '..');
-
-function readFile(relPath: string): string {
-  return fs.readFileSync(path.join(ROOT, relPath), 'utf-8');
-}
 
 describe('convention: AGENTS.md presence', () => {
   const expectedDirs = [
@@ -56,14 +52,5 @@ describe('convention: skills index', () => {
       const skillPath = path.join(ROOT, '.agents', 'skills', skill);
       expect(fs.existsSync(skillPath), `.agents/skills/${skill} should exist`).toBe(true);
     }
-  });
-});
-
-describe('convention: CODEMAP.md freshness', () => {
-  it('CODEMAP.md exists and has stats', () => {
-    const content = readFile('CODEMAP.md');
-    expect(content).toMatch(/# CODEMAP\.md/);
-    expect(content).toMatch(/Files indexed: \d+/);
-    expect(content).toMatch(/Total exports: \d+/);
   });
 });

@@ -19,7 +19,6 @@ New World does NOT execute anything: no rename, no git reset, no features, no co
 
 Before writing anything, survey the whole starter so the PRD and TODO are grounded in reality:
 
-- Read `CODEMAP.md` — what exists (routes, pages, services, scripts, building blocks)
 - Run `grep -ri "nara"` (case-insensitive: `nara`, `Nara`, `NARA`) — every identity location (see rename inventory below)
 - Check `package.json` scripts, `.env` / `.env.production.example`, `AGENTS.md` + nested AGENTS.md, `resources/inertia.html`, pages, `database/`
 - List the starter's reusable building blocks for the new project: auth/RBAC, resources, pages, components
@@ -113,7 +112,7 @@ Execution is not your job — completeness is. Every item maps to a skill to loa
 - [ ] Update env — `.env`, `.env.production.example`, `database/*.sqlite3` paths
 - [ ] Update `README.md` — title, badges, links
 - [ ] Update `AGENTS.md` + nested AGENTS.md — name refs + Structure tables
-- [ ] `npm run codemap && npm run check` — all gates green
+- [ ] `npm run check` — all gates green
 
 ## Phase 2: Auth & roles (skill: auth-rbac)
 - [ ] Configure initial roles/permissions + seeders
@@ -162,14 +161,13 @@ Never trust a hardcoded list — re-run `grep -ri "nara"` during research and ve
 | `README.md` | title, badges, links |
 | `AGENTS.md` + nested AGENTS.md | name references; renaming a listed file → update its Structure table (check:agents) |
 | `database/*.sqlite3` + `.env` | db file paths |
-| `CODEMAP.md` | regenerate — stale CODEMAP blocks CI (check:freshness) |
 
 Rules:
 
 - Search case-insensitively; rename file contents AND file names.
 - If a file was renamed, update every import/reference (use LSP rename where available).
 - Fresh db files regenerate on `migrate` — deleting `database/dev.sqlite3` is safe when the name changes.
-- After the last hit: `npm run codemap`, then `npm run check`.
+- After the last hit: `npm run check`.
 
 ## Examples
 
