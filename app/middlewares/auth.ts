@@ -1,4 +1,4 @@
-import { getUserBySessionId, getUserRoles, getUserPermissions } from '@queries';
+import { getUserBySessionId, getUserPermissions } from '@queries';
 import type { NaraRequest as Request, NaraResponse as Response } from '@core';
 
 export default (request: Request, response: Response, next: () => void) => {
@@ -21,12 +21,11 @@ export default (request: Request, response: Response, next: () => void) => {
       return response.clearCookie('auth_id').redirect('/login');
    }
 
-   const roles = getUserRoles(user.id);
    const permissions = getUserPermissions(user.id);
 
    request.user = {
       ...user,
-      roles: roles.map(r => r.slug),
+      roles: user.roles,
       permissions: permissions.map(p => p.slug),
    };
 

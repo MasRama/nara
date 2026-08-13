@@ -14,7 +14,7 @@ Route.get('/', home.landingPage);
 
 // Auth
 Route.get('/login', auth.loginPage);
-Route.post('/login', strictRateLimit(), auth.submitLogin);
+Route.post('/login', auth.submitLogin);
 Route.get('/register', auth.registerPage);
 Route.post('/register', strictRateLimit(), auth.submitRegister);
 Route.post('/logout', strictRateLimit(), auth.logout);
