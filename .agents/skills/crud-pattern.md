@@ -112,7 +112,7 @@ export const updateProduct = (id: string, data: Partial<Omit<Product, 'id' | 'cr
 export const deleteProducts = (ids: string[]): void => {
   if (ids.length === 0) return;
   const placeholders = ids.map(() => '?').join(',');
-  SQLite.run(`DELETE FROM products WHERE id IN (${placeholders})`, ids);
+  SQLite.exec`DELETE FROM products WHERE id IN (${ids})`;
 };
 ```
 

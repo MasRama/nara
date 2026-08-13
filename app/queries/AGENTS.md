@@ -33,26 +33,14 @@ export const findAllRoles = (): Role[] =>
 SQLite.exec`INSERT INTO users (id, email) VALUES (${id}, ${email})`;
 ```
 
-## Dynamic SQL → String Params (IN clauses, variable columns)
+## IN Clause (arrays expand automatically)
 
 ```typescript
-const row = SQLite.get<User>('SELECT * FROM users WHERE id = ?', [id]);
-const rows = SQLite.all<User>('SELECT * FROM users WHERE active = ?', [1]);
-SQLite.run('UPDATE users SET name = ? WHERE id = ?', [name, id]);
-```
-
-## IN Clause (critical — single `?` does NOT expand arrays)
-
-```typescript
-// ✅ Correct — build placeholders manually
+// ✅ Correct — interpolated arrays expand to (?, ?, …)
 export const deleteProducts = (ids: string[]): void => {
   if (ids.length === 0) return;
-  const placeholders = ids.map(() => '?').join(',');
-  SQLite.run(`DELETE FROM products WHERE id IN (${placeholders})`, ids);
+  SQLite.exec`DELETE FROM products WHERE id IN (${ids})`;
 };
-
-// ❌ Wrong — better-sqlite3 does not expand array to single '?'
-SQLite.all('DELETE FROM products WHERE id IN (?)', ids);
 ```
 
 ## Pagination

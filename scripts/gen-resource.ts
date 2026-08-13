@@ -147,13 +147,13 @@ export const create${singular} = (data: { id: string; ${fieldNames.map(n => `${n
 export const get${singular}sPaginated = (page: number, limit: number, search = ''): { data: ${singular}[]; total: number } => {
   const offset = (page - 1) * limit;
   const pattern = \`%\${search}%\`;
-  const countRow = SQLite.get<{ count: number }>(
-    'SELECT COUNT(*) as count FROM ${tableName} WHERE ${fieldNames[0] || 'id'} LIKE ?', [pattern]
-  );
-  const data = SQLite.all<${singular}>(
-    'SELECT * FROM ${tableName} WHERE ${fieldNames[0] || 'id'} LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [pattern, limit, offset]
-  );
+  const countRow = SQLite.one<{ count: number }>\`
+    SELECT COUNT(*) as count FROM ${tableName} WHERE ${fieldNames[0] || 'id'} LIKE \${pattern}
+  \`;
+  const data = SQLite.many<${singular}>\`
+    SELECT * FROM ${tableName} WHERE ${fieldNames[0] || 'id'} LIKE \${pattern}
+    ORDER BY created_at DESC LIMIT \${limit} OFFSET \${offset}
+  \`;
   return { data, total: countRow?.count ?? 0 };
 };
 
@@ -165,8 +165,7 @@ export const update${singular} = (id: string, data: Partial<Omit<${singular}, 'i
 
 export const delete${singular}s = (ids: string[]): void => {
   if (ids.length === 0) return;
-  const placeholders = ids.map(() => '?').join(',');
-  SQLite.run(\`DELETE FROM ${tableName} WHERE id IN (\${placeholders})\`, ids);
+  SQLite.exec\`DELETE FROM ${tableName} WHERE id IN (\${ids})\`;
 };
 `;
 }

@@ -21,18 +21,17 @@ SQLite.exec`INSERT INTO users (id, email) VALUES (${id}, ${email})`;       // ru
 
 Template literals auto-parameterize interpolated values — safe from SQL injection.
 
-## Dynamic SQL → String Params (variable columns, IN clauses)
+## IN clauses (interpolate the array directly)
 
 ```typescript
-const row = SQLite.get<User>('SELECT * FROM users WHERE id = ?', [id]);    // single row
-const rows = SQLite.all<User>('SELECT * FROM users WHERE id IN (?)', ids); // array
-SQLite.run('UPDATE users SET name = ? WHERE id = ?', [name, id]);          // run
+const rows = SQLite.many<User>`SELECT * FROM users WHERE id IN (${ids})`;   // expands to (?, ?, ?)
+SQLite.exec`DELETE FROM users WHERE id IN (${ids})`;
 ```
 
-Use string params when:
-- Column list is dynamic (e.g. `ORDER BY ${column}`)
-- `IN (?)` clauses with array values
-- Any SQL where template literal interpolation would not work
+Interpolated arrays are expanded into `(?, ?, …)` placeholders with each element
+bound — no manual placeholder strings. Use template literals everywhere. The only
+escape hatch is `SQLite.raw().exec(sql)` for dynamic identifiers (e.g.
+`DROP TABLE IF EXISTS "${name}"`) where parameter binding cannot apply.
 
 ## Transactions
 
@@ -59,13 +58,12 @@ SQLite.update('users', { id }, { name, email, avatar: undefined });
 export const getProductsPaginated = (page: number, limit: number, search = ''): { data: Product[]; total: number } => {
   const offset = (page - 1) * limit;
   const pattern = `%${search}%`;
-  const countRow = SQLite.get<{ count: number }>(
-    'SELECT COUNT(*) as count FROM products WHERE name LIKE ?', [pattern]
-  );
-  const data = SQLite.all<Product>(
-    'SELECT * FROM products WHERE name LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [pattern, limit, offset]
-  );
+  const countRow = SQLite.one<{ count: number }>`
+    SELECT COUNT(*) as count FROM products WHERE name LIKE ${pattern}
+  `;
+  const data = SQLite.many<Product>`
+    SELECT * FROM products WHERE name LIKE ${pattern} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
+  `;
   return { data, total: countRow?.count ?? 0 };
 };
 ```

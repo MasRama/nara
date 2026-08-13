@@ -17,9 +17,9 @@ export function run(SQLite: typeof SQLiteType): void {
   ];
 
   for (const p of permissions) {
-    SQLite.run(
-      'INSERT OR IGNORE INTO permissions (id, name, slug, resource, action, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [randomUUID(), p.name, p.slug, p.resource, p.action, now, now]
-    );
+    SQLite.exec`
+      INSERT OR IGNORE INTO permissions (id, name, slug, resource, action, created_at, updated_at)
+      VALUES (${randomUUID()}, ${p.name}, ${p.slug}, ${p.resource}, ${p.action}, ${now}, ${now})
+    `;
   }
 }

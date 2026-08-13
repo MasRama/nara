@@ -13,18 +13,18 @@ interface Migration {
 }
 
 function ensureMigrationsTable(): void {
-  SQLite.run(`
+  SQLite.exec`
     CREATE TABLE IF NOT EXISTS migrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE,
-      run_at TEXT NOT NULL DEFAULT (datetime('now'))
+      applied_at INTEGER NOT NULL DEFAULT (strftime('%s','now') * 1000)
     )
-  `);
+  `;
 }
 
 function appliedMigrations(): Set<string> {
   ensureMigrationsTable();
-  const rows = SQLite.all<{ name: string }>('SELECT name FROM migrations');
+  const rows = SQLite.many<{ name: string }>`SELECT name FROM migrations`;
   return new Set(rows.map(r => r.name));
 }
 
@@ -69,7 +69,7 @@ export function migrate(): { applied: string[]; skipped: string[] } {
     const migration = loadMigration(file);
     SQLite.transaction(() => {
       execStep(migration.up);
-      SQLite.run('INSERT INTO migrations (name) VALUES (?)', [file]);
+      SQLite.exec`INSERT INTO migrations (name) VALUES (${file})`;
     });
 
     newlyApplied.push(file);
@@ -84,9 +84,9 @@ export function migrate(): { applied: string[]; skipped: string[] } {
 }
 
 export function migrateRollback(steps = 1): { rolledBack: string[] } {
-  const rows = SQLite.all<{ name: string }>(
-    'SELECT name FROM migrations ORDER BY id DESC LIMIT ?', [steps]
-  );
+  const rows = SQLite.many<{ name: string }>`
+    SELECT name FROM migrations ORDER BY id DESC LIMIT ${steps}
+  `;
   const rolledBack: string[] = [];
 
   for (const { name } of rows) {
@@ -97,7 +97,7 @@ export function migrateRollback(steps = 1): { rolledBack: string[] } {
     }
     SQLite.transaction(() => {
       execStep(migration.down as MigrationStep);
-      SQLite.run('DELETE FROM migrations WHERE name = ?', [name]);
+      SQLite.exec`DELETE FROM migrations WHERE name = ${name}`;
     });
     rolledBack.push(name);
     Logger.info(`Migration rolled back: ${name}`);
@@ -119,14 +119,14 @@ export function migrateFresh(): { applied: string[] } {
   db.pragma('foreign_keys = OFF');
 
   try {
-    const tables = SQLite.all<{ name: string }>(`
+    const tables = SQLite.many<{ name: string }>`
       SELECT name FROM sqlite_master
       WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'migrations'
-    `);
+    `;
     for (const { name } of tables) {
-      SQLite.run(`DROP TABLE IF EXISTS "${name}"`);
+      SQLite.raw().exec(`DROP TABLE IF EXISTS "${name}"`);
     }
-    SQLite.run('DELETE FROM migrations WHERE 1=1');
+    SQLite.exec`DELETE FROM migrations WHERE 1=1`;
   } catch {
     // migrations table may not exist yet on a fresh DB — that's fine
   } finally {

@@ -26,7 +26,7 @@ export const updateRole = (id: string, data: Partial<Pick<Role, 'name' | 'slug' 
 };
 
 export const deleteRole = (id: string): boolean => {
-  const result = SQLite.run('DELETE FROM roles WHERE id = ?', [id]);
+  const result = SQLite.exec`DELETE FROM roles WHERE id = ${id}`;
   return result.changes > 0;
 };
 
@@ -39,14 +39,12 @@ export const getRolePermissions = (roleId: string): Permission[] =>
 
 export const getPermissionsForRoles = (roleIds: string[]): Map<string, Permission[]> => {
   if (roleIds.length === 0) return new Map();
-  const placeholders = roleIds.map(() => '?').join(',');
-  const rows = SQLite.all<{ role_id: string; id: string; name: string; slug: string; resource: string; action: string; description: string | null; created_at: number; updated_at: number }>(
-    `SELECT rp.role_id, p.id, p.name, p.slug, p.resource, p.action, p.description, p.created_at, p.updated_at
-     FROM permissions p
-     INNER JOIN role_permissions rp ON p.id = rp.permission_id
-     WHERE rp.role_id IN (${placeholders})`,
-    roleIds
-  );
+  const rows = SQLite.many<{ role_id: string; id: string; name: string; slug: string; resource: string; action: string; description: string | null; created_at: number; updated_at: number }>`
+    SELECT rp.role_id, p.id, p.name, p.slug, p.resource, p.action, p.description, p.created_at, p.updated_at
+    FROM permissions p
+    INNER JOIN role_permissions rp ON p.id = rp.permission_id
+    WHERE rp.role_id IN (${roleIds})
+  `;
   const map = new Map<string, Permission[]>();
   for (const row of rows) {
     const { role_id, ...perm } = row;
@@ -58,11 +56,9 @@ export const getPermissionsForRoles = (roleIds: string[]): Map<string, Permissio
 
 export const getUserCountsForRoles = (roleIds: string[]): Map<string, number> => {
   if (roleIds.length === 0) return new Map();
-  const placeholders = roleIds.map(() => '?').join(',');
-  const rows = SQLite.all<{ role_id: string; count: number }>(
-    `SELECT role_id, COUNT(*) as count FROM user_roles WHERE role_id IN (${placeholders}) GROUP BY role_id`,
-    roleIds
-  );
+  const rows = SQLite.many<{ role_id: string; count: number }>`
+    SELECT role_id, COUNT(*) as count FROM user_roles WHERE role_id IN (${roleIds}) GROUP BY role_id
+  `;
   const map = new Map<string, number>();
   for (const r of roleIds) map.set(r, 0);
   for (const row of rows) map.set(row.role_id, row.count);

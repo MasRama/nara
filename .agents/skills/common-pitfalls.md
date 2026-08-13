@@ -59,9 +59,9 @@ Mistakes AI agents make in Nara. Read before coding.
 
 ### 9. Using an IN-clause with a single placeholder
 
-**Wrong:** `SQLite.all('DELETE FROM products WHERE id IN (?)', ids)` — better-sqlite3 does not expand an array into a single placeholder.
+**Wrong:** `SQLite.many<User>`SELECT * FROM users WHERE id IN (?)` — better-sqlite3 does not expand an array into a single placeholder.
 
-**Fix:** Build placeholders manually: `const placeholders = ids.map(() => '?').join(','); SQLite.run(\`DELETE FROM products WHERE id IN (${placeholders})\`, ids)`.
+**Fix:** Interpolate the array directly — it expands to `(?, ?, …)`: `SQLite.many<User>`SELECT * FROM users WHERE id IN (${ids})``.
 
 ### 10. Using a language other than English for user-facing messages
 

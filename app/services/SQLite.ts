@@ -37,32 +37,25 @@ const getStmt = (sql: string): BetterSqlite3.Statement => {
   return stmt;
 };
 
-const toArray = (params: unknown): unknown[] => 
-  Array.isArray(params) ? params : Object.values(params as object);
-
 const sql = (strings: TemplateStringsArray, ...values: unknown[]) => {
   let query = strings[0];
   const params: unknown[] = [];
   for (let i = 0; i < values.length; i++) {
-    params.push(values[i]);
-    query += '?' + strings[i + 1];
+    const value = values[i];
+    if (Array.isArray(value)) {
+      if (value.length === 0) throw new Error('Cannot interpolate an empty array into SQL');
+      query += value.map(() => '?').join(', ');
+      params.push(...value);
+    } else {
+      query += '?';
+      params.push(value);
+    }
+    query += strings[i + 1];
   }
   return { query, params };
 };
 
 const SQLite = {
-  get<T = unknown>(sqlStr: string, params: unknown[] = []): T | undefined {
-    return getStmt(sqlStr).get(...toArray(params)) as T | undefined;
-  },
-
-  all<T = unknown>(sqlStr: string, params: unknown[] = []): T[] {
-    return getStmt(sqlStr).all(...toArray(params)) as T[];
-  },
-
-  run(sqlStr: string, params: unknown[] = []): BetterSqlite3.RunResult {
-    return getStmt(sqlStr).run(...toArray(params));
-  },
-
   one<T = unknown>(strings: TemplateStringsArray, ...values: unknown[]): T | undefined {
     const { query, params } = sql(strings, ...values);
     return getStmt(query).get(...params) as T | undefined;

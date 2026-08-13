@@ -39,11 +39,8 @@ describe('SQLite', () => {
     expect(users[1].name).toBe('Bob');
   });
 
-  it('should handle string params', () => {
-    const result = SQLite.run(
-      'INSERT INTO test_users (id, name, age) VALUES (?, ?, ?)',
-      ['1', 'Alice', 30]
-    );
+  it('should handle template params', () => {
+    const result = SQLite.exec`INSERT INTO test_users (id, name, age) VALUES (${'1'}, ${'Alice'}, ${30})`;
     
     expect(result.changes).toBe(1);
   });
@@ -76,11 +73,9 @@ describe('SQLite', () => {
     SQLite.exec`INSERT INTO test_users (id, name, age) VALUES (${'3'}, ${'Charlie'}, ${35})`;
     
     const ids = ['1', '3'];
-    const placeholders = ids.map(() => '?').join(',');
-    const users = SQLite.all<{ id: string; name: string }>(
-      `SELECT id, name FROM test_users WHERE id IN (${placeholders})`,
-      ids
-    );
+    const users = SQLite.many<{ id: string; name: string }>`
+      SELECT id, name FROM test_users WHERE id IN (${ids})
+    `;
     
     expect(users).toHaveLength(2);
     expect(users.map((u: { id: string; name: string }) => u.name)).toEqual(['Alice', 'Charlie']);

@@ -30,14 +30,13 @@ export const updateUser = (id: string, data: Partial<Omit<User, 'id' | 'created_
 };
 
 export const deleteUser = (id: string): boolean => {
-  const result = SQLite.run('DELETE FROM users WHERE id = ?', [id]);
+  const result = SQLite.exec`DELETE FROM users WHERE id = ${id}`;
   return result.changes > 0;
 };
 
 export const deleteUsers = (ids: string[]): number => {
   if (ids.length === 0) return 0;
-  const placeholders = ids.map(() => '?').join(',');
-  const result = SQLite.run(`DELETE FROM users WHERE id IN (${placeholders})`, ids);
+  const result = SQLite.exec`DELETE FROM users WHERE id IN (${ids})`;
   return result.changes;
 };
 
@@ -52,8 +51,9 @@ export const emailExists = (email: string, excludeId?: string): boolean => {
 
 export const searchUsers = (search: string): User[] => {
   const pattern = `%${search.replace(/[%_]/g, '')}%`;
-  const query = `SELECT * FROM users WHERE (name LIKE ? OR email LIKE ?) ORDER BY created_at DESC`;
-  return SQLite.all<User>(query, [pattern, pattern]);
+  return SQLite.many<User>`
+    SELECT * FROM users WHERE (name LIKE ${pattern} OR email LIKE ${pattern}) ORDER BY created_at DESC
+  `;
 };
 
 export const getUsersPaginated = (
@@ -62,19 +62,16 @@ export const getUsersPaginated = (
   search = ''
 ): { data: User[]; total: number } => {
   const pattern = `%${search.replace(/[%_]/g, '')}%`;
-  const whereClause = `(name LIKE ? OR email LIKE ?)`;
-  const params: unknown[] = [pattern, pattern];
 
-  const countRow = SQLite.get<{ count: number }>(
-    `SELECT COUNT(*) as count FROM users WHERE ${whereClause}`,
-    params
-  );
+  const countRow = SQLite.one<{ count: number }>`
+    SELECT COUNT(*) as count FROM users WHERE (name LIKE ${pattern} OR email LIKE ${pattern})
+  `;
 
   const offset = (page - 1) * limit;
-  const data = SQLite.all<User>(
-    `SELECT * FROM users WHERE ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
+  const data = SQLite.many<User>`
+    SELECT * FROM users WHERE (name LIKE ${pattern} OR email LIKE ${pattern})
+    ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
+  `;
 
   return { data, total: countRow?.count ?? 0 };
 };
@@ -97,14 +94,12 @@ export const getUserRoles = (userId: string): Role[] =>
 
 export const getRolesForUsers = (userIds: string[]): Map<string, Role[]> => {
   if (userIds.length === 0) return new Map();
-  const placeholders = userIds.map(() => '?').join(',');
-  const rows = SQLite.all<{ user_id: string; id: string; name: string; slug: string; description: string | null; created_at: number; updated_at: number }>(
-    `SELECT ur.user_id, r.id, r.name, r.slug, r.description, r.created_at, r.updated_at
-     FROM roles r
-     INNER JOIN user_roles ur ON r.id = ur.role_id
-     WHERE ur.user_id IN (${placeholders})`,
-    userIds
-  );
+  const rows = SQLite.many<{ user_id: string; id: string; name: string; slug: string; description: string | null; created_at: number; updated_at: number }>`
+    SELECT ur.user_id, r.id, r.name, r.slug, r.description, r.created_at, r.updated_at
+    FROM roles r
+    INNER JOIN user_roles ur ON r.id = ur.role_id
+    WHERE ur.user_id IN (${userIds})
+  `;
   const map = new Map<string, Role[]>();
   for (const row of rows) {
     const { user_id, ...role } = row;

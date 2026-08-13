@@ -19,9 +19,6 @@ vi.mock('@services/SQLite', () => ({
     one: vi.fn(),
     many: vi.fn(),
     exec: vi.fn(),
-    get: vi.fn(),
-    all: vi.fn(),
-    run: vi.fn(),
     update: vi.fn(),
     transaction: vi.fn((fn) => fn()),
     raw: vi.fn(),
@@ -110,13 +107,13 @@ describe('roles queries', () => {
 
   describe('deleteRole', () => {
     it('returns true when row was deleted', () => {
-      (SQLite.run as any).mockReturnValue({ changes: 1 });
+      (SQLite.exec as any).mockReturnValue({ changes: 1 });
       const result = deleteRole('role-1');
       expect(result).toBe(true);
     });
 
     it('returns false when no row deleted', () => {
-      (SQLite.run as any).mockReturnValue({ changes: 0 });
+      (SQLite.exec as any).mockReturnValue({ changes: 0 });
       const result = deleteRole('nonexistent');
       expect(result).toBe(false);
     });

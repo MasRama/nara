@@ -50,7 +50,7 @@ import { randomUUID } from 'crypto';
 export function up(SQLite: typeof SQLiteType): void {
   const users = SQLite.all<{ id: string; name: string }>('SELECT id, name FROM users');
   for (const u of users) {
-    SQLite.run('UPDATE users SET name = ? WHERE id = ?', [u.name.trim(), u.id]);
+    SQLite.exec`UPDATE users SET name = ${u.name.trim()} WHERE id = ${u.id}`;
   }
 }
 

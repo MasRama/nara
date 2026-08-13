@@ -20,12 +20,12 @@ export const deleteSession = (id: string): void => {
 };
 
 export const deleteSessionsByUserId = (userId: string): number => {
-  const result = SQLite.run('DELETE FROM sessions WHERE user_id = ?', [userId]);
+  const result = SQLite.exec`DELETE FROM sessions WHERE user_id = ${userId}`;
   return result.changes;
 };
 
 export const cleanupExpiredSessions = (): number => {
-  const result = SQLite.run('DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at <= ?', [Date.now()]);
+  const result = SQLite.exec`DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at <= ${Date.now()}`;
   return result.changes;
 };
 

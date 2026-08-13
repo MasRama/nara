@@ -28,14 +28,14 @@ Infrastructure code wrapped in functions. No classes, no singletons. Each servic
 ```typescript
 SQLite.one<T>`SELECT ... WHERE id = ${id}`      // single row | undefined
 SQLite.many<T>`SELECT ... WHERE active = 1`     // array (never undefined)
-SQLite.exec`INSERT ...`                          // run (no return)
-SQLite.get<T>('SELECT ... WHERE id = ?', [id])  // single row
-SQLite.all<T>('SELECT ... WHERE x = ?', [x])    // array
-SQLite.run('UPDATE ... WHERE id = ?', [id])     // RunResult
+SQLite.exec`INSERT ...`                          // RunResult
 SQLite.update('users', { id }, { name, active: true })  // dynamic update
 SQLite.transaction(() => { ... })                // atomic, auto-rollback
 SQLite.raw()                                     // native better-sqlite3 (rare)
 ```
+
+Interpolated arrays expand to `(?, ?, …)` — `WHERE id IN (${ids})` works directly.
+Only `SQLite.raw().exec(sql)` can run dynamic identifiers (e.g. DROP TABLE).
 
 Statement caching built in (`getStmt`). Pragmas: `WAL`, `synchronous=NORMAL`, `foreign_keys=ON`.
 
