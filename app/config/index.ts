@@ -9,7 +9,6 @@ export {
 
 export {
   env,
-  checkFeatureConfig,
   getEnvSummary,
   initEnv,
 } from './env';

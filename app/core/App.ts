@@ -3,7 +3,7 @@ import cors from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 
-import { initEnv, checkFeatureConfig, getEnvSummary, SERVER } from "@config";
+import { initEnv, getEnvSummary, SERVER } from "@config";
 import type { Env } from "@config";
 import Logger from "@services/Logger";
 import { securityHeaders } from "@middlewares/securityHeaders";
@@ -70,13 +70,6 @@ export function createApp(options?: AppOptions): NaraApp {
     routes: undefined as any,
     ...options,
   };
-
-  const featureWarnings = checkFeatureConfig(env);
-  if (featureWarnings.length > 0) {
-    console.log("\n⚠️  Optional features not configured:");
-    featureWarnings.forEach((w: string) => console.log(`   - ${w}`));
-    console.log("");
-  }
 
   const app = createServer(opts);
   let server: any = null;

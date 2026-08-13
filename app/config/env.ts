@@ -21,8 +21,6 @@ const EnvSchema = z.object({
   APP_URL: z.string().default(`http://localhost:${process.env.PORT || SERVER.DEFAULT_PORT}`),
   HAS_CERTIFICATE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
-  BACKUP_ENCRYPTION_KEY: z.string().optional(),
-  BACKUP_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -40,14 +38,6 @@ if (!parsed.success) {
 
 export const env: Env = parsed.data;
 
-export function checkFeatureConfig(envConfig: Env): string[] {
-  const warnings: string[] = [];
-  if (!envConfig.BACKUP_ENCRYPTION_KEY) {
-    warnings.push('Backup encryption not configured (BACKUP_ENCRYPTION_KEY)');
-  }
-  return warnings;
-}
-
 export function getEnvSummary(envConfig: Env) {
   return {
     nodeEnv: envConfig.NODE_ENV,
@@ -55,9 +45,6 @@ export function getEnvSummary(envConfig: Env) {
     appUrl: envConfig.APP_URL,
     logLevel: envConfig.LOG_LEVEL,
     hasHttps: envConfig.HAS_CERTIFICATE === 'true',
-    features: {
-      backup: !!envConfig.BACKUP_ENCRYPTION_KEY,
-    },
   };
 }
 

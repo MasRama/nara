@@ -56,8 +56,6 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/resources ./resources
 COPY --from=build /app/migrations ./migrations
 COPY --from=build /app/seeds ./seeds
-COPY --from=build /app/knexfile.ts ./knexfile.ts
-COPY --from=build /app/commands ./commands
 
 # Create directories the app may write to, with correct ownership
 RUN mkdir -p logs storage database \
