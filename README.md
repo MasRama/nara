@@ -192,7 +192,7 @@ Server (ultimate-express / uWebSockets.js)
 | Auth | Session-based + RBAC (roles & permissions) |
 | Security | CSRF (double-submit cookie), rate limiting, XSS sanitization, security headers, timing-safe comparisons, login throttling |
 | Storage | Local file storage with sharp image processing, magic byte validation |
-| DX | Path aliases, structured logging (Pino), Vitest, Docker-ready |
+| DX | Path aliases, structured logging (Pino), Vitest |
 
 ---
 
@@ -226,11 +226,6 @@ npm run seed               # run seeders
 ## Deployment.
 
 ```bash
-# Docker
-docker build -t nara-app .
-docker run -p 5555:5555 nara-app
-
-# Manual
 npm run build && npm start
 ```
 

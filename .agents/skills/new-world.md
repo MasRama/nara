@@ -132,7 +132,6 @@ Execution is not your job — completeness is. Every item maps to a skill to loa
 ## Phase 5: Production readiness
 - [ ] `npm run build` — production build passes
 - [ ] Verify production env (`.env.production.example`) and config
-- [ ] Docker/CI pass if deploying via container
 
 ## Phase 6: Finish
 - [ ] README — project-specific setup and feature docs
