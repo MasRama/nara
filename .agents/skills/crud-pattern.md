@@ -231,7 +231,7 @@ See [`inertia-patterns.md`](./inertia-patterns.md) for full frontend pattern.
 
 ```bash
 npm run migrate          # run the new migration
-npm run check            # lint + typecheck + lint:layers + tests
+npm run check            # lint + lint:layers + tests
 ```
 
 If `lint:layers` fails, read the error message — it includes the fix and skill reference.

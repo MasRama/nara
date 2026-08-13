@@ -15,7 +15,7 @@ For database schema: `ls migrations/` to see table names, read the specific migr
 
 Then verify your work with one command:
 ```bash
-npm run check    # lint + typecheck + layer lint + tests
+npm run check    # lint + layer lint + tests
 ```
 
 Scaffold a new resource with one command:
@@ -107,7 +107,7 @@ Server (ultimate-express)
 │   ├── Pages/             # Route pages (.svelte)
 │   ├── Components/        # Reusable components (Header, Button, Switch, Modal, etc — Zag JS for interactive UI)
 │   ├── lib/               # api.ts, csrf.ts, toast.ts, utils.ts (cn), utils/
-│   └── types/             # generated.ts + index.ts (manually synced with backend)
+│   └── types/             # index.ts + forms.ts (re-exports app/types/shared)
 ├── tests/               # Vitest tests
 ├── server.ts            # Entry point
 └── database/            # SQLite database files (dev.sqlite3, production.sqlite3)
@@ -123,6 +123,8 @@ Server (ultimate-express)
 | [`.agents/skills/auth-rbac.md`](./.agents/skills/auth-rbac.md) | Auth guards, permission checks |
 | [`.agents/skills/inertia-patterns.md`](./.agents/skills/inertia-patterns.md) | Frontend pages, navigation, API calls |
 | [`.agents/skills/api-contract.md`](./.agents/skills/api-contract.md) | Error responses, validation, API contract |
+| [`.agents/skills/dependency-policy.md`](./.agents/skills/dependency-policy.md) | Allowed vs banned dependencies (16 categories) |
+| [`.agents/skills/common-pitfalls.md`](./.agents/skills/common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |
 | [`.agents/skills/pentest-pattern.md`](./.agents/skills/pentest-pattern.md) | OWASP Top 10 security testing, POCs, finding format |
 | [`.agents/skills/testing-pattern.md`](./.agents/skills/testing-pattern.md) | Handler/query/middleware/validator test patterns, mock helpers |
 
@@ -139,8 +141,8 @@ Server (ultimate-express)
 | `assets` | id (uuid), name, type, url, mime_type, size, s3_key, user_id | belongs to `users` |
 
 - All IDs: `crypto.randomUUID()` (except auto-increment tables)
-- All timestamps: `biginteger` unix milliseconds via `Date.now()`
-- Foreign keys: `.onDelete('CASCADE')`
+- All timestamps: unix milliseconds via `Date.now()`
+- Foreign keys: `ON DELETE CASCADE` in raw SQL
 
 ## Middleware
 
@@ -227,7 +229,7 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + typecheck + lint:layers + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
+| `npm run check` | All-in-one: lint + lint:layers + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (11 files incl. test stub) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 | `npm run check:types` | Block new `any`/`as any`/`@ts-ignore` beyond baseline. Update: `--update` flag. | Yes (CI) |

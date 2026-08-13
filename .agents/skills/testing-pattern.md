@@ -35,7 +35,7 @@ npx vitest run tests/core/
 npx vitest run tests/middlewares/
 
 # Before commit — full suite
-npm run check    # lint + typecheck + layer lint + tests
+npm run check    # lint + layer lint + tests
 ```
 
 Do NOT run `npm test` on every change — it runs the full suite and burns context budget parsing irrelevant results.
@@ -224,7 +224,7 @@ describe('CreateProductSchema', () => {
 
 `tests/conventions.test.ts` asserts structural invariants that `lint:layers` cannot check:
 - Every documented directory has an `AGENTS.md`
-- All 8 skill files exist
+- Every skill referenced in `.agents/skills/SKILL.md` exists
 
 When you add a new AGENTS.md or skill, add it to the expected list in this file.
 

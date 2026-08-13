@@ -56,11 +56,11 @@ See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each de
 
 | Layer | What | Why it matters |
 |---|---|---|
-| **Context** | `AGENTS.md` (root + 11 nested) + 9 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
+| **Context** | `AGENTS.md` (root + 11 nested) + 10 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
 | **Scaffolding** | `npm run gen:resource` | Eleven files scaffolded with correct conventions (including test stub). The machine can't make structural mistakes. |
 | **Enforcement** | `npm run lint:layers` (17 rules) + 200+ tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
 | **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
-| **CI** | 9 steps: typecheck → layer lint → AGENTS accuracy → security → links → file size → type safety → eval harness → tests | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
+| **CI** | `npm run check` (8 gates) + eval harness in one job | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
 | **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
 | **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
 ---
@@ -131,14 +131,14 @@ Agent writes code
   │
   ▼
 npm run check
-  ├── tsc --noEmit           (typecheck)
+  ├── tsc --noEmit           (lint)
   ├── lint:layers            (17 architectural rules)
   ├── check:agents           (AGENTS.md Structure tables accurate)
   ├── check:security         (7 dangerous pattern checks)
   ├── check:links            (markdown links resolve)
   ├── check:filesize         (no file over 500 lines)
   ├── check:types            (no new `any` beyond baseline)
-  └── vitest                 (266 tests)
+  └── vitest                 (full suite)
   │
   ├── All green → commit
   └── Any red → agent reads the error, fixes, re-runs check
@@ -203,7 +203,7 @@ Server (ultimate-express / uWebSockets.js)
 npm run gen:resource products -- --fields="name:string,price:number"
 
 # Verification
-npm run check              # lint + typecheck + layer lint + tests
+npm run check              # lint + layer lint + tests
 npm run lint:layers        # 17 layer boundary + naming + import direction rules
 ```
 
@@ -244,7 +244,7 @@ Set `NODE_ENV=production` and configure SSL for production use. See [.env.produc
 |---|---|---|
 | [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
 | [`routes/web.ts`](./routes/web.ts) | All routes in one file | Before adding routes |
-| [`.agents/skills/`](./.agents/skills/SKILL.md) | 9 deep-dive skills (CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls, pentest, testing) | When touching that pattern |
+| [`.agents/skills/`](./.agents/skills/SKILL.md) | 10 deep-dive skills (new-world, CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls, pentest, testing) | When touching that pattern |
 | [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |
 
 ---

@@ -18,8 +18,8 @@ for (const filename of files) {
   input[filename.replace(".html", "")] = resolve(__dirname, `resources/${filename}`);
 }
 
-// Default port from environment or fallback to 3000
-const PORT = parseInt(process.env.VITE_PORT) || 3000;
+// Default port from environment or fallback to 5173 (matches constants + .env.example)
+const PORT = parseInt(process.env.VITE_PORT) || 5173;
  
 // https://vite.dev/config/
 export default defineConfig({

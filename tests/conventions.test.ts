@@ -10,6 +10,10 @@ import * as path from 'path';
 
 const ROOT = path.resolve(__dirname, '..');
 
+function readFile(relPath: string): string {
+  return fs.readFileSync(path.join(ROOT, relPath), 'utf-8');
+}
+
 describe('convention: AGENTS.md presence', () => {
   const expectedDirs = [
     '',                    // root
@@ -35,20 +39,11 @@ describe('convention: AGENTS.md presence', () => {
 });
 
 describe('convention: skills index', () => {
-  const skills = [
-    'crud-pattern.md',
-    'sqlite-usage.md',
-    'auth-rbac.md',
-    'inertia-patterns.md',
-    'api-contract.md',
-    'dependency-policy.md',
-    'common-pitfalls.md',
-    'pentest-pattern.md',
-    'testing-pattern.md',
-  ];
-
-  it('all skill files exist', () => {
-    for (const skill of skills) {
+  it('every skill referenced in SKILL.md exists', () => {
+    const index = readFile(path.join('.agents', 'skills', 'SKILL.md'));
+    const referenced = [...index.matchAll(/\]\(\.\/([a-z0-9-]+\.md)\)/g)].map(m => m[1]);
+    expect(referenced.length).toBeGreaterThan(0);
+    for (const skill of referenced) {
       const skillPath = path.join(ROOT, '.agents', 'skills', skill);
       expect(fs.existsSync(skillPath), `.agents/skills/${skill} should exist`).toBe(true);
     }

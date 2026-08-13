@@ -172,7 +172,7 @@
               <span>types</span><span>migration</span><span>queries</span><span>validator</span><span>handlers</span><span>routes</span><span>page</span>
             </div>
             <p class="text-muted-foreground/60 text-[11px] pt-1 border-t border-border/50">
-              <span class="text-green-500/70">✓</span> lint · typecheck · 17 layer rules · 252 tests — all passed
+              <span class="text-green-500/70">✓</span> lint · 17 layer rules · tests — all passed
             </p>
           </div>
         </div>

@@ -217,7 +217,7 @@ function main(): void {
   console.log('Phase 1: Generate resource');
   try {
     runGenResource();
-    record('gen:resource runs', true, '10 files generated');
+    record('gen:resource runs', true, '11 files generated');
   } catch (e) {
     record('gen:resource runs', false, (e as Error).message);
     restore();

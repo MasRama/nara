@@ -22,7 +22,6 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["app/*"],
       "@core": ["app/core/index.ts"],
       "@core/*": ["app/core/*"],
       "@handlers": ["app/handlers/index.ts"],
@@ -39,8 +38,6 @@
       "@config/*": ["app/config/*"],
       "@config": ["app/config/index.ts"],
       "@routes/*": ["routes/*"],
-      "@resources/*": ["resources/*"],
-      "@root/*": ["./*"],
       "$lib": ["resources/lib/index.ts"],
       "$lib/*": ["resources/lib/*"]
     }
