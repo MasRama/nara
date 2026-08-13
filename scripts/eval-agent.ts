@@ -175,11 +175,11 @@ function verifyConventions(): void {
 
   // Queries use raw SQL, not ORM
   record('queries import SQLite', /from '@services\/SQLite'/.test(queryContent), 'import SQLite');
-  record('queries use template literals', /SQLite\.one<|SQLite\.exec`|SQLite\.get</.test(queryContent), 'template literal SQL');
+  record('queries use template literals', /SQLite\.one<|SQLite\.many<|SQLite\.exec`/.test(queryContent), 'template literal SQL');
   record('no ORM imports', !/from ['"]prisma|drizzle|knex|sequelize/.test(queryContent), 'no Prisma/Drizzle/Knex');
 
-  // IN-clause pattern
-  record('IN-clause builds placeholders', /placeholders.*map.*\?/.test(queryContent), 'manual placeholder build');
+  // IN-clause pattern — arrays interpolate directly and expand to placeholders
+  record('IN-clause interpolates array', /WHERE id IN \(\$\{ids\}\)/.test(queryContent), 'array interpolation in IN clause');
 
   // Test file: mocks pre-wired, covers auth + validation + happy path
   record('test mocks @queries/evaltests', /vi\.mock\('@queries\/evaltests'/.test(testContent), 'vi.mock @queries/evaltests');
