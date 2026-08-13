@@ -58,17 +58,20 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    minify: 'esbuild',
+    minify: 'oxc',
     cssCodeSplit: true,
     sourcemap: false,
     target: 'es2022',
     rollupOptions: {
       input: input,
       output: {
-        manualChunks: {
-          'vendor-svelte': ['svelte'],
-          'vendor-inertia': ['@inertiajs/svelte'],
-          'vendor-utils': ['axios'],
+        advancedChunks: {
+          groups: [
+            { name: 'vendor-svelte', test: /node_modules[\\/]svelte/ },
+            { name: 'vendor-inertia', test: /node_modules[\\/]@inertiajs/ },
+            { name: 'vendor-zag', test: /node_modules[\\/]@zag-js/ },
+            { name: 'vendor-utils', test: /node_modules[\\/](axios|@lucide)/ },
+          ],
         },
       },
     },
