@@ -20,7 +20,6 @@ import { migrate } from "@services/Migrator";
 
 export interface AppOptions {
   port?: number;
-  https?: boolean;
   cors?: boolean;
   adapter?: FrontendAdapter;
   securityHeaders?: boolean;
@@ -36,7 +35,6 @@ export interface AppOptions {
 
 const DEFAULT_OPTIONS = {
   port: 5555,
-  https: false,
   cors: true,
   securityHeaders: true,
   requestLogging: true,
@@ -64,14 +62,13 @@ export function createApp(options?: AppOptions): NaraApp {
   const opts = {
     ...DEFAULT_OPTIONS,
     port: env.PORT,
-    https: env.HAS_CERTIFICATE === "true",
     adapter: undefined as FrontendAdapter | undefined,
     errorHandler: undefined as AppOptions["errorHandler"],
     routes: undefined as any,
     ...options,
   };
 
-  const app = createServer(opts);
+  const app = createServer();
   let server: any = null;
   let isStarted = false;
   let isShuttingDown = false;
@@ -88,17 +85,8 @@ export function createApp(options?: AppOptions): NaraApp {
     app.use(opts.routes);
   }
 
-  function createServer(o: typeof opts): any {
-    const appOptions: Record<string, unknown> = {};
-
-    if (o.https) {
-      appOptions.uwsOptions = {
-        key_file_name: require("path").join(process.cwd(), "localhost+1-key.pem"),
-        cert_file_name: require("path").join(process.cwd(), "localhost+1.pem"),
-      };
-    }
-
-    const instance = express(appOptions);
+  function createServer(): any {
+    const instance = express();
     instance.set("case sensitive routing", true);
     instance.disable("x-powered-by");
     instance.set("catch async errors", true);
@@ -267,8 +255,7 @@ export function createApp(options?: AppOptions): NaraApp {
         const envSummary = getEnvSummary(env);
         Logger.info("Server started successfully", { ...envSummary, nodeVersion: process.version });
 
-        const protocol = opts.https ? "https" : "http";
-        console.log(`\n🚀 Server is running at ${protocol}://localhost:${port}\n`);
+        console.log(`\n🚀 Server is running at http://localhost:${port}\n`);
       } catch (err) {
         Logger.fatal("Failed to start server", err as Error);
         process.exit(1);

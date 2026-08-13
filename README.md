@@ -234,7 +234,7 @@ docker run -p 5555:5555 nara-app
 npm run build && npm start
 ```
 
-Set `NODE_ENV=production` and configure SSL for production use. See [.env.production.example](./.env.production.example) for reference.
+Set `NODE_ENV=production` and run behind a reverse proxy (nginx, Caddy, etc.) for TLS termination. See [.env.production.example](./.env.production.example) for reference.
 
 ---
 

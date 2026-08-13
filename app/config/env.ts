@@ -19,7 +19,6 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_PORT),
   VITE_PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_VITE_PORT),
   APP_URL: z.string().default(`http://localhost:${process.env.PORT || SERVER.DEFAULT_PORT}`),
-  HAS_CERTIFICATE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
 });
 
@@ -44,7 +43,6 @@ export function getEnvSummary(envConfig: Env) {
     port: envConfig.PORT,
     appUrl: envConfig.APP_URL,
     logLevel: envConfig.LOG_LEVEL,
-    hasHttps: envConfig.HAS_CERTIFICATE === 'true',
   };
 }
 
