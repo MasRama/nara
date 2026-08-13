@@ -13,9 +13,8 @@ import { CreateUserSchema, UpdateUserSchema, DeleteUsersSchema, ChangeProfileSch
 export const dashboardPage = (req: NaraRequest, res: NaraResponse) => {
   const page = queryInt(req, 'page');
   const limit = queryInt(req, 'limit', 10);
-  const search = queryString(req, 'search');
 
-  const result = getUsersPaginated(page, limit, search);
+  const result = getUsersPaginated(page, limit, '');
   const admin = req.user ? isAdmin(req.user.id) : false;
   const rolesMap = getRolesForUsers(result.data.map(u => u.id));
 
@@ -26,7 +25,7 @@ export const dashboardPage = (req: NaraRequest, res: NaraResponse) => {
   }));
 
   return res.inertia('dashboard', {
-    users, total: result.total, page, limit, search,
+    users, total: result.total, page, limit,
   });
 };
 
@@ -40,7 +39,7 @@ export const usersPage = (req: NaraRequest, res: NaraResponse) => {
     return res.inertia('users', {
       users: [], availableRoles: [],
       permissions: { canCreate: false, canEdit: false, canDelete: false },
-      total: 0, page: 1, limit: 10, search: '',
+      total: 0, page: 1, limit: 10,
     });
   }
 
@@ -66,7 +65,7 @@ export const usersPage = (req: NaraRequest, res: NaraResponse) => {
   return res.inertia('users', {
     users, availableRoles: roles,
     permissions: { canCreate, canEdit, canDelete },
-    total: result.total, page, limit, search,
+    total: result.total, page, limit,
   });
 };
 

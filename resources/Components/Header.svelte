@@ -8,14 +8,7 @@
   import * as dialog from "@zag-js/dialog";
   import { useMachine, normalizeProps, portal } from "@zag-js/svelte";
   import { Menu, LogOut, ArrowUpRight } from '@lucide/svelte';
-
-  interface User {
-    id: string;
-    name: string;
-    email: string;
-    roles: string[];
-    permissions: string[];
-  }
+  import type { User } from '../types';
 
   interface MenuLink {
     href: string;
@@ -108,7 +101,7 @@
         {#if user && user.id}
           <button {...menuApi.getTriggerProps()} aria-label="Account menu">
             <div class="relative flex w-9 h-9 shrink-0 overflow-hidden rounded-full bg-muted border border-border items-center justify-center cursor-pointer hover:border-primary/40 transition-colors">
-              <span class="text-xs font-heading font-medium text-foreground">{user.name.slice(0, 2).toUpperCase()}</span>
+              <span class="text-xs font-heading font-medium text-foreground">{user.name?.slice(0, 2).toUpperCase() ?? ''}</span>
             </div>
           </button>
           <div use:portal {...menuApi.getPositionerProps()}>
@@ -181,7 +174,7 @@
                     {#if user}
                       <div class="flex items-center gap-3 mb-5 px-1">
                         <div class="relative flex w-9 h-9 shrink-0 overflow-hidden rounded-full bg-muted border border-border items-center justify-center">
-                          <span class="text-xs font-heading font-medium text-foreground">{user.name.slice(0, 2).toUpperCase()}</span>
+                          <span class="text-xs font-heading font-medium text-foreground">{user.name?.slice(0, 2).toUpperCase() ?? ''}</span>
                         </div>
                         <div class="min-w-0">
                           <p class="text-sm font-heading font-semibold tracking-tight truncate">{user.name}</p>

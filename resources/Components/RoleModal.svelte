@@ -3,7 +3,6 @@
   import Input from './Input.svelte';
   import Label from './Label.svelte';
   import Button from './Button.svelte';
-  import Switch from './Switch.svelte';
   import * as dialog from "@zag-js/dialog";
   import { useMachine, normalizeProps, portal } from "@zag-js/svelte";
   import { Loader2, CheckSquare, Square, X } from '@lucide/svelte';

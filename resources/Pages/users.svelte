@@ -10,7 +10,7 @@
   import type { User, UserForm, PaginationMeta, RoleInfo } from '../types';
   import { createEmptyUserForm, userToForm } from '../types';
   import Button from '../Components/Button.svelte';
-  import { Users, Plus, Pencil, Trash2, ArrowUpRight } from '@lucide/svelte';
+  import { Users, Plus, Pencil, Trash2 } from '@lucide/svelte';
 
   interface Props {
     users?: User[];
@@ -22,7 +22,6 @@
     totalPages?: number;
     hasNext?: boolean;
     hasPrev?: boolean;
-    search?: string;
   }
 
   let {
@@ -34,8 +33,7 @@
     limit = 10,
     totalPages = 1,
     hasNext = false,
-    hasPrev = false,
-    search = ''
+    hasPrev = false
   }: Props = $props();
 
   const currentUser = $derived(inertiaPage.props.user as User | undefined);

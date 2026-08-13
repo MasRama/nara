@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fly, fade } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
   import { page as inertiaPage, inertia } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import { Users, ShieldCheck, ArrowUpRight, ArrowRight } from '@lucide/svelte';
@@ -7,10 +7,8 @@
 
   interface Props {
     users?: User[];
-    search?: string;
     total?: number;
     page?: number;
-    limit?: number;
     totalPages?: number;
     hasNext?: boolean;
     hasPrev?: boolean;
@@ -18,10 +16,8 @@
 
   let {
     users = [],
-    search = '',
     total = 0,
     page = 1,
-    limit = 10,
     totalPages = 1,
     hasNext = false,
     hasPrev = false

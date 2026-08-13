@@ -6,7 +6,7 @@
   import axios from 'axios';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
-  import type { User, Role, GroupedPermissions, RoleForm } from '../types';
+  import type { Role, GroupedPermissions, RoleForm } from '../types';
   import { createEmptyRoleForm, roleToForm } from '../types';
   import Button from '../Components/Button.svelte';
   import { Shield, ShieldCheck, Users, Pencil, Trash2, Plus } from '@lucide/svelte';
@@ -15,14 +15,13 @@
     canCreate: boolean;
     canEdit: boolean;
     canDelete: boolean;
-    canAssign: boolean;
   }
 
   interface Props {
     permissions?: PagePermissions;
   }
 
-  let { permissions = { canCreate: false, canEdit: false, canDelete: false, canAssign: false } }: Props = $props();
+  let { permissions = { canCreate: false, canEdit: false, canDelete: false } }: Props = $props();
 
   let roles: Role[] = $state([]);
   let groupedPermissions: GroupedPermissions = $state({});

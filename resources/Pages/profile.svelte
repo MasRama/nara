@@ -10,15 +10,7 @@
   import * as tabs from "@zag-js/tabs";
   import { useMachine, normalizeProps } from "@zag-js/svelte";
   import { Loader2, Camera, Shield } from '@lucide/svelte';
-
-  interface User {
-    id: string;
-    name: string;
-    email: string;
-    avatar?: string;
-    roles: string[];
-    permissions: string[];
-  }
+  import type { User } from '../types';
 
   interface Props { user: User }
 
@@ -33,20 +25,22 @@
   const tabsService = useMachine(tabs.machine, { id: "profile-tabs", defaultValue: "personal" });
   const tabsApi = $derived(tabs.connect(tabsService, normalizeProps));
 
-  function handleAvatarChange(event: Event): void {
+  async function handleAvatarChange(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    if (file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      isLoading = true;
-      axios.post('/assets/avatar', formData)
-        .then((response) => {
-          setTimeout(() => { isLoading = false; previewUrl = response.data.data.url + '?v=' + Date.now(); }, 500);
-          user.avatar = response.data.data.url + '?v=' + Date.now();
-          Toast('Avatar uploaded', 'success');
-        })
-        .catch(() => { isLoading = false; Toast('Failed to upload avatar', 'error'); });
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    isLoading = true;
+    try {
+      const result = await api(() => axios.post('/assets/avatar', formData));
+      if (result.success && result.data) {
+        const url = `${(result.data as { url: string }).url}?v=${Date.now()}`;
+        previewUrl = url;
+        user.avatar = url;
+      }
+    } finally {
+      isLoading = false;
     }
   }
 

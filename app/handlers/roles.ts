@@ -10,14 +10,13 @@ import { randomUUID } from 'crypto';
 import { CreateRoleSchema, UpdateRoleSchema, zodToErrors } from '@validators';
 
 export const rolesPage = (req: NaraRequest, res: NaraResponse) => {
-  if (!req.user) return res.inertia('roles', { permissions: { canCreate: false, canEdit: false, canDelete: false, canAssign: false } });
+  if (!req.user) return res.inertia('roles', { permissions: { canCreate: false, canEdit: false, canDelete: false } });
 
   const userId = req.user.id;
   const permissions = {
     canCreate: isAdmin(userId) || hasPermission(userId, 'roles.create'),
     canEdit: isAdmin(userId) || hasPermission(userId, 'roles.edit'),
     canDelete: isAdmin(userId) || hasPermission(userId, 'roles.delete'),
-    canAssign: isAdmin(userId) || hasPermission(userId, 'roles.edit'),
   };
 
   return res.inertia('roles', { permissions });
