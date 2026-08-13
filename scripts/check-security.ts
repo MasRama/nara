@@ -19,14 +19,9 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { walk, DEFAULT_SKIP_DIRS } from './lib/walk';
 
 const ROOT = path.resolve(__dirname, '..');
-
-const SKIP_DIRS = new Set([
-  'node_modules', 'dist', 'build', '.git', 'storage', 'database',
-  'logs', '.vscode', '.github', '.playwright-mcp', '.agents', 'scripts',
-  'coverage', 'docs',
-]);
 
 interface Violation {
   rule: string;
@@ -37,22 +32,6 @@ interface Violation {
 }
 
 const violations: Violation[] = [];
-
-function walk(dir: string, results: string[] = []): string[] {
-  let entries: fs.Dirent[] = [];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return results; }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      walk(full, results);
-    } else if (entry.isFile()) {
-      const ext = path.extname(entry.name);
-      if (ext === '.ts' || ext === '.svelte' || ext === '.js') results.push(full);
-    }
-  }
-  return results;
-}
 
 function checkFile(absPath: string): void {
   const rel = path.relative(ROOT, absPath).replace(/\\/g, '/');
@@ -132,7 +111,8 @@ function checkFile(absPath: string): void {
 }
 
 function main(): void {
-  const files = walk(ROOT);
+  const skipDirs = new Set([...DEFAULT_SKIP_DIRS, 'coverage', 'docs']);
+  const files = walk(ROOT, { skipDirs, extensions: new Set(['.ts', '.svelte', '.js']) });
   for (const f of files) checkFile(f);
 
   if (violations.length === 0) {

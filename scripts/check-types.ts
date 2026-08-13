@@ -21,17 +21,11 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { walk, DEFAULT_SKIP_DIRS } from './lib/walk';
 
 const ROOT = path.resolve(__dirname, '..');
 const BASELINE_FILE = path.join(ROOT, '.agents', 'types-baseline.json');
 
-const SKIP_DIRS = new Set([
-  'node_modules', 'dist', 'build', '.git', 'storage', 'database',
-  'logs', '.vscode', '.github', '.playwright-mcp', '.agents', 'scripts',
-  'coverage', 'docs', 'tests',
-]);
-
-const SCAN_EXT = new Set(['.ts', '.svelte']);
 const SCAN_DIRS = ['app', 'resources', 'routes', 'migrations', 'seeds'];
 const SCAN_FILES = ['server.ts'];
 
@@ -51,21 +45,6 @@ interface Violation {
   newCount: number;
 }
 
-function walk(dir: string, results: string[] = []): string[] {
-  let entries: fs.Dirent[] = [];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return results; }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      walk(full, results);
-    } else if (entry.isFile() && SCAN_EXT.has(path.extname(entry.name))) {
-      results.push(full);
-    }
-  }
-  return results;
-}
-
 function countAny(content: string): number {
   let count = 0;
   for (const pattern of ANY_PATTERNS) {
@@ -76,9 +55,10 @@ function countAny(content: string): number {
 }
 
 function collectFiles(): string[] {
+  const skipDirs = new Set([...DEFAULT_SKIP_DIRS, 'coverage', 'docs', 'tests']);
   const files: string[] = [];
   for (const dir of SCAN_DIRS) {
-    walk(path.join(ROOT, dir), files);
+    files.push(...walk(path.join(ROOT, dir), { skipDirs }));
   }
   for (const f of SCAN_FILES) {
     const full = path.join(ROOT, f);

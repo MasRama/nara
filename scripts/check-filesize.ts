@@ -14,6 +14,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { walk, DEFAULT_SKIP_DIRS } from './lib/walk';
 
 const ROOT = path.resolve(__dirname, '..');
 const LIMIT = 500;
@@ -21,7 +22,6 @@ const LIMIT = 500;
 // Directories to check — source code, not tooling.
 const CHECK_DIRS = ['app', 'routes', 'resources', 'migrations', 'seeds'];
 const CHECK_FILES = ['server.ts'];
-const CHECK_EXT = new Set(['.ts', '.svelte']);
 
 // Files explicitly exempt (documented reason per entry).
 const WHITELIST = new Set<string>([
@@ -34,21 +34,6 @@ interface Violation {
   over: number;
 }
 
-function walk(dir: string, results: string[] = []): string[] {
-  let entries: fs.Dirent[] = [];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return results; }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name === 'build' || entry.name === '__tests__') continue;
-      walk(full, results);
-    } else if (entry.isFile()) {
-      if (CHECK_EXT.has(path.extname(entry.name))) results.push(full);
-    }
-  }
-  return results;
-}
-
 function countLines(filePath: string): number {
   try {
     return fs.readFileSync(filePath, 'utf-8').split('\n').length;
@@ -58,8 +43,9 @@ function countLines(filePath: string): number {
 }
 
 function main(): void {
+  const skipDirs = new Set([...DEFAULT_SKIP_DIRS, '__tests__']);
   const files: string[] = [];
-  for (const d of CHECK_DIRS) files.push(...walk(path.join(ROOT, d)));
+  for (const d of CHECK_DIRS) files.push(...walk(path.join(ROOT, d), { skipDirs }));
   for (const f of CHECK_FILES) {
     const full = path.join(ROOT, f);
     if (fs.existsSync(full)) files.push(full);

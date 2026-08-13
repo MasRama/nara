@@ -28,6 +28,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { walk } from './lib/walk';
 
 interface Violation {
   rule: string;
@@ -38,28 +39,8 @@ interface Violation {
 }
 
 const ROOT = path.resolve(__dirname, '..');
-const SKIP_DIRS = new Set([
-  'node_modules', 'dist', 'build', '.git', 'storage', 'database',
-  'logs', '.vscode', '.github', '.playwright-mcp', '.agents', 'scripts',
-]);
 
 const violations: Violation[] = [];
-
-function walk(dir: string, results: string[] = []): string[] {
-  let entries: fs.Dirent[] = [];
-  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return results; }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue;
-      walk(full, results);
-    } else if (entry.isFile()) {
-      const ext = path.extname(entry.name);
-      if (ext === '.ts' || ext === '.svelte') results.push(full);
-    }
-  }
-  return results;
-}
 
 function checkFile(absPath: string): void {
   const rel = path.relative(ROOT, absPath).replace(/\\/g, '/');
