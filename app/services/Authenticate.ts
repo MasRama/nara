@@ -1,6 +1,7 @@
 import { createSession, deleteSession, deleteSessionsByUserId } from '@queries';
 import type { User } from '@types';
 import type { NaraRequest as Request, NaraResponse as Response } from '@core';
+import { AUTH } from '@config';
 import { randomUUID, pbkdf2Sync, randomBytes, timingSafeEqual } from 'crypto';
 
 const ITERATIONS = 100000;
@@ -9,7 +10,6 @@ const DIGEST = 'sha512';
 const SALT_SIZE = 16;
 
 const SESSION_COOKIE_NAME = 'auth_id';
-const SESSION_EXPIRY_MS = 1000 * 60 * 60 * 24 * 60;
 
 const getSecureCookieOptions = () => ({
    httpOnly: true,
@@ -48,7 +48,7 @@ export const processLogin = (user: User, request: Request, response: Response) =
       user_agent: request.headers['user-agent'] || null,
    });
 
-   response.cookie(SESSION_COOKIE_NAME, token, { maxAge: SESSION_EXPIRY_MS, ...getSecureCookieOptions() });
+   response.cookie(SESSION_COOKIE_NAME, token, { maxAge: AUTH.SESSION_EXPIRY_MS, ...getSecureCookieOptions() });
 };
 
 export const logout = (request: Request, response: Response) => {

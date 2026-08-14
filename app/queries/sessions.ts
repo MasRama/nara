@@ -1,13 +1,12 @@
 import SQLite from '@services/SQLite';
 import type { Session, User } from '@types';
-
-const SESSION_TTL_MS = 60 * 24 * 60 * 60 * 1000;
+import { AUTH } from '@config';
 
 export const findSessionById = (id: string): Session | undefined =>
   SQLite.one<Session>`SELECT * FROM sessions WHERE id = ${id}`;
 
 export const createSession = (data: { id: string; user_id: string; user_agent?: string | null }): Session => {
-  const expiresAt = Date.now() + SESSION_TTL_MS;
+  const expiresAt = Date.now() + AUTH.SESSION_EXPIRY_MS;
   SQLite.exec`
     INSERT INTO sessions (id, user_id, user_agent, expires_at) 
     VALUES (${data.id}, ${data.user_id}, ${data.user_agent ?? null}, ${expiresAt})

@@ -5,8 +5,7 @@ export const SERVER = {
 } as const;
 
 export const AUTH = {
-  SESSION_EXPIRY_MS: 30 * 24 * 60 * 60 * 1000,
-  ERROR_COOKIE_EXPIRY_MS: 5 * 60 * 1000,
+  SESSION_EXPIRY_MS: 60 * 24 * 60 * 60 * 1000,
 } as const;
 
 export const RATE_LIMIT = {
