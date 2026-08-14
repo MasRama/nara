@@ -2,7 +2,7 @@ import express from "ultimate-express";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 
-import { initEnv, getEnvSummary, SERVER } from "@config";
+import { initEnv, getEnvSummary, SERVER, AUTH } from "@config";
 import type { Env } from "@config";
 import Logger from "@services/Logger";
 import { securityHeaders } from "@middlewares/securityHeaders";
@@ -54,6 +54,15 @@ export interface NaraApp {
   isRunning(): boolean;
 }
 
+let sessionCleanupInterval: NodeJS.Timeout | null = null;
+
+function startSessionCleanup(): void {
+  if (sessionCleanupInterval) return;
+  sessionCleanupInterval = setInterval(() => {
+    cleanupExpiredSessions();
+  }, AUTH.SESSION_CLEANUP_INTERVAL_MS);
+}
+
 export function createApp(options?: AppOptions): NaraApp {
   const env = initEnv();
 
@@ -75,6 +84,7 @@ export function createApp(options?: AppOptions): NaraApp {
     migrate();
   }
   cleanupExpiredSessions();
+  startSessionCleanup();
 
   applyDefaultMiddlewares(app, opts);
   setupErrorHandler(app, env, opts.errorHandler);
@@ -195,6 +205,11 @@ export function createApp(options?: AppOptions): NaraApp {
       return;
     }
     isShuttingDown = true;
+
+    if (sessionCleanupInterval) {
+      clearInterval(sessionCleanupInterval);
+      sessionCleanupInterval = null;
+    }
 
     const timeoutMs = opts.shutdownTimeout;
     Logger.info(`${signal} received, starting graceful shutdown...`);

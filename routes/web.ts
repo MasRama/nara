@@ -22,7 +22,7 @@ Route.post('/login', auth.submitLogin);
 Route.get('/register', auth.registerPage);
 Route.post('/register', strictRateLimit(), auth.submitRegister);
 Route.post('/logout', strictRateLimit(), auth.logout);
-Route.post('/change-password', [Auth], auth.changePassword);
+Route.post('/change-password', [Auth, strictRateLimit()], auth.changePassword);
 
 // Protected - Users
 Route.get('/dashboard', [Auth], users.dashboardPage);
