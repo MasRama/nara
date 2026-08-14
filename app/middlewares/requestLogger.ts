@@ -14,7 +14,6 @@ const DEFAULT_SKIP_PATHS = [
   '/health',
   '/ready',
   '/favicon.ico',
-  '/robots.txt',
 ];
 
 const STATIC_EXTENSIONS = [

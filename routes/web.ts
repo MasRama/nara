@@ -1,5 +1,6 @@
 import { createRouter } from '@core';
 import * as home from '@handlers/home';
+import * as health from '@handlers/health';
 import * as auth from '@handlers/auth';
 import * as users from '@handlers/users';
 import * as roles from '@handlers/roles';
@@ -11,6 +12,8 @@ const Route = createRouter();
 
 // Public
 Route.get('/', home.landingPage);
+Route.get('/health', health.healthCheck);
+Route.get('/ready', health.readyCheck);
 
 // Auth
 Route.get('/login', auth.loginPage);

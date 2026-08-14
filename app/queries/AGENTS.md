@@ -16,6 +16,7 @@ Raw SQL functions in `app/queries/`. The only layer that touches `SQLite`. Handl
 | `roles.ts` | CRUD + role-permission junction + permission lookups |
 | `sessions.ts` | session CRUD + expiry cleanup + `getUserBySessionId` |
 | `assets.ts` | `createAsset`, `findAssetsByUserId` |
+| `health.ts` | `pingDatabase` (readiness probe) |
 | `index.ts` | barrel export (`export * from './X'`) |
 
 ## Static SQL → Template Literals (auto-parameterized, safe)

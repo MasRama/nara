@@ -17,6 +17,7 @@ import { jsonError, jsonValidationError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
 import { migrate } from "@services/Migrator";
+import { cleanupExpiredSessions } from "@queries";
 
 export interface AppOptions {
   port?: number;
@@ -76,6 +77,7 @@ export function createApp(options?: AppOptions): NaraApp {
   if (opts.autoMigrate) {
     migrate();
   }
+  cleanupExpiredSessions();
 
   applyDefaultMiddlewares(app, opts);
   setupErrorHandler(app, env, opts.errorHandler);
