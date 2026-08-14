@@ -30,19 +30,6 @@ export default defineConfig({
         runes: true,
       },
     }),
-    {
-      name: 'port-handling',
-      configureServer(server) {
-        // Handle server startup errors
-        server.httpServer?.on('error', (err) => {
-          if (err.code === 'EADDRINUSE') {
-            console.error(`\x1b[31mError: Vite Port ${PORT} is already in use. Shutting down server.\x1b[0m`);
-            // Exit the process with an error code
-            process.exit(1);
-          }
-        });
-      }
-    }
   ],
   root: 'resources',
   resolve: {

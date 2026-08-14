@@ -107,7 +107,6 @@ Execution is not your job — completeness is. Every item maps to a skill to loa
 - [ ] Git: `rm -rf .git && git init` — confirm with user first (destructive)
 - [ ] Rename `package.json` — name, description
 - [ ] Rename `resources/inertia.html` — `<title>`, favicon `/public/nara.png`
-- [ ] Rename brand component `NaraIcon.svelte` — file + imports + alt text
 - [ ] Update brand text — Header, landing, auth pages, profile (copy + © footer)
 - [ ] Update env — `.env`, `.env.production.example`, `database/*.sqlite3` paths
 - [ ] Update `README.md` — title, badges, links
@@ -151,7 +150,6 @@ Never trust a hardcoded list — re-run `grep -ri "nara"` during research and ve
 |---|---|
 | `package.json` | name, description |
 | `resources/inertia.html` | `<title>NARA - ...`, favicon `/public/nara.png` |
-| `resources/Components/NaraIcon.svelte` | brand icon (rename file + all imports + alt text) |
 | `resources/Components/Header.svelte` | brand text (desktop + mobile menu) |
 | `resources/Pages/landing.svelte` | brand text, hero copy, footer |
 | `resources/Pages/auth/login.svelte`, `register.svelte` | brand text, © footer |

@@ -25,7 +25,7 @@ routes/web.ts            →  Route.get/post/put/delete('/products', ...)
 Pages/products.svelte    →  Full UI with table, forms, toast notifications
 ```
 
-Ten files. Correct conventions. The machine did it all — you just asked.
+Eleven files. Correct conventions. The machine did it all — you just asked.
 
 ---
 

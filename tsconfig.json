@@ -38,7 +38,6 @@
       "@config/*": ["app/config/*"],
       "@config": ["app/config/index.ts"],
       "@routes/*": ["routes/*"],
-      "$lib": ["resources/lib/index.ts"],
       "$lib/*": ["resources/lib/*"]
     }
   },

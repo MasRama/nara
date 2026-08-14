@@ -5,7 +5,7 @@
   "description": "AI-first TypeScript full-stack starter kit. ultimate-express + Svelte 5 + Inertia.js + SQLite. Raw SQL, plain functions, zero ORM. Auth, RBAC, CSRF, rate limiting, structured logging, file storage, and a complete user management UI.",
   "main": "server.ts",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.0.0"
   },
   "packageManager": "npm@10.9.8",
   "scripts": {
