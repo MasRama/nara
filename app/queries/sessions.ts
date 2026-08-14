@@ -1,5 +1,5 @@
 import SQLite from '@services/SQLite';
-import type { Session, User, Role } from '@types';
+import type { Session, User } from '@types';
 
 const SESSION_TTL_MS = 60 * 24 * 60 * 60 * 1000;
 

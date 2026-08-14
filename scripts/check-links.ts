@@ -82,7 +82,7 @@ function checkFile(rel: string): BrokenLink[] {
       // Skip external, anchor-only, mailto
       if (HTTP_RE.test(target) || ANCHOR_RE.test(target) || MAILTO_RE.test(target)) continue;
       // Strip anchor from target
-      const [pathPart, anchor] = target.split('#');
+      const [pathPart] = target.split('#');
       const resolved = path.normalize(path.join(baseDir, pathPart));
       const absTarget = path.join(ROOT, resolved);
       if (!fs.existsSync(absTarget)) {

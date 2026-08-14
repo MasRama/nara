@@ -1,5 +1,5 @@
 import SQLite from '@services/SQLite';
-import type { User, UserRole, Role, Permission } from '@types';
+import type { User, Role, Permission } from '@types';
 import { randomUUID } from 'crypto';
 
 export const findUserById = (id: string): User | undefined =>

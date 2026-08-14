@@ -124,7 +124,6 @@ DROP TABLE IF EXISTS ${tableName};
 
 function generateQueries(name: string, fields: Field[]): string {
   const singular = toPascal(singularize(name));
-  const camelSingular = toCamel(singularize(name));
   const tableName = name.toLowerCase();
   const fieldNames = fields.map(f => f.name);
   const insertFields = ['id', ...fieldNames, 'created_at', 'updated_at'];
@@ -170,12 +169,10 @@ export const delete${singular}s = (ids: string[]): void => {
 `;
 }
 
-function generateHandlers(name: string, fields: Field[]): string {
+function generateHandlers(name: string): string {
   const singular = toPascal(singularize(name));
   const camelSingular = toCamel(singularize(name));
   const camelPlural = toCamel(name);
-  const tableName = name.toLowerCase();
-  const fieldNames = fields.map(f => f.name);
 
   return `import type { NaraRequest, NaraResponse } from '@core';
 import { jsonSuccess, jsonCreated, jsonError, jsonServerError, jsonValidationError, jsonPaginated, queryInt, queryString } from '@core';
@@ -253,7 +250,6 @@ export const remove${singular}s = (req: NaraRequest, res: NaraResponse) => {
 
 function generateRoutes(name: string): string {
   const camelPlural = toCamel(name);
-  const singular = toCamel(singularize(name));
 
   return `
 // ${capitalize(camelPlural)}
@@ -268,7 +264,6 @@ Route.delete('/${camelPlural}', [Auth], ${camelPlural}.remove${toPascal(singular
 function generatePage(name: string): string {
   const singular = toPascal(singularize(name));
   const camelPlural = toCamel(name);
-  const camelSingular = toCamel(singularize(name));
 
   return `<script lang="ts">
   import { fly } from 'svelte/transition';
@@ -575,7 +570,7 @@ function main(): void {
 
   // 5. Handlers
   const handlerFile = `app/handlers/${camelPlural}.ts`;
-  writeFileSync(handlerFile, generateHandlers(name, fields));
+  writeFileSync(handlerFile, generateHandlers(name));
   console.log(`  ✓ ${handlerFile}`);
 
   // 5b. Update handlers AGENTS.md Structure table

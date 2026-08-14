@@ -1,5 +1,5 @@
 import SQLite from '@services/SQLite';
-import type { Role, Permission, RolePermission } from '@types';
+import type { Role, Permission } from '@types';
 import { randomUUID } from 'crypto';
 
 export const findAllRoles = (): Role[] =>

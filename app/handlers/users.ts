@@ -4,7 +4,7 @@ import { hashPassword } from '@services/Authenticate';
 import Logger from '@services/Logger';
 import {
   getUsersPaginated, createUser, updateUser, deleteUsers,
-  getUserRoles, getRolesForUsers, isAdmin, hasPermission, syncRoles, findUserById
+  getUserRoles, getRolesForUsers, isAdmin, hasPermission, syncRoles
 } from '@queries';
 import { findAllRoles, findRoleBySlug, getUsersWithRole } from '@queries/roles';
 import { randomUUID } from 'crypto';
@@ -69,7 +69,7 @@ export const usersPage = (req: NaraRequest, res: NaraResponse) => {
   });
 };
 
-export const profilePage = (req: NaraRequest, res: NaraResponse) => {
+export const profilePage = (_req: NaraRequest, res: NaraResponse) => {
   return res.inertia('profile');
 };
 

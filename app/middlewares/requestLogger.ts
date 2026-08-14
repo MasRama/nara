@@ -5,7 +5,6 @@ export interface RequestLoggerOptions {
   skip?: (req: NaraRequest) => boolean;
   includeHeaders?: string[];
   includeQuery?: boolean;
-  includeBody?: boolean;
   successLevel?: 'trace' | 'debug' | 'info';
   clientErrorLevel?: 'info' | 'warn';
   serverErrorLevel?: 'warn' | 'error';
@@ -32,7 +31,6 @@ export function requestLogger(options: RequestLoggerOptions = {}): NaraMiddlewar
     skip,
     includeHeaders = ['user-agent'],
     includeQuery = false,
-    includeBody = false,
     successLevel = 'info',
     clientErrorLevel = 'warn',
     serverErrorLevel = 'error',

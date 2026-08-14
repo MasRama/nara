@@ -21,8 +21,6 @@ import { execSync } from 'child_process';
 
 const ROOT = path.resolve(__dirname, '..');
 const RESOURCE = 'evaltests';
-const SINGULAR = 'Evaltest';
-const CAMEL = 'evaltests';
 
 // Files that gen:resource appends to (must be restored after eval).
 const APPENDED_FILES = [
@@ -44,9 +42,6 @@ const CREATED_FILES = [
   'resources/Pages/evaltests.svelte',
   'tests/handlers/evaltests.test.ts',
 ];
-
-// Migration file has a timestamp prefix — matched by glob.
-const MIGRATION_GLOB = 'migrations/*_create_evaltests.ts';
 
 interface Snapshot {
   file: string;
