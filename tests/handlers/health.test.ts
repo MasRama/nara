@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockRequest, mockResponse } from '../helpers/mocks';
 
-vi.mock('@queries/health', () => ({
+vi.mock('@queries', () => ({
   pingDatabase: vi.fn(),
 }));
 
 import { healthCheck, readyCheck } from '@handlers/health';
-import { pingDatabase } from '@queries/health';
+import { pingDatabase } from '@queries';
 
 describe('health handlers', () => {
   beforeEach(() => {
