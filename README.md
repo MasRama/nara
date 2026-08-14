@@ -246,7 +246,7 @@ Set `NODE_ENV=production` and run behind a reverse proxy (nginx, Caddy, etc.) fo
 
 ## Requirements.
 
-Node.js >= 20 · npm · That's it. SQLite is embedded.
+Node.js >= 22 · npm · That's it. SQLite is embedded.
 
 ## License.
 

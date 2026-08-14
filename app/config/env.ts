@@ -22,7 +22,9 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_PORT),
   VITE_PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_VITE_PORT),
   APP_URL: z.string().default(`http://localhost:${process.env.PORT || SERVER.DEFAULT_PORT}`),
-  LOG_LEVEL: z.enum(LOGGING.LEVELS).default('info'),
+  LOG_LEVEL: z.enum(LOGGING.LEVELS).default(() => process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  DB_FILE: z.string().optional(),
+  LOG_PRETTY: z.enum(['true', 'false']).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

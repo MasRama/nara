@@ -1,16 +1,14 @@
-import { loadEnvFile } from '@config';
+import { env } from '@config';
 import { resolve } from 'path';
 import Database from 'better-sqlite3';
 import type * as BetterSqlite3 from 'better-sqlite3';
 
-loadEnvFile();
-
-const defaultDbFile = process.env.NODE_ENV === 'production'
+const defaultDbFile = env.NODE_ENV === 'production'
   ? 'database/production.sqlite3'
-  : process.env.NODE_ENV === 'test'
+  : env.NODE_ENV === 'test'
     ? ':memory:'
     : 'database/dev.sqlite3';
-const dbFile = process.env.DB_FILE || defaultDbFile;
+const dbFile = env.DB_FILE || defaultDbFile;
 const nativeDb = new Database(dbFile === ':memory:' ? ':memory:' : resolve(process.cwd(), dbFile));
 
 nativeDb.pragma('busy_timeout = 5000');

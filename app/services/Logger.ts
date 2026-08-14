@@ -3,19 +3,19 @@ import pino from 'pino';
 import path from 'path';
 import fs from 'fs';
 
-import '@config';
+import { env } from '@config';
 
 const logsDir = path.join(process.cwd(), 'logs');
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-const LOG_LEVEL = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug');
-const NODE_ENV = process.env.NODE_ENV || 'development';
+const LOG_LEVEL = env.LOG_LEVEL || (env.NODE_ENV === 'production' ? 'info' : 'debug');
+const NODE_ENV = env.NODE_ENV;
 
 const usePrettyConsole =
-  process.env.LOG_PRETTY === 'true' ||
-  (process.env.LOG_PRETTY !== 'false' && (NODE_ENV === 'development' || process.stdout.isTTY));
+  env.LOG_PRETTY === 'true' ||
+  (env.LOG_PRETTY !== 'false' && (NODE_ENV === 'development' || process.stdout.isTTY));
 
 const pinoConfig: pino.LoggerOptions = {
   level: LOG_LEVEL,
