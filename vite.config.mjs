@@ -52,7 +52,7 @@ export default defineConfig({
     rollupOptions: {
       input: input,
       output: {
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             { name: 'vendor-svelte', test: /node_modules[\\/]svelte/ },
             { name: 'vendor-inertia', test: /node_modules[\\/]@inertiajs/ },
