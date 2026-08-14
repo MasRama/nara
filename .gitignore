@@ -23,6 +23,9 @@ production.sqlite3
 # Test coverage
 coverage/
 
+# macOS
+.DS_Store
+
 # Uploads & Storage
 public/uploads
 storage/

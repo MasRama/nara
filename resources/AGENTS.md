@@ -137,7 +137,7 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 - **Page data**: All data passed via `res.inertia()` props from handler — lists, permissions, metadata
 - **Mutations**: Use `api(() => axios.post/put/delete())` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` (bypasses api wrapper, no toast/CSRF)
 - **Navigation**: Use `router.visit()` for page transitions — NEVER `window.location` or native `<a>` for internal navigation
-- **Authorization**: `<Can permission="users.edit">` component wraps gated UI sections
+- **Authorization**: Gate UI with server-computed `permissions` props (`canCreate`, `canEdit`, `canDelete`) passed by the page handler — never manual role checks in templates
 - **Dark mode**: Use `dark:` Tailwind prefix on all elements
 - **Types**: Import from `$lib/types` or `../types` (relative)
 - **UI primitives**: Zag JS (`@zag-js/*`) for headless interactive components (dialog, menu, switch, tabs) — styled with Tailwind

@@ -1,5 +1,5 @@
 ---
-description: "Reusable Svelte 5 UI components — Button, Input, Label, Switch, Badge, Modal, Header, Pagination, Can. Zag JS for interactive primitives"
+description: "Reusable Svelte 5 UI components — Button, Input, Label, Switch, Badge, Modal, Header, Pagination. Zag JS for interactive primitives"
 tags: [components, svelte, ui, zag-js, button, modal, header, pagination]
 ---
 
@@ -16,7 +16,6 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 |------|---------|-----------|
 | `Badge.svelte` | Inline status/label badge | `variant`, `href`, `children` |
 | `Button.svelte` | Button with variants | `variant` (default/destructive/outline), `size` (default/sm/lg), `href`, `type`, `disabled`, `children` |
-| `Can.svelte` | Authorization wrapper | `permission` (string), `role` (string), `children` |
 | `DarkModeToggle.svelte` | Dark mode toggle | `onchange?: (isDark: boolean) => void` |
 | `Header.svelte` | Top nav bar + user menu | `group` (string — active nav section) |
 | `Input.svelte` | Styled text input | `value` (bindable), `type`, `files` (bindable), `className` |
@@ -36,20 +35,6 @@ import { api } from '$lib/api';           // HTTP wrapper (axios + toast)
 import { Toast } from '$lib/toast';         // Toast(text, type) — function, NOT object
 import { cn } from '$lib/utils';            // Class merging (clsx + tailwind-merge)
 import { password_generator } from '$lib/utils/password';
-```
-
-## Can Component
-
-Accepts `permission` OR `role` prop. Admin bypasses all checks.
-
-```svelte
-<Can permission="users.edit">
-  <button>Edit User</button>
-</Can>
-
-<Can role="admin">
-  <button>Admin Only</button>
-</Can>
 ```
 
 ## Pagination Component
@@ -246,7 +231,7 @@ Every Zag JS component follows the same 3-step pattern:
 - **Variants**: Use `tailwind-variants` (`tv`) with module script for components with visual variants
 - **Interactive components**: Use Zag JS (`@zag-js/*`) for dialogs, menus, switches, tabs — NOT raw HTML or custom implementations
 - Transitions from `svelte/transition` (fly, fade, scale)
-- Authorization: use `<Can>` component, never manual role checks in templates
+- Authorization: gate UI with server-computed `permissions` props (`canCreate`, `canEdit`, `canDelete`) from the page handler — never manual role checks in templates
 - CRUD mutations: use `api(() => axios.method(...))` — NOT raw `fetch()`
 - CSRF for axios: `configureAxiosCSRF(axios)` called once in `app.ts` — interceptor handles all requests automatically
 - All component files `.svelte` extension (no `.js` components)

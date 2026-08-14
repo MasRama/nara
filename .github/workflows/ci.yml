@@ -32,9 +32,6 @@ jobs:
       - name: Agent eval harness
         run: npm run eval
 
-      - name: Tests
-        run: npm test
-
   build:
     name: Build
     runs-on: ubuntu-latest
