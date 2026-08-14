@@ -19,7 +19,7 @@ Frontend TypeScript type definitions. Shared types are sourced from `app/types/s
 
 Shared types (`User`, `Role`, `Permission`, `Session`, `PaginationMeta`, `ApiResponse`, etc.) live in **`app/types/shared.ts`** and are re-exported from `forms.ts`. When backend types change, update `app/types/shared.ts` — the frontend automatically gets the changes.
 
-Database model types with sensitive fields (`password`, `remember_me_token`) stay in `app/types/models.ts` and are **never** exposed to the frontend.
+Database model types with sensitive fields (`password`) stay in `app/types/models.ts` and are **never** exposed to the frontend.
 
 ### Helper Functions (frontend-only)
 

@@ -5,7 +5,6 @@ export interface User {
   avatar: string | null;
   membership_date: string | null;
   password: string;
-  remember_me_token: string | null;
   created_at: number;
   updated_at: number;
 }

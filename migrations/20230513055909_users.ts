@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
   avatar TEXT,
   membership_date TEXT,
   password TEXT NOT NULL,
-  remember_me_token TEXT,
   created_at INTEGER,
   updated_at INTEGER
 );
