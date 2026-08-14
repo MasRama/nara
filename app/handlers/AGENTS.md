@@ -18,6 +18,7 @@ Request handlers — functions that receive `NaraRequest` / `NaraResponse` and r
 | `assets.ts` | avatar upload + static asset serving |
 | `home.ts` | landing page |
 | `health.ts` | liveness/readiness checks (`/health`, `/ready`) |
+| `errors.ts` | 404 catch-all (`notFoundPage`) |
 | `index.ts` | barrel export (`export * as X from './X'`) |
 
 ## The Two Route Types (critical)

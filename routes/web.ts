@@ -1,6 +1,7 @@
 import { createRouter } from '@core';
 import * as home from '@handlers/home';
 import * as health from '@handlers/health';
+import * as errors from '@handlers/errors';
 import * as auth from '@handlers/auth';
 import * as users from '@handlers/users';
 import * as roles from '@handlers/roles';
@@ -45,5 +46,8 @@ Route.post('/assets/avatar', [Auth, strictRateLimit(), assets.avatarMiddleware a
 Route.get('/assets/:file', assets.serveDistAsset);
 Route.get('/public/*', assets.servePublicAsset);
 Route.get('/storage/*', assets.servePublicAsset);
+
+// 404 — must be registered last
+Route.any('*', errors.notFoundPage);
 
 export default Route.getRouter();
