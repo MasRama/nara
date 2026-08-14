@@ -1,17 +1,9 @@
-import 'dotenv/config';
-import { existsSync } from 'fs';
+import { loadEnvFile } from '@config';
 import { resolve } from 'path';
 import Database from 'better-sqlite3';
 import type * as BetterSqlite3 from 'better-sqlite3';
 
-const prodEnvPath = resolve(process.cwd(), '.env.production');
-if (existsSync(prodEnvPath)) {
-  require('dotenv').config({ path: prodEnvPath });
-  process.env.NODE_ENV = 'production';
-} else {
-  require('dotenv').config();
-  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
-}
+loadEnvFile();
 
 const defaultDbFile = process.env.NODE_ENV === 'production'
   ? 'database/production.sqlite3'

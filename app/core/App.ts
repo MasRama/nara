@@ -1,5 +1,4 @@
 import express from "ultimate-express";
-import cors from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 
@@ -21,7 +20,6 @@ import { cleanupExpiredSessions } from "@queries";
 
 export interface AppOptions {
   port?: number;
-  cors?: boolean;
   adapter?: FrontendAdapter;
   securityHeaders?: boolean;
   requestLogging?: boolean;
@@ -36,8 +34,7 @@ export interface AppOptions {
 
 const DEFAULT_OPTIONS = {
   port: 5555,
-  cors: true,
-  securityHeaders: true,
+    securityHeaders: true,
   requestLogging: true,
   rateLimit: false,
   csrf: false,
@@ -106,7 +103,6 @@ export function createApp(options?: AppOptions): NaraApp {
     if (o.securityHeaders) instance.use(securityHeaders());
     instance.use(requestId());
     if (o.requestLogging) instance.use(requestLogger());
-    if (o.cors) instance.use(cors());
     if (o.rateLimit) instance.use(rateLimit());
     if (o.csrf) instance.use(csrf());
     if (o.inputSanitize) instance.use(inputSanitize());
@@ -290,14 +286,13 @@ export function createApp(options?: AppOptions): NaraApp {
   return api;
 }
 
-export function createWebApp(options: Omit<AppOptions, 'cors' | 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate'> & {
+export function createWebApp(options: Omit<AppOptions, 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate'> & {
   adapter: FrontendAdapter;
   csrf?: boolean;
   rateLimit?: boolean;
 }): NaraApp {
   return createApp({
-    cors: true,
-    securityHeaders: true,
+        securityHeaders: true,
     requestLogging: true,
     inputSanitize: true,
     autoMigrate: true,
@@ -306,13 +301,12 @@ export function createWebApp(options: Omit<AppOptions, 'cors' | 'securityHeaders
   });
 }
 
-export function createApiApp(options: Omit<AppOptions, 'cors' | 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate' | 'adapter'> & {
+export function createApiApp(options: Omit<AppOptions, 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate' | 'adapter'> & {
   rateLimit?: boolean;
   csrf?: boolean;
 }): NaraApp {
   return createApp({
-    cors: true,
-    securityHeaders: true,
+        securityHeaders: true,
     requestLogging: true,
     inputSanitize: true,
     autoMigrate: true,

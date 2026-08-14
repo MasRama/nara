@@ -16,7 +16,6 @@ export interface NaraResponse extends ExpressResponse {
     props?: Record<string, unknown>,
     viewProps?: Record<string, unknown>
   ): Promise<unknown>;
-  flash(key: string, value: unknown): NaraResponse;
 }
 
 export type NaraMiddleware = (

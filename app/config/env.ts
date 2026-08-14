@@ -3,16 +3,19 @@ import { join } from 'path';
 import { z } from 'zod';
 import { SERVER, LOGGING } from './constants';
 
-const projectRoot = process.cwd();
-const prodEnvPath = join(projectRoot, '.env.production');
+export function loadEnvFile(): void {
+  const prodEnvPath = join(process.cwd(), '.env.production');
 
-if (existsSync(prodEnvPath)) {
-  require('dotenv').config({ path: prodEnvPath });
-  process.env.NODE_ENV = 'production';
-} else {
-  require('dotenv').config({ path: '.env' });
-  process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+  if (existsSync(prodEnvPath)) {
+    require('dotenv').config({ path: prodEnvPath });
+    process.env.NODE_ENV = 'production';
+  } else {
+    require('dotenv').config({ path: '.env' });
+    process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+  }
 }
+
+loadEnvFile();
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

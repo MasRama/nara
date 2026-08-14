@@ -2,7 +2,6 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { templateCache } from "@services/CacheStore";
-import 'dotenv/config';
 
 function getViewsDirectory() {
    return process.env.NODE_ENV === 'development' ? "resources" : "dist";
