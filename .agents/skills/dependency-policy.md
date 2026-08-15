@@ -15,7 +15,7 @@ AI must not add dependencies without checking this table. If a category is "Bann
 | UI primitives | `@zag-js/*` | Headless UI, Radix, Melt | ADR 0007 — framework-agnostic state machines |
 | Validation | `zod` | Joi, Yup, class-validator, valibot | ADR 0006 — TypeScript-first, type inference |
 | Auth | `@services/Authenticate` (internal) | bcrypt (direct), passport, jsonwebtoken | ADR 0005 — session-based, internal wrapper |
-| HTTP client | `axios` | fetch (in frontend), got, node-fetch | `api()` wrapper handles CSRF + toast |
+| HTTP client | Native `fetch` (via `api()` wrapper) | axios, got, node-fetch | `api()` wrapper handles CSRF + toast |
 | Logging | `pino` (via `@services/Logger`) | winston, morgan, console.log | Structured logging, file rotation built-in |
 | Styling | `tailwindcss`, `clsx`, `tailwind-merge`, `tailwind-variants` | styled-components, emotion, CSS modules | Utility-first, AI generates Tailwind fluently |
 | Icons | `@lucide/svelte` | heroicons, feather-icons, font-awesome | Tree-shakeable, consistent API |

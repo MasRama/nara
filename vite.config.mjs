@@ -57,7 +57,7 @@ export default defineConfig({
             { name: 'vendor-svelte', test: /node_modules[\\/]svelte/ },
             { name: 'vendor-inertia', test: /node_modules[\\/]@inertiajs/ },
             { name: 'vendor-zag', test: /node_modules[\\/]@zag-js/ },
-            { name: 'vendor-utils', test: /node_modules[\\/](axios|@lucide)/ },
+            { name: 'vendor-utils', test: /node_modules[\\/]@lucide/ },
           ],
         },
       },

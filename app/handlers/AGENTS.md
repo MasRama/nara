@@ -26,9 +26,9 @@ Request handlers — functions that receive `NaraRequest` / `NaraResponse` and r
 | Route | Returns | Frontend calls |
 |------|---------|----------------|
 | **Page** | `res.inertia('pageName', { data })` | browser navigation |
-| **Data** | `jsonSuccess()` / `jsonError()` / `jsonCreated()` | `api(() => axios.method())` |
+| **Data** | `jsonSuccess()` / `jsonError()` / `jsonCreated()` | `api(path, { method, body })` |
 
-Never mix — page route returning `jsonSuccess` shows raw JSON in the browser; data route returning `inertia()` breaks axios.
+Never mix — page route returning `jsonSuccess` shows raw JSON in the browser; data route returning `inertia()` breaks the api() client.
 
 ## Naming (L11 + L12 — enforced by lint:layers)
 

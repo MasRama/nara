@@ -1,6 +1,5 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import axios from 'axios';
   import Header from '../Components/Header.svelte';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
@@ -33,7 +32,7 @@
     formData.append('file', file);
     isLoading = true;
     try {
-      const result = await api(() => axios.post('/assets/avatar', formData));
+      const result = await api('/assets/avatar', { method: 'POST', body: formData });
       if (result.success && result.data) {
         const url = `${(result.data as { url: string }).url}?v=${Date.now()}`;
         previewUrl = url;
@@ -46,7 +45,7 @@
 
   async function changeProfile(): Promise<void> {
     isLoading = true;
-    await api(() => axios.post('/change-profile', user));
+    await api('/change-profile', { method: 'POST', body: user });
     isLoading = false;
   }
 
@@ -54,7 +53,7 @@
     if (new_password != confirm_password) { Toast('Passwords do not match', 'error'); return; }
     if (!current_password || !new_password || !confirm_password) { Toast('Please fill in all fields', 'error'); return; }
     isLoading = true;
-    const result = await api(() => axios.post('/change-password', { current_password, new_password }));
+    const result = await api('/change-password', { method: 'POST', body: { current_password, new_password } });
     if (result.success) { current_password = ''; new_password = ''; confirm_password = ''; }
     isLoading = false;
   }

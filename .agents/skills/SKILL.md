@@ -10,7 +10,7 @@ Skills are deep-dive procedures loaded on demand. Each skill focuses on one patt
 | [`crud-pattern.md`](./crud-pattern.md) | Adding a new resource (types → migration → queries → validator → handlers → routes → page) |
 | [`sqlite-usage.md`](./sqlite-usage.md) | Writing SQL queries, transactions, dynamic updates |
 | [`auth-rbac.md`](./auth-rbac.md) | Auth guards, permission checks, role management |
-| [`inertia-patterns.md`](./inertia-patterns.md) | Frontend pages, `res.inertia` vs `jsonSuccess`, `router.visit` vs `axios` |
+| [`inertia-patterns.md`](./inertia-patterns.md) | Frontend pages, `res.inertia` vs `jsonSuccess`, `router.visit` vs `api()` |
 | [`api-contract.md`](./api-contract.md) | Response shapes, error codes, error handling patterns, Zod validation |
 | [`dependency-policy.md`](./dependency-policy.md) | Allowed vs banned dependencies (16 categories), adding new deps |
 | [`common-pitfalls.md`](./common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |

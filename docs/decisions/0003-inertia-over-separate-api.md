@@ -18,7 +18,7 @@ This doubles the surface area AI must understand. For a starter kit, the complex
 
 Use Inertia.js — a protocol that lets Svelte pages receive server data as props, without building a separate API. The backend renders Inertia responses (`res.inertia('pageName', { data })`), the frontend receives them as `$props()`.
 
-For data-only operations (CRUD mutations, list fetching), use separate JSON endpoints with `axios` wrapped in `api()`.
+For data-only operations (CRUD mutations, list fetching), use separate JSON endpoints with the `api()` wrapper (native fetch).
 
 ## Consequences
 

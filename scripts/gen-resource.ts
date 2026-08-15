@@ -269,7 +269,6 @@ function generatePage(name: string): string {
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import axios from 'axios';
   import { api } from '$lib/api';
   import type { ${singular}, PaginationMeta, User } from '../types';
   import Button from '../Components/Button.svelte';
@@ -288,7 +287,7 @@ function generatePage(name: string): string {
   let isLoading = $state(false);
 
   async function loadData(): Promise<void> {
-    const result = await api(() => axios.get('/${camelPlural}/data'), { showSuccessToast: false });
+    const result = await api('/${camelPlural}/data', { showSuccessToast: false });
     if (result.success) items = result.data;
   }
 

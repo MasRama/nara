@@ -14,29 +14,28 @@ Any time you write or modify a `.svelte` page or component that needs data from 
 | Route Type | Called By | Backend Returns | Frontend Uses |
 |---|---|---|---|
 | **Page** | Browser navigation | `res.inertia('pageName', { data })` | `$props()` |
-| **Data** | `axios` from Svelte | `jsonSuccess()`, `jsonError()` | `api(() => axios.method())` |
+| **Data** | `api()` from Svelte | `jsonSuccess()`, `jsonError()` | `api(path, { method, body })` |
 
-**Never mix these.** A page route returns `res.inertia()`. A data route returns `jsonSuccess()`. The frontend page receives page props via `$props()`, and fetches list data via `axios` to a separate `/data` endpoint.
+**Never mix these.** A page route returns `res.inertia()`. A data route returns `jsonSuccess()`. The frontend page receives page props via `$props()`, and fetches list data via `api()` to a separate `/data` endpoint.
 
-## HTTP Client: api() + axios (mandatory)
+## HTTP Client: api() wrapper (native fetch, mandatory)
 
 ```svelte
 <script lang="ts">
-  import axios from 'axios';
   import { api } from '$lib/api';
 
   // GET - fetch data
-  const result = await api(() => axios.get('/products/data'), { showSuccessToast: false });
+  const result = await api('/products/data', { showSuccessToast: false });
   if (result.success) items = result.data;
 
   // POST - create
-  const result = await api(() => axios.post('/products', payload));
+  const result = await api('/products', { method: 'POST', body: payload });
 
   // PUT - update
-  const result = await api(() => axios.put(`/products/${id}`, payload));
+  const result = await api(`/products/${id}`, { method: 'PUT', body: payload });
 
   // DELETE - remove
-  const result = await api(() => axios.delete(`/products/${id}`));
+  const result = await api(`/products/${id}`, { method: 'DELETE' });
 </script>
 ```
 
@@ -94,7 +93,6 @@ The `api()` wrapper handles:
   import { fly } from 'svelte/transition';
   import { page as inertiaPage, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
-  import axios from 'axios';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
   import type { Product } from '../types';
@@ -113,12 +111,12 @@ The `api()` wrapper handles:
   let isLoading = $state(false);
 
   async function loadData(): Promise<void> {
-    const result = await api(() => axios.get('/products/data'), { showSuccessToast: false });
+    const result = await api('/products/data', { showSuccessToast: false });
     if (result.success) items = result.data;
   }
 
   async function createProduct(payload: object): Promise<void> {
-    const result = await api(() => axios.post('/products', payload));
+    const result = await api('/products', { method: 'POST', body: payload });
     if (result.success) await loadData();
   }
 
@@ -160,10 +158,10 @@ For interactive primitives (dialog, menu, switch, tabs), use Zag JS:
 
 ## Do / Don't
 
-- **Do** use `api(() => axios.method(...))` for all HTTP — never raw `fetch()` or bare `axios`
+- **Do** use `api(path, { method, body })` for all HTTP — never raw `fetch()` or `axios` in components
 - **Do** use `router.visit()` for page transitions
 - **Do** use `$state`, `$derived`, `$effect`, `$props` — Svelte 5 runes
-- **Do** fetch list data via separate `/data` endpoint with `axios` — don't pass large lists via `res.inertia()`
+- **Do** fetch list data via separate `/data` endpoint with `api()` — don't pass large lists via `res.inertia()`
 - **Do** use Zag JS for interactive UI primitives
 - **Don't** use `router.post/put/patch/delete` — bypasses `api()` wrapper (no toast/CSRF)
 - **Don't** use `window.location` or `window.location.href` — causes full page reload

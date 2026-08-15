@@ -162,7 +162,7 @@ This runs in CI on every push — if `gen:resource` or any gate breaks, CI fails
 
 ```
 Browser (Svelte 5 + Inertia.js)
-  │  router.visit() for pages · axios for data
+  │  router.visit() for pages · api() for data
   ▼
 Server (ultimate-express / uWebSockets.js)
   │
@@ -178,7 +178,7 @@ Server (ultimate-express / uWebSockets.js)
 | Type | Called by | Returns |
 |------|-----------|---------|
 | Page | Browser navigation | `res.inertia('pageName', { data })` |
-| Data | `axios` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
+| Data | `api()` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
 ---
 

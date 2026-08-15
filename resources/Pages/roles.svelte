@@ -3,7 +3,6 @@
   import { page as inertiaPage, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import RoleModal from '../Components/RoleModal.svelte';
-  import axios from 'axios';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
   import type { Role, GroupedPermissions, RoleForm } from '../types';
@@ -35,8 +34,8 @@
   async function loadData(): Promise<void> {
     loading = true;
     const [rolesRes, permsRes] = await Promise.all([
-      api(() => axios.get('/roles/data'), { showSuccessToast: false }),
-      api(() => axios.get('/roles/permissions'), { showSuccessToast: false }),
+      api('/roles/data', { showSuccessToast: false }),
+      api('/roles/permissions', { showSuccessToast: false }),
     ]);
 
     if (rolesRes.success && rolesRes.data) {
@@ -83,9 +82,9 @@
 
     let result;
     if (mode === 'create') {
-      result = await api(() => axios.post('/roles', payload));
+      result = await api('/roles', { method: 'POST', body: payload });
     } else {
-      result = await api(() => axios.put(`/roles/${formData.id}`, payload));
+      result = await api(`/roles/${formData.id}`, { method: 'PUT', body: payload });
     }
 
     if (result.success) {
@@ -105,7 +104,7 @@
       return;
     }
 
-    const result = await api(() => axios.delete(`/roles/${role.id}`));
+    const result = await api(`/roles/${role.id}`, { method: 'DELETE' });
     if (result.success) {
       await loadData();
     }

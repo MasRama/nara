@@ -1,6 +1,5 @@
 <script lang="ts">
   import { page, router, inertia } from '@inertiajs/svelte';
-  import axios from 'axios';
   import { api } from '$lib/api';
   import DarkModeToggle from './DarkModeToggle.svelte';
   import Button from './Button.svelte';
@@ -51,7 +50,7 @@
   let visibleMenuLinks = $derived(menuLinks.filter((item) => item.show));
 
   async function handleLogout(): Promise<void> {
-    const result = await api(() => axios.post('/logout'));
+    const result = await api('/logout', { method: 'POST' });
     if (result.success) router.visit('/login');
   }
 </script>

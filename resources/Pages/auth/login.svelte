@@ -1,6 +1,5 @@
 <script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
-  import axios from 'axios'
   import { api } from '$lib/api'
   import { Toast } from '$lib/toast'
   import DarkModeToggle from '../../Components/DarkModeToggle.svelte'
@@ -28,7 +27,7 @@
 
   async function submitForm(): Promise<void> {
     isLoading = true
-    const result = await api(() => axios.post('/login', { email: form.email, password: form.password }))
+    const result = await api('/login', { method: 'POST', body: { email: form.email, password: form.password } })
     isLoading = false
     if (result.success) router.visit('/dashboard')
   }

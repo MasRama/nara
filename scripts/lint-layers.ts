@@ -6,9 +6,9 @@
  *   L2. Handlers must NOT import @services/* except Authenticate, Logger, Storage, LoginThrottle, CacheStore
  *   L3. Page handlers (exports ending in *Page) must return res.inertia, not jsonSuccess/jsonError
  *   L4. Data handlers (exports NOT ending in *Page) must return jsonSuccess/jsonError/jsonCreated/etc., not res.inertia
- *   L5. Frontend must NOT use fetch() — use api(() => axios.method())
+ *   L5. Frontend must NOT use fetch() or axios directly — use api(path, { method, body })
  *   L6. Frontend must NOT use window.location for internal navigation
- *   L7. Frontend must NOT use router.post/put/patch/delete — use api() + axios
+ *   L7. Frontend must NOT use router.post/put/patch/delete — use api()
  *   L8. Frontend must NOT use onMount, $:, or export let — use Svelte 5 runes
  *   L9. No console.log in backend — use Logger
  *   L10. No bcrypt direct — use hashPassword from @services/Authenticate
@@ -119,11 +119,11 @@ function checkFile(absPath: string): void {
       }
     }
 
-    // L5: Frontend must NOT use fetch()
-    if (isFrontend && /\bfetch\s*\(/.test(line) && !trimmed.startsWith('//')) {
+    // L5: Frontend must NOT use fetch() or axios directly — use api(path, { method, body })
+    if (isFrontend && (/\bfetch\s*\(/.test(line) || /\baxios\b/.test(line)) && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L5', file: rel, line: lineNum, text: trimmed,
-        message: 'Frontend must not use fetch(). Fix: use api(() => axios.get/post/put/delete(...)). See .agents/skills/inertia-patterns.md',
+        message: 'Frontend must not use fetch() or axios directly. Fix: use api(path, { method, body }) from $lib/api. See .agents/skills/inertia-patterns.md',
       });
     }
 
@@ -142,7 +142,7 @@ function checkFile(absPath: string): void {
     if (isFrontend && /router\.(post|put|patch|delete)\s*\(/.test(line) && !trimmed.startsWith('//')) {
       violations.push({
         rule: 'L7', file: rel, line: lineNum, text: trimmed,
-        message: 'Frontend must not use router.post/put/patch/delete — bypasses api() wrapper (no toast/CSRF). Fix: use api(() => axios.method()). See .agents/skills/inertia-patterns.md',
+        message: 'Frontend must not use router.post/put/patch/delete — bypasses api() wrapper (no toast/CSRF). Fix: use api(path, { method, body }). See .agents/skills/inertia-patterns.md',
       });
     }
 

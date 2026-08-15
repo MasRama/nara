@@ -1,5 +1,5 @@
 ---
-description: "Inertia.js pages rendered by Svelte 5. Each page is a route destination — server renders shell, page fetches data via axios to /data endpoints"
+description: "Inertia.js pages rendered by Svelte 5. Each page is a route destination — server renders shell, page fetches data via api() to /data endpoints"
 tags: [pages, inertia, svelte, routes, frontend, dashboard, landing, auth]
 ---
 
@@ -23,12 +23,11 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 | `auth/register.svelte` | Registration form |
 | `errors/NotFound.svelte` | 404 page (catch-all route) |
 
-## Page Pattern (Svelte 5 + Inertia + axios)
+## Page Pattern (Svelte 5 + Inertia + api())
 
 ```svelte
 <script lang="ts">
   import { page as inertiaPage, router } from "@inertiajs/svelte";
-  import axios from "axios";
   import Header from "../Components/Header.svelte";
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
@@ -40,26 +39,26 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
   // Current user from Inertia shared props
   const currentUser = $derived(inertiaPage.props.user as User | undefined);
 
-  // CRUD via axios mutations, then router.visit() to refresh page data
+  // CRUD via api() mutations, then router.visit() to refresh page data
   async function createItem(payload: Record<string, unknown>): Promise<void> {
-    const result = await api(() => axios.post("/resource", payload));
+    const result = await api("/resource", { method: "POST", body: payload });
     if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
   async function updateItem(id: string, payload: Record<string, unknown>): Promise<void> {
-    const result = await api(() => axios.put(`/resource/${id}`, payload));
+    const result = await api(`/resource/${id}`, { method: "PUT", body: payload });
     if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
   async function deleteItem(id: string): Promise<void> {
-    const result = await api(() => axios.delete(`/resource/${id}`));
+    const result = await api(`/resource/${id}`, { method: "DELETE" });
     if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
-  // ❌ NEVER use router.post/put/patch/delete — use api(() => axios.method()) instead
+  // ❌ NEVER use router.post/put/patch/delete — use api(path, { method, body }) instead
   // ❌ NEVER use window.location — bypasses Inertia, causes full page reload
 
-  // Page navigation — use router.visit, never window.location or fetch/axios
+  // Page navigation — use router.visit, never window.location
   function goToOtherPage(): void {
     router.visit("/other-page");
   }
@@ -77,30 +76,28 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 | Concept | How it works |
 |---------|-------------|
 | **Page props** | Passed by `res.inertia("PageName", { data })` in handler — includes lists, permissions, metadata |
-| **Mutations** | `api(() => axios.post/put/delete('/resource', ...))` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` |
+| **Mutations** | `api(path, { method, body })` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` |
 | **Navigation** | `router.visit('/path')` for Inertia page transitions — NEVER `window.location` or native `<a>` |
 
 **Page handlers pass ALL data via `res.inertia()`** — including CRUD lists. After mutations, use `router.visit()` to reload the page with fresh data.
 
-## HTTP Client: axios (NOT fetch)
+## HTTP Client: api() wrapper (native fetch)
 
-All CRUD operations use **axios** wrapped in `api()`. Do NOT use raw `fetch()` for mutations.
+All CRUD operations go through **`api()`** (native fetch wrapper). Do NOT use raw `fetch()` or `axios` in pages.
 
 ```typescript
-// ✅ Correct — axios via api() wrapper
-import axios from 'axios';
+// ✅ Correct — api() wrapper
 import { api } from '$lib/api';
 
-const result = await api(() => axios.post('/posts', data));
-const result = await api(() => axios.put(`/posts/${id}`, data));
-const result = await api(() => axios.delete(`/posts/${id}`));
-const result = await api(() => axios.get('/posts/data'), { showSuccessToast: false });
+const result = await api('/posts/data', { showSuccessToast: false });
+const result = await api('/posts', { method: 'POST', body: data });
+const result = await api(`/posts/${id}`, { method: 'PUT', body: data });
+const result = await api(`/posts/${id}`, { method: 'DELETE' });
 
-// ❌ Wrong — raw fetch() won't work with api() wrapper
-const result = await api(() => fetch('/posts', { method: 'POST', body: ... })); // api() expects axios response shape { data: ... }
+// ❌ Wrong — raw fetch()/axios in pages bypasses CSRF + toast handling
 ```
 
-CSRF is handled automatically via `configureAxiosCSRF(axios)` called once in `app.ts`.
+CSRF: `api()` attaches `X-CSRF-Token` (from the `csrf_token` cookie) automatically for non-GET requests.
 
 ## Conventions
 
@@ -108,9 +105,9 @@ CSRF is handled automatically via `configureAxiosCSRF(axios)` called once in `ap
 - Svelte 5 runes: `let x = $state()`, `let y = $derived()`, `$effect(() => {...})` — NEVER `onMount`, NEVER `$:`
 - Page props via `$props()` rune: `let { propName } = $props()` — NEVER `export let propName`
 - User access: `$derived(inertiaPage.props.user as User)` — import `page as inertiaPage` from `@inertiajs/svelte`
-- CRUD mutations: use `api(() => axios.method(...))` then `router.visit()` to refresh — NOT raw `fetch()`, NOT `router.post/put/patch/delete`
+- CRUD mutations: use `api(path, { method, body })` then `router.visit()` to refresh — NOT raw `fetch()`, NOT `router.post/put/patch/delete`
 - Navigation: use `router.visit()` — NEVER `window.location` or native `<a>` for internal navigation
-- CSRF: handled automatically by `configureAxiosCSRF(axios)` in `app.ts` — no manual header needed
+- CSRF: handled automatically by `api()` (`X-CSRF-Token` from cookie) — no manual header needed
 - Auth pages don't include Header
 - Component path: `../Components/ComponentName.svelte` (relative)
 - Types from: `../types` (relative)

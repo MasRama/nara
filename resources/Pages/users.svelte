@@ -4,7 +4,6 @@
   import Header from '../Components/Header.svelte';
   import UserModal from '../Components/UserModal.svelte';
   import Pagination from '../Components/Pagination.svelte';
-  import axios from 'axios';
   import { api } from '$lib/api';
   import { Toast } from '$lib/toast';
   import type { User, UserForm, PaginationMeta, RoleInfo } from '../types';
@@ -84,8 +83,8 @@
     };
 
     const result = mode === 'create'
-      ? await api(() => axios.post('/users', payload))
-      : await api(() => axios.put(`/users/${formData.id}`, payload));
+      ? await api('/users', { method: 'POST', body: payload })
+      : await api(`/users/${formData.id}`, { method: 'PUT', body: payload });
 
     if (result.success) {
       closeUserModal();
@@ -102,7 +101,7 @@
 
     isSubmitting = true;
 
-    const result = await api(() => axios.delete('/users', { data: { ids: [id] } }));
+    const result = await api('/users', { method: 'DELETE', body: { ids: [id] } });
 
     if (result.success) {
       router.visit('/users', { preserveScroll: true, preserveState: true });

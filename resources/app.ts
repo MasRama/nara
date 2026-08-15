@@ -1,11 +1,7 @@
 import { createInertiaApp } from '@inertiajs/svelte'
 import { mount, type Component } from 'svelte'
-import axios from 'axios'
-import { configureAxiosCSRF } from '$lib/csrf'
 import { ModeWatcher } from 'mode-watcher'
 import { Toaster } from 'svelte-sonner'
-
-configureAxiosCSRF(axios)
 
 createInertiaApp({
   resolve: (name: string) => {

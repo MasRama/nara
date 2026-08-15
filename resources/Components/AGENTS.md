@@ -29,7 +29,7 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 > Full documentation for `$lib/*` utilities: see [`../AGENTS.md`](../AGENTS.md)
 
 ```typescript
-import { api } from '$lib/api';           // HTTP wrapper (axios + toast)
+import { api } from '$lib/api';           // HTTP wrapper (fetch + toast)
 import { Toast } from '$lib/toast';         // Toast(text, type) — function, NOT object
 import { cn } from '$lib/utils';            // Class merging (clsx + tailwind-merge)
 import { password_generator } from '$lib/utils/password';
@@ -230,6 +230,6 @@ Every Zag JS component follows the same 3-step pattern:
 - **Interactive components**: Use Zag JS (`@zag-js/*`) for dialogs, menus, switches, tabs — NOT raw HTML or custom implementations
 - Transitions from `svelte/transition` (fly, fade, scale)
 - Authorization: gate UI with server-computed `permissions` props (`canCreate`, `canEdit`, `canDelete`) from the page handler — never manual role checks in templates
-- CRUD mutations: use `api(() => axios.method(...))` — NOT raw `fetch()`
-- CSRF for axios: `configureAxiosCSRF(axios)` called once in `app.ts` — interceptor handles all requests automatically
+- CRUD mutations: use `api(path, { method, body })` — NOT raw `fetch()`/`axios` in components
+- CSRF: `api()` attaches `X-CSRF-Token` automatically for non-GET — no manual headers
 - All component files `.svelte` extension (no `.js` components)

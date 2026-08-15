@@ -7,11 +7,11 @@ trigger: Before writing code — read this to avoid common AI mistakes
 
 Mistakes AI agents make in Nara. Read before coding.
 
-### 1. Using `router.post()` for mutations instead of `api(() => axios.post())`
+### 1. Using `router.post()` for mutations instead of `api(path, { method, body })`
 
 **Wrong:** `router.post('/products', data)` — bypasses CSRF, no toast, no error handling.
 
-**Fix:** `const result = await api(() => axios.post('/products', data))` — handles CSRF, toast, and errors.
+**Fix:** `const result = await api('/products', { method: 'POST', body: data })` — handles CSRF, toast, and errors.
 
 ### 2. Importing SQLite directly in a handler
 

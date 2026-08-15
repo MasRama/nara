@@ -238,5 +238,5 @@ When you add a new AGENTS.md or skill, add it to the expected list in this file.
 - **Do** assert on `_status` and `_body` for handler tests, on `SQLite.*.mock.calls` for query tests
 - **Don't** hit a real database in any test — every test must be hermetic
 - **Don't** write tests that depend on execution order
-- **Don't** mock what you don't own (mock `@queries`, not `axios` or `zod`)
+- **Don't** mock what you don't own (mock `@queries`, not `zod`)
 - **Don't** skip the auth-guard test case — it is the most common regression

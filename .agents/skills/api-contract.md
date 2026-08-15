@@ -161,7 +161,7 @@ if (!parsed.success) {
 The `api()` wrapper in `$lib/api` parses these shapes:
 
 ```typescript
-const result = await api(() => axios.post('/products', payload));
+const result = await api('/products', { method: 'POST', body: payload });
 // result.success === true  → result.data is the payload
 // result.success === false → result.message is the error, result.errors is validation
 ```

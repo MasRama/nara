@@ -1,6 +1,6 @@
 ---
 description: "Svelte 5 + Inertia.js frontend. Runes ($state/$derived/$effect/$props), api() wrapper for HTTP, router.visit() for navigation, Zag JS for UI primitives"
-tags: [frontend, svelte, inertia, runes, tailwind, zag-js, axios, ui]
+tags: [frontend, svelte, inertia, runes, tailwind, zag-js, ui]
 ---
 
 # resources - Frontend
@@ -24,7 +24,7 @@ resources/
 ├── app.ts                 # Inertia app initialization (entry point)
 ├── index.css              # Global styles + Tailwind
 ├── lib/                   # Utilities & helpers
-│   ├── api.ts             # HTTP client wrapper (axios + toast)
+│   ├── api.ts             # HTTP client wrapper (native fetch + toast)
 │   ├── csrf.ts            # CSRF token handling
 │   ├── toast.ts           # Toast notifications (svelte-sonner)
 │   ├── utils.ts           # cn() — class merging (clsx + tailwind-merge)
@@ -39,38 +39,36 @@ resources/
 - **Svelte 5** with runes: `$state`, `$derived`, `$effect` for reactivity
 - **Inertia.js** adapter for SSR + client navigation via `router` helper
 - **TypeScript** for type safety (`<script lang="ts">`)
-- **axios** for HTTP requests (wrapped in `api()` helper)
+- **Native fetch** for HTTP requests (wrapped in `api()` helper)
 - **Zag JS** (`@zag-js/*`) for headless UI primitives (dialog, menu, switch, tabs) — styled with Tailwind
 
 ## KEY PATTERNS
 
-### HTTP Client: axios + api() wrapper
+### HTTP Client: api() wrapper (native fetch)
 
-**ALWAYS use `api()` wrapper with axios** for all CRUD operations. This handles:
+**ALWAYS use `api()` wrapper** for all CRUD operations. This handles:
 - Toast notifications (success/error)
 - CSRF token injection
 - Error response parsing
 
 ```svelte
 <script lang="ts">
-  import axios from 'axios';
   import { api } from '$lib/api';
 
   // ✅ GET - fetch data
-  const result = await api(() => axios.get('/posts/data'), { showSuccessToast: false });
+  const result = await api('/posts/data', { showSuccessToast: false });
   if (result.success) items = result.data;
 
   // ✅ POST - create
-  const result = await api(() => axios.post('/posts', payload));
+  const result = await api('/posts', { method: 'POST', body: payload });
 
   // ✅ PUT - update
-  const result = await api(() => axios.put(`/posts/${id}`, payload));
+  const result = await api(`/posts/${id}`, { method: 'PUT', body: payload });
 
   // ✅ DELETE - remove
-  const result = await api(() => axios.delete(`/posts/${id}`));
+  const result = await api(`/posts/${id}`, { method: 'DELETE' });
 
-  // ❌ NEVER use raw fetch() - won't work with api() wrapper
-  // ❌ NEVER use axios directly without api() wrapper - no toast/CSRF handling
+  // ❌ NEVER use raw fetch()/axios in components - bypasses CSRF and toast handling
 </script>
 ```
 
@@ -105,7 +103,7 @@ resources/
     preserveScroll: true
   });
 
-  // ❌ NEVER use router.post/put/patch/delete — use api(() => axios.method()) instead
+  // ❌ NEVER use router.post/put/patch/delete — use api(path, { method, body }) instead
   // ❌ NEVER use window.location or window.location.href — bypasses Inertia, causes full page reload
   // ❌ NEVER use <a href="/path"> with target="_self" for internal navigation — let Inertia handle it
 </script>
@@ -129,13 +127,13 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 
 ## CONVENTIONS
 
-- **HTTP client**: Always `api(() => axios.method(...))` — never raw `fetch()` or bare `axios`
-- **CSRF**: Auto-handled by `configureAxiosCSRF(axios)` in `app.ts` — no manual headers needed
+- **HTTP client**: Always `api(path, { method, body })` — never raw `fetch()`/`axios` in components
+- **CSRF**: Auto-attached by `api()` for non-GET (`X-CSRF-Token` from cookie) — no manual headers needed
 - **Components**: Use `.svelte` extension with `<script lang="ts">`
 - **Entry point**: `app.ts` (TypeScript)
 - **State management**: Use `$state()` runes — avoid legacy stores
 - **Page data**: All data passed via `res.inertia()` props from handler — lists, permissions, metadata
-- **Mutations**: Use `api(() => axios.post/put/delete())` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` (bypasses api wrapper, no toast/CSRF)
+- **Mutations**: Use `api(path, { method, body })` then `router.visit()` to refresh — NEVER `router.post/put/patch/delete` (bypasses api wrapper, no toast/CSRF)
 - **Navigation**: Use `router.visit()` for page transitions — NEVER `window.location` or native `<a>` for internal navigation
 - **Authorization**: Gate UI with server-computed `permissions` props (`canCreate`, `canEdit`, `canDelete`) passed by the page handler — never manual role checks in templates
 - **Dark mode**: Use `dark:` Tailwind prefix on all elements

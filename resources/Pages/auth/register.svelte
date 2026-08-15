@@ -1,6 +1,5 @@
 <script lang="ts">
   import { inertia, router } from '@inertiajs/svelte'
-  import axios from 'axios'
   import { api } from '$lib/api'
   import { password_generator } from '$lib/utils/password'
   import { Toast } from '$lib/toast'
@@ -42,7 +41,7 @@
       return
     }
     isLoading = true
-    const result = await api(() => axios.post('/register', form))
+    const result = await api('/register', { method: 'POST', body: form })
     isLoading = false
     if (result.success) router.visit('/dashboard')
   }

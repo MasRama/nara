@@ -49,7 +49,7 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 3. **Descriptive handler names** — `createUser`, `addRole`, `listProducts`. Never generic `index`/`store`/`create`/`update`/`destroy`. (ADR 0009, L11-L12)
 4. **Layer boundaries are hard** — handlers → queries → services → core. Import direction enforced. Queries never import handlers. Validators never import services. (L14-L17)
 5. **Two response types, never mixed** — page routes return `res.inertia()`, data routes return `jsonSuccess()`/`jsonError()`. (L3-L4)
-6. **`api()` wrapper for all frontend HTTP** — never raw `fetch()`, never bare `axios`, never `router.post/put/patch/delete`. (L5-L7)
+6. **`api()` wrapper for all frontend HTTP** — never raw `fetch()` or `axios` in components, never `router.post/put/patch/delete`. (L5-L7)
 7. **Svelte 5 runes only** — `$state`, `$derived`, `$effect`, `$props`. Never `onMount`, `$:`, `export let`, or Svelte stores. (L8)
 8. **Logger, not console** — `Logger.info/warn/error`. `console.log` only in bootstrap files where Logger isn't initialized. (L9)
 9. **`hashPassword()` from Authenticate, never bcrypt direct** — the wrapper enforces the correct cost factor. (L10)
@@ -63,7 +63,7 @@ AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over
 
 ```
 Browser (Svelte 5 + Inertia)
-  │  router.visit() for pages · axios for data
+  │  router.visit() for pages · api() for data
   ▼
 Server (ultimate-express)
   │  Request → Middleware → Router → Handler → Response
@@ -82,7 +82,7 @@ Server (ultimate-express)
 | Route Type | Called By | Returns |
 |---|---|---|
 | **Page** | Browser navigation | `res.inertia('pageName', { data })` |
-| **Data** | `axios` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
+| **Data** | `api()` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
 
 ## Structure
 
@@ -181,7 +181,7 @@ See [`.agents/skills/common-pitfalls.md`](./.agents/skills/common-pitfalls.md) �
 4. **Don't** return `inertia()` from a data route — use `jsonSuccess/jsonError`
 5. **Don't** use relative imports for core modules — use path aliases
 6. **Don't** use `console.log` — use `Logger.info/warn/error`
-7. **Don't** use `fetch()` on frontend — use `api(() => axios.method(...))`
+7. **Don't** use `fetch()` or `axios` in components — use `api(path, { method, body })`
 8. **Don't** use bcrypt directly — use `hashPassword()` from `@services/Authenticate`
 9. **Don't** mix languages in error messages — use English for user-facing messages (see ADR 0010)
 10. **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — use descriptive names (`createUser`, `updateRole`, `listRoles`)
