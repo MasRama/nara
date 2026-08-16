@@ -12,7 +12,7 @@ The framework foundation: app bootstrap, router, request/response types, error h
 
 | File | Purpose |
 |------|---------|
-| `App.ts` | `createApp`, `createWebApp`, `createApiApp` — bootstrap, middleware wiring, auto-migrate, error handler |
+| `App.ts` | `createApp`, `createWebApp` — bootstrap, middleware wiring, auto-migrate, error handler |
 | `Router.ts` | `createRouter` — route registration with middleware arrays |
 | `response.ts` | `jsonSuccess`, `jsonError`, `jsonCreated`, `jsonPaginated`, `jsonValidationError`, `queryInt`, `queryString` |
 | `errors.ts` | `httpError`, `validationError`, `authError`, `notFoundError`, `forbiddenError`, `isNaraError`, `isUniqueConstraintError` |

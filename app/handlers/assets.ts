@@ -37,6 +37,22 @@ const validateMagicBytes = (buffer: Buffer, mimetype: string): boolean => {
   return expected.every((byte, i) => buffer[i] === byte);
 };
 
+// Shared path-safety helpers — used by both static asset handlers
+const isInsideAny = (baseDirs: string[], target: string): boolean =>
+  baseDirs.some(dir => target === dir || target.startsWith(dir + path.sep));
+
+// Resolve symlinks and verify the real path stays inside one of baseDirs
+const realpathStatus = (target: string, baseDirs: string[]): 'inside' | 'escape' | 'missing' => {
+  let real: string;
+  try {
+    real = fs.realpathSync(target);
+  } catch {
+    return 'missing';
+  }
+  const realDirs = baseDirs.map(dir => fs.realpathSync(dir));
+  return realDirs.some(dir => real === dir || real.startsWith(dir + path.sep)) ? 'inside' : 'escape';
+};
+
 export const avatarMiddleware = avatarUpload.single('file');
 
 export const uploadAsset = async (req: NaraRequest, res: NaraResponse) => {
@@ -113,7 +129,7 @@ export const serveDistAsset = async (req: NaraRequest, res: NaraResponse) => {
   const filePath = path.resolve(distDir, file);
 
   // Use path.sep to prevent prefix bypass (e.g. /dist-assets/ matching /dist/)
-  if (!filePath.startsWith(distDir + path.sep) && filePath !== distDir) {
+  if (!isInsideAny([distDir], filePath)) {
     return res.status(403).send('Access denied');
   }
 
@@ -128,12 +144,13 @@ export const serveDistAsset = async (req: NaraRequest, res: NaraResponse) => {
 
   try {
     if (await fs.promises.access(filePath).then(() => true).catch(() => false)) {
-      // Resolve symlinks before serving
-      const realPath = fs.realpathSync(filePath);
-      const realDistDir = fs.realpathSync(distDir);
-      if (!realPath.startsWith(realDistDir + path.sep) && realPath !== realDistDir) {
+      const status = realpathStatus(filePath, [distDir]);
+      if (status === 'escape') {
         Logger.logSecurity('Symlink escape blocked', { path: file, ip: req.ip });
         return res.status(403).send('Access denied');
+      }
+      if (status === 'missing') {
+        return res.status(500).send('Error');
       }
       const content = await fs.promises.readFile(filePath);
       assetCache.set(file, content);
@@ -178,9 +195,7 @@ export const servePublicAsset = (req: NaraRequest, res: NaraResponse) => {
   const resolved = path.resolve(process.cwd(), normalized);
 
   // Use path.sep to prevent prefix bypass (e.g. /public-evil/ matching /public/)
-  const inPublic = resolved === publicDir || resolved.startsWith(publicDir + path.sep);
-  const inStorage = resolved === storageDir || resolved.startsWith(storageDir + path.sep);
-  if (!inPublic && !inStorage) {
+  if (!isInsideAny([publicDir, storageDir], resolved)) {
     Logger.logSecurity('Path escape blocked', { path: reqPath, ip: req.ip });
     return res.status(403).send('Access denied');
   }
@@ -188,19 +203,12 @@ export const servePublicAsset = (req: NaraRequest, res: NaraResponse) => {
   if (!fs.existsSync(resolved)) return res.status(404).send('Not found');
 
   // Resolve symlinks before serving
-  try {
-    const realPath = fs.realpathSync(resolved);
-    const realPublicDir = fs.realpathSync(publicDir);
-    const realStorageDir = fs.realpathSync(storageDir);
-    const inRealPublic = realPath === realPublicDir || realPath.startsWith(realPublicDir + path.sep);
-    const inRealStorage = realPath === realStorageDir || realPath.startsWith(realStorageDir + path.sep);
-    if (!inRealPublic && !inRealStorage) {
-      Logger.logSecurity('Symlink escape blocked', { path: reqPath, ip: req.ip });
-      return res.status(403).send('Access denied');
-    }
-  } catch {
-    return res.status(404).send('Not found');
+  const status = realpathStatus(resolved, [publicDir, storageDir]);
+  if (status === 'escape') {
+    Logger.logSecurity('Symlink escape blocked', { path: reqPath, ip: req.ip });
+    return res.status(403).send('Access denied');
   }
+  if (status === 'missing') return res.status(404).send('Not found');
 
   return res.download(resolved);
 };

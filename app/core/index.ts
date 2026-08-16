@@ -1,4 +1,4 @@
-export { createApp, createWebApp, createApiApp } from './App';
+export { createApp, createWebApp } from './App';
 export type { AppOptions, NaraApp } from './App';
 
 export type {

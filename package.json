@@ -3,7 +3,6 @@
   "version": "2.1.0",
   "private": true,
   "description": "AI-first TypeScript full-stack starter kit. ultimate-express + Svelte 5 + Inertia.js + SQLite. Raw SQL, plain functions, zero ORM. Auth, RBAC, CSRF, rate limiting, structured logging, file storage, and a complete user management UI.",
-  "main": "server.ts",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -15,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "npx tsc --noEmit",
+    "lint": "tsc --noEmit",
     "migrate": "npx ts-node -r tsconfig-paths/register scripts/migrate.ts",
     "migrate:rollback": "npx ts-node -r tsconfig-paths/register scripts/migrate.ts --rollback",
     "migrate:status": "npx ts-node -r tsconfig-paths/register scripts/migrate.ts --status",

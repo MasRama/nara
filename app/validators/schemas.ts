@@ -38,6 +38,10 @@ export const DeleteUsersSchema = z.object({
   ids: z.array(z.string().uuid('Invalid ID format')).min(1, 'At least one ID must be selected'),
 });
 
+export const DeleteRolesSchema = z.object({
+  ids: z.array(z.string().uuid('Invalid ID format')).min(1, 'At least one ID must be selected'),
+});
+
 export const ChangeProfileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be at most 100 characters'),
   email: z.string().email('Invalid email format').transform(v => v.toLowerCase()),
@@ -71,6 +75,7 @@ export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export type CreateUserInput = z.infer<typeof CreateUserSchema>;
 export type UpdateUserInput = z.infer<typeof UpdateUserSchema>;
 export type DeleteUsersInput = z.infer<typeof DeleteUsersSchema>;
+export type DeleteRolesInput = z.infer<typeof DeleteRolesSchema>;
 export type ChangeProfileInput = z.infer<typeof ChangeProfileSchema>;
 export type CreateRoleInput = z.infer<typeof CreateRoleSchema>;
 export type UpdateRoleInput = z.infer<typeof UpdateRoleSchema>;

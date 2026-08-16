@@ -2,12 +2,12 @@ import type { NaraRequest, NaraResponse } from '@core';
 import { jsonSuccess, jsonCreated, jsonError, jsonServerError, jsonValidationError, isUniqueConstraintError } from '@core';
 import Logger from '@services/Logger';
 import {
-  findAllRoles, findRoleById, createRole, updateRole, deleteRole,
+  findAllRoles, findRoleById, createRole, updateRole, deleteRoles,
   getRolePermissions, getPermissionsForRoles, getUserCountsForRoles, syncRolePermissions, findAllPermissions
 } from '@queries/roles';
 import { isAdmin, hasPermission } from '@queries/users';
 import { randomUUID } from 'crypto';
-import { CreateRoleSchema, UpdateRoleSchema, zodToErrors } from '@validators';
+import { CreateRoleSchema, UpdateRoleSchema, DeleteRolesSchema, zodToErrors } from '@validators';
 
 export const rolesPage = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return res.inertia('roles', { permissions: { canCreate: false, canEdit: false, canDelete: false } });
@@ -129,24 +129,24 @@ export const editRole = (req: NaraRequest, res: NaraResponse) => {
   }
 };
 
-export const removeRole = (req: NaraRequest, res: NaraResponse) => {
+export const removeRoles = (req: NaraRequest, res: NaraResponse) => {
   if (!req.user) return jsonError(res, 'Unauthorized', 401);
   if (!isAdmin(req.user.id) && !hasPermission(req.user.id, 'roles.delete')) {
     return jsonError(res, 'Forbidden', 403);
   }
 
-  const id = req.params.id;
-  if (!id) return jsonError(res, 'ID required', 400);
+  const parsed = DeleteRolesSchema.safeParse(req.body);
+  if (!parsed.success) return jsonValidationError(res, 'Validation failed', zodToErrors(parsed.error));
+
+  const { ids } = parsed.data;
 
   // Prevent deleting protected roles (admin)
-  const existing = findRoleById(id);
-  if (!existing) return jsonError(res, 'Role not found', 404);
-  if (existing.slug === 'admin') {
+  const protectedRoles = ids.filter(id => findRoleById(id)?.slug === 'admin');
+  if (protectedRoles.length > 0) {
     return jsonError(res, 'Cannot delete the admin role', 400, 'PROTECTED_ROLE');
   }
 
-  const deleted = deleteRole(id);
-  if (!deleted) return jsonError(res, 'Role not found', 404);
-
-  return jsonSuccess(res, 'Role deleted', { deleted: true });
+  const deleted = deleteRoles(ids);
+  Logger.warn('Roles deleted', { adminId: req.user.id, deletedIds: ids, count: deleted, ip: req.ip });
+  return jsonSuccess(res, 'Roles deleted', { deleted });
 };

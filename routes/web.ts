@@ -18,7 +18,7 @@ Route.get('/ready', health.readyCheck);
 
 // Auth
 Route.get('/login', auth.loginPage);
-Route.post('/login', auth.submitLogin);
+Route.post('/login', strictRateLimit(), auth.submitLogin);
 Route.get('/register', auth.registerPage);
 Route.post('/register', strictRateLimit(), auth.submitRegister);
 Route.post('/logout', strictRateLimit(), auth.logout);
@@ -39,7 +39,7 @@ Route.get('/roles/data', [Auth], roles.listRoles);
 Route.get('/roles/permissions', [Auth], roles.permissionsData);
 Route.post('/roles', [Auth], roles.addRole);
 Route.put('/roles/:id', [Auth], roles.editRole);
-Route.delete('/roles/:id', [Auth], roles.removeRole);
+Route.delete('/roles', [Auth], roles.removeRoles);
 
 // Assets
 Route.post('/assets/avatar', [Auth, strictRateLimit(), assets.avatarMiddleware as any], assets.uploadAsset);

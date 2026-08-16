@@ -152,7 +152,7 @@ Server (ultimate-express)
 | `strictRateLimit()` | `@middlewares/rateLimit` | 10 req/min per IP |
 | `csrf()` | `@middlewares/csrf` | Double Submit Cookie CSRF protection |
 | `securityHeaders()` | `@middlewares/securityHeaders` | HSTS, CSP, X-Frame-Options |
-| `inputSanitize()` | `@middlewares/inputSanitize` | XSS protection via DOMPurify |
+| `inputSanitize()` | `@middlewares/inputSanitize` | Strips HTML tags from request body/query (basic XSS) |
 | `requestId()` | `@middlewares/requestId` | Adds `req.requestId` for tracing |
 | `requestLogger()` | `@middlewares/requestLogger` | Logs requests via Logger |
 

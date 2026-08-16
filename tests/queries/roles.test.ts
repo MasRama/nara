@@ -32,7 +32,7 @@ import {
   findRoleBySlug,
   createRole,
   updateRole,
-  deleteRole,
+  deleteRoles,
 } from '../../app/queries/roles';
 
 describe('roles queries', () => {
@@ -105,17 +105,17 @@ describe('roles queries', () => {
     });
   });
 
-  describe('deleteRole', () => {
-    it('returns true when row was deleted', () => {
-      (SQLite.exec as any).mockReturnValue({ changes: 1 });
-      const result = deleteRole('role-1');
-      expect(result).toBe(true);
+  describe('deleteRoles', () => {
+    it('returns count of deleted rows', () => {
+      (SQLite.exec as any).mockReturnValue({ changes: 2 });
+      const result = deleteRoles(['role-1', 'role-2']);
+      expect(result).toBe(2);
     });
 
-    it('returns false when no row deleted', () => {
+    it('returns 0 when no rows deleted', () => {
       (SQLite.exec as any).mockReturnValue({ changes: 0 });
-      const result = deleteRole('nonexistent');
-      expect(result).toBe(false);
+      const result = deleteRoles(['nonexistent']);
+      expect(result).toBe(0);
     });
   });
 });

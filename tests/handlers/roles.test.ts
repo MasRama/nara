@@ -21,7 +21,7 @@ vi.mock('@queries/roles', () => ({
   findRoleById: vi.fn(),
   createRole: vi.fn(),
   updateRole: vi.fn(),
-  deleteRole: vi.fn(),
+  deleteRoles: vi.fn(),
   getRolePermissions: vi.fn(() => []),
   getPermissionsForRoles: vi.fn(() => new Map()),
   getUserCountsForRoles: vi.fn(() => new Map()),
@@ -43,8 +43,8 @@ vi.mock('@services/Logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-import { listRoles, addRole, removeRole } from '../../app/handlers/roles';
-import { findAllRoles, createRole } from '@queries/roles';
+import { listRoles, addRole, removeRoles } from '../../app/handlers/roles';
+import { findAllRoles, createRole, findRoleById, deleteRoles } from '@queries/roles';
 import { isAdmin, hasPermission } from '@queries/users';
 
 describe('roles handler', () => {
@@ -116,19 +116,38 @@ describe('roles handler', () => {
     });
   });
 
-  describe('removeRole', () => {
+  describe('removeRoles', () => {
     it('returns 401 if no user', () => {
       const req = mockRequest();
       const res = mockResponse();
-      removeRole(req as any, res as any);
+      removeRoles(req as any, res as any);
       expect(res._status).toBe(401);
     });
 
-    it('returns 400 if no id param', () => {
-      const req = mockRequest({ user: mockUser() });
+    it('returns 422 if ids missing', () => {
+      const req = mockRequest({ user: mockUser(), body: {} });
       const res = mockResponse();
-      removeRole(req as any, res as any);
+      removeRoles(req as any, res as any);
+      expect(res._status).toBe(422);
+    });
+
+    it('returns 400 for protected admin role', () => {
+      (findRoleById as any).mockReturnValue({ id: '11111111-1111-4111-8111-111111111111', slug: 'admin' });
+      const req = mockRequest({ user: mockUser(), body: { ids: ['11111111-1111-4111-8111-111111111111'] } });
+      const res = mockResponse();
+      removeRoles(req as any, res as any);
       expect(res._status).toBe(400);
+      expect(res._body.code).toBe('PROTECTED_ROLE');
+    });
+
+    it('deletes roles and returns count', () => {
+      (findRoleById as any).mockReturnValue({ id: '22222222-2222-4222-8222-222222222222', slug: 'user' });
+      (deleteRoles as any).mockReturnValue(2);
+      const req = mockRequest({ user: mockUser(), body: { ids: ['22222222-2222-4222-8222-222222222222', '33333333-3333-4333-8333-333333333333'] } });
+      const res = mockResponse();
+      removeRoles(req as any, res as any);
+      expect(res._status).toBe(200);
+      expect(res._body.data.deleted).toBe(2);
     });
   });
 });

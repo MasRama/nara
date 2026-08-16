@@ -51,7 +51,7 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
   }
 
   async function deleteItem(id: string): Promise<void> {
-    const result = await api(`/resource/${id}`, { method: "DELETE" });
+    const result = await api("/resource", { method: "DELETE", body: { ids: [id] } });
     if (result.success) router.visit("/resource", { preserveScroll: true });
   }
 
@@ -92,7 +92,7 @@ import { api } from '$lib/api';
 const result = await api('/posts/data', { showSuccessToast: false });
 const result = await api('/posts', { method: 'POST', body: data });
 const result = await api(`/posts/${id}`, { method: 'PUT', body: data });
-const result = await api(`/posts/${id}`, { method: 'DELETE' });
+const result = await api('/posts', { method: 'DELETE', body: { ids: [id] } });
 
 // ❌ Wrong — raw fetch()/axios in pages bypasses CSRF + toast handling
 ```

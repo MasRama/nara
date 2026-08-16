@@ -35,7 +35,7 @@ Any time you write or modify a `.svelte` page or component that needs data from 
   const result = await api(`/products/${id}`, { method: 'PUT', body: payload });
 
   // DELETE - remove
-  const result = await api(`/products/${id}`, { method: 'DELETE' });
+  const result = await api('/products', { method: 'DELETE', body: { ids: [id] } });
 </script>
 ```
 

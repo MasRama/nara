@@ -315,18 +315,3 @@ export function createWebApp(options: Omit<AppOptions, 'securityHeaders' | 'requ
     ...options,
   });
 }
-
-export function createApiApp(options: Omit<AppOptions, 'securityHeaders' | 'requestLogging' | 'inputSanitize' | 'autoMigrate' | 'adapter'> & {
-  rateLimit?: boolean;
-  csrf?: boolean;
-}): NaraApp {
-  return createApp({
-        securityHeaders: true,
-    requestLogging: true,
-    inputSanitize: true,
-    autoMigrate: true,
-    rateLimit: true,
-    csrf: false,
-    ...options,
-  });
-}

@@ -25,9 +25,10 @@ export const updateRole = (id: string, data: Partial<Pick<Role, 'name' | 'slug' 
   return findRoleById(id);
 };
 
-export const deleteRole = (id: string): boolean => {
-  const result = SQLite.exec`DELETE FROM roles WHERE id = ${id}`;
-  return result.changes > 0;
+export const deleteRoles = (ids: string[]): number => {
+  if (ids.length === 0) return 0;
+  const result = SQLite.exec`DELETE FROM roles WHERE id IN (${ids})`;
+  return result.changes;
 };
 
 export const getRolePermissions = (roleId: string): Permission[] =>

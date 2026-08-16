@@ -18,7 +18,7 @@ Use descriptive handler names that include the resource and action:
 - `index` → `listUsers`, `listRoles`, `listProducts`
 - `store`/`create` → `addUser`, `addRole`, `addProduct`
 - `update` → `editUser`, `editRole`, `editProduct`
-- `destroy`/`remove` → `removeUsers`, `removeRole`, `removeProducts`
+- `destroy`/`remove` → `removeUsers`, `removeRoles`, `removeProducts`
 - `show` → `showUser`, `showRole` (or just include in page handler)
 - Page handlers keep `*Page` suffix: `usersPage`, `rolesPage`, `landingPage`
 

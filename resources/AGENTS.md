@@ -66,7 +66,7 @@ resources/
   const result = await api(`/posts/${id}`, { method: 'PUT', body: payload });
 
   // ✅ DELETE - remove
-  const result = await api(`/posts/${id}`, { method: 'DELETE' });
+  const result = await api('/posts', { method: 'DELETE', body: { ids: [id] } });
 
   // ❌ NEVER use raw fetch()/axios in components - bypasses CSRF and toast handling
 </script>

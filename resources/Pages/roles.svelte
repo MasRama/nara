@@ -104,7 +104,7 @@
       return;
     }
 
-    const result = await api(`/roles/${role.id}`, { method: 'DELETE' });
+    const result = await api('/roles', { method: 'DELETE', body: { ids: [role.id] } });
     if (result.success) {
       await loadData();
     }
