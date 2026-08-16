@@ -6,7 +6,7 @@ Skills are deep-dive procedures loaded on demand. Each skill focuses on one patt
 
 | Skill | When to load |
 |---|---|
-| [`new-world.md`](./new-world.md) | Creating a new project from the starter — `.nara/` PRD + TODO, rename, bootstrap |
+| [`new-world.md`](./new-world.md) | Creating a new project from the starter — `.nara/` PRD + TODO planning only; execution happens later via the TODO |
 | [`crud-pattern.md`](./crud-pattern.md) | Adding a new resource (types → migration → queries → validator → handlers → routes → page) |
 | [`sqlite-usage.md`](./sqlite-usage.md) | Writing SQL queries, transactions, dynamic updates |
 | [`auth-rbac.md`](./auth-rbac.md) | Auth guards, permission checks, role management |
