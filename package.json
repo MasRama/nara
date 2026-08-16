@@ -37,7 +37,7 @@
     "@inertiajs/svelte": "^3.6.1",
     "@lucide/svelte": "^1.31.0",
     "@tailwindcss/vite": "^4.3.3",
-    "better-sqlite3": "^12.4.1",
+    "better-sqlite3": "^12.11.1",
     "bits-ui": "^2.18.1",
     "clsx": "^2.1.1",
     "compression": "^1.8.1",
