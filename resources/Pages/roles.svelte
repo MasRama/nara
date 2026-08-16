@@ -270,7 +270,7 @@
   <RoleModal
     show={showRoleModal}
     {mode}
-    {form}
+    bind:form
     {isSubmitting}
     {groupedPermissions}
     on:close={closeRoleModal}

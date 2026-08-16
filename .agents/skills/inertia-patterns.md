@@ -134,27 +134,29 @@ The `api()` wrapper handles:
 </div>
 ```
 
-## UI Components (Zag JS)
+## UI Components (Bits UI)
 
-For interactive primitives (dialog, menu, switch, tabs), use Zag JS:
+For interactive primitives (dialog, menu, switch, tabs), use [Bits UI](https://www.bits-ui.com/) — headless, Svelte 5 native:
 
 ```svelte
 <script lang="ts">
-  import * as dialog from "@zag-js/dialog";
-  import { useMachine, normalizeProps } from "@zag-js/svelte";
-
-  const dialogService = useMachine(dialog.machine, { id: "my-dialog" });
-  const dialogApi = $derived(dialog.connect(dialogService, normalizeProps));
+  import { Dialog } from "bits-ui";
+  let open = $state(false);
 </script>
 
-<div {...dialogApi.getRootProps()}>
-  <button {...dialogApi.getTriggerProps()}>Open</button>
-  <div {...dialogApi.getBackdropProps()} />
-  <div {...dialogApi.getPositionerProps()}>
-    <div {...dialogApi.getContentProps()}>...</div>
-  </div>
-</div>
+<Dialog.Root bind:open>
+  <Dialog.Trigger>Open</Dialog.Trigger>
+  <Dialog.Portal>
+    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+    <Dialog.Content class="bg-background fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 ...">
+      <Dialog.Title>Title</Dialog.Title>
+      <Dialog.Description>...</Dialog.Description>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
 ```
+
+Other primitives: `DropdownMenu` (user menus), `Switch` (toggles), `Tabs` (tab navigation). State via props (`open`/`onOpenChange`, `checked`/`onCheckedChange`, `value`/`onValueChange`) or `bind:` the state prop. Style with Tailwind — Bits provides behavior + ARIA only.
 
 ## Do / Don't
 
@@ -162,7 +164,7 @@ For interactive primitives (dialog, menu, switch, tabs), use Zag JS:
 - **Do** use `router.visit()` for page transitions
 - **Do** use `$state`, `$derived`, `$effect`, `$props` — Svelte 5 runes
 - **Do** fetch list data via separate `/data` endpoint with `api()` — don't pass large lists via `res.inertia()`
-- **Do** use Zag JS for interactive UI primitives
+- **Do** use Bits UI for interactive UI primitives
 - **Don't** use `router.post/put/patch/delete` — bypasses `api()` wrapper (no toast/CSRF)
 - **Don't** use `window.location` or `window.location.href` — causes full page reload
 - **Don't** use `<a href="/path">` with `target="_self"` for internal navigation — let Inertia handle it

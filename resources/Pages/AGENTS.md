@@ -16,7 +16,7 @@ Inertia.js pages rendered by Svelte 5. Each page is a route destination — the 
 |------|---------|
 | `dashboard.svelte` | Admin dashboard with user stats + user list |
 | `landing.svelte` | Public landing page |
-| `profile.svelte` | User profile + password change (Zag JS tabs) |
+| `profile.svelte` | User profile + password change (Bits UI tabs) |
 | `roles.svelte` | Role management (CRUD table + permissions) |
 | `users.svelte` | User management (CRUD table + role assignment) |
 | `auth/login.svelte` | Login form |

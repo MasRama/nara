@@ -6,8 +6,7 @@
   import Input from '../Components/Input.svelte';
   import Label from '../Components/Label.svelte';
   import Button from '../Components/Button.svelte';
-  import * as tabs from "@zag-js/tabs";
-  import { useMachine, normalizeProps } from "@zag-js/svelte";
+  import { Tabs } from 'bits-ui';
   import { Loader2, Camera, Shield } from '@lucide/svelte';
   import type { User } from '../types';
 
@@ -20,9 +19,7 @@
   let confirm_password: string = $state('');
   let isLoading: boolean = $state(false);
   let previewUrl: string | null = $derived(user.avatar || null);
-
-  const tabsService = useMachine(tabs.machine, { id: "profile-tabs", defaultValue: "personal" });
-  const tabsApi = $derived(tabs.connect(tabsService, normalizeProps));
+  let activeTab: string = $state('personal');
 
   async function handleAvatarChange(event: Event): Promise<void> {
     const target = event.target as HTMLInputElement;
@@ -127,20 +124,20 @@
 
         <!-- Tabs -->
         <div class="lg:col-span-8">
-          <div {...tabsApi.getRootProps()} class="flex flex-col gap-2 w-full">
+          <Tabs.Root bind:value={activeTab} class="flex flex-col gap-2 w-full">
 
             <!-- Tab triggers -->
-            <div {...tabsApi.getListProps()} class="border border-border rounded-xl inline-flex h-auto w-fit items-stretch bg-card p-1 gap-0.5 mb-8">
-              <button {...tabsApi.getTriggerProps({ value: "personal" })} class="data-[selected]:bg-foreground data-[selected]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
+            <Tabs.List class="border border-border rounded-xl inline-flex h-auto w-fit items-stretch bg-card p-1 gap-0.5 mb-8">
+              <Tabs.Trigger value="personal" class="data-[state=active]:bg-foreground data-[state=active]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
                 Personal info
-              </button>
-              <button {...tabsApi.getTriggerProps({ value: "security" })} class="data-[selected]:bg-foreground data-[selected]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
+              </Tabs.Trigger>
+              <Tabs.Trigger value="security" class="data-[state=active]:bg-foreground data-[state=active]:text-background text-muted-foreground hover:text-foreground inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-heading font-medium whitespace-nowrap transition-colors">
                 Security
-              </button>
-            </div>
+              </Tabs.Trigger>
+            </Tabs.List>
 
             <!-- Personal info -->
-            <div {...tabsApi.getContentProps({ value: "personal" })} class="flex-1 outline-none">
+            <Tabs.Content value="personal" class="flex-1 outline-none">
               <div class="border border-border rounded-xl bg-card p-6 sm:p-8">
                 <div class="mb-6">
                   <h3 class="text-xl font-heading font-semibold tracking-tight text-foreground">Personal information</h3>
@@ -163,10 +160,10 @@
                   </div>
                 </form>
               </div>
-            </div>
+            </Tabs.Content>
 
             <!-- Security -->
-            <div {...tabsApi.getContentProps({ value: "security" })} class="flex-1 outline-none">
+            <Tabs.Content value="security" class="flex-1 outline-none">
               <div class="border border-border rounded-xl bg-card p-6 sm:p-8">
                 <div class="mb-6">
                   <h3 class="text-xl font-heading font-semibold tracking-tight text-foreground">Change password</h3>
@@ -195,8 +192,8 @@
                   </div>
                 </form>
               </div>
-            </div>
-          </div>
+            </Tabs.Content>
+          </Tabs.Root>
         </div>
 
       </div>

@@ -28,7 +28,7 @@ npm run gen:resource products -- --fields="name:string,price:number"
 AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over ORM, minimal abstractions.
 
 - **Backend**: ultimate-express (uWebSockets.js) + better-sqlite3
-- **Frontend**: Svelte 5 + Inertia.js + Zag JS (headless UI)
+- **Frontend**: Svelte 5 + Inertia.js + Bits UI (headless UI)
 - **Auth**: Session-based + RBAC
 - **Validation**: Zod
 
@@ -105,7 +105,7 @@ Server (ultimate-express)
 │   ├── app.ts             # Inertia app entry point
 │   ├── index.css          # Global styles + Tailwind
 │   ├── Pages/             # Route pages (.svelte)
-│   ├── Components/        # Reusable components (Header, Button, Switch, Modal, etc — Zag JS for interactive UI)
+│   ├── Components/        # Reusable components (Header, Button, Switch, Modal, etc — Bits UI for interactive UI)
 │   ├── lib/               # api.ts, csrf.ts, toast.ts, utils.ts (cn), utils/
 │   └── types/             # index.ts + forms.ts (re-exports app/types/shared)
 ├── tests/               # Vitest tests

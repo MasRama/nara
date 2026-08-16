@@ -12,7 +12,7 @@ AI must not add dependencies without checking this table. If a category is "Bann
 | Database | `better-sqlite3` | Prisma, Drizzle, Knex, Sequelize, TypeORM | ADR 0001 — raw SQL, AI writes SQL fluently |
 | Framework | `ultimate-express` | Express, Fastify, Koa, Hono | Nara uses uWebSockets.js for performance |
 | Frontend | `svelte`, `@inertiajs/svelte` | React, Vue, Solid, Angular | ADR 0003 — Inertia + Svelte 5 |
-| UI primitives | `@zag-js/*` | Headless UI, Radix, Melt | ADR 0007 — framework-agnostic state machines |
+| UI primitives | `bits-ui` | Headless UI, Radix, Melt, `@zag-js/*` | ADR 0007 — Svelte-native headless, accessible primitives |
 | Validation | `zod` | Joi, Yup, class-validator, valibot | ADR 0006 — TypeScript-first, type inference |
 | Auth | `@services/Authenticate` (internal) | bcrypt (direct), passport, jsonwebtoken | ADR 0005 — session-based, internal wrapper |
 | HTTP client | Native `fetch` (via `api()` wrapper) | axios, got, node-fetch | `api()` wrapper handles CSRF + toast |

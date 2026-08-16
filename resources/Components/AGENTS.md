@@ -1,6 +1,6 @@
 ---
-description: "Reusable Svelte 5 UI components — Button, Input, Label, Switch, Modal, Header, Pagination. Zag JS for interactive primitives"
-tags: [components, svelte, ui, zag-js, button, modal, header, pagination]
+description: "Reusable Svelte 5 UI components — Button, Input, Label, Switch, Modal, Header, Pagination. Bits UI for interactive primitives"
+tags: [components, svelte, ui, bits-ui, button, modal, header, pagination]
 ---
 
 # Components
@@ -20,9 +20,9 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 | `Input.svelte` | Styled text input | `value` (bindable), `type`, `files` (bindable), `className` |
 | `Label.svelte` | Form label | `children` |
 | `Pagination.svelte` | Page navigation | `meta: PaginationMeta`, `preserveState?: boolean` |
-| `RoleModal.svelte` | Create/edit role modal | Zag JS dialog — open/close via `bind:open` |
+| `RoleModal.svelte` | Create/edit role modal | Bits UI Dialog — open/close via `show` + `on:close` |
 | `Switch.svelte` | Toggle switch | `checked` (bindable), `disabled`, `onCheckedChange` |
-| `UserModal.svelte` | Create/edit user modal | Zag JS dialog — open/close via `bind:open` |
+| `UserModal.svelte` | Create/edit user modal | Bits UI Dialog — open/close via `show` + `on:close` |
 
 ## $lib/* Quick Reference
 
@@ -141,53 +141,46 @@ Components with visual variants use `tailwind-variants` with a **module script**
 
 **Currently using `tv`:** `Button.svelte`
 
-## Zag JS Components
+## Bits UI Components
 
-Interactive UI components use [Zag JS](https://zagjs.com/) — a headless, framework-agnostic state machine library. Zag provides behavior; styling is done with Tailwind.
+Interactive UI components use [Bits UI](https://www.bits-ui.com/) — a headless, accessible component library for Svelte 5 (runes). Bits provides behavior + accessibility (ARIA, keyboard nav, focus trap); styling is done with Tailwind.
 
-**Installed packages:** `@zag-js/dialog`, `@zag-js/menu`, `@zag-js/switch`, `@zag-js/tabs`, `@zag-js/svelte`
+**Installed package:** `bits-ui` (`Dialog`, `DropdownMenu`, `Switch`, `Tabs`)
 
 ### Pattern
 
-Every Zag JS component follows the same 3-step pattern:
+Compose Bits UI primitives with Tailwind classes:
 
 ```svelte
-<script lang="ts">
-  // 1. Import the machine + Svelte adapter
-  import * as dialog from "@zag-js/dialog";
-  import { useMachine, normalizeProps, portal } from "@zag-js/svelte";
-
-  // 2. Connect the machine to Svelte reactivity
-  const service = useMachine(dialog.machine, { id: crypto.randomUUID() });
-  const api = $derived(dialog.connect(service, normalizeProps));
-</script>
-
-<!-- 3. Spread props onto elements -->
-<div {...api.getPositionerProps()}>
-  <div {...api.getContentProps()}>
-    <button {...api.getCloseTriggerProps()}>Close</button>
-  </div>
-</div>
+<Dialog.Root open={show} onOpenChange={(open) => !open && dispatch('close')}>
+  <Dialog.Portal>
+    <Dialog.Overlay class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" />
+    <Dialog.Content class="bg-background fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 ...">
+      <Dialog.Title>Title</Dialog.Title>
+      <Dialog.Description>Description</Dialog.Description>
+      <Dialog.Close>Close</Dialog.Close>
+    </Dialog.Content>
+  </Dialog.Portal>
+</Dialog.Root>
 ```
 
-### Which components use Zag JS
+### Which components use Bits UI
 
-| Component | Zag Package | Used For |
-|-----------|-------------|----------|
-| `Header.svelte` | `@zag-js/menu` + `@zag-js/dialog` | User dropdown menu + logout confirmation |
-| `UserModal.svelte` | `@zag-js/dialog` | Create/edit user modal |
-| `RoleModal.svelte` | `@zag-js/dialog` | Create/edit role modal |
-| `Switch.svelte` | `@zag-js/switch` | Toggle switch (e.g. active/inactive) |
-| `profile.svelte` (page) | `@zag-js/tabs` | Profile tab navigation |
+| Component | Bits UI Primitive | Used For |
+|-----------|-------------------|----------|
+| `Header.svelte` | `DropdownMenu` + `Dialog` | User dropdown menu + mobile sheet |
+| `UserModal.svelte` | `Dialog` | Create/edit user modal |
+| `RoleModal.svelte` | `Dialog` | Create/edit role modal |
+| `Switch.svelte` | `Switch` | Toggle switch (e.g. active/inactive) |
+| `profile.svelte` (page) | `Tabs` | Profile tab navigation |
 
 ### Rules
 
-- **Always** use `crypto.randomUUID()` for the machine `id` (required by Zag)
-- **Always** derive the API: `const api = $derived(xxx.connect(service, normalizeProps))`
-- **Always** spread Zag props onto elements: `{...api.getRootProps()}`
-- Use `portal` from `@zag-js/svelte` for dialogs/menus that need portal rendering
-- Style with Tailwind — Zag provides no styles, only behavior + ARIA attributes
-- Access state via `api.*` (e.g. `api.checked`, `api.open`) — never reach into the service directly
+- **Always** pass `class` (merged via `cn()`) to Bits primitives — Bits provides no styles, only behavior + ARIA
+- Controlled state via props: `open` + `onOpenChange`, `checked` + `onCheckedChange`, `value` + `onValueChange` — or `bind:` the state prop
+- Use `Portal` for dialogs/menus that need portal rendering
+- Bits components pass through DOM attributes (`id`, `data-slot`, `aria-label`, …) — use them for styling hooks
+- Data attributes for styling: `data-state="active|inactive"` (Tabs trigger), `data-state="checked|unchecked"` (Switch), `data-highlighted` (DropdownMenu item)
 
 ## Svelte 5 Component Pattern
 
@@ -227,7 +220,7 @@ Every Zag JS component follows the same 3-step pattern:
 - **Children**: Use `{@render children?.()}` (Svelte 5 snippets) — NEVER `<slot />`
 - **Two-way binding**: Use `$bindable()` in `$props()` — parent uses `bind:propName`
 - **Variants**: Use `tailwind-variants` (`tv`) with module script for components with visual variants
-- **Interactive components**: Use Zag JS (`@zag-js/*`) for dialogs, menus, switches, tabs — NOT raw HTML or custom implementations
+- **Interactive components**: Use Bits UI (`bits-ui`) for dialogs, menus, switches, tabs — NOT raw HTML or custom implementations
 - Transitions from `svelte/transition` (fly, fade, scale)
 - Authorization: gate UI with server-computed `permissions` props (`canCreate`, `canEdit`, `canDelete`) from the page handler — never manual role checks in templates
 - CRUD mutations: use `api(path, { method, body })` — NOT raw `fetch()`/`axios` in components

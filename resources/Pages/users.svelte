@@ -230,7 +230,7 @@
   <UserModal
     show={showUserModal}
     {mode}
-    {form}
+    bind:form
     {isSubmitting}
     {availableRoles}
     on:close={closeUserModal}

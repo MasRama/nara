@@ -1,6 +1,6 @@
 ---
-description: "Svelte 5 + Inertia.js frontend. Runes ($state/$derived/$effect/$props), api() wrapper for HTTP, router.visit() for navigation, Zag JS for UI primitives"
-tags: [frontend, svelte, inertia, runes, tailwind, zag-js, ui]
+description: "Svelte 5 + Inertia.js frontend. Runes ($state/$derived/$effect/$props), api() wrapper for HTTP, router.visit() for navigation, Bits UI for UI primitives"
+tags: [frontend, svelte, inertia, runes, tailwind, bits-ui, ui]
 ---
 
 # resources - Frontend
@@ -40,7 +40,7 @@ resources/
 - **Inertia.js** adapter for SSR + client navigation via `router` helper
 - **TypeScript** for type safety (`<script lang="ts">`)
 - **Native fetch** for HTTP requests (wrapped in `api()` helper)
-- **Zag JS** (`@zag-js/*`) for headless UI primitives (dialog, menu, switch, tabs) — styled with Tailwind
+- **Bits UI** (`bits-ui`) for headless UI primitives (dialog, menu, switch, tabs) — styled with Tailwind
 
 ## KEY PATTERNS
 
@@ -138,4 +138,4 @@ This matches the backend response helpers: `jsonSuccess`, `jsonCreated`, `jsonPa
 - **Authorization**: Gate UI with server-computed `permissions` props (`canCreate`, `canEdit`, `canDelete`) passed by the page handler — never manual role checks in templates
 - **Dark mode**: Use `dark:` Tailwind prefix on all elements
 - **Types**: Import from `$lib/types` or `../types` (relative)
-- **UI primitives**: Zag JS (`@zag-js/*`) for headless interactive components (dialog, menu, switch, tabs) — styled with Tailwind
+- **UI primitives**: Bits UI (`bits-ui`) for headless interactive components (dialog, menu, switch, tabs) — styled with Tailwind
