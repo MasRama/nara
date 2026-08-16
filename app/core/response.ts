@@ -109,30 +109,11 @@ export function jsonCreated<T = unknown>(
   return jsonSuccess(res, message, data, undefined, 201);
 }
 
-export function jsonNoContent(res: NaraResponse): NaraResponse {
-  res.status(204).send('');
-  return res;
-}
-
-export function jsonUnauthorized(
-  res: NaraResponse,
-  message: string = 'Unauthorized'
-): NaraResponse {
-  return jsonError(res, message, 401, 'UNAUTHORIZED');
-}
-
 export function jsonForbidden(
   res: NaraResponse,
   message: string = 'Forbidden'
 ): NaraResponse {
   return jsonError(res, message, 403, 'FORBIDDEN');
-}
-
-export function jsonNotFound(
-  res: NaraResponse,
-  message: string = 'Not Found'
-): NaraResponse {
-  return jsonError(res, message, 404, 'NOT_FOUND');
 }
 
 export function jsonValidationError(

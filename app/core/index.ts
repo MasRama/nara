@@ -17,32 +17,14 @@ export type { NaraRouter } from './Router';
 export * from './adapters/types';
 export { svelteAdapter } from './adapters/svelte';
 
-export {
-  httpError,
-  validationError,
-  authError,
-  notFoundError,
-  forbiddenError,
-  badRequestError,
-  conflictError,
-  tooManyRequestsError,
-  internalError,
-  isNaraError,
-  isValidationError,
-  isUniqueConstraintError,
-} from './errors';
-
-export type { NaraError } from './errors';
+export { isUniqueConstraintError } from './errors';
 
 export {
   jsonSuccess,
   jsonError,
   jsonPaginated,
   jsonCreated,
-  jsonNoContent,
-  jsonUnauthorized,
   jsonForbidden,
-  jsonNotFound,
   jsonValidationError,
   jsonServerError,
   queryInt,

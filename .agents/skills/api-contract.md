@@ -28,11 +28,8 @@ Import from `@core`. Use these — never construct response objects manually.
 | `jsonSuccess(res, msg, data?, meta?, status=200)` | 200 | — | Generic success |
 | `jsonCreated(res, msg, data?)` | 201 | — | After create mutation |
 | `jsonPaginated(res, msg, data[], meta)` | 200 | — | List endpoints with pagination |
-| `jsonNoContent(res)` | 204 | — | Empty success (delete) |
 | `jsonError(res, msg, status=400, code?, errors?)` | custom | custom | Generic error |
-| `jsonUnauthorized(res)` | 401 | `UNAUTHORIZED` | No session |
 | `jsonForbidden(res)` | 403 | `FORBIDDEN` | No permission |
-| `jsonNotFound(res)` | 404 | `NOT_FOUND` | Resource missing |
 | `jsonValidationError(res, msg, errors)` | 422 | `VALIDATION_ERROR` | Zod validation failed |
 | `jsonServerError(res)` | 500 | `INTERNAL_ERROR` | Unexpected failure |
 

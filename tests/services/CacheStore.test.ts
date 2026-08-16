@@ -130,17 +130,6 @@ describe('CacheStore', () => {
       expect(store.has('c')).toBe(true);
       expect(store.has('d')).toBe(true);
     });
-
-    it('counts evictions in stats', () => {
-      const store = makeStore({ maxEntries: 2, maxBytes: 999_999, defaultTtlMs: 0 });
-
-      store.set('a', buf('a'));
-      store.set('b', buf('b'));
-      store.set('c', buf('c')); // evicts 'a'
-      store.set('d', buf('d')); // evicts 'b'
-
-      expect(store.stats().evictions).toBe(2);
-    });
   });
 
   // ── LRU eviction by maxBytes ──
@@ -263,34 +252,12 @@ describe('CacheStore', () => {
       const stats = store.stats();
       expect(stats.entries).toBe(0);
       expect(stats.totalBytes).toBe(0);
-      expect(stats.hits).toBe(0);
-      expect(stats.misses).toBe(0);
-      expect(stats.evictions).toBe(0);
     });
   });
 
   // ── Statistics ──
 
   describe('stats', () => {
-    it('tracks hits and misses correctly', () => {
-      const store = makeStore();
-      store.set('a', buf('a'));
-
-      store.get('a'); // hit
-      store.get('a'); // hit
-      store.get('z'); // miss
-
-      const stats = store.stats();
-      expect(stats.hits).toBe(2);
-      expect(stats.misses).toBe(1);
-      expect(stats.hitRate).toBeCloseTo(2 / 3);
-    });
-
-    it('hitRate is 0 when no requests made', () => {
-      const store = makeStore();
-      expect(store.stats().hitRate).toBe(0);
-    });
-
     it('reports correct totalBytes', () => {
       const store = makeStore({ maxEntries: 999, maxBytes: 999_999, defaultTtlMs: 0 });
       store.set('a', buf('hello')); // 5

@@ -11,8 +11,7 @@ import { rateLimit } from "@middlewares/rateLimit";
 import { csrf } from "@middlewares/csrf";
 import { inputSanitize } from "@middlewares/inputSanitize";
 import { requestId } from "@middlewares/requestId";
-import { isNaraError, isValidationError } from "./errors";
-import { jsonError, jsonValidationError } from "./response";
+import { jsonError } from "./response";
 import type { NaraRequest, NaraResponse } from "./types";
 import type { FrontendAdapter } from "./adapters/types";
 import { migrate } from "@services/Migrator";
@@ -133,41 +132,8 @@ export function createApp(options?: AppOptions): NaraApp {
       }
 
       const isDevelopment = envConfig.NODE_ENV === "development";
-
-      if (isNaraError(error)) {
-        Logger.warn("HTTP error", {
-          name: error.name,
-          message: error.message,
-          statusCode: error.statusCode,
-          code: error.code,
-          path: req.path,
-          method: req.method,
-        });
-
-        if (isValidationError(error)) {
-          const isInertia = req.headers["x-inertia"] === "true";
-
-          if (isInertia) {
-            const referer = (req.headers["referer"] as string) || "/";
-            const errorMsg = (error.errors && Object.keys(error.errors).length > 0)
-              ? Object.values(error.errors).flat().join(", ")
-              : error.message;
-
-            return (res as NaraResponse)
-              .cookie("error", errorMsg, { maxAge: 5000 })
-              .setHeader('X-Inertia-Location', referer)
-              .redirect(referer);
-          }
-
-          return jsonValidationError(res as NaraResponse, error.message, error.errors);
-        }
-
-        const { message, statusCode, code } = error;
-        return jsonError(res as NaraResponse, message, statusCode, code);
-      }
-
-      const err = error as Error;
-      const statusCode = (error as { statusCode?: number }).statusCode || 500;
+      const err = error as Error & { statusCode?: number; code?: string };
+      const statusCode = err.statusCode || 500;
 
       Logger.error("Unhandled request error", {
         err,
@@ -181,7 +147,7 @@ export function createApp(options?: AppOptions): NaraApp {
         res as NaraResponse,
         isDevelopment ? err.message : "Internal Server Error",
         statusCode,
-        (error as { code?: string }).code
+        err.code
       );
     });
   }

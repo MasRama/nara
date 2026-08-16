@@ -15,7 +15,7 @@ The framework foundation: app bootstrap, router, request/response types, error h
 | `App.ts` | `createApp`, `createWebApp` — bootstrap, middleware wiring, auto-migrate, error handler |
 | `Router.ts` | `createRouter` — route registration with middleware arrays |
 | `response.ts` | `jsonSuccess`, `jsonError`, `jsonCreated`, `jsonPaginated`, `jsonValidationError`, `queryInt`, `queryString` |
-| `errors.ts` | `httpError`, `validationError`, `authError`, `notFoundError`, `forbiddenError`, `isNaraError`, `isUniqueConstraintError` |
+| `errors.ts` | `isUniqueConstraintError` — SQLite unique constraint guard |
 | `types.ts` | `NaraRequest`, `NaraResponse`, `AuthUser`, `NaraMiddleware`, `NaraHandler`, `RouteMiddlewares` |
 | `index.ts` | Barrel export — `@core` alias resolves here |
 | `adapters/svelte.ts` | Inertia.js adapter (renderer + page glob) |
@@ -43,11 +43,8 @@ Handler (from app/handlers/)
 | `jsonSuccess(res, msg, data?, meta?)` | 200 | Generic success |
 | `jsonCreated(res, msg, data?)` | 201 | After create mutation |
 | `jsonPaginated(res, msg, data[], meta)` | 200 | List endpoints |
-| `jsonNoContent(res)` | 204 | Empty success |
 | `jsonError(res, msg, status, code?, errors?)` | custom | Generic error |
-| `jsonUnauthorized(res)` | 401 | No session |
 | `jsonForbidden(res)` | 403 | No permission |
-| `jsonNotFound(res)` | 404 | Resource missing |
 | `jsonValidationError(res, msg, errors)` | 422 | Zod validation failed |
 | `jsonServerError(res)` | 500 | Unexpected failure |
 
@@ -68,10 +65,7 @@ Never use `parseInt(req.query.x as string) || 1` — `queryInt` handles parsing 
 ## Error Helpers (rarely needed — response helpers cover most cases)
 
 ```typescript
-import { httpError, isNaraError, isUniqueConstraintError } from '@core';
-
-// Throw a typed error — caught by App error handler, converted to jsonError
-throw httpError(404, 'Product not found');
+import { isUniqueConstraintError } from '@core';
 
 // In a catch block — distinguish SQLite unique constraint from other errors
 try { createProduct(...) }
@@ -87,7 +81,7 @@ catch (error) {
 - **Bottom layer** — core may import `@config`, `@services`, `@middlewares`, `@types`, but never `@handlers`, `@queries`, `@validators`
 - **No business logic here** — core is infrastructure. Logic lives in handlers/services/queries
 - **Bootstrap files** (`App.ts`, `env.ts`, `server.ts`) may use `console.log` — Logger not yet initialized. All other backend files must use Logger (L9, enforced)
-- **Error handler** in `App.ts` catches thrown errors and converts to `jsonError` — handlers can `throw httpError(...)` instead of returning, but returning is preferred
+- **Error handler** in `App.ts` catches thrown errors and converts to `jsonError` — handlers return responses directly (never throw), except inside try/catch where `isUniqueConstraintError` distinguishes constraint failures
 - `index.ts` is the `@core` alias target — add new exports here
 
 ## When to modify core

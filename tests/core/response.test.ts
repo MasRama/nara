@@ -12,10 +12,7 @@ import {
   jsonError,
   jsonPaginated,
   jsonCreated,
-  jsonNoContent,
-  jsonUnauthorized,
   jsonForbidden,
-  jsonNotFound,
   jsonValidationError,
   jsonServerError,
 } from '../../app/core/response';
@@ -181,37 +178,6 @@ describe('jsonCreated', () => {
   });
 });
 
-describe('jsonNoContent', () => {
-  it('returns 204 with empty body', () => {
-    const res = mockResponse();
-    jsonNoContent(res as any);
-
-    expect(res._status).toBe(204);
-    expect(res._body).toBe('');
-  });
-});
-
-describe('jsonUnauthorized', () => {
-  it('returns 401 with default message', () => {
-    const res = mockResponse();
-    jsonUnauthorized(res as any);
-
-    expect(res._status).toBe(401);
-    expect(res._body).toEqual({
-      success: false,
-      message: 'Unauthorized',
-      code: 'UNAUTHORIZED',
-    });
-  });
-
-  it('accepts custom message', () => {
-    const res = mockResponse();
-    jsonUnauthorized(res as any, 'Session expired');
-
-    expect(res._body.message).toBe('Session expired');
-  });
-});
-
 describe('jsonForbidden', () => {
   it('returns 403 with default message', () => {
     const res = mockResponse();
@@ -226,17 +192,6 @@ describe('jsonForbidden', () => {
     jsonForbidden(res as any, 'Admin only');
 
     expect(res._body.message).toBe('Admin only');
-  });
-});
-
-describe('jsonNotFound', () => {
-  it('returns 404 with default message', () => {
-    const res = mockResponse();
-    jsonNotFound(res as any);
-
-    expect(res._status).toBe(404);
-    expect(res._body.code).toBe('NOT_FOUND');
-    expect(res._body.message).toBe('Not Found');
   });
 });
 

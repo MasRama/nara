@@ -14,10 +14,6 @@ interface CacheEntry<V> {
 export interface CacheStats {
   entries: number;
   totalBytes: number;
-  hits: number;
-  misses: number;
-  evictions: number;
-  hitRate: number;
 }
 
 export interface CacheStore<V> {
@@ -40,9 +36,6 @@ export const createCacheStore = <V>(options: CacheStoreOptions): CacheStore<V> =
   const store = new Map<string, CacheEntry<V>>();
   const measure = options.measureFn ?? defaultMeasure;
   let totalBytes = 0;
-  let hits = 0;
-  let misses = 0;
-  let evictions = 0;
 
   const evictLru = (): void => {
     const firstKey = store.keys().next().value;
@@ -50,21 +43,18 @@ export const createCacheStore = <V>(options: CacheStoreOptions): CacheStore<V> =
     const entry = store.get(firstKey);
     if (entry) totalBytes -= entry.size;
     store.delete(firstKey);
-    evictions++;
   };
 
   const get = (key: string): V | undefined => {
     const entry = store.get(key);
-    if (!entry) { misses++; return undefined; }
+    if (!entry) return undefined;
     if (entry.expiresAt > 0 && Date.now() > entry.expiresAt) {
       store.delete(key);
       totalBytes -= entry.size;
-      misses++;
       return undefined;
     }
     store.delete(key);
     store.set(key, entry);
-    hits++;
     return entry.value;
   };
 
@@ -108,22 +98,12 @@ export const createCacheStore = <V>(options: CacheStoreOptions): CacheStore<V> =
   const clear = (): void => {
     store.clear();
     totalBytes = 0;
-    hits = 0;
-    misses = 0;
-    evictions = 0;
   };
 
-  const stats = (): CacheStats => {
-    const total = hits + misses;
-    return {
-      entries: store.size,
-      totalBytes,
-      hits,
-      misses,
-      evictions,
-      hitRate: total > 0 ? hits / total : 0,
-    };
-  };
+  const stats = (): CacheStats => ({
+    entries: store.size,
+    totalBytes,
+  });
 
   return {
     get,
