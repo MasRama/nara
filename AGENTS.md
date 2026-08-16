@@ -15,7 +15,7 @@ For database schema: `ls migrations/` to see table names, read the specific migr
 
 Then verify your work with one command:
 ```bash
-npm run check    # lint + layer lint + tests
+npm run check    # lint + frontend type check + layer lint + tests
 ```
 
 Scaffold a new resource with one command:
@@ -229,7 +229,7 @@ Nara ships with agent-ergonomic tooling. Run these before committing AI-generate
 
 | Command | Purpose | Blocks commit? |
 |---|---|---|
-| `npm run check` | All-in-one: lint + lint:layers + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
+| `npm run check` | All-in-one: lint + svelte-check + lint:layers + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
 | `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (11 files incl. test stub) | No |
 | `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
 | `npm run check:types` | Block new `any`/`as any`/`@ts-ignore` beyond baseline. Update: `--update` flag. | Yes (CI) |

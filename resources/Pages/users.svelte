@@ -1,6 +1,6 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import { page as inertiaPage, router } from '@inertiajs/svelte';
+  import { router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import UserModal from '../Components/UserModal.svelte';
   import Pagination from '../Components/Pagination.svelte';
@@ -34,8 +34,6 @@
     hasNext = false,
     hasPrev = false
   }: Props = $props();
-
-  const currentUser = $derived(inertiaPage.props.user as User | undefined);
 
   let paginationMeta = $derived({ total, page, limit, totalPages, hasNext, hasPrev } as PaginationMeta);
 
@@ -162,7 +160,7 @@
                     <td class="p-5 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-3">
                         <div class="relative flex w-9 h-9 shrink-0 overflow-hidden rounded-full bg-muted border border-border items-center justify-center">
-                          <span class="text-xs font-heading font-medium text-foreground">{userItem.name.charAt(0).toUpperCase()}</span>
+                          <span class="text-xs font-heading font-medium text-foreground">{userItem.name?.charAt(0).toUpperCase()}</span>
                         </div>
                         <div class="min-w-0">
                           <div class="text-sm font-heading font-semibold tracking-tight text-foreground truncate">{userItem.name}</div>

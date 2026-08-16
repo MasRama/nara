@@ -3,12 +3,16 @@ import type { NaraRequest, NaraResponse, NaraMiddleware } from "@core";
 const stripTags = (value: string): string =>
   value.replace(/<[^>]*>/g, '').trim();
 
-function sanitizeValue(value: unknown): unknown {
+const SENSITIVE_KEYS = /password/i;
+
+function sanitizeValue(value: unknown, key?: string): unknown {
+  // Never mutate credentials — stripping tags would corrupt hashes/comparison
+  if (key && SENSITIVE_KEYS.test(key)) return value;
   if (typeof value === 'string') return stripTags(value);
-  if (Array.isArray(value)) return value.map(sanitizeValue);
+  if (Array.isArray(value)) return value.map(v => sanitizeValue(v));
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = sanitizeValue(v);
+    for (const [k, v] of Object.entries(value)) out[k] = sanitizeValue(v, k);
     return out;
   }
   return value;

@@ -1,6 +1,5 @@
 <script lang="ts">
   import { fly } from 'svelte/transition';
-  import { page as inertiaPage, router } from '@inertiajs/svelte';
   import Header from '../Components/Header.svelte';
   import RoleModal from '../Components/RoleModal.svelte';
   import { api } from '$lib/api';

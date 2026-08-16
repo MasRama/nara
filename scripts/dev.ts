@@ -29,11 +29,11 @@ function start(cmd: string, args: string[], label: string, color: string) {
 }
 
 // Vite — start immediately
-const vite = start('npx', ['vite'], 'vite', '36');
+const vite = start('vite', [], 'vite', '36');
 
 // Nodemon — delay 1s to let Vite bind first (replaces `sleep 1 && ...`)
 setTimeout(() => {
-  start('npx', ['nodemon', '--legacy-watch'], 'nodemon', '34');
+  start('nodemon', ['--legacy-watch'], 'nodemon', '34');
 }, 1000);
 
 // Die together

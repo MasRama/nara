@@ -18,9 +18,7 @@
     users = [],
     total = 0,
     page = 1,
-    totalPages = 1,
-    hasNext = false,
-    hasPrev = false
+    totalPages = 1
   }: Props = $props();
 
   const currentUser = $derived(inertiaPage.props.user as User | undefined);

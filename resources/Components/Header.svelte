@@ -2,7 +2,6 @@
   import { page, router, inertia } from '@inertiajs/svelte';
   import { api } from '$lib/api';
   import DarkModeToggle from './DarkModeToggle.svelte';
-  import Button from './Button.svelte';
   import * as menu from "@zag-js/menu";
   import * as dialog from "@zag-js/dialog";
   import { useMachine, normalizeProps, portal } from "@zag-js/svelte";

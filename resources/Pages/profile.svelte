@@ -92,7 +92,7 @@
                   {/if}
                   {#if !previewUrl}
                     <div class="bg-muted text-foreground font-heading font-semibold flex size-full items-center justify-center text-2xl">
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.name?.charAt(0).toUpperCase()}
                     </div>
                   {/if}
                 </div>

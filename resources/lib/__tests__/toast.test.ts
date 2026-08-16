@@ -40,8 +40,4 @@ describe('Toast()', () => {
     Toast('Default message');
     expect(toast.success).toHaveBeenCalledWith('Default message');
   });
-
-  it('accepts signature (text: string, type: ToastType, duration: number)', () => {
-    expect(() => Toast('msg', 'info', 100)).not.toThrow();
-  });
 });

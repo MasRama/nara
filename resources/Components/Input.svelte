@@ -5,7 +5,9 @@
 	type InputType = Exclude<HTMLInputTypeAttribute, "file">;
 
 	type Props = Omit<HTMLInputAttributes, "type"> &
-		({ type: "file"; files?: FileList } | { type?: InputType; files?: undefined });
+		({ type: "file"; files?: FileList } | { type?: InputType; files?: undefined }) & {
+			ref?: HTMLInputElement | null;
+		};
 
 	let {
 		ref = $bindable(null),

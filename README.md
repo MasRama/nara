@@ -131,7 +131,8 @@ Agent writes code
   │
   ▼
 npm run check
-  ├── tsc --noEmit           (lint)
+  ├── tsc --noEmit           (lint, backend)
+  ├── svelte-check           (frontend type check)
   ├── lint:layers            (17 architectural rules)
   ├── check:agents           (AGENTS.md Structure tables accurate)
   ├── check:security         (7 dangerous pattern checks)
@@ -203,7 +204,7 @@ Server (ultimate-express / uWebSockets.js)
 npm run gen:resource products -- --fields="name:string,price:number"
 
 # Verification
-npm run check              # lint + layer lint + tests
+npm run check              # lint + frontend type check + layer lint + tests
 npm run lint:layers        # 17 layer boundary + naming + import direction rules
 ```
 

@@ -37,7 +37,7 @@ export async function api<T = unknown>(path: string, options: ApiOptions = {}): 
   }
 
   // Double-submit cookie CSRF — server validates X-CSRF-Token against csrf_token cookie
-  if (method !== 'GET' && method !== 'HEAD') {
+  if (method !== 'GET') {
     const token = getCSRFToken();
     if (token) headers['X-CSRF-Token'] = token;
   }

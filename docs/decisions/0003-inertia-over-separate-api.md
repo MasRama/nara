@@ -9,7 +9,7 @@ Traditional SPA architecture requires:
 1. Backend API (JSON endpoints)
 2. Frontend SPA (React/Vue/Svelte)
 3. State management (Redux/Zustand/Pinia)
-4. API client layer (fetch/axios + error handling + loading states)
+4. API client layer (fetch + error handling + loading states)
 5. Routing on both sides (API routes + frontend routes)
 
 This doubles the surface area AI must understand. For a starter kit, the complexity is not justified.

@@ -36,6 +36,7 @@
 
 	export type ButtonProps = HTMLButtonAttributes &
 		HTMLAnchorAttributes & {
+			ref?: HTMLElement | null;
 			variant?: ButtonVariant;
 			size?: ButtonSize;
 		};

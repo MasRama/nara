@@ -1,0 +1,14 @@
+# Normalize line endings — always LF (Unix) unless a file needs otherwise
+* text=auto eol=lf
+
+# Binary files — never normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.sqlite3 binary
+*.sqlite binary
+*.db binary
