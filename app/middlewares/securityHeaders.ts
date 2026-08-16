@@ -1,12 +1,5 @@
 import type { NaraRequest, NaraResponse, NaraMiddleware } from "@core/types";
 
-export interface HSTSOptions {
-  maxAge?: number;
-  includeSubDomains?: boolean;
-  preload?: boolean;
-  enabled?: boolean;
-}
-
 export interface CSPDirectives {
   defaultSrc?: string[];
   scriptSrc?: string[];
@@ -23,33 +16,23 @@ export interface CSPDirectives {
   upgradeInsecureRequests?: boolean;
 }
 
-export interface CSPOptions {
-  directives?: CSPDirectives;
-  reportOnly?: boolean;
-  reportUri?: string;
-  enabled?: boolean;
-}
-
 export interface SecurityHeadersOptions {
-  hsts?: HSTSOptions | boolean;
+  hsts?: boolean;
   frameOptions?: 'DENY' | 'SAMEORIGIN' | false;
   contentTypeOptions?: 'nosniff' | false;
   referrerPolicy?: string | false;
   xssProtection?: string | false;
-  csp?: CSPOptions | false;
+  csp?: boolean | { directives?: CSPDirectives; reportOnly?: boolean; reportUri?: string };
   permissionsPolicy?: Record<string, string[]> | false;
-  coep?: 'require-corp' | 'credentialless' | false;
-  coop?: 'same-origin' | 'same-origin-allow-popups' | 'unsafe-none' | false;
-  corp?: 'same-origin' | 'same-site' | 'cross-origin' | false;
 }
 
 const DEFAULT_CSP_DIRECTIVES: CSPDirectives = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-  styleSrc: ["'self'", "'unsafe-inline'"],
+  styleSrc: ["'self'", "'unsafe-inline'", 'https://rsms.me', 'https://fonts.googleapis.com'],
   imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
   fontSrc: ["'self'", 'data:', 'https:'],
-  connectSrc: ["'self'", 'https:', 'wss:'],
+  connectSrc: ["'self'", 'https:', 'wss:', 'ws:'], // ws: for Vite HMR in dev
   mediaSrc: ["'self'"],
   objectSrc: ["'none'"],
   frameAncestors: ["'none'"],
@@ -70,7 +53,7 @@ const DEFAULT_PERMISSIONS_POLICY: Record<string, string[]> = {
 
 function buildCSPHeader(directives: CSPDirectives): string {
   const parts: string[] = [];
-  
+
   if (directives.defaultSrc) parts.push(`default-src ${directives.defaultSrc.join(' ')}`);
   if (directives.scriptSrc) parts.push(`script-src ${directives.scriptSrc.join(' ')}`);
   if (directives.styleSrc) parts.push(`style-src ${directives.styleSrc.join(' ')}`);
@@ -84,7 +67,7 @@ function buildCSPHeader(directives: CSPDirectives): string {
   if (directives.formAction) parts.push(`form-action ${directives.formAction.join(' ')}`);
   if (directives.baseUri) parts.push(`base-uri ${directives.baseUri.join(' ')}`);
   if (directives.upgradeInsecureRequests) parts.push('upgrade-insecure-requests');
-  
+
   return parts.join('; ');
 }
 
@@ -101,77 +84,66 @@ function buildPermissionsPolicy(policy: Record<string, string[]>): string {
 
 export function securityHeaders(options: SecurityHeadersOptions = {}): NaraMiddleware {
   const isProduction = process.env.NODE_ENV === 'production';
-  
-  const hstsOptions: HSTSOptions = typeof options.hsts === 'object'
-    ? options.hsts
-    : { enabled: options.hsts !== false && isProduction };
-  
-  const hstsEnabled = hstsOptions.enabled !== false && isProduction;
-  const hstsMaxAge = hstsOptions.maxAge ?? 31536000;
-  const hstsIncludeSubDomains = hstsOptions.includeSubDomains !== false;
-  const hstsPreload = hstsOptions.preload === true;
-  
-  const cspOptions: CSPOptions = typeof options.csp === 'object'
-    ? options.csp
-    : { enabled: false };
-  
-  const cspEnabled = cspOptions.enabled === true;
-  const cspDirectives = { ...DEFAULT_CSP_DIRECTIVES, ...cspOptions.directives };
-  const cspReportOnly = cspOptions.reportOnly === true;
-  
+
+  const hstsEnabled = options.hsts !== false && isProduction;
+  const hstsValue = hstsEnabled ? 'max-age=31536000; includeSubDomains' : null;
+
+  const cspCustom = typeof options.csp === 'object' ? options.csp : null;
+  const cspEnabled = cspCustom ? true : options.csp !== false;
+  const cspDirectives = { ...DEFAULT_CSP_DIRECTIVES, ...cspCustom?.directives };
+
+  // Dev: Vite serves assets from its own origin (VITE_PORT) — allow it explicitly
+  if (!isProduction) {
+    const viteOrigin = `http://localhost:${process.env.VITE_PORT || 5173}`;
+    cspDirectives.scriptSrc = [...(cspDirectives.scriptSrc ?? []), viteOrigin];
+    cspDirectives.styleSrc = [...(cspDirectives.styleSrc ?? []), viteOrigin];
+    cspDirectives.connectSrc = [...(cspDirectives.connectSrc ?? []), viteOrigin];
+  }
+
+  const cspReportOnly = cspCustom?.reportOnly === true;
+  const cspReportUri = cspCustom?.reportUri;
+
   const permissionsPolicy = options.permissionsPolicy !== false
     ? { ...DEFAULT_PERMISSIONS_POLICY, ...(typeof options.permissionsPolicy === 'object' ? options.permissionsPolicy : {}) }
     : null;
-  
-  const hstsValue = hstsEnabled
-    ? `max-age=${hstsMaxAge}${hstsIncludeSubDomains ? '; includeSubDomains' : ''}${hstsPreload ? '; preload' : ''}`
-    : null;
-  
+
   const cspValue = cspEnabled ? buildCSPHeader(cspDirectives) : null;
   const permissionsPolicyValue = permissionsPolicy ? buildPermissionsPolicy(permissionsPolicy) : null;
-  
+
   return (_req: NaraRequest, res: NaraResponse, next: () => void) => {
     if (hstsValue) {
       res.setHeader('Strict-Transport-Security', hstsValue);
     }
-    
+
     if (options.frameOptions !== false) {
       res.setHeader('X-Frame-Options', options.frameOptions || 'DENY');
     }
-    
+
     if (options.contentTypeOptions !== false) {
       res.setHeader('X-Content-Type-Options', options.contentTypeOptions || 'nosniff');
     }
-    
+
     if (options.referrerPolicy !== false) {
       res.setHeader('Referrer-Policy', options.referrerPolicy || 'strict-origin-when-cross-origin');
     }
-    
+
     if (options.xssProtection !== false) {
       res.setHeader('X-XSS-Protection', options.xssProtection || '0');
     }
-    
+
     if (cspValue) {
       const headerName = cspReportOnly
         ? 'Content-Security-Policy-Report-Only'
         : 'Content-Security-Policy';
-      
-      let value = cspValue;
-      if (cspOptions.reportUri) {
-        value += `; report-uri ${cspOptions.reportUri}`;
-      }
-      
+
+      const value = cspReportUri ? `${cspValue}; report-uri ${cspReportUri}` : cspValue;
       res.setHeader(headerName, value);
     }
-    
+
     if (permissionsPolicyValue) {
       res.setHeader('Permissions-Policy', permissionsPolicyValue);
     }
-    
-    if (options.coep) res.setHeader('Cross-Origin-Embedder-Policy', options.coep);
-    if (options.coop) res.setHeader('Cross-Origin-Opener-Policy', options.coop);
-    if (options.corp) res.setHeader('Cross-Origin-Resource-Policy', options.corp);
-    
+
     return next();
   };
 }

@@ -9,9 +9,7 @@ describe('Logger', () => {
     expect(typeof Logger.warn).toBe('function');
     expect(typeof Logger.error).toBe('function');
     expect(typeof Logger.fatal).toBe('function');
-    expect(typeof Logger.child).toBe('function');
     expect(typeof Logger.logRequest).toBe('function');
-    expect(typeof Logger.logQuery).toBe('function');
     expect(typeof Logger.logAuth).toBe('function');
     expect(typeof Logger.logSecurity).toBe('function');
     expect(typeof Logger.flush).toBe('function');
@@ -48,12 +46,6 @@ describe('Logger', () => {
     expect(() => Logger.fatal('critical failure', err)).not.toThrow();
   });
 
-  it('should create child logger', () => {
-    const child = Logger.child({ requestId: '123' });
-    expect(child).toBeDefined();
-    expect(typeof child.info).toBe('function');
-  });
-
   it('should log request data', () => {
     expect(() => Logger.logRequest({
       method: 'GET',
@@ -61,10 +53,6 @@ describe('Logger', () => {
       statusCode: 200,
       responseTime: 50,
     })).not.toThrow();
-  });
-
-  it('should log query data', () => {
-    expect(() => Logger.logQuery('SELECT 1', 5)).not.toThrow();
   });
 
   it('should log auth events', () => {

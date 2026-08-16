@@ -19,8 +19,6 @@ export type { RequestLoggerOptions } from './requestLogger';
 export { securityHeaders } from './securityHeaders';
 export type {
   SecurityHeadersOptions,
-  HSTSOptions,
-  CSPOptions,
   CSPDirectives,
 } from './securityHeaders';
 

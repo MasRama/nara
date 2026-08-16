@@ -96,9 +96,6 @@ const transport = pino.transport({
 
 const logger = pino(pinoConfig, transport);
 
-export const child = (bindings: Record<string, any>): pino.Logger =>
-  logger.child(bindings);
-
 export const trace = (message: string, data?: Record<string, any>): void => {
   if (data) logger.trace(data, message);
   else logger.trace(message);
@@ -142,10 +139,6 @@ export const logRequest = (data: {
   info('HTTP Request', data);
 };
 
-export const logQuery = (query: string, duration?: number): void => {
-  debug('Database Query', { query, duration });
-};
-
 export const logAuth = (event: string, data: Record<string, any>): void => {
   info(`Auth: ${event}`, data);
 };
@@ -161,5 +154,5 @@ export const flush = async (): Promise<void> => {
   });
 };
 
-const Logger = { child, trace, debug, info, warn, error, fatal, logRequest, logQuery, logAuth, logSecurity, flush };
+const Logger = { trace, debug, info, warn, error, fatal, logRequest, logAuth, logSecurity, flush };
 export default Logger;

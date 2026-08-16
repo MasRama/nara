@@ -119,24 +119,35 @@ describe('securityHeaders middleware', () => {
   });
 
   describe('CSP', () => {
-    it('does not set CSP by default (opt-in)', async () => {
+    it('sets CSP by default', async () => {
       const req = mockRequest();
       const res = mockResponse();
 
       await runMiddleware(securityHeaders(), req, res as any);
 
+      expect(res._headers['Content-Security-Policy']).toBeDefined();
+      expect(res._headers['Content-Security-Policy']).toContain("default-src 'self'");
+    });
+
+    it('can disable CSP', async () => {
+      const req = mockRequest();
+      const res = mockResponse();
+
+      await runMiddleware(securityHeaders({ csp: false }), req, res as any);
+
       expect(res._headers['Content-Security-Policy']).toBeUndefined();
     });
 
-    it('sets CSP when enabled', async () => {
+    it('merges custom directives with defaults', async () => {
       const req = mockRequest();
       const res = mockResponse();
 
       await runMiddleware(securityHeaders({
-        csp: { enabled: true },
+        csp: { directives: { imgSrc: ["'self'", 'https://cdn.example.com'] } },
       }), req, res as any);
 
-      expect(res._headers['Content-Security-Policy']).toBeDefined();
+      expect(res._headers['Content-Security-Policy']).toContain('img-src');
+      expect(res._headers['Content-Security-Policy']).toContain('https://cdn.example.com');
     });
 
     it('uses report-only header when configured', async () => {
@@ -144,7 +155,7 @@ describe('securityHeaders middleware', () => {
       const res = mockResponse();
 
       await runMiddleware(securityHeaders({
-        csp: { enabled: true, reportOnly: true },
+        csp: { reportOnly: true },
       }), req, res as any);
 
       expect(res._headers['Content-Security-Policy-Report-Only']).toBeDefined();
@@ -178,21 +189,6 @@ describe('securityHeaders middleware', () => {
       await runMiddleware(securityHeaders({ contentTypeOptions: false }), req, res as any);
 
       expect(res._headers['X-Content-Type-Options']).toBeUndefined();
-    });
-
-    it('sets Cross-Origin headers when configured', async () => {
-      const req = mockRequest();
-      const res = mockResponse();
-
-      await runMiddleware(securityHeaders({
-        coep: 'require-corp',
-        coop: 'same-origin',
-        corp: 'same-origin',
-      }), req, res as any);
-
-      expect(res._headers['Cross-Origin-Embedder-Policy']).toBe('require-corp');
-      expect(res._headers['Cross-Origin-Opener-Policy']).toBe('same-origin');
-      expect(res._headers['Cross-Origin-Resource-Policy']).toBe('same-origin');
     });
 
     it('can disable Permissions-Policy', async () => {
