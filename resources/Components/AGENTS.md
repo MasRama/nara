@@ -17,6 +17,7 @@ Reusable Svelte 5 UI components shared across pages. All use TypeScript and Tail
 | `Button.svelte` | Button with variants | `variant` (default/destructive/outline), `size` (default/sm/lg), `href`, `type`, `disabled`, `children` |
 | `DarkModeToggle.svelte` | Dark mode toggle | `onchange?: (isDark: boolean) => void` |
 | `Header.svelte` | Top nav bar + user menu | `group` (string — active nav section) |
+| `FloatingInput.svelte` | Input with notched-outline floating label | `value` (bindable), `type`, `label`, `ref` (bindable) |
 | `Input.svelte` | Styled text input | `value` (bindable), `type`, `files` (bindable), `className` |
 | `Label.svelte` | Form label | `children` |
 | `Pagination.svelte` | Page navigation | `meta: PaginationMeta`, `preserveState?: boolean` |

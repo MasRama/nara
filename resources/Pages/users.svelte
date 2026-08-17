@@ -111,30 +111,31 @@
 
 <Header group="users" />
 
-<div class="min-h-[100dvh] bg-background text-foreground font-body antialiased selection:bg-primary/20 selection:text-primary">
+<div class="min-h-[100dvh] bg-background text-foreground font-body antialiased selection:bg-primary/20 selection:text-primary overflow-x-hidden">
 
-  <section class="px-6 sm:px-10 lg:px-16 pt-28 pb-16">
+  <!-- paper grain -->
+  <div class="fixed inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none bg-[radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-foreground"></div>
+
+  <section class="relative px-6 sm:px-10 lg:px-16 pt-28 pb-16">
     <div class="max-w-[1400px] mx-auto">
 
       <!-- Header row -->
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12" in:fly={{ y: 20, duration: 800 }}>
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10" in:fly={{ y: 16, duration: 600 }}>
         <div>
-          <p class="font-heading text-xs uppercase tracking-[0.25em] text-muted-foreground mb-4">Management</p>
-          <h1 class="font-heading font-semibold tracking-[-0.03em] leading-[1] text-[clamp(2.5rem,6vw,4.5rem)] text-foreground">
-            Users.
+          <p class="font-heading text-xs uppercase tracking-[0.25em] text-muted-foreground mb-2">Management</p>
+          <h1 class="font-heading font-semibold tracking-[-0.02em] text-2xl sm:text-3xl text-foreground">
+            Users <span class="text-muted-foreground font-normal">— every seat at the table.</span>
           </h1>
-          <p class="mt-5 text-lg text-muted-foreground leading-relaxed max-w-[52ch]">
-            Every person who has a seat at the table. Add, edit, or remove them here.
-          </p>
         </div>
 
-        <div class="flex items-center gap-6 shrink-0">
-          <div class="text-right">
-            <p class="font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-1">Total</p>
-            <p class="font-heading font-semibold text-3xl tracking-[-0.03em] text-foreground">{total}</p>
+        <div class="flex items-center gap-4 shrink-0">
+          <div class="inline-flex items-center gap-x-4 gap-y-2 font-mono-accent text-xs text-muted-foreground rounded-full bg-card/60 ring-1 ring-border/40 px-4 py-2 backdrop-blur-sm">
+            <span><span class="text-foreground font-medium">{total}</span> total</span>
+            <span class="w-px h-3 bg-border/60"></span>
+            <span>page <span class="text-foreground font-medium">{page}</span>/{totalPages}</span>
           </div>
           {#if permissions.canCreate}
-            <Button onclick={openCreateUser} disabled={isSubmitting} size="lg">
+            <Button onclick={openCreateUser} disabled={isSubmitting} size="lg" class="rounded-xl">
               <Plus class="w-4 h-4" />
               Add user
             </Button>
@@ -144,34 +145,35 @@
 
       <!-- Table -->
       {#if users && users.length}
-        <div class="border border-border rounded-xl overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+        <div class="rounded-2xl bg-card ring-1 ring-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_4px_16px_-4px_rgba(0,0,0,0.05)] overflow-hidden" in:fly={{ y: 16, duration: 600, delay: 120 }}>
           <div class="relative w-full overflow-x-auto">
             <table class="w-full caption-bottom text-sm">
               <thead>
-                <tr class="border-b border-border">
+                <tr>
                   <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">User</th>
                   <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Roles</th>
                   <th class="h-12 px-5 text-end font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {#each users as userItem}
-                  <tr class="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors duration-150">
-                    <td class="p-5 align-middle whitespace-nowrap">
+                {#each users as userItem, i}
+                  <tr class="border-t border-border/40 hover:bg-muted/30 transition-colors duration-200">
+                    <td class="p-4 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-3">
-                        <div class="relative flex w-9 h-9 shrink-0 overflow-hidden rounded-full bg-muted border border-border items-center justify-center">
+                        <span class="font-mono-accent text-[11px] text-muted-foreground/50 w-5 shrink-0 hidden sm:block">{String(i + 1).padStart(2, '0')}</span>
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-muted to-muted/60 ring-1 ring-border/40 flex items-center justify-center shrink-0">
                           <span class="text-xs font-heading font-medium text-foreground">{userItem.name?.charAt(0).toUpperCase()}</span>
                         </div>
                         <div class="min-w-0">
                           <div class="text-sm font-heading font-semibold tracking-tight text-foreground truncate">{userItem.name}</div>
-                          <div class="text-xs text-muted-foreground truncate">{userItem.email}</div>
+                          <div class="text-xs text-muted-foreground truncate font-mono-accent">{userItem.email || '—'}</div>
                         </div>
                       </div>
                     </td>
-                    <td class="p-5 align-middle whitespace-nowrap">
+                    <td class="p-4 align-middle whitespace-nowrap">
                       <div class="flex flex-wrap items-center gap-1.5">
                         {#each (userItem.roles || []) as roleSlug}
-                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-heading font-medium capitalize {roleSlug === 'admin' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-muted text-muted-foreground border border-border'}">
+                          <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-heading font-medium capitalize {roleSlug === 'admin' ? 'bg-primary/10 ring-1 ring-primary/20 text-primary' : 'bg-muted ring-1 ring-border/50 text-muted-foreground'}">
                             {getRoleDisplayName(roleSlug)}
                           </span>
                         {/each}
@@ -180,17 +182,17 @@
                         {/if}
                       </div>
                     </td>
-                    <td class="p-5 align-middle whitespace-nowrap text-right">
+                    <td class="p-4 align-middle whitespace-nowrap text-right">
                       {#if permissions.canEdit || permissions.canDelete}
                         <div class="flex justify-end gap-2">
                           {#if permissions.canEdit}
-                            <Button variant="outline" size="sm" onclick={() => openEditUser(userItem)} disabled={isSubmitting}>
+                            <Button variant="outline" size="sm" onclick={() => openEditUser(userItem)} disabled={isSubmitting} class="rounded-lg">
                               <Pencil class="w-3 h-3" />
                               Edit
                             </Button>
                           {/if}
                           {#if permissions.canDelete}
-                            <Button variant="ghost" size="sm" class="text-destructive hover:bg-destructive/10 hover:text-destructive" onclick={() => deleteUser(userItem.id)} disabled={isSubmitting}>
+                            <Button variant="ghost" size="sm" class="text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg" onclick={() => deleteUser(userItem.id)} disabled={isSubmitting}>
                               <Trash2 class="w-3 h-3" />
                             </Button>
                           {/if}
@@ -204,19 +206,19 @@
           </div>
         </div>
 
-        <div in:fly={{ y: 10, duration: 600, delay: 300 }}>
+        <div in:fly={{ y: 10, duration: 600, delay: 240 }}>
           <Pagination meta={paginationMeta} />
         </div>
       {:else}
         <!-- Empty state -->
-        <div class="border border-border rounded-xl bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
-          <div class="w-14 h-14 rounded-full bg-muted border border-border flex items-center justify-center mb-6">
+        <div class="rounded-2xl bg-card ring-1 ring-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_4px_16px_-4px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center py-20 px-8 text-center" in:fly={{ y: 16, duration: 600, delay: 120 }}>
+          <div class="w-14 h-14 rounded-full bg-gradient-to-br from-muted to-muted/60 ring-1 ring-border/40 flex items-center justify-center mb-6">
             <Users class="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 class="font-heading font-semibold text-xl tracking-tight text-foreground mb-2">No users yet</h3>
-          <p class="text-sm text-muted-foreground max-w-xs mb-8">Start by adding your first person to the system.</p>
+          <h3 class="font-heading font-semibold text-lg tracking-tight text-foreground mb-2">No users yet</h3>
+          <p class="text-sm text-muted-foreground max-w-xs mb-6">Start by adding your first person to the system.</p>
           {#if permissions.canCreate}
-            <Button onclick={openCreateUser} size="lg">
+            <Button onclick={openCreateUser} size="lg" class="rounded-xl">
               <Plus class="w-4 h-4" />
               Add first user
             </Button>
@@ -237,3 +239,14 @@
     on:submit={handleSubmit}
   />
 </div>
+
+<style>
+  :global(html) {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-behavior: auto;
+    }
+  }
+</style>

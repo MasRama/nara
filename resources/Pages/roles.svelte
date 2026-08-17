@@ -125,30 +125,29 @@
 
 <Header group="roles" />
 
-<div class="min-h-[100dvh] bg-background text-foreground font-body antialiased selection:bg-primary/20 selection:text-primary">
+<div class="min-h-[100dvh] bg-background text-foreground font-body antialiased selection:bg-primary/20 selection:text-primary overflow-x-hidden">
 
-  <section class="px-6 sm:px-10 lg:px-16 pt-28 pb-16">
+  <!-- paper grain -->
+  <div class="fixed inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none bg-[radial-gradient(currentColor_1px,transparent_1px)] [background-size:22px_22px] text-foreground"></div>
+
+  <section class="relative px-6 sm:px-10 lg:px-16 pt-28 pb-16">
     <div class="max-w-[1400px] mx-auto">
 
       <!-- Header row -->
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-12" in:fly={{ y: 20, duration: 800 }}>
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10" in:fly={{ y: 16, duration: 600 }}>
         <div>
-          <p class="font-heading text-xs uppercase tracking-[0.25em] text-muted-foreground mb-4">Management</p>
-          <h1 class="font-heading font-semibold tracking-[-0.03em] leading-[1] text-[clamp(2.5rem,6vw,4.5rem)] text-foreground">
-            Roles.
+          <p class="font-heading text-xs uppercase tracking-[0.25em] text-muted-foreground mb-2">Management</p>
+          <h1 class="font-heading font-semibold tracking-[-0.02em] text-2xl sm:text-3xl text-foreground">
+            Roles <span class="text-muted-foreground font-normal">— the shape of what people can do.</span>
           </h1>
-          <p class="mt-5 text-lg text-muted-foreground leading-relaxed max-w-[52ch]">
-            The shape of what people can do. Define a role, assign permissions, hand it out.
-          </p>
         </div>
 
-        <div class="flex items-center gap-6 shrink-0">
-          <div class="text-right">
-            <p class="font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground mb-1">Total</p>
-            <p class="font-heading font-semibold text-3xl tracking-[-0.03em] text-foreground">{roles.length}</p>
+        <div class="flex items-center gap-4 shrink-0">
+          <div class="inline-flex items-center gap-x-4 gap-y-2 font-mono-accent text-xs text-muted-foreground rounded-full bg-card/60 ring-1 ring-border/40 px-4 py-2 backdrop-blur-sm">
+            <span><span class="text-foreground font-medium">{roles.length}</span> roles</span>
           </div>
           {#if permissions.canCreate}
-            <Button onclick={openCreateRole} disabled={isSubmitting} size="lg">
+            <Button onclick={openCreateRole} disabled={isSubmitting} size="lg" class="rounded-xl">
               <Plus class="w-4 h-4" />
               Add role
             </Button>
@@ -161,11 +160,11 @@
           <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
         </div>
       {:else if roles.length}
-        <div class="border border-border rounded-xl overflow-hidden bg-card" in:fly={{ y: 20, duration: 800, delay: 150 }}>
+        <div class="rounded-2xl bg-card ring-1 ring-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_4px_16px_-4px_rgba(0,0,0,0.05)] overflow-hidden" in:fly={{ y: 16, duration: 600, delay: 120 }}>
           <div class="relative w-full overflow-x-auto">
             <table class="w-full caption-bottom text-sm">
               <thead>
-                <tr class="border-b border-border">
+                <tr>
                   <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Role</th>
                   <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Slug</th>
                   <th class="h-12 px-5 text-start font-heading text-[11px] uppercase tracking-[0.25em] text-muted-foreground font-medium whitespace-nowrap">Permissions</th>
@@ -174,11 +173,12 @@
                 </tr>
               </thead>
               <tbody>
-                {#each roles as role}
-                  <tr class="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors duration-150">
-                    <td class="p-5 align-middle whitespace-nowrap">
+                {#each roles as role, i}
+                  <tr class="border-t border-border/40 hover:bg-muted/30 transition-colors duration-200">
+                    <td class="p-4 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-3">
-                        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 {role.slug === 'admin' ? 'bg-primary/10 border border-primary/20' : 'bg-muted border border-border'}">
+                        <span class="font-mono-accent text-[11px] text-muted-foreground/50 w-5 shrink-0 hidden sm:block">{String(i + 1).padStart(2, '0')}</span>
+                        <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 {role.slug === 'admin' ? 'bg-primary/10 ring-1 ring-primary/20' : 'bg-gradient-to-br from-muted to-muted/60 ring-1 ring-border/40'}">
                           {#if role.slug === 'admin'}
                             <ShieldCheck class="w-4 h-4 text-primary" />
                           {:else}
@@ -193,10 +193,10 @@
                         </div>
                       </div>
                     </td>
-                    <td class="p-5 align-middle whitespace-nowrap">
-                      <span class="font-mono-accent text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full border border-border">{role.slug}</span>
+                    <td class="p-4 align-middle whitespace-nowrap">
+                      <span class="font-mono-accent text-xs text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full ring-1 ring-border/40">{role.slug}</span>
                     </td>
-                    <td class="p-5 align-middle whitespace-nowrap">
+                    <td class="p-4 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-2">
                         <span class="text-sm font-heading font-semibold text-foreground">{getPermissionCount(role)}</span>
                         <span class="text-xs text-muted-foreground">permissions</span>
@@ -212,30 +212,30 @@
                               return acc;
                             }, {} as Record<string, number>)
                           ) as [resource, count]}
-                            <span class="text-[10px] px-1.5 py-0.5 bg-muted rounded-full border border-border text-muted-foreground font-heading">
+                            <span class="text-[10px] px-1.5 py-0.5 bg-muted/60 rounded-full ring-1 ring-border/40 text-muted-foreground font-heading">
                               {formatResourceName(resource)}: {count}
                             </span>
                           {/each}
                         </div>
                       {/if}
                     </td>
-                    <td class="p-5 align-middle whitespace-nowrap">
+                    <td class="p-4 align-middle whitespace-nowrap">
                       <div class="flex items-center gap-2">
                         <Users class="w-3.5 h-3.5 text-muted-foreground" />
                         <span class="text-sm font-heading font-medium text-foreground">{role.user_count || 0}</span>
                       </div>
                     </td>
-                    <td class="p-5 align-middle whitespace-nowrap text-right">
+                    <td class="p-4 align-middle whitespace-nowrap text-right">
                       {#if permissions.canEdit || (permissions.canDelete && role.slug !== 'admin')}
                         <div class="flex justify-end gap-2">
                           {#if permissions.canEdit}
-                            <Button variant="outline" size="sm" onclick={() => openEditRole(role)} disabled={isSubmitting}>
+                            <Button variant="outline" size="sm" onclick={() => openEditRole(role)} disabled={isSubmitting} class="rounded-lg">
                               <Pencil class="w-3 h-3" />
                               Edit
                             </Button>
                           {/if}
                           {#if permissions.canDelete && role.slug !== 'admin'}
-                            <Button variant="ghost" size="sm" class="text-destructive hover:bg-destructive/10 hover:text-destructive" onclick={() => deleteRole(role)} disabled={isSubmitting}>
+                            <Button variant="ghost" size="sm" class="text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg" onclick={() => deleteRole(role)} disabled={isSubmitting}>
                               <Trash2 class="w-3 h-3" />
                             </Button>
                           {/if}
@@ -249,16 +249,16 @@
           </div>
         </div>
       {:else}
-        <div class="border border-border rounded-xl bg-card flex flex-col items-center justify-center py-24 px-8 text-center" in:fly={{ y: 20, duration: 800, delay: 150 }}>
-          <div class="w-14 h-14 rounded-full bg-muted border border-border flex items-center justify-center mb-6">
+        <div class="rounded-2xl bg-card ring-1 ring-border/50 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.06),0_4px_16px_-4px_rgba(0,0,0,0.05)] flex flex-col items-center justify-center py-20 px-8 text-center" in:fly={{ y: 16, duration: 600, delay: 120 }}>
+          <div class="w-14 h-14 rounded-full bg-gradient-to-br from-muted to-muted/60 ring-1 ring-border/40 flex items-center justify-center mb-6">
             <Shield class="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 class="font-heading font-semibold text-xl tracking-tight text-foreground mb-2">No roles yet</h3>
-          <p class="text-sm text-muted-foreground max-w-xs mb-8">Create your first role to start managing permissions.</p>
+          <h3 class="font-heading font-semibold text-lg tracking-tight text-foreground mb-2">No roles yet</h3>
+          <p class="text-sm text-muted-foreground max-w-xs mb-6">Create your first role to start managing permissions.</p>
           {#if permissions.canCreate}
-            <Button onclick={openCreateRole} size="lg">
+            <Button onclick={openCreateRole} size="lg" class="rounded-xl">
               <Plus class="w-4 h-4" />
-              Create first role
+              Add first role
             </Button>
           {/if}
         </div>
@@ -277,3 +277,14 @@
     on:submit={handleSubmit}
   />
 </div>
+
+<style>
+  :global(html) {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-behavior: auto;
+    }
+  }
+</style>

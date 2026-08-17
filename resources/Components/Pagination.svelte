@@ -20,16 +20,16 @@
   const showStartEllipsis = $derived(getPageNumbers()[0] > 1);
   const showEndEllipsis = $derived(getPageNumbers()[getPageNumbers().length - 1] < meta.totalPages);
 
-  const linkBase = cn("inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 w-9");
-  const navBtn = cn("inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-xl text-sm font-heading font-medium transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground");
+const linkBase = cn("inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-heading font-medium transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 w-9");
+const navBtn = cn("inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-xl text-sm font-heading font-medium transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 h-9 px-3 text-muted-foreground hover:bg-muted/60 hover:text-foreground");
 </script>
 
 {#if meta.totalPages > 1}
-  <div class="mt-8">
-    <div class="flex items-center justify-between mb-3 text-xs text-muted-foreground font-heading">
-      <span>Page {meta.page} of {meta.totalPages} &middot; {meta.total} total</span>
-    </div>
-    <nav class="mx-auto flex w-full justify-center">
+<div class="mt-8">
+  <div class="flex items-center justify-between mb-3 text-xs text-muted-foreground font-mono-accent">
+    <span>page {meta.page} / {meta.totalPages} &middot; {meta.total} total</span>
+  </div>
+  <nav class="mx-auto flex w-full justify-center">
       <ul class="flex flex-row items-center gap-1">
         <li>
           <button class={navBtn} onclick={() => goToPage(meta.page - 1)} disabled={!meta.hasPrev} aria-label="Go to previous page">
@@ -45,7 +45,7 @@
         {#each getPageNumbers() as pageNum}
           <li>
             <button
-              class={cn(linkBase, pageNum === meta.page ? "bg-foreground text-background" : "text-foreground hover:bg-muted border border-border")}
+              class={cn(linkBase, pageNum === meta.page ? "bg-foreground text-background shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)]" : "text-foreground hover:bg-muted/60 ring-1 ring-border/40")}
               onclick={() => goToPage(pageNum)}
               aria-current={pageNum === meta.page ? "page" : undefined}
             >{pageNum}</button>
@@ -63,6 +63,6 @@
           </button>
         </li>
       </ul>
-    </nav>
-  </div>
+  </nav>
+</div>
 {/if}
