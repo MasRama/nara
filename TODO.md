@@ -949,8 +949,8 @@ Specification supports at least one official reusable feature.
 
 ---
 
-## [ ] V3-081 — Implement first official installable feature
-> Reopened during the v3 consistency audit: the install test checks copied files, not the required clean-project typecheck, doctor, and test run.
+## [x] V3-081 — Implement first official installable feature
+> Verified by `npm run test:official-feature`: a temporary project created through the real `nara new` path installed dependencies, installed the `audit` Feature through the real CLI path, ran generated server and Vue typechecks, ran its two tests and `npm run check`, and passed the repository's real doctor with `Architecture looks healthy.`; the temporary directory was removed.
 
 ### Goal
 
