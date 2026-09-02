@@ -12,7 +12,7 @@ Run `nara --help` for the command list and `-h`/`--help` for command-specific us
 
 ## `nara new <name>`
 
-Create a runnable minimal Nara v3 application in a new sibling directory:
+Create a runnable minimal Nara v3 application in a new sibling directory. `nara new` writes the project files but does not install dependencies:
 
 ```bash
 nara new ledger
@@ -23,7 +23,37 @@ npm run build
 npm start
 ```
 
-The generated project contains a Hono app, a health Feature, a Node server, TypeScript configuration, a Vitest health test, and an `AGENTS.md` entrypoint. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+`npm run check` runs the server typecheck, Vue typecheck, and Vitest tests. `npm start` runs the generated Node server on port `5555` by default; `GET /health` returns `{"status":"ok"}`.
+
+The generated project is intentionally small:
+
+```text
+ledger/
+├── .gitignore
+├── AGENTS.md
+├── package.json
+├── resources/
+│   ├── app.ts
+│   ├── index.css
+│   └── index.html
+├── src/
+│   ├── app/
+│   │   ├── App.vue
+│   │   └── server.ts
+│   ├── features/
+│   │   └── health/
+│   │       ├── index.ts
+│   │       └── tests/
+│   │           └── health.test.ts
+│   └── server.ts
+├── tsconfig.frontend.json
+├── tsconfig.json
+├── vite.config.mjs
+└── vitest.config.mjs
+```
+
+`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue`. `src/app/server.ts` composes the health Feature's Hono route, and `src/server.ts` serves it through `@hono/node-server`. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+
 
 ## `nara make feature <name>`
 

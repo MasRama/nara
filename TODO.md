@@ -1008,8 +1008,8 @@ Two materially different features use the same installation mechanism.
 
 # M10 — Agent Ergonomics
 
-## [ ] V3-090 — Verify root `AGENTS.md` is sufficient
-> Reopened during the v3 consistency audit: no fresh coding-agent execution record is present.
+## [x] V3-090 — Verify root `AGENTS.md` is sufficient
+> Verified 2026-09-03 with a cold-start bounded documentation task: the root guidance identified V3-090, the locked stack and feature rules, forbidden scope, and required checks; implementation inspection found the generated Vue/Hono health application; `docs/v3/cli.md` was updated and `npm run test:new-project` plus `npm run check` passed. No nested instructions were needed.
 
 ### Goal
 
