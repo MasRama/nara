@@ -601,7 +601,8 @@ nara make feature invoices
 
 ---
 
-## [x] V3-042 — Implement `nara new`
+## [ ] V3-042 — Implement `nara new`
+> Reopened during the v3 consistency audit: current tests inspect generated files but do not install, typecheck, test, and run a generated project.
 
 ### Goal
 
@@ -948,7 +949,8 @@ Specification supports at least one official reusable feature.
 
 ---
 
-## [x] V3-081 — Implement first official installable feature
+## [ ] V3-081 — Implement first official installable feature
+> Reopened during the v3 consistency audit: the install test checks copied files, not the required clean-project typecheck, doctor, and test run.
 
 ### Goal
 
@@ -1006,7 +1008,8 @@ Two materially different features use the same installation mechanism.
 
 # M10 — Agent Ergonomics
 
-## [x] V3-090 — Verify root `AGENTS.md` is sufficient
+## [ ] V3-090 — Verify root `AGENTS.md` is sufficient
+> Reopened during the v3 consistency audit: no fresh coding-agent execution record is present.
 
 ### Goal
 
@@ -1195,7 +1198,8 @@ Delete historical documentation that explains important lessons.
 
 # M12 — Hardening
 
-## [x] V3-110 — Fresh install test
+## [ ] V3-110 — Fresh install test
+> Reopened during the v3 consistency audit: no clean temporary-directory execution record is present.
 
 ### Goal
 
@@ -1218,7 +1222,8 @@ No undocumented manual fix is needed.
 
 ---
 
-## [x] V3-111 — Linux deployment test
+## [ ] V3-111 — Linux deployment test
+> Reopened during the v3 consistency audit: no supported-Linux deployment evidence is present.
 
 ### Goal
 
@@ -1237,7 +1242,8 @@ A normal supported Linux environment such as Ubuntu 22.04 or equivalent compatib
 
 ---
 
-## [x] V3-112 — Production build test
+## [ ] V3-112 — Production build test
+> Reopened during the v3 consistency audit: the current build check does not establish generated-server startup, API smoke, and configuration-error acceptance.
 
 ### Acceptance
 
@@ -1287,7 +1293,8 @@ Failures are readable and intentional.
 
 ---
 
-## [x] V3-115 — Performance sanity check
+## [ ] V3-115 — Performance sanity check
+> Reopened during the v3 consistency audit: no startup, HTTP, CLI, or discovery measurements are recorded.
 
 ### Goal
 
@@ -1408,7 +1415,8 @@ Also explain what Nara deliberately does not build.
 
 # M14 — Release Validation
 
-## [x] V3-130 — Run full validation
+## [ ] V3-130 — Run full validation
+> Reopened during the v3 consistency audit: the checklist includes fresh-install and other release gates that remain open.
 
 Must pass:
 
@@ -1444,7 +1452,8 @@ Remove unnecessary v3 rewrite infrastructure that does not.
 
 ---
 
-## [x] V3-133 — Agent cold-start test
+## [ ] V3-133 — Agent cold-start test
+> Reopened during the v3 consistency audit: no fresh coding-agent execution record is present.
 
 ### Scenario
 
@@ -1474,7 +1483,8 @@ If it fails, improve architecture/docs before adding more prompt files.
 
 ---
 
-## [x] V3-134 — Human cold-start test
+## [ ] V3-134 — Human cold-start test
+> Reopened during the v3 consistency audit: no human cold-start validation record is present.
 
 ### Scenario
 
@@ -1493,7 +1503,8 @@ Nara's value proposition becomes obvious through usage.
 
 ---
 
-## [x] V3-135 — Release candidate
+## [ ] V3-135 — Release candidate
+> Reopened during the v3 consistency audit: no release-candidate artifact was created and blocking gates remain open.
 
 Create the v3 release candidate only after all blocking v3 TODO items pass.
 
@@ -1501,7 +1512,8 @@ Do not merge to `main` yet unless explicitly instructed.
 
 ---
 
-## [x] V3-136 — Final v3.0.0 release
+## [ ] V3-136 — Final v3.0.0 release
+> Reopened during the v3 consistency audit: merge to `main` and the `v3.0.0` tag were not performed, and blocking gates remain open.
 
 Before release:
 

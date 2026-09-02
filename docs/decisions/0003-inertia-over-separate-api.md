@@ -1,7 +1,9 @@
-# ADR 0003: Inertia.js over separate API + SPA
+# ADR 0003: Inertia.js over separate API + SPA (Superseded)
 
 Date: 2025-01-15
-Status: Accepted
+Status: Superseded by V3_SPEC.md §7 Frontend
+
+> **Historical v2 decision.** This ADR is retained to explain why v2 chose Inertia/Svelte. Nara v3 replaces it with direct Vue 3 + Vite + TypeScript and feature-scoped Hono clients; see `V3_SPEC.md` §7.
 
 ## Context
 

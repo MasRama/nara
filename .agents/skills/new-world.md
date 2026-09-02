@@ -1,8 +1,12 @@
 ---
-trigger: Creating a new project from the Nara starter — research the repo, write a comprehensive .nara/PRD.md, get user approval, then write the full execution .nara/TODO.md. Planning ONLY — execution is a separate later step.
+trigger: Never load for v3; historical v2 project-planning reference only
+status: superseded-v2
+superseded_by: V3_SPEC.md; TODO.md
 ---
 
-# New World: Plan a New Project from Nara (PRD + TODO only)
+# New World: Plan a New Project from Nara (Superseded v2)
+
+> **Superseded for Nara v3.** This planning skill retains the v2 starter inventory and frontend assumptions as historical context. Do not use its Svelte/Inertia or technical-layer defaults for v3 work.
 
 ## When to use
 

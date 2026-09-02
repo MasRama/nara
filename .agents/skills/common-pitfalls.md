@@ -1,70 +1,68 @@
 ---
 trigger: Before writing code — read this to avoid common AI mistakes
+status: active-v3
 ---
 
-# Common Pitfalls
+# Common Pitfalls (v3)
 
+Mistakes coding agents make in Nara v3. Read before changing code.
 
-Mistakes AI agents make in Nara. Read before coding.
+### 1. Organizing a capability by technical layer
 
-### 1. Using `router.post()` for mutations instead of `api(path, { method, body })`
+**Wrong:** Adding a new global `controllers/`, `services/`, or `repositories/` tree.
 
-**Wrong:** `router.post('/products', data)` — bypasses CSRF, no toast, no error handling.
+**Fix:** Keep the capability under `src/features/<feature>/` and use `server/`, `web/`, `contract.ts`, and `tests/` only where needed.
 
-**Fix:** `const result = await api('/products', { method: 'POST', body: data })` — handles CSRF, toast, and errors.
+### 2. Importing another Feature's internals
 
-### 2. Importing SQLite directly in a handler
+**Wrong:** Importing `src/features/users/server/repository.ts` from the auth Feature.
 
-**Wrong:** `import SQLite from '@services/SQLite'` in a handler.
+**Fix:** Import only the target Feature's public exports from its `index.ts`.
 
-**Fix:** Import query functions from `@queries` — handlers never touch SQLite directly.
+### 3. Putting feature pages in a global frontend directory
 
-### 3. Using `export let` instead of `$props()`
+**Wrong:** Creating `resources/Pages/Users.vue` for a users capability.
 
-**Wrong:** `export let value: string` — Svelte 4 syntax.
+**Fix:** Place feature-specific pages, components, and composables under `src/features/users/web/`. Keep application-wide Vue composition under `src/app/`.
 
-**Fix:** `let { value }: { value: string } = $props()` — Svelte 5 runes.
+### 4. Treating frontend authorization as security
 
-### 4. Forgetting `try/catch` in a mutation
+**Wrong:** Hiding a destructive button and assuming the operation is protected.
 
-**Wrong:** Calling `createProduct()` without try/catch — SQLite constraint errors crash the server.
+**Fix:** Enforce authentication and permission checks in the owning Hono route. Frontend permission gating is only a user-experience concern.
 
-**Fix:** Wrap mutations in try/catch, handle `SQLITE_CONSTRAINT_UNIQUE`, return `jsonServerError()` for unexpected errors.
+### 5. Duplicating server and client contract types
 
-### 5. Using `onMount()` instead of `$effect()`
+**Wrong:** Defining a second request interface in a Vue page that already has a Feature contract.
 
-**Wrong:** `onMount(() => { ... })` — Svelte 4 lifecycle.
+**Fix:** Export the schema and inferred types from the owning Feature's `contract.ts`, then consume them through its browser client.
 
-**Fix:** `$effect(() => { ... })` — Svelte 5 runes. Runs after mount AND when dependencies change.
+### 6. Adding a global frontend transport abstraction
 
-### 6. Not checking `req.user` before using it
+**Wrong:** Wrapping Vue and Hono behind a new Nara RPC or universal API layer.
 
-**Wrong:** `const userId = req.user.id` — crashes if user is not logged in.
+**Fix:** Use the existing feature-scoped typed client in `web/client.ts`, or a direct browser request when no client exists. Keep the underlying ecosystem visible.
 
-**Fix:** `if (!req.user) return jsonError(res, 'Unauthorized', 401)` at the top of the handler.
+### 7. Returning the wrong Hono response shape
 
-### 7. Using `parseInt(req.query.x as string) || 1` for pagination
+**Wrong:** Returning an ad hoc success or error object from a route.
 
-**Wrong:** Manual parseInt + fallback — verbose, error-prone.
+**Fix:** Follow the Feature contract's discriminated response shape: `{ success: true, message, data? }` or `{ success: false, message, code, errors? }`.
 
-**Fix:** `const page = queryInt(req, 'page')` — handles parsing + default value.
+### 8. Putting SQL in route composition
 
-### 8. Forgetting to update `app/handlers/index.ts` after creating a handler
+**Wrong:** Building SQL inside `src/app/server.ts` or a route registration callback.
 
-**Wrong:** Creating `app/handlers/products.ts` but not exporting it.
+**Fix:** Keep raw SQL in the owning Feature's repository module or the smallest intentional shared database module.
 
-**Result:** `import * as products from '@handlers/products'` fails.
+### 9. Skipping transactions for replacement operations
 
-**Fix:** Add `export * as products from './products'` to `app/handlers/index.ts`.
+**Wrong:** Deleting and recreating role or user assignments as separate unprotected operations.
 
-### 9. Using an IN-clause with a single placeholder
-
-**Wrong:** `SQLite.many<User>`SELECT * FROM users WHERE id IN (?)` — better-sqlite3 does not expand an array into a single placeholder.
-
-**Fix:** Interpolate the array directly — it expands to `(?, ?, …)`: `SQLite.many<User>`SELECT * FROM users WHERE id IN (${ids})``.
+**Fix:** Use a `better-sqlite3` transaction for all-or-nothing replacement behavior.
 
 ### 10. Using a language other than English for user-facing messages
 
-**Wrong:** `jsonError(res, 'Email sudah digunakan', 400)` — inconsistent with ADR 0010.
+**Wrong:** Returning a localized message that conflicts with the rest of the API.
 
-**Fix:** `jsonError(res, 'Email already in use', 400, 'DUPLICATE_EMAIL')` — English for all user-facing messages (ADR 0010).
+**Fix:** Keep API, validation, and Vue-visible messages in English (ADR 0010).

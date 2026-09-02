@@ -1,33 +1,34 @@
 ---
 trigger: Adding a dependency, or before suggesting a library/package
+status: active-v3
 ---
 
 # Dependency Policy
 
-
-AI must not add dependencies without checking this table. If a category is "Banned", suggest the allowed alternative instead.
+Do not add dependencies without checking this table. If a category is banned, use the allowed v3 option or standard library instead.
 
 | Category | Allowed | Banned | Why |
 |---|---|---|---|
-| Database | `better-sqlite3` | Prisma, Drizzle, Knex, Sequelize, TypeORM | ADR 0001 — raw SQL, AI writes SQL fluently |
-| Framework | `ultimate-express` | Express, Fastify, Koa, Hono | Nara uses uWebSockets.js for performance |
-| Frontend | `svelte`, `@inertiajs/svelte` | React, Vue, Solid, Angular | ADR 0003 — Inertia + Svelte 5 |
-| UI primitives | `bits-ui` | Headless UI, Radix, Melt, `@zag-js/*` | ADR 0007 — Svelte-native headless, accessible primitives |
-| Validation | `zod` | Joi, Yup, class-validator, valibot | ADR 0006 — TypeScript-first, type inference |
-| Auth | `@services/Authenticate` (internal) | bcrypt (direct), passport, jsonwebtoken | ADR 0005 — session-based, internal wrapper |
-| HTTP client | Native `fetch` (via `api()` wrapper) | axios, got, node-fetch | `api()` wrapper handles CSRF + toast |
-| Logging | `pino` (via `@services/Logger`) | winston, morgan, console.log | Structured logging, file rotation built-in |
-| Styling | `tailwindcss`, `clsx`, `tailwind-merge`, `tailwind-variants` | styled-components, emotion, CSS modules | Utility-first, AI generates Tailwind fluently |
-| Icons | `@lucide/svelte` | heroicons, feather-icons, font-awesome | Tree-shakeable, consistent API |
-| Image processing | `sharp` | jimp, canvas, gm | Native binding, fast |
-| File upload | `multer` | formidable, busboy | Memory storage + sharp pipeline |
-| State (frontend) | Svelte 5 runes (`$state`, `$derived`, `$effect`) | Redux, Zustand, Pinia, Svelte stores | ADR 0003 — server is source of truth |
-| Testing | `vitest` | jest, mocha, jasmine | Vite-native, fast, ESM support |
-| Date/time | native `Date`, `Intl` | moment, dayjs, date-fns | Standard library sufficient |
-| Utils | native `crypto`, `path`, `fs` | lodash, underscore, ramda | Standard library sufficient |
+| Database | `better-sqlite3` | Prisma, Drizzle, Knex, Sequelize, TypeORM | ADR 0001 — raw SQL keeps intent explicit |
+| HTTP framework | `hono`, `@hono/node-server` | Express, Ultimate Express, Fastify, NestJS, `uWebSockets.js` | V3_SPEC — portable Node HTTP stack |
+| Frontend framework | `vue` | React, Svelte, Solid, Angular, Nuxt, `@inertiajs/*` | V3_SPEC §7 — Vue 3 is the sole supported framework |
+| Frontend build/typecheck | `vite`, `@vitejs/plugin-vue`, `vue-tsc` | `@sveltejs/vite-plugin-svelte`, `svelte-check`, framework-specific SSR tooling | Direct Vue + Vite + TypeScript |
+| UI primitives | Native Vue elements and existing Tailwind/CSS | `bits-ui`, Svelte-only component libraries, custom Nara UI framework | Keep browser composition direct and framework-transparent |
+| HTTP client | Feature-scoped Hono typed clients, native `fetch` where required | axios, got, node-fetch, global RPC wrappers | Keep contracts feature-owned and transport visible |
+| Validation | `zod` | Joi, Yup, class-validator, valibot | TypeScript-first inference (ADR 0006) |
+| Auth | `src/features/auth` session interface | bcrypt direct, passport, jsonwebtoken | Session auth remains feature-owned (ADR 0005) |
+| Logging | `pino` through `src/shared/logging` | winston, morgan, `console.log` | Structured logging and redaction |
+| Styling | `tailwindcss`, `@tailwindcss/vite`, plain CSS | styled-components, emotion, CSS-in-JS frameworks | Existing utility-first styling |
+| Icons | Text or existing browser-safe assets | `@lucide/svelte`, Svelte-only icon packages | No default icon dependency |
+| Image processing | `sharp` | jimp, canvas, gm | Existing bounded image pipeline |
+| State (frontend) | Vue Composition API (`ref`, `computed`, `watch`) | Redux, Zustand, Pinia, Svelte runes, global stores | Keep state local unless a task proves a shared store is needed |
+| Testing | `vitest`, `jsdom` | jest, mocha, jasmine | Existing Vite-native test stack |
+| Date/time | native `Date`, `Intl` | moment, dayjs, date-fns | Standard library is sufficient |
+| Utils | native `crypto`, `path`, `fs` | lodash, underscore, ramda | Standard library is sufficient |
 
 ## Adding a new dependency
 
-1. Check if the category is in the table above
-2. Check if the need can be met with the allowed dependency or standard library
-3. If a new dependency is truly needed, add it to `package.json`, update this table, and add an ADR explaining why
+1. Check whether the category is listed above.
+2. Check whether the need can be met by an allowed dependency or the standard library.
+3. If a new dependency is truly required, add it to `package.json`, update this table, and add an ADR explaining why.
+4. Never add a second frontend framework, SSR stack, or framework-agnostic Nara abstraction.

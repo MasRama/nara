@@ -1,117 +1,130 @@
 ---
 trigger: Adding auth guards, permission checks, role management, or session handling
+status: active-v3
 ---
 
-# Auth & RBAC
-
+# Auth & RBAC (v3)
 
 ## When to use
 
-Any handler that needs to check if a user is logged in, has a role, or has a permission.
+Load this skill when changing the auth Feature, session checks, role management, permission checks, or browser authorization UI.
 
-## Auth Guard (in handler)
+## Ownership
 
-```typescript
-import { jsonError } from '@core';
-import { isAdmin, hasPermission } from '@queries';
+Authentication and authorization are owned by `src/features/auth/`:
 
-export const showProfile = (req: NaraRequest, res: NaraResponse) => {
-  // 1. Check login
-  if (!req.user) return jsonError(res, 'Unauthorized', 401);
-
-  // 2. Check admin (bypasses all permission checks)
-  if (!isAdmin(req.user.id)) return jsonError(res, 'Forbidden', 403);
-
-  // 3. Check specific permission
-  if (!hasPermission(req.user.id, 'users.edit')) return jsonError(res, 'Forbidden', 403);
-
-  // ... handler body
-};
+```text
+src/features/auth/
+├── contract.ts
+├── index.ts
+├── server/
+│   ├── routes.ts
+│   ├── service.ts
+│   ├── repository.ts
+│   └── access.ts
+└── web/
+    └── client.ts
 ```
 
-## Permission Slug Convention
+Use public exports from `src/features/auth/index.ts` when another Feature needs an auth capability. Do not import `server/` internals from browser code or another Feature.
 
-Permissions follow `<resource>.<action>` format:
+## Route guard
+
+The server is authoritative. Resolve the session from the auth Feature and reject unauthenticated requests before using user data:
+
+```typescript
+import { getCookie } from 'hono/cookie';
+import type { Context } from 'hono';
+import { getCurrentUser, SESSION_COOKIE_NAME } from '@features/auth';
+
+export function requireSession(context: Context) {
+  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
+  if (!user) {
+    return context.json(
+      { success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' },
+      401,
+    );
+  }
+  return user;
+}
+```
+
+For permission-protected routes, check admin access or the specific permission after resolving the session:
+
+```typescript
+const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
+if (!user) return unauthorized(context);
+if (!isAdmin(user.id) && !hasPermission(user.id, 'users.edit')) {
+  return forbidden(context);
+}
+```
+
+Keep route-specific response helpers local to the Feature when they are repeated. Do not move auth logic into a global technical layer.
+
+## Permission slug convention
+
+Permissions follow `<resource>.<action>`:
 
 | Slug | Meaning |
 |---|---|
 | `users.view` | View user list |
-| `users.create` | Create new user |
-| `users.edit` | Edit existing user |
-| `users.delete` | Delete user |
+| `users.create` | Create a user |
+| `users.edit` | Edit a user |
+| `users.delete` | Delete a user |
 | `roles.view` | View roles |
-| `roles.create` | Create role |
-| `roles.edit` | Edit role |
-| `roles.delete` | Delete role |
+| `roles.create` | Create a role |
+| `roles.edit` | Edit a role |
+| `roles.delete` | Delete a role |
 
-When adding a new resource, add permissions in seeds:
+When adding a capability, define its permission data with the owning Feature and enforce it in the server route.
 
-```typescript
-// seeds/permissions.ts
-const permissions = [
-  { slug: 'products.view', name: 'View products', resource: 'products', action: 'view' },
-  { slug: 'products.create', name: 'Create products', resource: 'products', action: 'create' },
-  // ...
-];
-```
+## Admin bypass
 
-## Admin Bypass
+`isAdmin(userId)` checks the `admin` role. Use this order:
 
-`isAdmin(userId)` returns `true` for users with the `admin` role. Admin bypasses all `hasPermission` checks. Use this order:
+1. resolve the session user
+2. allow the admin bypass where the route requires it
+3. check the specific permission with `hasPermission(userId, '<resource>.<action>')`
 
-1. `if (!req.user)` — not logged in
-2. `if (!isAdmin(req.user.id))` — not admin (for admin-only routes)
-3. `if (!hasPermission(req.user.id, 'X.Y'))` — lacks specific permission
+Never use a client-provided role or permission list as the security decision.
 
-## Frontend Permission Gating
+## Frontend permission gating
 
-```svelte
-<script lang="ts">
-  import { page as inertiaPage } from '@inertiajs/svelte';
-  const currentUser = $derived(inertiaPage.props.user as User | undefined);
+Vue pages may hide controls using browser-safe user data, but this is only UX gating. The server route must repeat the authorization check.
 
-  function hasPermission(slug: string): boolean {
-    if (!currentUser) return false;
-    if (currentUser.roles?.includes('admin')) return true;
-    return currentUser.permissions?.includes(slug) ?? false;
-  }
+```vue
+<script setup lang="ts">
+interface CurrentUser {
+  roles?: string[];
+  permissions?: string[];
+}
+
+const props = defineProps<{ user?: CurrentUser }>();
+
+function hasPermission(slug: string): boolean {
+  if (!props.user) return false;
+  if (props.user.roles?.includes('admin')) return true;
+  return props.user.permissions?.includes(slug) ?? false;
+}
 </script>
 
-{#if hasPermission('users.create')}
-  <Button onclick={openCreateUser}>Add user</Button>
-{/if}
+<template>
+  <button v-if="hasPermission('users.create')" type="button">Add user</button>
+</template>
 ```
 
-## Password Hashing
+## Password and session handling
 
-```typescript
-import { hashPassword, comparePassword } from '@services/Authenticate';
-
-const hashed = hashPassword(plaintext);
-const valid = comparePassword(plaintext, hashed);
-```
-
-Never use bcrypt directly — always go through `@services/Authenticate`.
-
-## Session Management
-
-Sessions are handled by `@services/Session` middleware. The `Auth` middleware loads the user + roles + permissions onto `req.user`. You do not manage sessions manually in handlers.
-
-## Role Assignment (sync pattern)
-
-```typescript
-import { syncRoles } from '@queries';
-
-// Replace all roles for a user
-syncRoles(userId, ['admin', 'editor']);
-```
+Use `hashPassword()` from the auth Feature public boundary. Password verification and session creation remain inside the auth Feature service. Session cookies must remain HTTP-only, use the configured expiry, and use secure flags in production.
 
 ## Do / Don't
 
-- **Do** check `req.user` first, then `isAdmin`, then `hasPermission`
-- **Do** use `@services/Authenticate` for password hashing — never bcrypt directly
-- **Do** follow `<resource>.<action>` slug convention for new permissions
-- **Do** gate frontend UI with `hasPermission()` — don't rely on hiding links alone
-- **Don't** trust `req.user.roles` for permission checks — use `hasPermission()` (queries the DB)
-- **Don't** create new session logic in handlers — `Auth` middleware handles it
-- **Don't** expose password fields in API responses or Inertia props
+- **Do** resolve the session before reading user data.
+- **Do** enforce permissions in Hono routes, not only in Vue.
+- **Do** use the `<resource>.<action>` permission convention.
+- **Do** use `src/features/auth` public exports across Feature boundaries.
+- **Do** keep password fields out of API responses and browser page props.
+- **Don't** import another Feature's `server/` internals from web code.
+- **Don't** create session logic in unrelated Features.
+- **Don't** trust browser-provided roles or permissions.
+- **Don't** use a second auth mechanism or JWT without an explicit specification.

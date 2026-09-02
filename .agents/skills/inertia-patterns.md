@@ -1,8 +1,12 @@
 ---
-trigger: Writing frontend pages, using Inertia.js navigation, or making API calls from Svelte
+trigger: Never load for v3; historical v2 Inertia/Svelte reference only
+status: superseded-v2
+superseded_by: V3_SPEC.md §7 Frontend; vue-patterns.md
 ---
 
-# Inertia Patterns (Frontend)
+# Inertia Patterns (Superseded — v2)
+
+> **Superseded for Nara v3.** This file is retained as historical v2 context only. Do not use its Inertia, Svelte, or Bits UI instructions for v3 work. Use [`vue-patterns.md`](./vue-patterns.md) and [`V3_SPEC.md`](../../V3_SPEC.md) instead.
 
 
 ## When to use

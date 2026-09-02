@@ -1,42 +1,35 @@
 # Skills Directory
 
-Skills are deep-dive procedures loaded on demand. Each skill focuses on one pattern with detailed rules, code examples, and do/don't lists. The agent reads these when it needs to follow a specific pattern.
+These skills are deep-dive procedures loaded on demand. Nara v3 guidance is authoritative for current implementation. Historical v2 skills remain available only to explain older decisions and must not be used as implementation instructions.
 
-## Available Skills
+## Active v3 skills
 
 | Skill | When to load |
 |---|---|
-| [`new-world.md`](./new-world.md) | Creating a new project from the starter — `.nara/` PRD + TODO planning only; execution happens later via the TODO |
-| [`crud-pattern.md`](./crud-pattern.md) | Adding a new resource (types → migration → queries → validator → handlers → routes → page) |
-| [`sqlite-usage.md`](./sqlite-usage.md) | Writing SQL queries, transactions, dynamic updates |
-| [`auth-rbac.md`](./auth-rbac.md) | Auth guards, permission checks, role management |
-| [`inertia-patterns.md`](./inertia-patterns.md) | Frontend pages, `res.inertia` vs `jsonSuccess`, `router.visit` vs `api()` |
-| [`api-contract.md`](./api-contract.md) | Response shapes, error codes, error handling patterns, Zod validation |
-| [`dependency-policy.md`](./dependency-policy.md) | Allowed vs banned dependencies (16 categories), adding new deps |
-| [`common-pitfalls.md`](./common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |
-| [`pentest-pattern.md`](./pentest-pattern.md) | OWASP Top 10 security testing — POCs, mitigation inventory, finding format |
-| [`testing-pattern.md`](./testing-pattern.md) | Handler/query/middleware/validator test patterns, mock helpers, coverage checklist |
+| [`vue-patterns.md`](./vue-patterns.md) | Vue 3 pages, components, composables, feature-scoped browser clients, and Vite frontend work |
+| [`sqlite-usage.md`](./sqlite-usage.md) | SQL queries, `better-sqlite3` repositories, transactions, dynamic updates, or database access |
+| [`auth-rbac.md`](./auth-rbac.md) | Auth guards, permission checks, role management, and session handling |
+| [`api-contract.md`](./api-contract.md) | Hono response shapes, error codes, error handling, and Zod validation |
+| [`dependency-policy.md`](./dependency-policy.md) | Allowed versus banned dependencies and adding a new package |
+| [`common-pitfalls.md`](./common-pitfalls.md) | Before writing code, to avoid common v3 architecture and boundary mistakes |
+| [`testing-pattern.md`](./testing-pattern.md) | Feature, Hono route, repository, Vue, CLI, and architecture tests |
 
-## Skill Format
+## Historical v2 skills — do not load for v3 implementation
 
-Each skill file uses this structure:
+| Skill | Historical scope | Current replacement |
+|---|---|---|
+| [`inertia-patterns.md`](./inertia-patterns.md) | Inertia, Svelte, and Bits UI frontend patterns | [`vue-patterns.md`](./vue-patterns.md), [`V3_SPEC.md`](../../V3_SPEC.md) §7 |
+| [`crud-pattern.md`](./crud-pattern.md) | v2 technical-layer CRUD workflow and frontend assumptions | [`V3_SPEC.md`](../../V3_SPEC.md), [`docs/v3/feature-model.md`](../../docs/v3/feature-model.md) |
+| [`new-world.md`](./new-world.md) | v2 starter planning and inventory assumptions | [`V3_SPEC.md`](../../V3_SPEC.md), [`TODO.md`](../../TODO.md) |
+| [`pentest-pattern.md`](./pentest-pattern.md) | v2 security-testing paths and stack inventory | Current v3 source tree, [`V3_SPEC.md`](../../V3_SPEC.md) |
 
-```markdown
----
-trigger: <when agent should load this skill>
----
+## Skill format
 
-# <Skill Name>
+Each skill uses frontmatter with a `trigger`. Superseded skills additionally declare `status: superseded-v2` and `superseded_by`, and carry a historical-context banner. Do not copy their old framework or layer assumptions into v3 code.
 
-## When to use
-## Pattern
-## Examples
-## Do / Don't
-```
+## Loading rules
 
-## Loading Rules
-
-- AGENTS.md (root + nested) = orientation, always loaded
-- Skills = execution, loaded on demand
-- If a task touches multiple skills, load all relevant ones
-- If guidance conflicts, AGENTS.md wins over skills (skills are derived)
+- Root and nested `AGENTS.md` files provide orientation and are always loaded.
+- Load every active skill relevant to the task.
+- If guidance conflicts, `AGENTS.md` and `V3_SPEC.md` win over skills.
+- Never use a historical v2 skill as a v3 implementation recipe.

@@ -58,17 +58,17 @@ The Vue 3 + Vite + TypeScript frontend shell and Tailwind styling are available 
 
 Use [`migration-v2-v3.md`](./migration-v2-v3.md) for the capability mapping and explicit data migration checklist.
 
-## Verification completed
+## Automated verification currently passing
 
-The release candidate has been exercised with:
+The repository checks currently pass with:
 
 ```bash
 npm run check
 npm run build
-npx ts-node -r tsconfig-paths/register src/cli/index.ts doctor
+npm run architecture:doctor
 ```
 
-The fresh-install path was exercised in a clean temporary directory: generate with `nara new`, install dependencies, typecheck, test, build, start the generated server, query `/health`, and run `nara doctor`.
+Release-gating validation remains open in TODO.md. No evidence is recorded here for a clean-directory install, generated-project start/API smoke test, Linux deployment, performance measurement, agent cold-start, human cold-start, merge to `main`, or the `v3.0.0` tag. See V3-110 through V3-136 for the remaining gates.
 
 Architecture regression fixtures cover valid projects and these invalid cases:
 

@@ -1,8 +1,12 @@
 ---
-trigger: Adding a new resource (e.g. products, posts, comments) — full stack from types to UI
+trigger: Never load for v3; historical v2 CRUD reference only
+status: superseded-v2
+superseded_by: V3_SPEC.md; docs/v3/feature-model.md
 ---
 
-# CRUD Pattern: Types → Queries → Handlers → Routes → Page
+# CRUD Pattern (Superseded — v2)
+
+> **Superseded for Nara v3.** This file preserves the old technical-layer, Inertia, and Svelte CRUD workflow for historical reference. Use the feature-first v3 model in `V3_SPEC.md` and the owning Feature's `server/`, `web/`, `contract.ts`, and `tests/` surfaces instead.
 
 
 ## When to use

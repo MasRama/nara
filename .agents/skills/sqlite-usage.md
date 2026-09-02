@@ -1,105 +1,107 @@
 ---
 trigger: Writing SQL queries, transactions, dynamic updates, or any database access
+status: active-v3
 ---
 
-# SQLite Usage
+# SQLite Usage (v3)
 
+## Ownership
 
-## When to use
-
-Any time you touch the database. Queries live in `app/queries/` — handlers never import `SQLite` directly.
-
-## Static SQL → Template Literals (preferred)
+Feature repositories own SQL. Shared database lifecycle lives in `src/shared/database/`; route modules and browser code must not access SQLite directly.
 
 ```typescript
-import SQLite from '@services/SQLite';
+import { getDatabase } from '../../../shared/database';
 
-const user = SQLite.one<User>`SELECT * FROM users WHERE id = ${id}`;       // single row or undefined
-const users = SQLite.many<User>`SELECT * FROM users WHERE active = 1`;     // array (never undefined)
-SQLite.exec`INSERT INTO users (id, email) VALUES (${id}, ${email})`;       // run (returns RunResult)
+export function findUserById(userId: string): StoredUser | undefined {
+  return getDatabase()
+    .prepare(
+      'SELECT id, name, email, password, avatar, created_at, updated_at FROM users WHERE id = ?',
+    )
+    .get(userId) as StoredUser | undefined;
+}
 ```
 
-Template literals auto-parameterize interpolated values — safe from SQL injection.
+Use `better-sqlite3` prepared statements for values. Keep row interfaces near the repository that reads them or export them through the Feature's public boundary when another module needs the type.
 
-## IN clauses (interpolate the array directly)
+## Parameter binding
+
+Never interpolate user-controlled values into SQL. Bind values through `.get()`, `.all()`, or `.run()`:
 
 ```typescript
-const rows = SQLite.many<User>`SELECT * FROM users WHERE id IN (${ids})`;   // expands to (?, ?, ?)
-SQLite.exec`DELETE FROM users WHERE id IN (${ids})`;
+const pattern = `%${search}%`;
+const rows = getDatabase()
+  .prepare(
+    `SELECT id, name
+     FROM products
+     WHERE name LIKE ?
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`,
+  )
+  .all(pattern, limit, offset) as ProductRow[];
 ```
 
-Interpolated arrays are expanded into `(?, ?, …)` placeholders with each element
-bound — no manual placeholder strings. Use template literals everywhere. The only
-escape hatch is `SQLite.raw().exec(sql)` for dynamic identifiers (e.g.
-`DROP TABLE IF EXISTS "${name}"`) where parameter binding cannot apply.
+For dynamic `IN` clauses, generate one placeholder per validated value and spread the values into the prepared statement:
+
+```typescript
+const placeholders = roleIds.map(() => '?').join(', ');
+const rows = getDatabase()
+  .prepare(`SELECT * FROM roles WHERE id IN (${placeholders})`)
+  .all(...roleIds) as Role[];
+```
+
+Dynamic identifiers cannot be bound. Prefer fixed SQL; if an identifier must be dynamic, validate it against a closed allowlist before inserting it into the statement.
 
 ## Transactions
 
+Use a `better-sqlite3` transaction for multi-statement writes that must be atomic:
+
 ```typescript
-SQLite.transaction(() => {
-  SQLite.exec`INSERT INTO users ...`;
-  SQLite.exec`INSERT INTO profiles ...`;
+const database = getDatabase();
+const replace = database.transaction(() => {
+  database.prepare('DELETE FROM user_roles WHERE user_id = ?').run(userId);
+  const statement = database.prepare(
+    `INSERT INTO user_roles (id, user_id, role_id, created_at)
+     VALUES (?, ?, ?, ?)`,
+  );
+  const now = Date.now();
+  for (const roleId of roleIds) {
+    statement.run(randomUUID(), userId, roleId, now);
+  }
 });
+replace();
 ```
 
-Auto-rollback on throw. Use for any multi-statement write that must be atomic.
+A thrown error rolls the transaction back. Use transactions for replacement operations, junction-table synchronization, and coordinated writes across tables.
 
-## Dynamic Update (auto-skips undefined, converts booleans, sets updated_at)
+## Pagination
+
+Validate page and limit at the request boundary, then use a deterministic order and a bound offset:
 
 ```typescript
-SQLite.update('users', { id }, { name, email, avatar: undefined });
-// → UPDATE users SET name = ?, email = ? WHERE id = ?
-// undefined fields are skipped, booleans converted to 0/1, updated_at auto-set
+const offset = (page - 1) * limit;
+const data = database
+  .prepare(
+    `SELECT * FROM products
+     ORDER BY created_at DESC, id DESC
+     LIMIT ? OFFSET ?`,
+  )
+  .all(limit, offset) as ProductRow[];
 ```
 
-## Pagination Pattern
+Return `{ data, total }` from the repository when the API contract needs both values. Do not accept arbitrary SQL fragments as pagination or sorting input.
 
-```typescript
-export const getProductsPaginated = (page: number, limit: number, search = ''): { data: Product[]; total: number } => {
-  const offset = (page - 1) * limit;
-  const pattern = `%${search}%`;
-  const countRow = SQLite.one<{ count: number }>`
-    SELECT COUNT(*) as count FROM products WHERE name LIKE ${pattern}
-  `;
-  const data = SQLite.many<Product>`
-    SELECT * FROM products WHERE name LIKE ${pattern} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
-  `;
-  return { data, total: countRow?.count ?? 0 };
-};
-```
+## Schema and lifecycle
 
-## Junction Table Operations
-
-```typescript
-// Insert
-SQLite.exec`INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (${randomUUID()}, ${userId}, ${roleId}, ${Date.now()})`;
-
-// Delete all for a user (before re-sync)
-SQLite.exec`DELETE FROM user_roles WHERE user_id = ${userId}`;
-
-// Fetch with join
-const roles = SQLite.many<Role>`
-  SELECT r.* FROM roles r
-  JOIN user_roles ur ON ur.role_id = r.id
-  WHERE ur.user_id = ${userId}
-`;
-```
-
-## Native Database Access (rare)
-
-```typescript
-const db = SQLite.raw(); // better-sqlite3 instance
-```
-
-Only for operations not covered by the wrapper (e.g. custom prepared statements with complex reuse).
+Use `getDatabase()` so the configured database path, test in-memory mode, pragmas, and schema initialization remain centralized. Call `closeDatabase()` in test teardown when a test opens the shared connection. Foreign keys are enabled by the shared database module; preserve them for new relationships.
 
 ## Do / Don't
 
-- **Do** keep all SQL in `app/queries/` — handlers call query functions, never write SQL
-- **Do** use template literals for static SQL — auto-parameterized, safe
-- **Do** use string params for dynamic SQL (IN clauses, variable columns)
-- **Do** wrap multi-statement writes in `SQLite.transaction()`
-- **Do** use `SQLite.update()` for partial updates — it handles undefined/boolean/timestamps
-- **Don't** interpolate user input directly into SQL strings — use template literals or `?` params
-- **Don't** use `SQLite.raw()` in queries unless the wrapper genuinely cannot do what you need
-- **Don't** catch SQLite errors in queries — let them bubble to handlers
+- **Do** keep SQL in Feature repositories or the smallest intentional shared database module.
+- **Do** bind every value through prepared statements.
+- **Do** use `crypto.randomUUID()` for new IDs and `Date.now()` for timestamps.
+- **Do** use transactions for all-or-nothing multi-row writes.
+- **Do** validate dynamic identifiers against an allowlist.
+- **Don't** put SQL in Hono route composition or Vue code.
+- **Don't** use an ORM, query builder, or hidden SQL wrapper.
+- **Don't** interpolate request values into SQL.
+- **Don't** swallow database errors; translate only known domain failures at the route boundary.
