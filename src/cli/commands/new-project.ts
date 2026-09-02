@@ -39,7 +39,8 @@ function projectFiles(name: string): Record<string, string> {
         dependencies: {
           '@hono/node-server': '^2.1.1',
           hono: '^4.13.5',
-          vue: '^3.5.42',
+          'vue': '^3.5.42',
+          'vue-router': '^5.3.1',
         },
         devDependencies: {
           '@types/node': '^22.20.1',
@@ -217,8 +218,8 @@ This is a minimal Nara v3 application.
 - During development, Vite proxies /api, /health, and /ready to Hono.
 - Business capabilities belong under src/features/<feature>.
 - Each Feature exposes behavior through its index.ts public boundary.
-- Application-wide composition belongs under src/app/.
-- Feature-specific browser code belongs under that Feature's web/ directory.
+- Application-wide Vue composition belongs under src/app/; src/app/router.ts owns browser routes and src/app/pages holds app-owned pages.
+- Feature-specific browser code belongs under that Feature's web/ directory, including Feature-owned pages.
 - Keep server code separate from browser code; do not add SSR, a second framework, or custom RPC.
 - Run npm run check before handing off changes.
 
@@ -241,8 +242,9 @@ The app entrypoint is resources/app.ts. The Hono composition is src/app/server.t
     'resources/app.ts': `import './index.css';
 import { createApp } from 'vue';
 import App from '../src/app/App.vue';
+import router from '../src/app/router';
 
-createApp(App).mount('#app');
+createApp(App).use(router).mount('#app');
 `,
     'resources/index.css': `:root {
   font-family: system-ui, sans-serif;
@@ -260,12 +262,41 @@ main {
   padding: 4rem 1.5rem;
 }
 `,
-    'src/app/App.vue': `<template>
+    'src/app/App.vue': `<script setup lang="ts">
+import { RouterView } from 'vue-router';
+</script>
+
+<template>
+  <RouterView />
+</template>
+`,
+    'src/app/pages/HomePage.vue': `<template>
   <main>
     <h1>Welcome to Nara v3</h1>
     <p>This Vue application is composed by feature.</p>
   </main>
 </template>
+`,
+    'src/app/router.ts': `import { createRouter, createWebHistory } from 'vue-router';
+import HomePage from './pages/HomePage.vue';
+
+export default createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: HomePage,
+    },
+  ],
+});
+`,
+    'src/vue.d.ts': `declare module '*.vue' {
+  import type { DefineComponent } from 'vue';
+
+  const component: DefineComponent;
+  export default component;
+}
 `,
     'src/app/server.ts': `import { Hono } from 'hono';
 import { healthRoutes } from '../features/health';

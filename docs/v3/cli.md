@@ -50,20 +50,24 @@ ledger/
 ├── src/
 │   ├── app/
 │   │   ├── App.vue
+│   │   ├── pages/
+│   │   │   └── HomePage.vue
+│   │   ├── router.ts
 │   │   └── server.ts
 │   ├── features/
 │   │   └── health/
 │   │       ├── index.ts
 │   │       └── tests/
 │   │           └── health.test.ts
-│   └── server.ts
+│   ├── server.ts
+│   └── vue.d.ts
 ├── tsconfig.frontend.json
 ├── tsconfig.json
 ├── vite.config.mjs
 └── vitest.config.mjs
 ```
 
-`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue`. `src/app/server.ts` composes the health Feature's Hono route, and `src/server.ts` serves it through `@hono/node-server`. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home page and future Feature-owned browser pages; `src/app/server.ts` composes the health Feature's Hono route, and `src/server.ts` serves it through `@hono/node-server`. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
 
 
 ## `nara make feature <name>`

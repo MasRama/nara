@@ -563,6 +563,25 @@ Make one command start the Vue/Vite frontend and Hono development server with sa
 * real generated-project validation proves a request through Vite reaches Hono
 * no custom development framework is introduced
 
+## [x] V3-034 — Establish canonical SPA routing and Feature page composition
+> Verified 2026-09-03: Vue Router is installed as the browser routing layer; the app-level router resolves `/` to `src/app/pages/HomePage.vue` and `/login` to the auth-owned `LoginPage.vue`; RouterLink navigation changes the mounted page without replacing the document; Feature web sources are included in Tailwind; generated projects include the same router foundation; direct Vite `/login` returned the SPA shell; `npm run check`, `npm run build`, `npm run test:new-project`, and architecture doctor passed.
+
+### Goal
+
+Establish Vue Router as the canonical SPA composition layer.
+
+### Acceptance
+
+* Vue Router is the browser routing layer
+* `/` and `/login` resolve client-side
+* LoginPage remains owned by auth
+* app layer owns route composition
+* internal navigation does not cause full document reload
+* Tailwind sees Feature browser surfaces
+* generated applications use the canonical routing foundation
+* frontend typecheck/tests/build pass
+* architecture doctor passes
+
 ---
 
 # M5 — Nara CLI Foundation

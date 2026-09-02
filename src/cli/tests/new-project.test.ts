@@ -62,6 +62,7 @@ describe('new project', () => {
       '@hono/node-server',
       'hono',
       'vue',
+      'vue-router',
     ]);
     expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
       '@types/node',
@@ -81,10 +82,13 @@ describe('new project', () => {
       'resources/index.css',
       'resources/index.html',
       'src/app/App.vue',
+      'src/app/pages/HomePage.vue',
+      'src/app/router.ts',
       'src/app/server.ts',
       'src/features/health/index.ts',
       'src/features/health/tests/health.test.ts',
       'src/server.ts',
+      'src/vue.d.ts',
       'tsconfig.frontend.json',
       'tsconfig.json',
       'vite.config.mjs',
@@ -93,6 +97,11 @@ describe('new project', () => {
     for (const file of expectedFiles) {
       expect(existsSync(path.join(projectDirectory, file))).toBe(true);
     }
+    expect(readFileSync(path.join(projectDirectory, 'resources/app.ts'), 'utf8')).toContain(
+      "createApp(App).use(router).mount('#app');",
+    );
+    expect(readFileSync(path.join(projectDirectory, 'src/app/App.vue'), 'utf8')).toContain('<RouterView />');
+    expect(readFileSync(path.join(projectDirectory, 'src/app/router.ts'), 'utf8')).toContain('createWebHistory');
     expect(existsSync(path.join(projectDirectory, 'src/app.ts'))).toBe(false);
 
     const obsoleteStack = /Svelte|@inertiajs\/svelte|Inertia|Bits UI|Ultimate Express|uWebSockets\.js|Nuxt|React/i;

@@ -122,6 +122,12 @@ Feature contract ───────┐
 Feature public index ─── application composition and other Features
 ```
 
+## Browser routing
+
+Application-wide browser route composition belongs under `src/app/router.ts` and uses Vue Router. Routes may point to app-owned pages under `src/app/pages/` or Feature-owned pages under `src/features/<feature>/web/pages/`.
+
+Features own their browser pages, but they do not own the global router. The app layer composes those pages into the application's client-side routes.
+
 ## Dependencies
 
 Dependencies follow ownership and direction:
