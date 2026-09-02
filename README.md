@@ -1,254 +1,228 @@
 # Nara
 
-[![CI](https://github.com/MasRama/nara/actions/workflows/ci.yml/badge.svg)](https://github.com/MasRama/nara/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+Architecture-aware TypeScript application kit.
 
-> A quiet foundation for people who build software by talking to machines.
+Build by feature, not by layer.
 
-Most starter kits fight the machine. Layers of abstraction it cannot read. Classes it has to guess. Magic it cannot trace. Nara is the opposite — flat, plain, readable. The machine understands it on the first look, and so do you.
+Nara keeps each business capability together and makes the boundaries machine-checkable. The framework stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
 
----
-
-## The craft of building with machines.
-
-Say to your machine: *"Add a products CRUD."*
-
-That's all. The machine reads `AGENTS.md` for conventions, loads the `crud-pattern` skill for the workflow, checks `migrations/` for table shapes, writes the types, the migration, the queries, the validator, the handlers, the routes, the page — then runs `npm run check` to verify its own work. You review. You ship.
-
-```
-types/models.ts          →  interface Product { ... }
-migrations/...ts         →  CREATE TABLE products (...)
-queries/products.ts      →  findProductById(), createProduct(), ...
-validators/schemas.ts    →  CreateProductSchema (Zod)
-handlers/products.ts     →  productsPage, listProducts, addProduct, editProduct, removeProducts
-routes/web.ts            →  Route.get/post/put/delete('/products', ...)
-Pages/products.svelte    →  Full UI with table, forms, toast notifications
-```
-
-Eleven files. Correct conventions. The machine did it all — you just asked.
-
----
-
-## Five quiet principles.
-
-Each one removes a reason for the machine to guess.
-
-**01. Flat, by design.**
-Files at arm's reach. No deep nesting to navigate. The machine finds things by name, and so do you.
-
-**02. Functions, not classes.**
-Standalone functions the machine writes accurately. No inheritance to hallucinate, no hidden state to chase.
-
-**03. Raw SQL, not magic.**
-Every query explicit, readable, predictable. The machine writes SQL fluently. No query builder syntax to invent.
-
-**04. No hidden behavior.**
-Traceable end to end. No decorators, no implicit middleware, no magic resolvers.
-
-**05. Few dependencies.**
-Fewer APIs to learn. Fewer mistakes to make. Each one earns its place.
-
-See [`docs/decisions/`](./docs/decisions/) for ten ADRs explaining *why* each decision was made.
-
----
-
-## What makes Nara AI-first.
-
-| Layer | What | Why it matters |
-|---|---|---|
-| **Context** | `AGENTS.md` (root + 11 nested) + 10 skills + 10 ADRs | The machine reads conventions, not guesses. Skills loaded on demand to save context window. |
-| **Scaffolding** | `npm run gen:resource` | Eleven files scaffolded with correct conventions (including test stub). The machine can't make structural mistakes. |
-| **Enforcement** | `npm run lint:layers` (17 rules) + 200+ tests + pre-commit hook | The machine pushes a violation → blocked. Naming, layer boundaries, import direction, anti-patterns. |
-| **Verification** | `npm run check` | One command. The machine doesn't need to remember three. |
-| **CI** | `npm run check` (8 gates) + eval harness in one job | Last line of defense. Cloud agents can't bypass with `--no-verify`. |
-| **Policy** | Dependency policy (16 categories: allowed vs banned) | The machine checks the table before suggesting a dependency. No Prisma, no JWT, no React. |
-| **Pitfalls** | 10 real mistakes AI makes, with fix | The machine reads before coding. Prevents common errors. |
----
-
-## Begin.
+## Start here
 
 ```bash
-git clone https://github.com/MasRama/nara.git my-app && cd my-app
+git clone https://github.com/MasRama/nara.git
+cd nara
 npm install
 cp .env.example .env
+npm run build
+npm start
+```
+
+The server listens on `http://localhost:5555` by default. Verify it with:
+
+```bash
+curl http://localhost:5555/health
+# {"status":"ok"}
+```
+
+For development with the Vite frontend shell and the Hono server:
+
+```bash
 npm run dev
 ```
 
-Open [http://localhost:5555](http://localhost:5555). You're live.
+Node.js 22 or newer and npm are required. SQLite is embedded; no database service is required.
 
-> Migrations run automatically on startup. To reset: `npm run migrate:fresh`
+## The core idea
 
----
+A feature owns a business capability, its public contract, runtime code, optional web code, and tests:
 
-## How to talk to the machine.
-
-Nara is built to be driven by natural language. The machine reads `AGENTS.md` for conventions, loads skills on demand, and verifies its own work with `npm run check`. A good prompt is short and names the resource + fields.
-
-**Add a full-stack resource:**
-
-```
-Add a products CRUD with name (string), price (number), and description (text).
-```
-
-The machine runs `npm run gen:resource products -- --fields="name:string,price:number,description:text"`, then `npm run migrate`, then `npm run check`. You review the diff.
-
-**Add a field to an existing resource:**
-
-```
-Add an is_active boolean column to users. Default true. Update the form and table.
+```text
+src/features/billing/
+├── contract.ts       # types and runtime-safe boundary data
+├── index.ts          # the only public import boundary
+├── server/           # routes, services, repositories
+├── web/              # optional client-side surface
+└── tests/            # feature tests
 ```
 
-**Fix a bug:**
+Cross-feature code imports the target feature's public `index.ts`:
 
-```
-The /users page shows raw JSON instead of HTML. Fix it.
-```
-
-The machine reads `lint:layers` rule L3, finds the handler returning `jsonSuccess` from a `*Page` handler, switches to `res.inertia()`.
-
-**Security audit:**
-
-```
-Run an OWASP Top 10 audit on the auth flow. Report findings in the standard format.
+```ts
+import { getUser } from '@/features/users';
 ```
 
-The machine loads the `pentest-pattern` skill and runs the POCs against the running server.
+This is invalid:
 
-**Rules of thumb:**
-- Name the resource and fields — don't say "add a thing"
-- One resource per prompt — the machine stays focused
-- Let the machine run `npm run check` itself — don't paste the output back
-- Review the diff, don't just trust it
-
----
-
-## The verification loop.
-
-The machine writes code, then verifies its own work. You don't trust the diff — the gates do.
-
+```ts
+import { findUserById } from '@/features/users/server/repository';
 ```
-Agent writes code
+
+The second import couples one feature to another feature's implementation. `nara doctor` detects this, along with malformed features, dependency cycles, and server-only code leaking into `web/`.
+
+## CLI
+
+Build the CLI from this repository, then use the `nara` executable from an installed package:
+
+```bash
+npm run build
+nara make feature billing
+nara doctor
+```
+
+When working directly from a checkout, use the equivalent command:
+
+```bash
+node build/src/cli/index.js make feature billing
+node build/src/cli/index.js doctor
+```
+
+Available commands:
+
+```text
+nara new <name>                 Create a runnable v3 application
+nara make feature <name>        Create the canonical feature skeleton
+nara add <feature>              Install an official open-code feature
+nara doctor                    Validate architecture
+nara inspect <feature>         Show bounded feature facts
+nara context <feature>         Show coding context without source dumps
+nara impact <feature>          Show feature-graph dependents
+```
+
+Architecture facts are deterministic and available as JSON for scripts and agents:
+
+```bash
+nara doctor --json
+nara inspect billing --json
+nara context billing --json
+nara impact billing --json
+```
+
+No AI provider is required for these commands.
+
+## HTTP and application structure
+
+```text
+Request
   │
   ▼
-npm run check
-  ├── tsc --noEmit           (lint, backend)
-  ├── svelte-check           (frontend type check)
-  ├── lint:layers            (17 architectural rules)
-  ├── check:agents           (AGENTS.md Structure tables accurate)
-  ├── check:security         (7 dangerous pattern checks)
-  ├── check:links            (markdown links resolve)
-  ├── check:filesize         (no file over 500 lines)
-  ├── check:types            (no new `any` beyond baseline)
-  └── vitest                 (full suite)
+Hono application (src/app/server.ts)
   │
-  ├── All green → commit
-  └── Any red → agent reads the error, fixes, re-runs check
-```
-
-The error messages are written for the agent, not just the human. Each violation includes the fix and a link to the relevant skill. This is the maker-verifier pattern: the agent that wrote the code is not the one grading it — the gates are independent and deterministic.
-
-**Prove it works:**
-
-```bash
-npm run eval
-```
-
-Runs a full end-to-end test of the AI-first tooling: generates a resource with `gen:resource`, verifies all 11 files follow conventions (naming, barrel exports, route entries, raw SQL, no ORM, test stub with pre-wired mocks), runs the gates on the generated code, then cleans up — leaving zero trace. 39 checks, all must pass.
-
-This runs in CI on every push — if `gen:resource` or any gate breaks, CI fails before merge.
-
----
-
-## Architecture.
-
-```
-Browser (Svelte 5 + Inertia.js)
-  │  router.visit() for pages · api() for data
-  ▼
-Server (ultimate-express / uWebSockets.js)
+  ├── Feature routes
+  │     ├── auth
+  │     └── users
   │
-  ├── Handlers (functions)
-  │     ├── Queries (raw SQL via better-sqlite3)
-  │     └── Services (Auth, Logger, Storage, CacheStore, LoginThrottle)
-  │
-  └── SQLite (embedded, zero-config)
+  ├── Health and readiness
+  └── Shared infrastructure
+        ├── configuration
+        ├── SQLite database
+        ├── structured logging
+        └── error handling
 ```
 
-**Two route types:**
+The current application exposes:
 
-| Type | Called by | Returns |
-|------|-----------|---------|
-| Page | Browser navigation | `res.inertia('pageName', { data })` |
-| Data | `api()` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
+| Surface | Purpose |
+|---|---|
+| `/health` | Liveness response |
+| `/ready` | Database readiness response |
+| `/api/auth` | Registration, login, sessions, and password changes |
+| `/api/roles` | Role and permission administration |
+| `/api/users` | Profile and user administration |
+| `/api/assets` | Avatar upload and delivery |
 
----
+Hono is the HTTP layer. Nara does not replace it with a custom runtime or a native HTTP dependency.
 
-## What's inside.
+## Source map
 
-| Area | Stack |
-|------|-------|
-| Server | ultimate-express (uWebSockets.js, 250k+ req/s) |
-| Frontend | Svelte 5, Inertia.js, Tailwind CSS 4, Bits UI |
-| Database | SQLite via better-sqlite3, raw SQL migrations |
-| Auth | Session-based + RBAC (roles & permissions) |
-| Security | CSRF (double-submit cookie), rate limiting, XSS sanitization, security headers, timing-safe comparisons, login throttling |
-| Storage | Local file storage with sharp image processing, magic byte validation |
-| DX | Path aliases, structured logging (Pino), Vitest |
+```text
+src/
+├── app/                 HTTP composition and error handling
+├── cli/                 TypeScript CLI and architecture engine
+├── features/
+│   ├── auth/            Sessions, passwords, roles, permissions
+│   └── users/           Profiles, administration, and avatars
+└── shared/              Configuration, database, errors, logging
 
----
+official-features/
+├── audit/               Installable audit feature
+└── health/              Installable health feature
 
-## Tooling.
+resources/                Svelte/Inertia frontend shell
+ tests/
+├── v3/                  Runtime and CLI tests
+└── fixtures/architecture Valid and invalid architecture projects
+```
+
+`web/` is optional inside a feature. A backend-only feature is valid. The frontend stack remains available for applications that need it without making every feature depend on a page surface.
+
+## Development loop
+
+Make a focused change, then run the checks that defend it:
 
 ```bash
-# Scaffolding (optional — the machine can also write files manually)
-npm run gen:resource products -- --fields="name:string,price:number"
-
-# Verification
-npm run check              # lint + frontend type check + layer lint + tests
-npm run lint:layers        # 17 layer boundary + naming + import direction rules
+npm run lint                 # TypeScript typecheck
+npm run check:frontend       # Svelte typecheck
+npm test                     # Vitest suite
+npm run architecture:doctor # Human-readable architecture report
+npm run check                # All repository checks above
+npm run build                # Production client and server build
 ```
 
----
+The architecture tests include valid projects and intentionally invalid fixtures for:
 
-## Database.
+- invalid feature shape
+- cross-feature internal imports
+- circular feature dependencies
+- server/client leaks
 
-Migrations are raw SQL strings executed by a lightweight migrator. No ORM, no query builder — just SQL.
+Diagnostics report the problem, source file, relationship, reason, and recommended fix. Human output and `--json` output use the same analysis.
+
+## Configuration and deployment
+
+Development configuration starts from `.env.example`:
+
+```text
+NODE_ENV=development
+PORT=5555
+APP_URL=http://localhost:5555
+DB_FILE=database/dev.sqlite3
+```
+
+For production, copy `.env.production.example` to `.env.production`, set a real `APP_URL`, and choose a production database path:
 
 ```bash
-npm run migrate            # run pending migrations (auto-runs on startup)
-npm run migrate:rollback   # rollback last batch
-npm run migrate:status     # show pending/applied
-npm run migrate:fresh      # drop all + re-migrate + seed
-npm run seed               # run seeders
+cp .env.production.example .env.production
+npm run build
+npm start
 ```
 
----
+Production configuration fails during startup with the invalid field named in the error. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 
-## Deployment.
+## Official feature packages
+
+Official features are open TypeScript source installed into `src/features/<name>` without merging or overwriting local code:
 
 ```bash
-npm run build && npm start
+nara add health
+nara add audit
 ```
 
-Set `NODE_ENV=production` and run behind a reverse proxy (nginx, Caddy, etc.) for TLS termination. See [.env.production.example](./.env.production.example) for reference.
+The installation result is inspectable source, not a hidden runtime plugin. Run `nara doctor` after adding a feature.
 
----
+## Read next
 
-## Read.
+- [`AGENTS.md`](./AGENTS.md) — coding rules and agent workflow
+- [`V3_SPEC.md`](./V3_SPEC.md) — architectural source of truth
+- [`TODO.md`](./TODO.md) — implementation order
+- [`docs/v3/feature-model.md`](./docs/v3/feature-model.md) — feature ownership and boundaries
+- [`docs/v3/cli.md`](./docs/v3/cli.md) — CLI command reference and JSON output
+- [`docs/v3/feature-format.md`](./docs/v3/feature-format.md) — installable feature format
+- [`docs/v3/v2-inventory.md`](./docs/v3/v2-inventory.md) — capability migration inventory
+- [`docs/v3/migration-v2-v3.md`](./docs/v3/migration-v2-v3.md) — v2 to v3 porting guide
+- [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md) — Compose, Understand, Protect
+- [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
+- [`SECURITY.md`](./SECURITY.md) — security reporting
 
-| File | For | Read when |
-|---|---|---|
-| [`AGENTS.md`](./AGENTS.md) | Conventions, anti-patterns, structure | First time here |
-| [`routes/web.ts`](./routes/web.ts) | All routes in one file | Before adding routes |
-| [`.agents/skills/`](./.agents/skills/SKILL.md) | 10 deep-dive skills (new-world, CRUD, SQL, auth, Inertia, API/errors, deps, pitfalls, pentest, testing) | When touching that pattern |
-| [`docs/decisions/`](./docs/decisions/README.md) | 10 ADRs explaining *why* decisions were made | When questioning a convention |
-
----
-
-## Requirements.
-
-Node.js >= 22 · npm · That's it. SQLite is embedded.
-
-## License.
+## License
 
 [MIT](./LICENSE) — Built by [MasRama](https://github.com/MasRama)

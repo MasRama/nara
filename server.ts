@@ -1,9 +1,3 @@
-import { createWebApp, svelteAdapter } from "@core";
-import routes from "@routes/web";
+import { startServer } from './src/app/server';
 
-const app = createWebApp({
-  routes,
-  adapter: svelteAdapter(),
-});
-
-app.start();
+startServer();

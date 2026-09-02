@@ -2,16 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, v3]
   pull_request:
-    branches: [main]
+    branches: [main, v3]
 
 env:
   NODE_VERSION: '22'
 
 jobs:
   check:
-    name: Typecheck + Layer Lint + Tests
+    name: Typecheck + Tests + Architecture
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -26,11 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Full check (lint + layers + AGENTS + security + links + filesize + types + tests)
+      - name: Full check (lint + frontend typecheck + tests + architecture doctor)
         run: npm run check
-
-      - name: Agent eval harness
-        run: npm run eval
 
   build:
     name: Build

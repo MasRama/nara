@@ -22,36 +22,25 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@core": ["app/core/index.ts"],
-      "@core/*": ["app/core/*"],
-      "@handlers": ["app/handlers/index.ts"],
-      "@handlers/*": ["app/handlers/*"],
-      "@services": ["app/services/index.ts"],
-      "@services/*": ["app/services/*"],
-      "@middlewares/*": ["app/middlewares/*"],
-      "@validators/*": ["app/validators/*"],
-      "@validators": ["app/validators/index.ts"],
-      "@queries": ["app/queries/index.ts"],
-      "@queries/*": ["app/queries/*"],
-      "@types": ["app/types/models.ts"],
-      "@types/*": ["app/types/*"],
-      "@config/*": ["app/config/*"],
-      "@config": ["app/config/index.ts"],
-      "@routes/*": ["routes/*"],
-      "$lib/*": ["resources/lib/*"]
+      "@/*": ["src/*"],
+      "@app/*": ["src/app/*"],
+      "@features/*": ["src/features/*"],
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": [
     "./*.ts",
-    "migrations",
-    "seeds",
-    "scripts",
-    "app",
-    "routes"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "build"
+    "build",
+    "app",
+    "routes",
+    "migrations",
+    "seeds",
+    "scripts",
+    "tests"
   ]
 }

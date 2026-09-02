@@ -1,280 +1,562 @@
-# Nara - Project Knowledge Base
+# AGENTS.md
 
-> **Skills:** Deep-dive procedures live in [`.agents/skills/`](./.agents/skills/SKILL.md) — load on demand.
+> Operating contract for AI coding agents working on Nara v3.
+>
+> This file defines **how to work**.
+> `V3_SPEC.md` defines **what Nara v3 is**.
+> `TODO.md` defines **what to implement next**.
 
-## AI Quickstart — First time here?
+---
 
-Read in this order (each builds on the previous):
+## 1. Authority
 
-1. **This file** — conventions, anti-patterns, dependency policy, common pitfalls, structure. ~270 lines.
-2. **[`routes/web.ts`](./routes/web.ts)** — all routes in one file. API surface at a glance.
-3. **[`.agents/skills/SKILL.md`](./.agents/skills/SKILL.md)** — skill index. Load relevant skill when touching that pattern.
-4. **[`docs/decisions/`](./docs/decisions/README.md)** — ADRs explain WHY decisions were made. Read when questioning a convention.
+Use this order of authority:
 
-For database schema: `ls migrations/` to see table names, read the specific migration file for column types and constraints.
+1. Direct user instruction in the current session
+2. `V3_SPEC.md`
+3. The active task in `TODO.md`
+4. Existing v3 tests
+5. Existing v3 implementation
+6. Existing v2 implementation as historical reference only
 
-Then verify your work with one command:
+If two sources conflict, follow the higher authority.
+
+Do not reinterpret product or architecture decisions that are already defined in `V3_SPEC.md`.
+
+---
+
+## 2. Branch
+
+Nara v3 is a full rewrite developed on the `v3` branch.
+
+Rules:
+
+* Treat `main` as the stable Nara v2 line until v3 is ready.
+* Do not merge `v3` into `main` unless explicitly instructed.
+* Do not modify `main`.
+* Do not preserve v2 compatibility unless a task explicitly requires it.
+* Do not add compatibility wrappers merely to keep old APIs alive.
+* Reuse lessons and proven behavior from v2, not necessarily its implementation.
+
+Nara v3 is allowed to break Nara v2 APIs.
+
+---
+
+## 3. Required Reading
+
+At the beginning of a new coding session:
+
+1. Read this file.
+2. Read `V3_SPEC.md`.
+3. Read the current incomplete task in `TODO.md`.
+4. Inspect only the code relevant to that task.
+5. Execute the task.
+
+Do not recursively read the entire repository unless necessary.
+
+Do not load every documentation file into context by default.
+
+Prefer targeted context.
+
+---
+
+## 4. Execution Model
+
+Work on **one TODO task at a time**.
+
+For every task:
+
+1. Read the task and its acceptance criteria.
+2. Inspect the minimum relevant code.
+3. Implement the smallest correct solution.
+4. Add or update tests when required.
+5. Run the required verification.
+6. Fix failures caused by the task.
+7. Mark the task complete only when every acceptance criterion passes.
+8. Continue to the next unblocked task.
+
+Do not implement future TODO items opportunistically.
+
+Do not turn one task into a broad cleanup.
+
+---
+
+## 5. Architecture Decisions Are Closed
+
+The coding agent is an implementer, not the product architect.
+
+Do not independently replace or reconsider:
+
+* TypeScript
+* Node.js as the default server runtime
+* Hono as the HTTP framework
+* feature-first architecture
+* feature public boundaries
+* the architecture-aware direction of Nara
+* the TypeScript implementation of the Nara CLI
+* the decision to avoid a custom Nara runtime
+* the decision to avoid native HTTP dependencies by default
+
+Do not propose another framework during implementation unless explicitly asked.
+
+Do not replace Hono with:
+
+* Express
+* Ultimate Express
+* Fastify
+* NestJS
+* another HTTP framework
+
+Do not introduce Go or Rust into the v3 implementation unless explicitly requested.
+
+---
+
+## 6. Preserve Undecided Technology
+
+Some technology choices are intentionally not part of the initial v3 rewrite decision.
+
+Unless a TODO task explicitly changes them, preserve the currently proven Nara choice for:
+
+* frontend framework
+* styling system
+* database
+* ORM/query layer
+* authentication provider/library
+* test runner
+* package manager
+* formatter/linter
+
+Do not replace a dependency merely because another option appears newer or more popular.
+
+A full rewrite of Nara architecture does not mean every dependency must be replaced.
+
+---
+
+## 7. No Overengineering
+
+Prefer the simplest implementation that satisfies the current specification.
+
+Before creating a new abstraction, ask:
+
+> Is this abstraction required by the current specification or acceptance criteria?
+
+If not, do not create it.
+
+Avoid:
+
+* speculative abstractions
+* generic factories used once
+* wrapper classes around libraries without a real boundary need
+* premature plugin systems
+* premature caching
+* premature performance optimization
+* custom dependency injection containers
+* custom HTTP abstractions
+* custom RPC frameworks
+* custom ORMs
+* custom validation frameworks
+* custom compilers
+* custom DSLs
+* custom language servers
+* custom package managers
+
+Nara should provide architectural value without recreating the ecosystem.
+
+---
+
+## 8. Framework Transparency
+
+Nara is not a runtime abstraction layer.
+
+Application code should use ecosystem libraries directly where appropriate.
+
+Good:
+
+```ts
+import { Hono } from "hono"
+```
+
+Avoid:
+
+```ts
+import { NaraServer } from "nara"
+```
+
+Do not create:
+
+* `NaraRequest`
+* `NaraResponse`
+* `NaraRouter`
+* `NaraServer`
+* `NaraORM`
+
+unless a future specification explicitly introduces them.
+
+Nara should organize and understand application architecture, not hide the underlying stack.
+
+---
+
+## 9. Feature-First Rule
+
+The primary architectural unit in Nara v3 is a **feature**.
+
+A business capability belongs together.
+
+Prefer:
+
+```text
+features/
+  billing/
+    contract.ts
+    index.ts
+    server/
+    web/
+    tests/
+```
+
+Avoid organizing business code primarily as:
+
+```text
+controllers/
+services/
+repositories/
+validators/
+models/
+```
+
+Cross-feature communication must use the target feature's public interface.
+
+A feature's `index.ts` is its public boundary unless the specification states otherwise.
+
+Never import another feature's internal implementation directly.
+
+Forbidden example:
+
+```ts
+import { db } from "@/features/users/server/repository"
+```
+
+Expected direction:
+
+```ts
+import { getUser } from "@/features/users"
+```
+
+---
+
+## 10. Keep Architecture Inferable
+
+Prefer conventions that Nara can understand from:
+
+* filesystem structure
+* TypeScript imports
+* public exports
+* existing schemas
+* existing configuration
+
+Do not introduce duplicated architecture metadata when the information can be reliably inferred.
+
+Avoid creating manifests that humans must manually keep synchronized with code.
+
+Generated metadata is acceptable if it has one authoritative source and is reproducible.
+
+---
+
+## 11. Dependencies
+
+Before installing a dependency:
+
+1. Verify the current task actually requires it.
+2. Check whether the repository already contains an appropriate solution.
+3. Prefer stable, focused ecosystem packages.
+4. Avoid native dependencies unless they provide clearly necessary value.
+5. Avoid dependencies that substantially reduce deployment portability.
+
+Never reintroduce `uWebSockets.js` or Ultimate Express as the default Nara HTTP engine.
+
+Nara v2 experienced native binary / glibc compatibility problems through this dependency chain:
+
+```text
+Ultimate Express
+    ↓
+uWebSockets.js
+    ↓
+native binary
+    ↓
+host glibc compatibility
+```
+
+Nara v3 deliberately avoids this deployment coupling.
+
+---
+
+## 12. Performance
+
+Do not optimize synthetic framework benchmarks.
+
+Optimize only after evidence of a real bottleneck.
+
+Priority order:
+
+1. correctness
+2. architecture clarity
+3. portability
+4. maintainability
+5. developer experience
+6. measured performance
+7. synthetic benchmark performance
+
+Nara should choose simple technology that is already fast enough.
+
+---
+
+## 13. Testing
+
+Every architectural rule implemented by Nara should be testable.
+
+Prefer testing behavior over implementation details.
+
+For CLI features, test:
+
+* successful behavior
+* invalid input
+* expected diagnostics
+* exit status where relevant
+* deterministic output where practical
+
+For architecture rules, create fixtures representing both:
+
+* valid Nara projects
+* intentionally invalid Nara projects
+
+Never weaken tests simply to make implementation pass.
+
+---
+
+## 14. Diagnostics
+
+Nara diagnostics are part of the product.
+
+Errors must explain:
+
+1. what is wrong
+2. where it happened
+3. why Nara considers it invalid
+4. the expected direction to fix it
+
+Prefer:
+
+```text
+billing imports an internal module from users
+
+src/features/billing/server/checkout.ts
+  → @/features/users/server/repository
+
+Cross-feature internals cannot be imported directly.
+
+Import from the users public interface instead:
+  @/features/users
+```
+
+Avoid:
+
+```text
+ERR_NARA_BOUNDARY_004
+```
+
+unless a machine-readable error code is additionally useful.
+
+Human-readable diagnostics come first.
+
+---
+
+## 15. CLI Principles
+
+The v3 CLI is implemented in TypeScript.
+
+CLI commands should be:
+
+* predictable
+* composable
+* scriptable
+* deterministic when possible
+* useful without an AI model
+* friendly to both humans and agents
+
+Interactive prompts are allowed for human workflows, but core operations should also support non-interactive execution.
+
+Prefer:
+
 ```bash
-npm run check    # lint + frontend type check + layer lint + tests
+nara make feature billing
 ```
 
-Scaffold a new resource with one command:
-```bash
-npm run gen:resource products -- --fields="name:string,price:number"
+over flows that require many prompts.
+
+Machine-readable output may be added where specified.
+
+---
+
+## 16. AI and Agent Features
+
+Nara must remain fully useful without an LLM.
+
+Do not add LLM calls to core architecture commands.
+
+Commands such as:
+
+```text
+doctor
+inspect
+context
+impact
 ```
 
-## Overview
+should derive information deterministically from the repository whenever possible.
 
-AI-first TypeScript full-stack starter kit. Functions over classes, raw SQL over ORM, minimal abstractions.
-
-- **Backend**: ultimate-express (uWebSockets.js) + better-sqlite3
-- **Frontend**: Svelte 5 + Inertia.js + Bits UI (headless UI)
-- **Auth**: Session-based + RBAC
-- **Validation**: Zod
-
-## Philosophy
-
-- **No classes** — functions only
-- **No unnecessary comments** — code is self-documenting
-- **No abstractions** — inline is fine
-- **Raw SQL** — AI writes SQL, we just execute it
-- **Minimal code** — less code = less bugs
-
-## Golden Principles
-
-> Opinionated, mechanical rules that keep the codebase legible for agents. Enforced by lint:layers, check:agents, check:security, or convention tests. Violations block commit.
-
-1. **Functions over classes** — `export const fn = () => ...` or `export function fn()`. Never `class`. (ADR 0002, enforced structurally)
-2. **Raw SQL over ORM** — write SQL in `queries/`, never use Prisma/Drizzle/Knex. (ADR 0001, dependency policy)
-3. **Descriptive handler names** — `createUser`, `addRole`, `listProducts`. Never generic `index`/`store`/`create`/`update`/`destroy`. (ADR 0009, L11-L12)
-4. **Layer boundaries are hard** — handlers → queries → services → core. Import direction enforced. Queries never import handlers. Validators never import services. (L14-L17)
-5. **Two response types, never mixed** — page routes return `res.inertia()`, data routes return `jsonSuccess()`/`jsonError()`. (L3-L4)
-6. **`api()` wrapper for all frontend HTTP** — never raw `fetch()` or `axios` in components, never `router.post/put/patch/delete`. (L5-L7)
-7. **Svelte 5 runes only** — `$state`, `$derived`, `$effect`, `$props`. Never `onMount`, `$:`, `export let`, or Svelte stores. (L8)
-8. **Logger, not console** — `Logger.info/warn/error`. `console.log` only in bootstrap files where Logger isn't initialized. (L9)
-9. **`hashPassword()` from Authenticate, never bcrypt direct** — the wrapper enforces the correct cost factor. (L10)
-10. **English for all user-facing messages** — error messages, toast, validation. (ADR 0010)
-11. **AGENTS.md stays in sync with code** — every documented directory has an AGENTS.md, every Structure table matches the actual files. (check:agents, convention test)
-12. **Files stay small** — source files under 500 lines. Split before they grow into monsters. (check:filesize)
-13. **Docs links resolve** — no broken markdown links in AGENTS.md, skills, or ADRs. (check:links)
-14. **No new `any`** — type safety is non-negotiable. Existing `any` is baselined; new `any` blocks CI. Use proper types. (check:types)
-
-## Mental Model
-
-```
-Browser (Svelte 5 + Inertia)
-  │  router.visit() for pages · api() for data
-  ▼
-Server (ultimate-express)
-  │  Request → Middleware → Router → Handler → Response
-  │
-  ├── handlers/   (request handlers — functions)
-  ├── queries/    (raw SQL functions)
-  ├── services/   (SQLite, Auth, Logger, Storage, CacheStore)
-  ├── middlewares/ (auth, csrf, rateLimit, securityHeaders)
-  ├── validators/ (Zod schemas)
-  ├── config/     (env + constants)
-  └── types/      (interfaces)
-```
-
-### Two Response Types
-
-| Route Type | Called By | Returns |
-|---|---|---|
-| **Page** | Browser navigation | `res.inertia('pageName', { data })` |
-| **Data** | `api()` from Svelte | `jsonSuccess()`, `jsonError()`, `jsonCreated()` |
-
-## Structure
-
-```
-./
-├── app/
-│   ├── types/           # Interfaces (User, Session, Role, Permission)
-│   ├── queries/         # Raw SQL functions (findUserById, createUser, isAdmin)
-│   ├── handlers/        # Request handlers (functions, not classes)
-│   ├── services/        # SQLite, Logger, Auth, Storage, CacheStore, LoginThrottle
-│   ├── middlewares/      # auth, csrf, rateLimit, securityHeaders, inputSanitize, requestId
-│   ├── validators/      # Zod schemas + zodToErrors helper
-│   ├── config/          # Environment (env.ts) & constants (constants.ts)
-│   └── core/            # App, Router, errors, response helpers
-├── routes/web.ts        # All route definitions
-├── migrations/          # TypeScript migrations (raw SQL strings, up/down exports)
-├── seeds/               # TypeScript seeds (run(SQLite) function exports)
-├── resources/             # Frontend (Svelte 5 + Inertia)
-│   ├── inertia.html       # HTML template (served by View.ts)
-│   ├── app.ts             # Inertia app entry point
-│   ├── index.css          # Global styles + Tailwind
-│   ├── Pages/             # Route pages (.svelte)
-│   ├── Components/        # Reusable components (Header, Button, Switch, Modal, etc — Bits UI for interactive UI)
-│   ├── lib/               # api.ts, csrf.ts, toast.ts, utils.ts (cn), utils/
-│   └── types/             # index.ts + forms.ts (re-exports app/types/shared)
-├── tests/               # Vitest tests
-├── server.ts            # Entry point
-└── database/            # SQLite database files (dev.sqlite3, production.sqlite3)
-```
-
-## Skills (load on demand)
-
-| Skill | When to load |
-|---|---|
-| [`.agents/skills/new-world.md`](./.agents/skills/new-world.md) | Creating a new project from the starter — PRD/TODO in `.nara/` (planning only; execution later via the TODO) |
-| [`.agents/skills/crud-pattern.md`](./.agents/skills/crud-pattern.md) | Adding a new resource (full stack) |
-| [`.agents/skills/sqlite-usage.md`](./.agents/skills/sqlite-usage.md) | Writing SQL queries, transactions |
-| [`.agents/skills/auth-rbac.md`](./.agents/skills/auth-rbac.md) | Auth guards, permission checks |
-| [`.agents/skills/inertia-patterns.md`](./.agents/skills/inertia-patterns.md) | Frontend pages, navigation, API calls |
-| [`.agents/skills/api-contract.md`](./.agents/skills/api-contract.md) | Error responses, validation, API contract |
-| [`.agents/skills/dependency-policy.md`](./.agents/skills/dependency-policy.md) | Allowed vs banned dependencies (16 categories) |
-| [`.agents/skills/common-pitfalls.md`](./.agents/skills/common-pitfalls.md) | 10 real mistakes AI agents make — read before coding |
-| [`.agents/skills/pentest-pattern.md`](./.agents/skills/pentest-pattern.md) | OWASP Top 10 security testing, POCs, finding format |
-| [`.agents/skills/testing-pattern.md`](./.agents/skills/testing-pattern.md) | Handler/query/middleware/validator test patterns, mock helpers |
-
-## Database Schema
-
-| Table | Key Columns | Relations |
-|---|---|---|
-| `users` | id (uuid), email, name, password, avatar | has many roles via `user_roles` |
-| `sessions` | id (uuid), user_id, user_agent, expires_at | belongs to `users` |
-| `roles` | id (uuid), name, slug, description | has many permissions via `role_permissions` |
-| `permissions` | id (uuid), name, slug, resource, action, description | belongs to roles via `role_permissions` |
-| `user_roles` | id (uuid), user_id, role_id, created_at | junction: `users` ↔ `roles` |
-| `role_permissions` | id (uuid), role_id, permission_id, created_at | junction: `roles` ↔ `permissions` |
-| `assets` | id (uuid), name, type, url, mime_type, size, s3_key, user_id | belongs to `users` |
-
-- All IDs: `crypto.randomUUID()` (except auto-increment tables)
-- All timestamps: unix milliseconds via `Date.now()`
-- Foreign keys: `ON DELETE CASCADE` in raw SQL
-
-## Middleware
-
-| Middleware | Import | Effect |
-|---|---|---|
-| `Auth` | `@middlewares/auth` | Requires session, loads user + roles + permissions |
-| `strictRateLimit()` | `@middlewares/rateLimit` | 10 req/min per IP |
-| `csrf()` | `@middlewares/csrf` | Double Submit Cookie CSRF protection |
-| `securityHeaders()` | `@middlewares/securityHeaders` | HSTS, CSP, X-Frame-Options |
-| `inputSanitize()` | `@middlewares/inputSanitize` | Strips HTML tags from request body/query (basic XSS) |
-| `requestId()` | `@middlewares/requestId` | Adds `req.requestId` for tracing |
-| `requestLogger()` | `@middlewares/requestLogger` | Logs requests via Logger |
-
-## Conventions
-
-- **2-space indent** (.editorconfig)
-- **Strict TypeScript** (strict: true)
-- **Path aliases** — `@core`, `@queries`, `@services`, `@middlewares/*`, `@handlers/*`, `@types`, `@validators`, `@config`
-- **Password hashing** — `hashPassword()` / `comparePassword()` from `@services/Authenticate`
-- **Constants** — use `@config/constants` (SERVER, AUTH, RATE_LIMIT, UPLOAD, CACHE, LOGGING)
-- **IDs** — `crypto.randomUUID()` for all new records
-
-## Dependency Policy
-
-See [`.agents/skills/dependency-policy.md`](./.agents/skills/dependency-policy.md) — 16-category table of allowed vs banned dependencies. Check before suggesting a new dependency.
-
-## Common Pitfalls
-
-See [`.agents/skills/common-pitfalls.md`](./.agents/skills/common-pitfalls.md) — 10 real mistakes AI agents make in this codebase. Read before coding.
-
-## Anti-Patterns
-
-1. **Don't** use classes — use functions
-2. **Don't** use ORM/query builder — write raw SQL in `queries/`
-3. **Don't** return `jsonSuccess` from a page route — use `res.inertia()`
-4. **Don't** return `inertia()` from a data route — use `jsonSuccess/jsonError`
-5. **Don't** use relative imports for core modules — use path aliases
-6. **Don't** use `console.log` — use `Logger.info/warn/error`
-7. **Don't** use `fetch()` or `axios` in components — use `api(path, { method, body })`
-8. **Don't** use bcrypt directly — use `hashPassword()` from `@services/Authenticate`
-9. **Don't** mix languages in error messages — use English for user-facing messages (see ADR 0010)
-10. **Don't** use generic handler names (`index`, `store`, `create`, `update`, `destroy`) — use descriptive names (`createUser`, `updateRole`, `listRoles`)
-11. **Don't** use vague function names (`handle`, `process`, `run`, `do`, `execute` as standalone) — describe what it does (`processPayment`, `handleWebhookDelivery`)
-
-## Build/Test
+For bounded implementation work, prefer deterministic JSON facts before opening unrelated files:
 
 ```bash
-npm run dev          # Dev server (Vite + nodemon)
-npm run build        # Production build
-npm run lint         # tsc --noEmit
-npm run test         # vitest run (ALL tests — for CI/pre-commit only)
-npm run migrate      # Run pending migrations (ts-node + raw SQL)
-npm run seed         # Run seeders
+nara doctor --json
+nara inspect billing --json
+nara context billing --json
+nara impact billing --json
 ```
 
-### Smart test running (during development)
+Use `nara context <feature> --json` to identify the feature boundary, public dependencies, dependents, contracts, and relevant server/web/test surfaces. Use `nara doctor --json` after edits; it is a repository check and does not require an AI provider.
 
-**Don't run `npm test` on every change.** It runs the full suite (200+ tests) — burns your token budget parsing irrelevant results (TDAD study: this increases regressions by 63%).
+AI integrations consume Nara's architecture knowledge.
 
-Instead, run **only the test file for the layer you touched**:
+AI does not define the architecture.
 
-```bash
-# Touched handlers/roles.ts?
-npx vitest run tests/handlers/roles.test.ts
+---
 
-# Touched queries/users.ts?
-npx vitest run tests/queries/roles.test.ts
+## 17. Documentation
 
-# Touched core/response.ts?
-npx vitest run tests/core/
+Do not duplicate the same rule across many files.
 
-# Touched a middleware?
-npx vitest run tests/middlewares/
+Canonical responsibilities:
 
-# Before commit — THEN run the full suite
-npm run check
+```text
+AGENTS.md
+  How agents work.
+
+V3_SPEC.md
+  What Nara v3 is.
+
+TODO.md
+  What gets implemented and in what order.
 ```
 
-Rule: **specific test file during development, full suite before commit.**
+If additional documentation is created, link it from an index rather than expanding `AGENTS.md` indefinitely.
 
-## Agent Tooling
+---
 
-Nara ships with agent-ergonomic tooling. Run these before committing AI-generated code.
+## 18. Nested AGENTS.md Policy
 
-| Command | Purpose | Blocks commit? |
-|---|---|---|
-| `npm run check` | All-in-one: lint + svelte-check + lint:layers + AGENTS accuracy + security + links + file size + type safety + tests | No (run manually) |
-| `npm run gen:resource <name> -- --fields="..."` | Scaffold a full-stack resource (11 files incl. test stub) | No |
-| `npm run lint:layers` | Enforce 17 layer boundary + naming + import direction rules | Yes (pre-commit) |
-| `npm run check:types` | Block new `any`/`as any`/`@ts-ignore` beyond baseline. Update: `--update` flag. | Yes (CI) |
-| `npm run eval` | End-to-end eval: generate resource → verify conventions → run gates → cleanup (39 checks). Runs in CI. | Yes (CI) |
+Do not create nested `AGENTS.md` files by default.
 
-### Resource Generator
+A nested `AGENTS.md` is justified only when a subtree has operational constraints that genuinely differ from the repository root.
 
-Scaffold a full-stack resource (types → migration → queries → validator → handler → route → page → test stub) following all conventions:
+Examples that may justify one in the future:
 
-```bash
-npm run gen:resource products -- --fields="name:string,price:number"
+```text
+packages/cli/
+examples/
+website/
 ```
 
-Generates 11 files with correct naming (ADR 0009), raw SQL (ADR 0001), functions (ADR 0002), descriptive handler names, and a test stub with pre-wired mocks. Zero structural mistakes possible.
+but only when the root rules are insufficient.
 
-### Layer Boundary Lint
+Do not use nested agent files merely to document code.
 
-Enforces 17 rules from AGENTS.md anti-patterns + import direction:
-- L1-L10: anti-patterns (no SQLite in handlers, no fetch in frontend, no console.log, etc.)
-- L11-L13: naming conventions (no generic names, include resource, no vague functions)
-- L14-L17: import direction (queries → types only, services → core only, validators → types+zod only, middlewares → core+queries only)
+Repository knowledge belongs in documentation or a wiki, not in a tree of agent instructions.
 
-See `scripts/lint-layers.ts` for the full rule list.
+---
 
-### Pre-commit Hook
+## 19. LLM Wiki Policy
 
-Install with:
-```bash
-cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+An LLM Wiki may be introduced as a **derived knowledge layer**.
+
+It is not authoritative over:
+
+* `V3_SPEC.md`
+* `TODO.md`
+* tests
+* source code
+
+If a `wiki/` directory exists:
+
+1. Read `wiki/index.md` first.
+2. Load only pages relevant to the current task.
+3. Do not recursively load the whole wiki.
+4. Treat wiki content as contextual knowledge, not architecture authority.
+5. If wiki content conflicts with `V3_SPEC.md`, follow `V3_SPEC.md`.
+6. Update wiki content only when the workflow explicitly requires it.
+
+Recommended future structure:
+
+```text
+wiki/
+  index.md
+  overview.md
+  architecture/
+  features/
+  decisions/
+  lessons/
 ```
 
-Runs layer lint (blocking) on every commit.
+Do not create the wiki merely because it may become useful later.
 
-## Where to Look
+Introduce it when repository/session knowledge becomes difficult to navigate without it.
 
-| Task | Location | Skill |
-|---|---|---|
-| Add new endpoint | `app/handlers/` + `routes/web.ts` | [`crud-pattern.md`](./.agents/skills/crud-pattern.md) |
-| Add database query | `app/queries/` | [`sqlite-usage.md`](./.agents/skills/sqlite-usage.md) |
-| Add data model | `app/types/models.ts` + `migrations/` | [`crud-pattern.md`](./.agents/skills/crud-pattern.md) |
-| Add Zod schema | `app/validators/schemas.ts` + export from `index.ts` | [`api-contract.md`](./.agents/skills/api-contract.md) |
-| Auth logic | `app/services/Authenticate.ts` | [`auth-rbac.md`](./.agents/skills/auth-rbac.md) |
-| Permission checks | `app/queries/users.ts` (isAdmin, hasPermission) | [`auth-rbac.md`](./.agents/skills/auth-rbac.md) |
-| File upload | `app/handlers/assets.ts` (multer + sharp + Storage) | — |
-| Frontend page | `resources/Pages/` | [`inertia-patterns.md`](./.agents/skills/inertia-patterns.md) |
-| Frontend component | `resources/Components/` | — |
-| Constants | `app/config/constants.ts` | — |
-| Adapters | `app/core/adapters/` (Svelte/Inertia integration) | — |
+---
+
+## 20. Git Hygiene
+
+Keep changes scoped to the active TODO task.
+
+Do not:
+
+* mass-format unrelated files
+* rename unrelated files
+* refactor unrelated features
+* modify generated lockfiles without dependency changes
+* commit secrets
+* force-push
+* merge into `main`
+
+Do not create commits unless the current workflow or user explicitly requests commits.
+
+---
+
+## 21. Completion Report
+
+After completing a task, report concisely:
+
+```text
+Completed: <task ID and title>
+
+Changed:
+- ...
+- ...
+
+Verified:
+- ...
+- ...
+
+Remaining:
+- next TODO task
+```
+
+Do not write a long retrospective unless asked.
+
+---
+
+## 22. Core Principle
+
+When uncertain between a clever solution and a boring solution that satisfies the specification:
+
+**choose the boring solution.**
+
+Nara's innovation belongs in its application model and architectural tooling, not unnecessary infrastructure.

@@ -16,11 +16,7 @@
     "isolatedModules": true,
     "allowJs": true,
     "checkJs": true,
-    "types": ["svelte", "vite/client"],
-    "baseUrl": ".",
-    "paths": {
-      "$lib/*": ["resources/lib/*"]
-    }
+    "types": ["svelte", "vite/client"]
   },
   "include": ["resources/**/*.ts", "resources/**/*.svelte"]
 }

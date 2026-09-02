@@ -17,8 +17,5 @@ updates:
       - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
-      # ultimate-express 2.2.x loses req.body/req.cookies through mounted
-      # routers (upstream regression). Remove this ignore once fixed upstream.
-      - dependency-name: "ultimate-express"
     commit-message:
       prefix: chore(deps)

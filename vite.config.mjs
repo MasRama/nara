@@ -32,11 +32,6 @@ export default defineConfig({
     }),
   ],
   root: 'resources',
-  resolve: {
-    alias: {
-      '$lib': resolve(__dirname, 'resources/lib'),
-    },
-  },
   server: {
     host: '0.0.0.0',
     port: PORT,
@@ -56,8 +51,6 @@ export default defineConfig({
           groups: [
             { name: 'vendor-svelte', test: /node_modules[\\/]svelte/ },
             { name: 'vendor-inertia', test: /node_modules[\\/]@inertiajs/ },
-            { name: 'vendor-bits-ui', test: /node_modules[\\/]bits-ui/ },
-            { name: 'vendor-utils', test: /node_modules[\\/]@lucide/ },
           ],
         },
       },
