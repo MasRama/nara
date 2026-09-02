@@ -16,8 +16,8 @@ Reference point for the v3 rewrite. This inventory records the current v2 implem
 | uWebSockets.js workaround | REMOVE | The v2 HTTP dependency chain carries the native uWS deployment risk. | No uWebSockets.js or native HTTP workaround in the v3 runtime path. |
 | HTTP framework and adapter | REIMPLEMENT | Express-compatible app/router APIs are used throughout the v2 core. | Use Hono with `@hono/node-server` and standard `node:http` composition, without a Nara HTTP wrapper. |
 | Route composition | REIMPLEMENT | `routes/web.ts` is one global route file for pages, auth, users, roles, assets, health, and 404 handling. | Move route ownership into features and compose feature routes in the app layer. |
-| Frontend framework | PRESERVE | Svelte 5 with runes and `@inertiajs/svelte`; entrypoint is `resources/app.ts`. | Keep the proven frontend choices while adapting integration to v3 features. |
-| Frontend styling and UI | PRESERVE | Tailwind CSS, Bits UI, Lucide Svelte, `mode-watcher`, and `svelte-sonner`. | Keep unless a later TODO task explicitly changes the choice. |
+| Frontend framework | REIMPLEMENT | Svelte 5 with runes and `@inertiajs/svelte`; entrypoint is `resources/app.ts`. | Replace with locked Vue 3 + Vite + TypeScript; preserve useful behavior, not Svelte implementation details. |
+| Frontend styling and UI | REIMPLEMENT | Tailwind CSS, Bits UI, Lucide Svelte, `mode-watcher`, and `svelte-sonner`. | Keep useful Tailwind styling; replace Svelte-specific UI/runtime integrations with direct Vue composition. |
 | Frontend API access | REIMPLEMENT | `resources/lib/api.ts` provides a generic `fetch` wrapper with CSRF headers, response parsing, and toasts. | Adapt to feature-scoped contracts/clients; do not introduce a global RPC type. |
 | Database | PRESERVE | `better-sqlite3` with SQLite files under `database/`; tests use `:memory:`. | Keep SQLite and adapt database access to shared or feature-owned v3 locations. |
 | Query layer | REIMPLEMENT | Raw SQL functions are split across `app/queries/*.ts` and imported by handlers/services. | Keep raw SQL behavior where useful, but place ownership inside features or intentionally small shared code. |
@@ -30,10 +30,10 @@ Reference point for the v3 rewrite. This inventory records the current v2 implem
 | Error and response handling | REIMPLEMENT | Express response helpers return success/error/validation/paginated JSON; `App.ts` hides unexpected errors in production. | Use Hono-native mechanisms where adequate and keep expected, validation, and unexpected errors distinct. |
 | Security middleware | PRESERVE | Security headers/CSP, CSRF double-submit cookies, request IDs, input sanitization, request logging, and rate limiting. | Preserve effective protections and adapt middleware to Hono; remove Express-specific implementations. |
 | File upload and storage | REIMPLEMENT | Authenticated avatar upload uses Multer memory storage, magic-byte checks, Sharp WebP conversion, `Storage`, and asset records. Static/public serving includes traversal and symlink checks. | Reimplement as a feature-owned capability if retained; preserve security behavior and storage semantics. |
-| Views and page rendering | REIMPLEMENT | `View.ts`, renderer middleware, Inertia Svelte pages, and a global page route surface render landing, auth, dashboard, users, roles, profile, and errors. | Adapt rendering/composition to the preserved frontend stack and feature-owned web surfaces. |
+| Views and page rendering | REIMPLEMENT | `View.ts`, renderer middleware, Inertia Svelte pages, and a global page route surface render landing, auth, dashboard, users, roles, profile, and errors. | Migrate useful browser behavior to Vue feature-owned web surfaces; do not preserve the Svelte implementation. |
 | Validation | PRESERVE | Zod schemas cover auth, users, roles, profile, and bulk deletion; `zodToErrors` maps issues to API errors. | Keep Zod and move validation/contracts into feature boundaries. |
 | Tests | PRESERVE | Vitest tests cover handlers, queries, middleware, services, validators, core response/router behavior, and frontend API utilities; `jsdom` is the test environment. | Keep Vitest and add v3 architecture/fixture tests as required by later TODO tasks. |
-| Build and package tooling | PRESERVE | npm, TypeScript 5.6, Vite, Svelte plugin, `tsc`, `tsc-alias`, ts-node, nodemon, and Vitest. | Keep the tooling choices where compatible; add only task-required v3 CLI/build wiring. |
+| Build and package tooling | REIMPLEMENT | npm, TypeScript 5.6, Vite, Svelte plugin, `tsc`, `tsc-alias`, ts-node, nodemon, and Vitest. | Keep npm, TypeScript, Vite, ts-node, nodemon, and Vitest where compatible; replace Svelte tooling with the locked Vue plugin and Vue-aware typecheck. |
 | Technical-layer directories | REMOVE | Business code is primarily organized under `app/handlers`, `app/queries`, `app/services`, `app/middlewares`, `app/validators`, `app/config`, and `app/core`. | Do not make these global technical layers the v3 target; migrate ownership into `features/`, `shared/`, and `app/`. |
 
 ## Current route and capability surface
@@ -92,7 +92,7 @@ The required server capabilities migrated so far are:
 | Avatar assets | `src/features/users` | MIME/magic-byte validation, bounded WebP processing, storage, serving, and unauthenticated rejection are covered by feature integration tests. |
 | Health and readiness | `official-features/health` and `src/app` | Health composition and database readiness are covered by application integration tests. |
 
-The v3 entrypoint is `src/app/server.ts` and composes only v3 feature exports. Legacy page-only implementation remains outside the v3 TypeScript/runtime path and is not an active v3 implementation.
+The v3 entrypoint is `src/app/server.ts` and composes only v3 feature exports. The Vue shell is bootstrapped by `resources/app.ts` and `src/app/App.vue`; the auth login surface lives under `src/features/auth/web/pages/`. Legacy v2 Svelte pages are not active.
 
 ## Migration matrix: capability to Feature ownership
 
@@ -105,7 +105,7 @@ The v2 business surface maps to these v3 Feature owners. Platform concerns suppo
 | Roles, permissions, and RBAC checks | `auth` | `src/features/auth/server` public authorization exports and `src/shared/database` | Migrated and tested |
 | Avatar upload and user-owned asset metadata | `users` | `src/features/users/server` plus `src/shared/database` storage records | Migrated and tested |
 | Health and readiness endpoints | `health` | `official-features/health` composed by `src/app/server.ts` plus the app readiness probe | Migrated and tested |
-| Frontend pages and navigation | Owning Feature (`auth`, `users`, or a later business Feature) | `web/` inside the owning Feature; frontend integration in `src/app` | Deferred from v3.0 backend parity; preserve the frontend stack for later feature-owned web surfaces |
+| Frontend pages and navigation | Owning Feature (`auth`, `users`, or a later business Feature) | Vue shell in `resources/app.ts` and `src/app/App.vue`; feature pages under owning `web/` directories | Migrated and typechecked; useful shell behavior is covered by the Vue frontend smoke test. |
 
 The target owner is the business concept, not the v2 technical layer. Shared code is limited to infrastructure such as configuration, logging, errors, database access, and storage mechanics; it does not own the capabilities above.
 

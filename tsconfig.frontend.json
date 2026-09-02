@@ -16,7 +16,12 @@
     "isolatedModules": true,
     "allowJs": true,
     "checkJs": true,
-    "types": ["svelte", "vite/client"]
+    "types": ["vite/client"]
   },
-  "include": ["resources/**/*.ts", "resources/**/*.svelte"]
+  "include": [
+    "resources/**/*.ts",
+    "resources/**/*.vue",
+    "src/app/**/*.vue",
+    "src/features/**/*.vue"
+  ]
 }

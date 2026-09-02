@@ -1,9 +1,11 @@
 import { defineConfig } from 'vitest/config';
-import path from 'path';
-
-const r = (p: string) => path.resolve(__dirname, p);
+import vue from '@vitejs/plugin-vue';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const r = (p) => path.resolve(fileURLToPath(new URL('.', import.meta.url)), p);
 
 export default defineConfig({
+  plugins: [vue()],
   test: {
     globals: true,
     environment: 'jsdom',

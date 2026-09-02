@@ -45,7 +45,7 @@ Official `health` and `audit` Feature packages can be installed with `nara add`.
 
 ### Full-stack compatibility boundary
 
-The Svelte/Inertia frontend shell and Tailwind styling remain available for applications that need browser surfaces. `web/` is optional inside a Feature; v3 does not require every capability to ship a page layer.
+The Vue 3 + Vite + TypeScript frontend shell and Tailwind styling are available for applications that need browser surfaces. Vue is the only supported frontend framework; feature-specific pages, components, and composables belong in the owning Feature's `web/`, while application-wide composition belongs under `src/app/`. `web/` remains optional inside a Feature.
 
 ## Breaking changes from v2
 

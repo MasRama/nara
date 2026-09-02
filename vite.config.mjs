@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import tailwindcss from '@tailwindcss/vite';
 import 'dotenv/config'
 import { resolve } from 'path'
 import { readdirSync } from 'fs';
@@ -25,13 +25,10 @@ const PORT = parseInt(process.env.VITE_PORT) || 5173;
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    svelte({
-      compilerOptions: {
-        runes: true,
-      },
-    }),
+    vue(),
   ],
   root: 'resources',
+  publicDir: '../public',
   server: {
     host: '0.0.0.0',
     port: PORT,
@@ -49,8 +46,7 @@ export default defineConfig({
       output: {
         codeSplitting: {
           groups: [
-            { name: 'vendor-svelte', test: /node_modules[\\/]svelte/ },
-            { name: 'vendor-inertia', test: /node_modules[\\/]@inertiajs/ },
+            { name: 'vendor-vue', test: /node_modules[\\/]vue/ },
           ],
         },
       },

@@ -18,7 +18,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
-    "check:frontend": "svelte-check --tsconfig tsconfig.frontend.json",
+    "check:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
     "architecture:doctor": "npx ts-node -r tsconfig-paths/register src/cli/index.ts doctor",
     "check": "npm run lint && npm run check:frontend && npm test && npm run architecture:doctor"
   },
@@ -26,34 +26,31 @@
   "license": "MIT",
   "dependencies": {
     "@hono/node-server": "^2.1.1",
-    "@inertiajs/svelte": "^3.6.1",
     "@tailwindcss/vite": "^4.3.3",
     "better-sqlite3": "^12.4.1",
     "dotenv": "^16.4.5",
     "hono": "^4.13.5",
-    "mode-watcher": "^1.1.0",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.2",
     "pino-roll": "^4.0.0",
     "sharp": "^0.35.3",
-    "svelte-sonner": "^1.1.1",
     "tailwindcss": "^4.3.3",
+    "vue": "^3.5.42",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.20.1",
+    "@vitejs/plugin-vue": "^6.0.8",
     "@vitest/coverage-v8": "^4.1.10",
     "jsdom": "^30.0.1",
     "nodemon": "^3.1.14",
-    "svelte": "^5.56.9",
-    "svelte-check": "^4.7.6",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.9.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3",
     "vite": "^8.2.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.11"
   }
 }

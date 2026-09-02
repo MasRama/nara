@@ -44,7 +44,7 @@ Ensure the rewrite is isolated from stable Nara v2.
 
 ---
 
-## [ ] V3-002 — Inventory current Nara v2
+## [x] V3-002 — Inventory current Nara v2
 
 ### Goal
 
@@ -93,7 +93,7 @@ REVIEW
 
 ---
 
-## [ ] V3-003 — Establish v3 source skeleton
+## [x] V3-003 — Establish v3 source skeleton
 
 ### Goal
 
@@ -377,7 +377,125 @@ For each capability:
 
 ---
 
-# M3 — Full-Stack Contracts
+# M3 — Vue Frontend Migration
+
+## [x] V3-024 — Remove Svelte frontend runtime and tooling
+
+### Goal
+
+Remove the v2 Svelte runtime and build integration before introducing Vue.
+
+### Requirements
+
+* remove Svelte runtime, compiler, Vite plugin, config, and Svelte-specific UI/runtime packages
+* remove `@inertiajs/svelte` and Svelte-specific tooling
+* keep the Hono + Node backend unchanged
+
+### Acceptance
+
+* no active Svelte source, config, package, or build-plugin reference remains
+* frontend migration starts from a clean Vue-compatible dependency graph
+* Hono + Node server behavior remains intact
+
+---
+
+## [x] V3-025 — Install Vue frontend stack
+
+### Goal
+
+Make Vue 3 + Vite + TypeScript the only supported frontend stack.
+
+### Requirements
+
+* add Vue 3, `@vitejs/plugin-vue`, and the Vue TypeScript checker
+* configure Vite for Vue SFCs
+* do not add Nuxt, SSR, React, Svelte, or multi-framework abstractions
+
+### Acceptance
+
+* `package.json` and the lockfile contain the required Vue dependencies
+* Vite resolves Vue SFCs through the Vue plugin
+
+---
+
+## [x] V3-026 — Establish Vue application bootstrap
+
+### Goal
+
+Mount a direct Vue application through the existing Vite HTML shell.
+
+### Requirements
+
+* keep the Vite entrypoint thin
+* place application-wide Vue composition under `src/app/`
+* do not introduce a custom frontend framework abstraction
+* do not add SSR unless a later specification explicitly requires it
+
+### Acceptance
+
+* the existing HTML shell mounts a Vue application
+* the application bootstrap is TypeScript and production-buildable
+
+---
+
+## [x] V3-027 — Establish feature-first Vue web structure
+
+### Goal
+
+Give browser code the same Feature ownership as server code.
+
+### Requirements
+
+* feature-specific Vue pages, components, and composables live under the owning Feature's `web/`
+* application-wide Vue composition remains under `src/app/`
+* cross-feature browser code uses public Feature boundaries
+
+### Acceptance
+
+* at least one real Feature web surface exists under a Feature `web/` directory
+* no browser surface imports another Feature's internal implementation
+
+---
+
+## [x] V3-028 — Migrate frontend shell and UI behavior
+
+### Goal
+
+Port useful existing browser behavior from Svelte to Vue without preserving Svelte implementation details.
+
+### Requirements
+
+* preserve the existing shell's useful styling, theme behavior, navigation, and user-facing interactions where applicable
+* use direct Vue composition rather than a custom Nara frontend abstraction
+* keep backend contracts and Hono + Node behavior unchanged
+
+### Acceptance
+
+* the shell runs through Vue
+* required migrated interactions behave as before
+* no Svelte implementation remains in the active frontend
+
+---
+
+## [x] V3-029 — Verify Vue frontend migration
+
+### Goal
+
+Replace Svelte-specific checks and verify the complete Vue migration.
+
+### Requirements
+
+* replace `svelte-check` with `vue-tsc` or an equivalent Vue-aware typecheck
+* run frontend typecheck, production build, tests, and `nara doctor`
+
+### Acceptance
+
+* all required verification commands pass
+* no Svelte dependency, config, import, or checker remains
+
+---
+
+# M4 — Full-Stack Contracts
 
 ## [x] V3-030 — Establish canonical feature contract pattern
 
@@ -429,7 +547,7 @@ Document any necessary convention updates in `docs/v3/feature-model.md`.
 
 ---
 
-# M4 — Nara CLI Foundation
+# M5 — Nara CLI Foundation
 
 ## [x] V3-040 — Establish CLI package/entrypoint
 
@@ -512,7 +630,7 @@ without manual architecture fixes.
 
 ---
 
-# M5 — Architecture Engine
+# M6 — Architecture Engine
 
 ## [x] V3-050 — Implement feature discovery
 
@@ -636,7 +754,7 @@ Do not invent an advanced compiler analysis system.
 
 ---
 
-# M6 — `nara doctor`
+# M7 — `nara doctor`
 
 ## [x] V3-060 — Implement doctor command
 
@@ -723,7 +841,7 @@ nara doctor
 
 ---
 
-# M7 — Understand
+# M8 — Understand
 
 ## [x] V3-070 — Implement `nara inspect <feature>`
 
@@ -808,7 +926,7 @@ Feature dependency graph only.
 
 ---
 
-# M8 — Composition
+# M9 — Composition
 
 ## [x] V3-080 — Define installable feature format
 
@@ -886,7 +1004,7 @@ Two materially different features use the same installation mechanism.
 
 ---
 
-# M9 — Agent Ergonomics
+# M10 — Agent Ergonomics
 
 ## [x] V3-090 — Verify root `AGENTS.md` is sufficient
 
@@ -1013,9 +1131,9 @@ Do not make the wiki canonical over `V3_SPEC.md`.
 
 ---
 
-# M10 — v2 Capability Migration
+# M11 — v2 Capability Migration
 
-## [ ] V3-100 — Map remaining v2 capabilities to v3 Features
+## [x] V3-100 — Map remaining v2 capabilities to v3 Features
 
 ### Goal
 
@@ -1075,7 +1193,7 @@ Delete historical documentation that explains important lessons.
 
 ---
 
-# M11 — Hardening
+# M12 — Hardening
 
 ## [x] V3-110 — Fresh install test
 
@@ -1189,7 +1307,7 @@ Do not introduce native infrastructure unless a measured practical problem exist
 
 ---
 
-# M12 — Documentation
+# M13 — Documentation
 
 ## [x] V3-120 — Rewrite README around v3 thesis
 
@@ -1288,7 +1406,7 @@ Also explain what Nara deliberately does not build.
 
 ---
 
-# M13 — Release Validation
+# M14 — Release Validation
 
 ## [x] V3-130 — Run full validation
 

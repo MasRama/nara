@@ -88,6 +88,7 @@ The coding agent is an implementer, not the product architect.
 Do not independently replace or reconsider:
 
 * TypeScript
+* Vue 3 + Vite + TypeScript as the only supported frontend stack
 * Node.js as the default server runtime
 * Hono as the HTTP framework
 * feature-first architecture
@@ -115,9 +116,8 @@ Do not introduce Go or Rust into the v3 implementation unless explicitly request
 
 Some technology choices are intentionally not part of the initial v3 rewrite decision.
 
-Unless a TODO task explicitly changes them, preserve the currently proven Nara choice for:
+Unless a TODO task explicitly changes them, preserve the currently proven Nara choices for:
 
-* frontend framework
 * styling system
 * database
 * ORM/query layer
@@ -126,6 +126,7 @@ Unless a TODO task explicitly changes them, preserve the currently proven Nara c
 * package manager
 * formatter/linter
 
+The frontend framework is not undecided. `V3_SPEC.md` locks Vue 3 + Vite + TypeScript as Nara's sole supported frontend stack.
 Do not replace a dependency merely because another option appears newer or more popular.
 
 A full rewrite of Nara architecture does not mean every dependency must be replaced.
@@ -194,6 +195,8 @@ unless a future specification explicitly introduces them.
 
 Nara should organize and understand application architecture, not hide the underlying stack.
 
+Use Vue directly for frontend composition. Do not create a Nara frontend framework or a multi-framework abstraction.
+
 ---
 
 ## 9. Feature-First Rule
@@ -213,6 +216,12 @@ features/
     web/
     tests/
 ```
+
+Frontend rules:
+
+* Feature-specific Vue pages, components, and composables live under the owning Feature's `web/`.
+* Application-wide Vue composition belongs under the app layer (`src/app/`); keep the Vite entry thin.
+* Never keep or reintroduce Svelte. React, Nuxt, SSR tooling, and multi-framework abstractions are out of scope unless a later specification explicitly changes this decision.
 
 Avoid organizing business code primarily as:
 
@@ -273,6 +282,8 @@ Before installing a dependency:
 5. Avoid dependencies that substantially reduce deployment portability.
 
 Never reintroduce `uWebSockets.js` or Ultimate Express as the default Nara HTTP engine.
+
+The frontend dependency set is opinionated: Vue 3 + Vite + TypeScript with `@vitejs/plugin-vue`. Do not add React, Svelte, Nuxt, or SSR dependencies unless a later specification explicitly requires them.
 
 Nara v2 experienced native binary / glibc compatibility problems through this dependency chain:
 

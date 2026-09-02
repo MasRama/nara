@@ -147,13 +147,13 @@ official-features/
 ├── audit/               Installable audit feature
 └── health/              Installable health feature
 
-resources/                Svelte/Inertia frontend shell
+resources/                Vue 3/Vite/TypeScript frontend shell
  tests/
 ├── v3/                  Runtime and CLI tests
 └── fixtures/architecture Valid and invalid architecture projects
 ```
 
-`web/` is optional inside a feature. A backend-only feature is valid. The frontend stack remains available for applications that need it without making every feature depend on a page surface.
+`web/` is optional inside a feature. A backend-only feature is valid. The supported browser stack is Vue 3 + Vite + TypeScript; feature-specific Vue pages, components, and composables live in the owning Feature's `web/`, while application-wide composition lives under `src/app/`.
 
 ## Development loop
 
@@ -161,7 +161,7 @@ Make a focused change, then run the checks that defend it:
 
 ```bash
 npm run lint                 # TypeScript typecheck
-npm run check:frontend       # Svelte typecheck
+npm run check:frontend       # Vue-aware frontend typecheck
 npm test                     # Vitest suite
 npm run architecture:doctor # Human-readable architecture report
 npm run check                # All repository checks above

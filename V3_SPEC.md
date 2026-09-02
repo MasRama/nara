@@ -244,6 +244,22 @@ Nara v2 encountered deployment compatibility problems caused by native uWebSocke
 
 Nara v3 prioritizes deployment portability over extreme synthetic HTTP throughput.
 
+## Frontend
+
+The initial v3 browser stack is locked to:
+
+```text
+Vue 3 + Vite + TypeScript
+```
+
+Vue is the sole supported frontend framework. Nara is intentionally opinionated here; it does not offer multiple frontend choices or a multi-framework abstraction.
+
+Do not keep or reintroduce the v2 Svelte implementation. React, Svelte, and Nuxt are not part of the initial v3 stack. SSR is not part of the initial v3 stack and requires a later explicit specification.
+
+Feature-specific Vue pages, components, and composables belong under the owning Feature's `web/` directory.
+
+Application-wide Vue composition belongs under `src/app/`. The Vite entrypoint should remain thin and mount the app-layer composition.
+
 ---
 
 ## Nara CLI
@@ -264,7 +280,6 @@ The v3 rewrite is an architectural rewrite, not a mandate to replace every depen
 
 Until an explicit v3 task says otherwise, preserve the currently proven Nara choices for:
 
-* frontend framework
 * frontend styling
 * database
 * ORM/query system
@@ -275,7 +290,9 @@ Until an explicit v3 task says otherwise, preserve the currently proven Nara cho
 * linting
 * application logging
 
-When migrating these areas, prefer adapting them to the v3 feature model rather than replacing them.
+The frontend framework is not part of this preserved set. Vue 3 + Vite + TypeScript is locked above, and the v3 frontend migration moves away from the v2 Svelte implementation.
+
+When migrating preserved areas, prefer adapting them to the v3 feature model rather than replacing them.
 
 ---
 
@@ -313,9 +330,9 @@ src/
         repository.ts
 
       web/
-        pages/
-        components/
-        composables/
+        pages/          Vue pages (`*.vue`)
+        components/     Vue components (`*.vue`)
+        composables/    TypeScript composables (`*.ts`)
 
       tests/
 ```
@@ -323,6 +340,10 @@ src/
 Not every feature must contain every directory.
 
 Empty structural directories should not be created unless needed.
+
+Feature-specific Vue pages, components, and composables belong under the owning Feature's `web/` directory. They must use the Feature's public boundary when consuming another capability.
+
+Application-wide Vue composition belongs under `src/app/`. It may compose Features but must not absorb business logic owned by a Feature.
 
 ---
 
@@ -425,6 +446,10 @@ app/
 The app layer composes features.
 
 It should not contain business logic that belongs inside a feature.
+
+For the browser application, the app layer owns application-wide Vue composition and bootstrap-level concerns. Feature-specific Vue pages, components, and composables remain in Feature `web/` directories.
+
+The initial v3 frontend is a direct Vue + Vite application. Nara does not add a custom frontend abstraction, Nuxt, or SSR; SSR requires a later explicit specification.
 
 Example server composition:
 
@@ -647,7 +672,7 @@ Server:
 - server/service.ts
 
 Web:
-- web/pages/BillingPage.tsx
+- web/pages/BillingPage.vue
 
 Contracts:
 - CreateCheckout
