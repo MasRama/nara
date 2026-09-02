@@ -26,7 +26,7 @@ function projectFiles(name: string): Record<string, string> {
         private: true,
         engines: { node: '>=22.0.0' },
         scripts: {
-          dev: 'vite',
+          dev: 'tsx scripts/dev.ts',
           'dev:server': 'tsx watch src/server.ts',
           build: 'vite build && tsc',
           start: 'node build/server.js',
@@ -106,17 +106,33 @@ function projectFiles(name: string): Record<string, string> {
       null,
       2,
     )}\n`,
-    'vite.config.mjs': `import { defineConfig } from 'vite';
+    'vite.config.mjs': `import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
-export default defineConfig({
-  root: 'resources',
-  plugins: [vue()],
-  build: {
-    outDir: '../dist',
-    emptyOutDir: true,
-    target: 'es2022',
-  },
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const serverPort = Number(process.env.PORT || env.PORT || 5555);
+  const vitePort = Number(process.env.VITE_PORT || env.VITE_PORT || 5173);
+  const serverOrigin = \`http://127.0.0.1:\${serverPort}\`;
+
+  return {
+    root: 'resources',
+    plugins: [vue()],
+    server: {
+      port: vitePort,
+      strictPort: true,
+      proxy: {
+        '/api': { target: serverOrigin },
+        '/health': { target: serverOrigin },
+        '/ready': { target: serverOrigin },
+      },
+    },
+    build: {
+      outDir: '../dist',
+      emptyOutDir: true,
+      target: 'es2022',
+    },
+  };
 });
 `,
     'vitest.config.mjs': `import { defineConfig } from 'vitest/config';
@@ -131,12 +147,74 @@ export default defineConfig({
 });
 `,
     '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\n',
+    'scripts/dev.ts': `import { spawn, type ChildProcess } from 'node:child_process';
+
+const isWindows = process.platform === 'win32';
+const children: ChildProcess[] = [];
+let shuttingDown = false;
+let shutdownPromise: Promise<void> | undefined;
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function start(command: string, args: string[], label: string): ChildProcess {
+  const child = spawn(command, args, {
+    stdio: 'inherit',
+    shell: isWindows,
+    env: { ...process.env, FORCE_COLOR: '1' },
+  });
+  children.push(child);
+
+  child.once('error', (error) => {
+    if (shuttingDown) return;
+    process.stderr.write('[' + label + '] failed: ' + error.message + '\\n');
+    void shutdown(1);
+  });
+  child.once('exit', (code, signal) => {
+    if (shuttingDown) return;
+    const reason = signal ? 'signal ' + signal : 'code ' + String(code ?? 'unknown');
+    process.stderr.write('[' + label + '] exited unexpectedly (' + reason + ')\\n');
+    void shutdown(signal === 'SIGINT' || signal === 'SIGTERM' ? 0 : 1);
+  });
+
+  return child;
+}
+
+function shutdown(exitCode: number): Promise<void> {
+  if (shutdownPromise) return shutdownPromise;
+  shuttingDown = true;
+  shutdownPromise = (async () => {
+    for (const child of children) {
+      if (child.exitCode === null) child.kill('SIGTERM');
+    }
+    await delay(1_000);
+    for (const child of children) {
+      if (child.exitCode === null) child.kill('SIGKILL');
+    }
+    process.exitCode = exitCode;
+  })();
+  return shutdownPromise;
+}
+
+process.once('SIGINT', () => {
+  void shutdown(0);
+});
+process.once('SIGTERM', () => {
+  void shutdown(0);
+});
+
+start('vite', [], 'vite');
+start('tsx', ['watch', 'src/server.ts'], 'hono');
+`,
     'AGENTS.md': `# ${name}
 
 This is a minimal Nara v3 application.
 
 - Runtime: TypeScript, Node.js, Hono, and @hono/node-server.
 - Browser stack: Vue 3 + Vite + TypeScript.
+- Run npm run dev for the full-stack development session; it starts Vue/Vite and Hono together.
+- During development, Vite proxies /api, /health, and /ready to Hono.
 - Business capabilities belong under src/features/<feature>.
 - Each Feature exposes behavior through its index.ts public boundary.
 - Application-wide composition belongs under src/app/.
@@ -144,6 +222,7 @@ This is a minimal Nara v3 application.
 - Keep server code separate from browser code; do not add SSR, a second framework, or custom RPC.
 - Run npm run check before handing off changes.
 
+The development ports default to Vite 5173 and Hono 5555; set VITE_PORT and PORT to override them.
 The app entrypoint is resources/app.ts. The Hono composition is src/app/server.ts, and the production server is src/server.ts.
 `,
     'resources/index.html': `<!doctype html>

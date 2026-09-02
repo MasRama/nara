@@ -48,7 +48,7 @@ describe('new project', () => {
       devDependencies: Record<string, string>;
     };
     expect(packageJson.scripts).toMatchObject({
-      dev: 'vite',
+      dev: 'tsx scripts/dev.ts',
       'dev:server': 'tsx watch src/server.ts',
       build: 'vite build && tsc',
       start: 'node build/server.js',
@@ -75,6 +75,7 @@ describe('new project', () => {
     ]);
 
     const expectedFiles = [
+      'scripts/dev.ts',
       'AGENTS.md',
       'resources/app.ts',
       'resources/index.css',

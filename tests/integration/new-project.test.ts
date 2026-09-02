@@ -69,6 +69,78 @@ function findFreePort(): Promise<number> {
   return promise;
 }
 
+async function findDistinctPorts(): Promise<{ vitePort: number; serverPort: number }> {
+  const vitePort = await findFreePort();
+  let serverPort = await findFreePort();
+  while (serverPort === vitePort) {
+    serverPort = await findFreePort();
+  }
+  return { vitePort, serverPort };
+}
+
+function startGeneratedDevServer(
+  projectDirectory: string,
+  vitePort: number,
+  serverPort: number,
+): { child: ChildProcess; output: () => string } {
+  const child = spawn(npmCommand, ['run', 'dev'], {
+    cwd: projectDirectory,
+    env: { ...process.env, PORT: String(serverPort), VITE_PORT: String(vitePort) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
+  });
+  let output = '';
+  child.stdout?.setEncoding('utf8');
+  child.stderr?.setEncoding('utf8');
+  child.stdout?.on('data', (chunk: string) => {
+    output += chunk;
+  });
+  child.stderr?.on('data', (chunk: string) => {
+    output += chunk;
+  });
+  return { child, output: () => output };
+}
+
+async function waitForDevelopmentHealth(
+  child: ChildProcess,
+  vitePort: number,
+  output: () => string,
+): Promise<void> {
+  const frontendUrl = `http://127.0.0.1:${vitePort}/`;
+  const healthUrl = `http://127.0.0.1:${vitePort}/health`;
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null) {
+      throw new Error(`Generated development process exited with code ${child.exitCode}.\n${output()}`);
+    }
+    try {
+      const frontendResponse = await fetch(frontendUrl);
+      if (frontendResponse.status === 200) {
+        const healthResponse = await fetch(healthUrl);
+        if (healthResponse.status === 200) return;
+      }
+    } catch {
+      // Vite and Hono may still be binding their ports.
+    }
+    await delay(100);
+  }
+  throw new Error(`Generated development server did not answer ${healthUrl} within 30 seconds.\n${output()}`);
+}
+
+async function expectUnavailable(url: string): Promise<void> {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    try {
+      await fetch(url);
+    } catch {
+      return;
+    }
+    await delay(100);
+  }
+  throw new Error(`Process remained available at ${url} after shutdown`);
+}
+
+
 function startGeneratedServer(projectDirectory: string, port: number): { child: ChildProcess; output: () => string } {
   const child = spawn(process.execPath, ['build/server.js'], {
     cwd: projectDirectory,
@@ -105,6 +177,26 @@ async function stopGeneratedServer(child: ChildProcess): Promise<void> {
   }
 }
 
+async function stopGeneratedDevServer(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null) return;
+  if (process.platform !== 'win32' && child.pid !== undefined) {
+    process.kill(-child.pid, 'SIGTERM');
+  } else {
+    child.kill('SIGTERM');
+  }
+  if (await waitForExit(child, 5_000)) return;
+  if (child.exitCode === null) {
+    if (process.platform !== 'win32' && child.pid !== undefined) {
+      process.kill(-child.pid, 'SIGKILL');
+    } else {
+      child.kill('SIGKILL');
+    }
+  }
+  if (!(await waitForExit(child, 5_000))) {
+    throw new Error('Generated development process did not terminate after SIGTERM and SIGKILL');
+  }
+}
+
 async function waitForHealth(child: ChildProcess, port: number, output: () => string): Promise<void> {
   const url = `http://127.0.0.1:${port}/health`;
   const deadline = Date.now() + 30_000;
@@ -124,7 +216,7 @@ async function waitForHealth(child: ChildProcess, port: number, output: () => st
 }
 
 describe('nara new fresh project', () => {
-  it('installs, checks, validates, builds, starts, and serves health', { timeout: 300_000 }, async () => {
+  it('installs, runs full-stack dev, checks, validates, builds, starts, and serves health', { timeout: 300_000 }, async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'nara-new-integration-'));
     try {
       const result = runCli(['new', 'fresh-app'], createIO(), { cwd: root });
@@ -132,6 +224,19 @@ describe('nara new fresh project', () => {
 
       const projectDirectory = path.join(root, 'fresh-app');
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
+
+      const { vitePort, serverPort } = await findDistinctPorts();
+      const generatedDevServer = startGeneratedDevServer(projectDirectory, vitePort, serverPort);
+      try {
+        await waitForDevelopmentHealth(generatedDevServer.child, vitePort, generatedDevServer.output);
+        const response = await fetch(`http://127.0.0.1:${vitePort}/health`);
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({ status: 'ok' });
+      } finally {
+        await stopGeneratedDevServer(generatedDevServer.child);
+      }
+      await expectUnavailable(`http://127.0.0.1:${vitePort}/`);
+      await expectUnavailable(`http://127.0.0.1:${serverPort}/health`);
       await runCommand(npmCommand, ['run', 'typecheck'], projectDirectory);
       await runCommand(npmCommand, ['run', 'typecheck:frontend'], projectDirectory);
       await runCommand(npmCommand, ['test'], projectDirectory);

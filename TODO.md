@@ -547,6 +547,24 @@ Document any necessary convention updates in `docs/v3/feature-model.md`.
 
 ---
 
+## [x] V3-033 — Complete canonical full-stack development loop
+> Verified 2026-09-03: root `npm run dev` started Vite + Hono, proxied `/health` and `/ready`, and both ports closed on shutdown; the existing fresh-project integration now starts generated `npm run dev`, requests Vite `/health`, asserts `200 {"status":"ok"}`, verifies both dev ports close, then runs typechecks, tests, `npm run check`, real doctor, production build/start/health, and cleanup. Root and generated Vite configs proxy `/api`, `/health`, and `/ready`; `createAuthClient` remains relative; `npm run test:new-project` and `npm run check` passed without a custom framework or new orchestration dependency.
+
+### Goal
+
+Make one command start the Vue/Vite frontend and Hono development server with same-origin backend proxying.
+
+### Acceptance
+
+* one command starts Vue + Hono development
+* browser API requests use same-origin relative URLs
+* Vite proxies backend traffic to Hono
+* generated applications use the same topology
+* real generated-project validation proves a request through Vite reaches Hono
+* no custom development framework is introduced
+
+---
+
 # M5 — Nara CLI Foundation
 
 ## [x] V3-040 — Establish CLI package/entrypoint
