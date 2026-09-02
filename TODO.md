@@ -601,8 +601,8 @@ nara make feature invoices
 
 ---
 
-## [ ] V3-042 — Implement `nara new`
-> Reopened during the v3 consistency audit: current tests inspect generated files but do not install, typecheck, test, and run a generated project.
+## [x] V3-042 — Implement `nara new`
+> Verified by `npm run test:new-project`: a temporary project created through the real `nara new` path installed dependencies, ran server and Vue typechecks, ran tests and `npm run check`, built, started `build/server.js`, and returned HTTP 200 with `{"status":"ok"}` from `/health`; the spawned server was terminated and the temporary directory was removed.
 
 ### Goal
 

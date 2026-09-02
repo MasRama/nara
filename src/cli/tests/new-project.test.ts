@@ -31,7 +31,7 @@ function createIO(): CliIO & { output: string[]; errors: string[] } {
 }
 
 describe('new project', () => {
-  it('creates a runnable v3 project with opinionated defaults', () => {
+  it('creates a minimal canonical Vue and Hono v3 project', () => {
     const fixture = createFixture();
 
     const result = newProject('ledger', fixture);
@@ -40,13 +40,64 @@ describe('new project', () => {
       throw new Error(result.error.message);
     }
     const projectDirectory = result.project.directory;
-    const packageJson: unknown = JSON.parse(readFileSync(path.join(projectDirectory, 'package.json'), 'utf8'));
-    expect(packageJson).toMatchObject({
-      scripts: { build: 'tsc', start: 'node build/server.js', test: 'vitest run' },
-      dependencies: { hono: expect.any(String) },
+    const packageJson = JSON.parse(
+      readFileSync(path.join(projectDirectory, 'package.json'), 'utf8'),
+    ) as {
+      scripts: Record<string, string>;
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(packageJson.scripts).toMatchObject({
+      dev: 'vite',
+      'dev:server': 'tsx watch src/server.ts',
+      build: 'vite build && tsc',
+      start: 'node build/server.js',
+      typecheck: 'tsc --noEmit',
+      lint: 'npm run typecheck',
+      'typecheck:frontend': 'vue-tsc --noEmit -p tsconfig.frontend.json',
+      test: 'vitest run',
+      check: 'npm run typecheck && npm run typecheck:frontend && npm test',
     });
-    expect(existsSync(path.join(projectDirectory, 'src/features/health/index.ts'))).toBe(true);
-    expect(existsSync(path.join(projectDirectory, 'AGENTS.md'))).toBe(true);
+    expect(Object.keys(packageJson.dependencies).sort()).toEqual([
+      '@hono/node-server',
+      'hono',
+      'vue',
+    ]);
+    expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
+      '@types/node',
+      '@vitejs/plugin-vue',
+      'jsdom',
+      'tsx',
+      'typescript',
+      'vite',
+      'vitest',
+      'vue-tsc',
+    ]);
+
+    const expectedFiles = [
+      'AGENTS.md',
+      'resources/app.ts',
+      'resources/index.css',
+      'resources/index.html',
+      'src/app/App.vue',
+      'src/app/server.ts',
+      'src/features/health/index.ts',
+      'src/features/health/tests/health.test.ts',
+      'src/server.ts',
+      'tsconfig.frontend.json',
+      'tsconfig.json',
+      'vite.config.mjs',
+      'vitest.config.mjs',
+    ];
+    for (const file of expectedFiles) {
+      expect(existsSync(path.join(projectDirectory, file))).toBe(true);
+    }
+    expect(existsSync(path.join(projectDirectory, 'src/app.ts'))).toBe(false);
+
+    const obsoleteStack = /Svelte|@inertiajs\/svelte|Inertia|Bits UI|Ultimate Express|uWebSockets\.js|Nuxt|React/i;
+    for (const file of result.project.files) {
+      expect(readFileSync(file, 'utf8')).not.toMatch(obsoleteStack);
+    }
   });
 
   it('rejects unsafe project names', () => {

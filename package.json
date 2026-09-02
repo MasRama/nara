@@ -15,6 +15,7 @@
     "build": "vite build && tsc && tsc-alias -p tsconfig.json && cp -rf dist build && cp -rf public build",
     "start": "node build/server.js",
     "test": "vitest run",
+    "test:new-project": "vitest run --config vitest.integration.config.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",

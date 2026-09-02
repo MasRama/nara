@@ -26,22 +26,30 @@ function projectFiles(name: string): Record<string, string> {
         private: true,
         engines: { node: '>=22.0.0' },
         scripts: {
-          build: 'tsc',
+          dev: 'vite',
+          'dev:server': 'tsx watch src/server.ts',
+          build: 'vite build && tsc',
           start: 'node build/server.js',
-          dev: 'tsx src/server.ts',
-          lint: 'tsc --noEmit',
+          typecheck: 'tsc --noEmit',
+          lint: 'npm run typecheck',
+          'typecheck:frontend': 'vue-tsc --noEmit -p tsconfig.frontend.json',
           test: 'vitest run',
-          check: 'npm run lint && npm test',
+          check: 'npm run typecheck && npm run typecheck:frontend && npm test',
         },
         dependencies: {
           '@hono/node-server': '^2.1.1',
           hono: '^4.13.5',
+          vue: '^3.5.42',
         },
         devDependencies: {
           '@types/node': '^22.20.1',
+          '@vitejs/plugin-vue': '^6.0.8',
+          jsdom: '^30.0.1',
           tsx: '^4.19.2',
           typescript: '^5.6.3',
+          vite: '^8.2.1',
           vitest: '^4.1.10',
+          'vue-tsc': '^3.3.11',
         },
       },
       null,
@@ -51,27 +59,168 @@ function projectFiles(name: string): Record<string, string> {
       {
         compilerOptions: {
           target: 'es2022',
-          module: 'commonjs',
-          moduleResolution: 'node',
           lib: ['es2022'],
+          skipLibCheck: true,
           outDir: './build',
           rootDir: './src',
+          module: 'commonjs',
+          moduleResolution: 'node',
           strict: true,
+          noImplicitAny: true,
+          noUnusedLocals: true,
+          noUnusedParameters: true,
           esModuleInterop: true,
-          skipLibCheck: true,
         },
         include: ['src/**/*.ts'],
       },
       null,
       2,
     )}\n`,
-    'vitest.config.ts': `import { defineConfig } from 'vitest/config';\n\nexport default defineConfig({\n  test: {\n    environment: 'node',\n    include: ['tests/**/*.test.ts', 'src/**/*.test.ts'],\n  },\n});\n`,
-    '.gitignore': 'node_modules/\nbuild/\n.env\n',
-    'AGENTS.md': `# ${name}\n\nThis is a Nara v3 application.\n\n- Keep business capabilities under src/features/<feature>.\n- Import feature behavior through each feature's index.ts.\n- Keep server-only code under server/ and validate external input at runtime.\n- Run npm run check before handing off changes.\n`,
-    'src/app.ts': `import { Hono } from 'hono';\nimport { healthRoutes } from './features/health';\n\nexport const app = new Hono();\napp.route('/health', healthRoutes);\n`,
-    'src/server.ts': `import { serve } from '@hono/node-server';\nimport { app } from './app';\n\nconst port = Number(process.env.PORT ?? 5555);\nserve({ fetch: app.fetch, port });\n`,
-    'src/features/health/index.ts': `import { Hono } from 'hono';\n\nexport const healthRoutes = new Hono().get('/', (context) =>\n  context.json({ status: 'ok' as const }),\n);\n`,
-    'tests/health.test.ts': `import { describe, expect, it } from 'vitest';\nimport { app } from '../src/app';\n\ndescribe('health feature', () => {\n  it('reports a healthy application', async () => {\n    const response = await app.request('/health');\n\n    expect(response.status).toBe(200);\n    await expect(response.json()).resolves.toEqual({ status: 'ok' });\n  });\n});\n`,
+    'tsconfig.frontend.json': `${JSON.stringify(
+      {
+        compilerOptions: {
+          target: 'es2022',
+          useDefineForClassFields: true,
+          module: 'esnext',
+          lib: ['es2022', 'dom', 'dom.iterable'],
+          moduleResolution: 'bundler',
+          resolveJsonModule: true,
+          verbatimModuleSyntax: true,
+          noEmit: true,
+          strict: true,
+          noImplicitAny: true,
+          noUnusedLocals: true,
+          noUnusedParameters: true,
+          skipLibCheck: true,
+          isolatedModules: true,
+          types: ['vite/client'],
+        },
+        include: [
+          'resources/**/*.ts',
+          'resources/**/*.vue',
+          'src/app/**/*.vue',
+          'src/features/**/web/**/*.ts',
+          'src/features/**/*.vue',
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+    'vite.config.mjs': `import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+
+export default defineConfig({
+  root: 'resources',
+  plugins: [vue()],
+  build: {
+    outDir: '../dist',
+    emptyOutDir: true,
+    target: 'es2022',
+  },
+});
+`,
+    'vitest.config.mjs': `import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
+
+export default defineConfig({
+  plugins: [vue()],
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+  },
+});
+`,
+    '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\n',
+    'AGENTS.md': `# ${name}
+
+This is a minimal Nara v3 application.
+
+- Runtime: TypeScript, Node.js, Hono, and @hono/node-server.
+- Browser stack: Vue 3 + Vite + TypeScript.
+- Business capabilities belong under src/features/<feature>.
+- Each Feature exposes behavior through its index.ts public boundary.
+- Application-wide composition belongs under src/app/.
+- Feature-specific browser code belongs under that Feature's web/ directory.
+- Keep server code separate from browser code; do not add SSR, a second framework, or custom RPC.
+- Run npm run check before handing off changes.
+
+The app entrypoint is resources/app.ts. The Hono composition is src/app/server.ts, and the production server is src/server.ts.
+`,
+    'resources/index.html': `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${name} — Nara v3</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/app.ts"></script>
+  </body>
+</html>
+`,
+    'resources/app.ts': `import './index.css';
+import { createApp } from 'vue';
+import App from '../src/app/App.vue';
+
+createApp(App).mount('#app');
+`,
+    'resources/index.css': `:root {
+  font-family: system-ui, sans-serif;
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 4rem 1.5rem;
+}
+`,
+    'src/app/App.vue': `<template>
+  <main>
+    <h1>Welcome to Nara v3</h1>
+    <p>This Vue application is composed by feature.</p>
+  </main>
+</template>
+`,
+    'src/app/server.ts': `import { Hono } from 'hono';
+import { healthRoutes } from '../features/health';
+
+export const app = new Hono();
+app.route('/health', healthRoutes);
+`,
+    'src/server.ts': `import { serve } from '@hono/node-server';
+import { app } from './app/server';
+
+const port = Number(process.env.PORT ?? 5555);
+
+serve({ fetch: app.fetch, port }, (info) => {
+  process.stdout.write(\`Nara server listening on http://localhost:\${info.port}\\n\`);
+});
+`,
+    'src/features/health/index.ts': `import { Hono } from 'hono';
+
+export const healthRoutes = new Hono().get('/', (context) =>
+  context.json({ status: 'ok' as const }),
+);
+`,
+    'src/features/health/tests/health.test.ts': `import { describe, expect, it } from 'vitest';
+import { app } from '../../../app/server';
+
+describe('health feature', () => {
+  it('reports a healthy application', async () => {
+    const response = await app.request('/health');
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: 'ok' });
+  });
+});
+`,
   };
 }
 
