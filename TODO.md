@@ -1198,8 +1198,8 @@ Delete historical documentation that explains important lessons.
 
 # M12 — Hardening
 
-## [ ] V3-110 — Fresh install test
-> Reopened during the v3 consistency audit: no clean temporary-directory execution record is present.
+## [x] V3-110 — Fresh install test
+> Verified 2026-09-03 through the existing `tests/integration/new-project.test.ts`: one clean temporary project was created by the real `nara new` path, dependencies installed, server and Vue typechecks plus tests and `npm run check` passed, the repository CLI ran `doctor` against the generated project (`exitCode 0`, `Architecture looks healthy.`, no stderr), then the production build, Node startup, HTTP 200 `/health` check, shutdown, and temporary-directory cleanup passed with no manual fix.
 
 ### Goal
 

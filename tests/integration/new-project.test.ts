@@ -16,10 +16,14 @@ type CommandFailure = Error & {
   stderr?: string;
 };
 
-function createIO(): CliIO {
+function createIO(): CliIO & { output: string[]; errors: string[] } {
+  const output: string[] = [];
+  const errors: string[] = [];
   return {
-    stdout: () => undefined,
-    stderr: () => undefined,
+    output,
+    errors,
+    stdout: (message) => output.push(message),
+    stderr: (message) => errors.push(message),
   };
 }
 
@@ -120,7 +124,7 @@ async function waitForHealth(child: ChildProcess, port: number, output: () => st
 }
 
 describe('nara new fresh project', () => {
-  it('installs, checks, builds, starts, and serves health', { timeout: 300_000 }, async () => {
+  it('installs, checks, validates, builds, starts, and serves health', { timeout: 300_000 }, async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'nara-new-integration-'));
     try {
       const result = runCli(['new', 'fresh-app'], createIO(), { cwd: root });
@@ -132,6 +136,12 @@ describe('nara new fresh project', () => {
       await runCommand(npmCommand, ['run', 'typecheck:frontend'], projectDirectory);
       await runCommand(npmCommand, ['test'], projectDirectory);
       await runCommand(npmCommand, ['run', 'check'], projectDirectory);
+
+      const doctorIO = createIO();
+      const doctorResult = runCli(['doctor'], doctorIO, { cwd: projectDirectory });
+      expect(doctorResult.exitCode).toBe(0);
+      expect(doctorIO.output.join('')).toBe('Architecture looks healthy.\n');
+      expect(doctorIO.errors).toHaveLength(0);
       await runCommand(npmCommand, ['run', 'build'], projectDirectory);
 
       const port = await findFreePort();
