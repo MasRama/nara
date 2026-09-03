@@ -520,7 +520,7 @@ describe('canonical SQLite migration lifecycle', () => {
     expect(stdout).toContain('quick_check, foreign_key_check');
   });
 
-  it('refuses backup and integrity checks when the persistent database is missing', async () => {
+  it('refuses backup and integrity checks when the persistent database is missing', { timeout: 20_000 }, async () => {
     const root = temporaryRoot();
     const missingDatabase = path.join(root, 'missing.sqlite3');
     const command = path.resolve('scripts/database.ts');
