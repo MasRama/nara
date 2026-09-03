@@ -16,6 +16,15 @@ interface ThrottleConfig {
 
 const store = new Map<string, ThrottleEntry>();
 
+/**
+ * Hard ceiling on throttle keys. Creation is already gated by the global and
+ * auth rate limiters, and entries expire after the lockout window + 60s, but
+ * identifier rotation (`id:<email>`) is attacker-controlled so expiry alone
+ * cannot bound cardinality. Evicting the oldest key first keeps memory bounded
+ * without a cache framework; eviction only forgives an old bucket.
+ */
+const MAX_THROTTLE_KEYS = 10_000;
+
 let lastSweep = Date.now();
 
 function config(now: () => number = Date.now): ThrottleConfig {
@@ -37,12 +46,16 @@ function sweep(currentTime: number, windowMs: number): void {
 }
 
 function entryFor(key: string, currentTime: number): ThrottleEntry {
-  let entry = store.get(key);
-  if (!entry) {
-    entry = { attempts: 0, firstAttempt: currentTime, lockedUntil: null };
-    store.set(key, entry);
+  const existing = store.get(key);
+  if (existing) return existing;
+  while (store.size >= MAX_THROTTLE_KEYS) {
+    const oldest = store.keys().next().value;
+    if (oldest === undefined) break;
+    store.delete(oldest);
   }
-  return entry;
+  const created: ThrottleEntry = { attempts: 0, firstAttempt: currentTime, lockedUntil: null };
+  store.set(key, created);
+  return created;
 }
 
 function resetIfExpired(entry: ThrottleEntry, currentTime: number, windowMs: number): void {

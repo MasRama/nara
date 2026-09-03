@@ -3,8 +3,13 @@ import { clientIp } from './ip';
 
 /**
  * Bounded in-memory sliding-window rate limiter for the single-host v3
- * architecture. No Redis, no distributed state, no per-key intervals: stale
- * buckets are swept lazily on each request with a single cleanup pass.
+ * architecture. No Redis, no distributed state, no per-key intervals.
+ *
+ * Boundedness is explicit: stale buckets are swept lazily each window, and
+ * key cardinality has a hard ceiling (`maxKeys`, default 10_000). When the
+ * ceiling is reached the oldest bucket is evicted before a new key is
+ * admitted, so memory cannot grow without bound even if an attacker rotates
+ * identifiers. Eviction only forgives an old bucket; it never invents budget.
  */
 export interface RateLimitOptions {
   maxRequests: number;
@@ -17,17 +22,18 @@ export interface RateLimitOptions {
   skip?: (context: Context) => boolean;
   /** Overrideable clock for deterministic tests. */
   now?: () => number;
+  /** Hard ceiling on distinct keys; oldest evicted first. Defaults to 10_000. */
+  maxKeys?: number;
 }
-
 export interface RateLimiter {
   middleware: (context: Context, next: Next) => Promise<Response | void>;
   reset: () => void;
 }
-
 export function createRateLimiter(options: RateLimitOptions): RateLimiter {
   const { maxRequests, windowMs, name, skip } = options;
   const keyGenerator = options.keyGenerator ?? ((context: Context) => clientIp(context));
   const now = options.now ?? Date.now;
+  const maxKeys = options.maxKeys ?? 10_000;
   const buckets = new Map<string, number[]>();
   let lastSweep = now();
 
@@ -39,6 +45,21 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
       while (timestamps.length > 0 && timestamps[0]! <= cutoff) timestamps.shift();
       if (timestamps.length === 0) buckets.delete(key);
     }
+  }
+
+  function admit(key: string): number[] {
+    const existing = buckets.get(key);
+    if (existing) return existing;
+    // Hard ceiling: evict oldest first-inserted keys before admitting a new
+    // one, so cardinality never exceeds maxKeys even under identifier rotation.
+    while (buckets.size >= maxKeys) {
+      const oldest = buckets.keys().next().value;
+      if (oldest === undefined) break;
+      buckets.delete(oldest);
+    }
+    const created: number[] = [];
+    buckets.set(key, created);
+    return created;
   }
 
   function rateLimited(context: Context, resetMs: number): Response {
@@ -60,11 +81,7 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
       sweep(currentTime);
       const key = `${name}:${keyGenerator(context)}`;
       const cutoff = currentTime - windowMs;
-      let timestamps = buckets.get(key);
-      if (!timestamps) {
-        timestamps = [];
-        buckets.set(key, timestamps);
-      }
+      const timestamps = admit(key);
       while (timestamps.length > 0 && timestamps[0]! <= cutoff) timestamps.shift();
 
       if (timestamps.length >= maxRequests) {

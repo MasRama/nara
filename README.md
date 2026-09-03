@@ -211,6 +211,8 @@ Production serves the built Vue SPA, public files, and backend APIs from the sam
 
 Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 
+Reverse-proxy client IP: by default Nara uses the Node socket address and ignores `X-Forwarded-For`, so all clients behind a proxy share one limiter identity until trust is configured. For a single nginx/Caddy hop, set `TRUST_PROXY=true` (and `TRUST_PROXY_HOPS=1` unless the chain is longer) so rate limits and login lockout distinguish real clients via the trusted suffix of `X-Forwarded-For`. Only enable trust when the Node process is not directly reachable; `TRUST_PROXY` defaults to `false`. Development HTML is served by Vite and is not covered by Hono security headers; production is authoritative for page headers.
+
 ## Official feature packages
 
 Official features are open TypeScript source installed into `src/features/<name>` without merging or overwriting local code:

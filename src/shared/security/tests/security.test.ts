@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { UPLOAD, env } from '../../config';
 import { app } from '../../../app/server';
-import { env } from '../../config';
-import { jsonBodyLimit } from '../body-limit';
+import { jsonBodyLimit, multipartBodyLimit } from '../body-limit';
 import { csrfProtection } from '../csrf';
 import { securityHeaders } from '../headers';
+import { clientIp } from '../ip';
 import { createRateLimiter } from '../rate-limit';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from './helpers';
 
@@ -575,5 +576,221 @@ describe('CSRF middleware scope', () => {
     form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
     const allowed = await probe.request('/api/upload', { method: 'POST', body: form });
     expect(allowed.status).toBe(200);
+  });
+});
+
+describe('request body Content-Type bypass', () => {
+  async function oversizedRegister(contentType: Record<string, string>, body: string) {
+    const state = await issueCsrf(app);
+    return app.request('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        ...csrfHeaders(state),
+        ...contentType,
+        'Content-Length': String(new TextEncoder().encode(body).length),
+        ...testIp(),
+      },
+      body,
+    });
+  }
+
+  it('rejects oversized JSON sent as text/plain', async () => {
+    const big = JSON.stringify({ name: 'x'.repeat(env.MAX_JSON_BODY_BYTES), email: uniqueEmail(), password: TEST_PASSWORD });
+    const response = await oversizedRegister({ 'Content-Type': 'text/plain' }, big);
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('rejects oversized JSON with an alternate JSON-like media type', async () => {
+    const big = JSON.stringify({ name: 'x'.repeat(env.MAX_JSON_BODY_BYTES), email: uniqueEmail(), password: TEST_PASSWORD });
+    const response = await oversizedRegister({ 'Content-Type': 'application/problem+json' }, big);
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('rejects oversized streamed JSON without relying on Content-Type', async () => {
+    const state = await issueCsrf(app);
+    const big = JSON.stringify({ name: 'y'.repeat(env.MAX_JSON_BODY_BYTES + 1024), email: uniqueEmail(), password: TEST_PASSWORD });
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(big));
+        controller.close();
+      },
+    });
+    const request = new Request('http://localhost/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+        Cookie: state.cookie,
+        'X-CSRF-Token': state.token,
+        ...testIp(),
+      },
+      body: stream,
+      duplex: 'half',
+    } as RequestInit);
+    const response = await app.request(request);
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('accepts small valid JSON regardless of declared media type', async () => {
+    const email = uniqueEmail();
+    const state = await issueCsrf(app);
+    const response = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: { ...csrfHeaders(state), 'Content-Type': 'text/plain', ...testIp() },
+      body: JSON.stringify({ name: 'Security Probe', email, password: TEST_PASSWORD }),
+    });
+    expect(response.status).toBe(201);
+  });
+
+  it('does not buffer multipart through the JSON limiter', async () => {
+    const probe = new Hono();
+    probe.use('*', jsonBodyLimit({ maxBytes: 8 }));
+    probe.post('/api/upload', (context) => context.json({ ok: true }));
+    const form = new FormData();
+    form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
+    const allowed = await probe.request('/api/upload', { method: 'POST', body: form });
+    expect(allowed.status).toBe(200);
+  });
+});
+
+describe('multipart early bound', () => {
+  it('rejects oversized multipart requests before full parsing', async () => {
+    const email = uniqueEmail();
+    const registered = await registerWithCsrf(email);
+    expect(registered.response.status).toBe(201);
+    const session = await issueCsrf(app, registered.cookie);
+    const requestCap = UPLOAD.MAX_FILE_SIZE + 256 * 1024;
+    // Declared-length fast path: lies about size without allocating it.
+    const declared = await app.request('/api/assets/avatar', {
+      method: 'POST',
+      headers: {
+        Cookie: session.cookie,
+        'X-CSRF-Token': session.token,
+        'Content-Type': 'multipart/form-data; boundary=----adversarial',
+        'Content-Length': String(requestCap + 1024),
+        ...testIp(),
+      },
+      body: '------adversarial--\r\n',
+    });
+    expect(declared.status).toBe(413);
+    await expect(declared.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('enforces the multipart request cap on streamed bodies', async () => {
+    const probe = new Hono();
+    const cap = 1024;
+    probe.use('*', multipartBodyLimit({ maxBytes: cap }));
+    probe.post('/api/assets/avatar', (context) => context.json({ ok: true }));
+    const big = new Uint8Array(cap + 512).fill(0x61);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(big);
+        controller.close();
+      },
+    });
+    const request = new Request('http://localhost/api/assets/avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/form-data; boundary=----probe' },
+      body: stream,
+      duplex: 'half',
+    } as RequestInit);
+    expect((await probe.request(request)).status).toBe(413);
+  });
+});
+
+describe('proxy trust', () => {
+  afterEach(() => {
+    delete process.env.TRUST_PROXY;
+    delete process.env.TRUST_PROXY_HOPS;
+  });
+
+  function trustedProbe() {
+    const limiter = createRateLimiter({ maxRequests: 1, windowMs: 60_000, name: 'proxy-probe' });
+    const probe = new Hono();
+    probe.use('*', limiter.middleware);
+    probe.get('/api/thing', (context) => context.json({ ok: true }));
+    return probe;
+  }
+
+  it('ignores forged X-Forwarded-For when trust is disabled', async () => {
+    delete process.env.TRUST_PROXY;
+    const probe = trustedProbe();
+    expect((await probe.request('/api/thing', { headers: { 'X-Forwarded-For': '1.1.1.1' } })).status).toBe(200);
+    const second = await probe.request('/api/thing', { headers: { 'X-Forwarded-For': '2.2.2.2' } });
+    // Same socket identity shares the bucket despite different forged headers.
+    expect(second.status).toBe(429);
+  });
+
+  it('derives distinct identities from the trusted suffix when enabled', async () => {
+    process.env.TRUST_PROXY = 'true';
+    process.env.TRUST_PROXY_HOPS = '1';
+    const probe = trustedProbe();
+    expect((await probe.request('/api/thing', { headers: { 'X-Forwarded-For': '198.51.100.10' } })).status).toBe(200);
+    // Different client through the same documented single proxy gets its own bucket.
+    expect((await probe.request('/api/thing', { headers: { 'X-Forwarded-For': '198.51.100.11' } })).status).toBe(200);
+  });
+
+  it('does not let an attacker select an arbitrary IP via the leftmost entry', async () => {
+    process.env.TRUST_PROXY = 'true';
+    process.env.TRUST_PROXY_HOPS = '1';
+    const probe = trustedProbe();
+    // Documented chain: proxy appends the real peer, so hops=1 honors the last entry.
+    expect(
+      (await probe.request('/api/thing', { headers: { 'X-Forwarded-For': '9.9.9.9, 198.51.100.77' } })).status,
+    ).toBe(200);
+    const forgedLeftmost = await probe.request('/api/thing', {
+      headers: { 'X-Forwarded-For': '8.8.8.8, 198.51.100.77' },
+    });
+    // Same effective IP (last entry) shares the bucket; forged leftmost is ignored.
+    expect(forgedLeftmost.status).toBe(429);
+  });
+
+  it('falls back to socket identity for malformed forwarded headers', async () => {
+    process.env.TRUST_PROXY = 'true';
+    process.env.TRUST_PROXY_HOPS = '1';
+    const probe = new Hono();
+    probe.get('/ip', (context) => context.json({ ip: clientIp(context) }));
+    const response = await probe.request('/ip', { headers: { 'X-Forwarded-For': 'not-an-ip' } });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { ip: string };
+    expect(payload.ip).not.toBe('not-an-ip');
+  });
+});
+
+describe('auth limiter logout parity', () => {
+  it('applies the tight auth budget to logout', async () => {
+    const ip = testIp();
+    const state = await issueCsrf(app);
+    // Prime the jar once; logout rotates nothing but needs a valid CSRF pair.
+    for (let attempt = 0; attempt < env.AUTH_RATE_LIMIT_MAX; attempt += 1) {
+      const response = await app.request('/api/auth/logout', {
+        method: 'POST',
+        headers: { ...csrfHeaders(state), ...ip },
+      });
+      expect(response.status).toBe(200);
+    }
+    const limited = await app.request('/api/auth/logout', {
+      method: 'POST',
+      headers: { ...csrfHeaders(state), ...ip },
+    });
+    expect(limited.status).toBe(429);
+    await expect(limited.json()).resolves.toMatchObject({ code: 'RATE_LIMITED' });
+  });
+});
+
+describe('limiter store boundedness', () => {
+  it('evicts the oldest bucket when maxKeys is exceeded', async () => {
+    const limiter = createRateLimiter({ maxRequests: 1, windowMs: 60_000, name: 'bounded', maxKeys: 2 });
+    const probe = new Hono();
+    probe.use('*', limiter.middleware);
+    probe.get('/api/thing', (context) => context.json({ ok: true }));
+    const via = (ip: string) => probe.request('/api/thing', { headers: { 'x-test-ip': ip } });
+    expect((await via('10.0.0.1')).status).toBe(200);
+    expect((await via('10.0.0.2')).status).toBe(200);
+    // Admitting a third key evicts the oldest; the evicted identity gets budget again.
+    expect((await via('10.0.0.3')).status).toBe(200);
+    expect((await via('10.0.0.1')).status).toBe(200);
   });
 });

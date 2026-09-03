@@ -20,6 +20,8 @@ const EnvSchema = z.object({
   AUTH_LOCKOUT_ATTEMPTS: z.coerce.number().int().positive().default(RATE_LIMIT.MAX_LOGIN_ATTEMPTS),
   AUTH_LOCKOUT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.LOGIN_LOCKOUT_MS),
   MAX_JSON_BODY_BYTES: z.coerce.number().int().positive().default(SECURITY.MAX_JSON_BODY_BYTES),
+  TRUST_PROXY: z.enum(['true', 'false']).default('false'),
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(1).max(10).default(1),
 });
 
 type ParsedEnv = z.infer<typeof EnvSchema>;

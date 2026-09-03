@@ -33,6 +33,10 @@ export default defineConfig({
     host: '0.0.0.0',
     port: vitePort,
     strictPort: true,
+    // Dev HTML is served by Vite, not Hono: Hono security headers cover only
+    // proxied /api, /health, and /ready responses here. Production
+    // (npm run build && npm start) is authoritative for page headers; adding
+    // Vite CSP here would duplicate policy machinery and risk breaking HMR.
     proxy: {
       '/api': { target: serverOrigin },
       '/health': { target: serverOrigin },

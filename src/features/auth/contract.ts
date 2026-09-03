@@ -1,5 +1,34 @@
 import { z } from 'zod';
-import { emailSchema, personNameSchema, roleDescriptionSchema, roleNameSchema, roleSlugSchema } from '../../shared/security/input';
+import { CONTROL_MESSAGE, emailSchema, hasNoControlChars, personNameSchema } from '../../shared/security/input';
+
+/**
+ * Auth/RBAC domain validation. Role name/slug/description semantics are owned
+ * here, not by feature-neutral security infrastructure: shared code provides
+ * only the generic control-byte primitive composed below.
+ */
+export const roleNameSchema = z
+  .string()
+  .trim()
+  .min(2, 'Role name must be at least 2 characters')
+  .max(100, 'Role name must be at most 100 characters')
+  .refine(hasNoControlChars, { message: `Role name ${CONTROL_MESSAGE}` });
+
+export const roleSlugSchema = z
+  .string()
+  .trim()
+  .min(2, 'Slug must be at least 2 characters')
+  .max(100, 'Slug must be at most 100 characters')
+  .regex(/^[a-z0-9-]+$/, 'Slug may only contain lowercase letters, numbers, and hyphens')
+  .refine(hasNoControlChars, { message: `Slug ${CONTROL_MESSAGE}` })
+  .transform((value) => value.toLowerCase());
+
+export const roleDescriptionSchema = z
+  .string()
+  .trim()
+  .max(500, 'Description must be at most 500 characters')
+  .refine(hasNoControlChars, { message: `Description ${CONTROL_MESSAGE}` })
+  .nullable()
+  .optional();
 
 export const registerInputSchema = z.object({
   name: personNameSchema,

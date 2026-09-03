@@ -194,4 +194,15 @@ describe('production browser and static delivery', () => {
   it('logs the public browser URL at production startup', () => {
     expect(serverOutput).toContain(`Browser/API: ${baseUrl}`);
   });
+
+  it('returns production security headers from the real production process', async () => {
+    for (const pathname of ['/', '/api/auth/me']) {
+      const response = await get(pathname);
+      expect(response.headers.get('Content-Security-Policy'), pathname).toContain(`default-src 'self'`);
+      expect(response.headers.get('X-Content-Type-Options'), pathname).toBe('nosniff');
+      expect(response.headers.get('Strict-Transport-Security'), pathname).toBe(
+        'max-age=31536000; includeSubDomains',
+      );
+    }
+  });
 });
