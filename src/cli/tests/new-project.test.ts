@@ -83,6 +83,7 @@ describe('new project', () => {
       'resources/index.html',
       'src/app/App.vue',
       'src/app/pages/HomePage.vue',
+      'src/app/pages/NotFoundPage.vue',
       'src/app/router.ts',
       'src/app/server.ts',
       'src/features/health/index.ts',
@@ -102,6 +103,7 @@ describe('new project', () => {
     );
     expect(readFileSync(path.join(projectDirectory, 'src/app/App.vue'), 'utf8')).toContain('<RouterView />');
     expect(readFileSync(path.join(projectDirectory, 'src/app/router.ts'), 'utf8')).toContain('createWebHistory');
+    expect(readFileSync(path.join(projectDirectory, 'src/app/router.ts'), 'utf8')).toContain('/:pathMatch(.*)*');
     expect(existsSync(path.join(projectDirectory, 'src/app.ts'))).toBe(false);
 
     const obsoleteStack = /Svelte|@inertiajs\/svelte|Inertia|Bits UI|Ultimate Express|uWebSockets\.js|Nuxt|React/i;

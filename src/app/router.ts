@@ -3,6 +3,7 @@ import { LoginPage, RegisterPage, RolesPage, useAuthSession } from '../features/
 import { ProfilePage, UsersPage } from '../features/users/web';
 import DashboardPage from './pages/DashboardPage.vue';
 import HomePage from './pages/HomePage.vue';
+import NotFoundPage from './pages/NotFoundPage.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -47,6 +48,11 @@ const router = createRouter({
       name: 'roles',
       component: RolesPage,
       meta: { requiresAuth: true, requiresPermission: 'roles.view' },
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundPage,
     },
   ],
 });

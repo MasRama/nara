@@ -2,16 +2,14 @@ import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 const projectRoot = path.resolve(__dirname, '..');
-const buildDirectory = path.join(projectRoot, 'build');
+const buildDirectories = [path.join(projectRoot, 'build'), path.join(projectRoot, 'dist')];
 
-function cleanBuild(): void {
-  if (buildDirectory === projectRoot || buildDirectory === path.parse(buildDirectory).root) {
-    throw new Error(`Refusing to clean unsafe build path: ${buildDirectory}`);
+for (const directory of buildDirectories) {
+  if (directory === projectRoot || directory === path.parse(directory).root) {
+    throw new Error(`Refusing to clean unsafe build path: ${directory}`);
   }
 
-  if (existsSync(buildDirectory)) {
-    rmSync(buildDirectory, { recursive: true, force: true });
+  if (existsSync(directory)) {
+    rmSync(directory, { recursive: true, force: true });
   }
 }
-
-cleanBuild();

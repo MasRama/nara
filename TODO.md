@@ -684,8 +684,8 @@ Restore the v2 users and roles workflows as Vue pages backed by the v3 auth/user
 
 ---
 
-## [ ] V3-039 — Restore production browser and static delivery
-> Release-blocking: the v3 build emits browser assets, but the production Hono server currently returns JSON at `/` and 404s browser pages and public assets.
+## [x] V3-039 — Restore production browser and static delivery
+> Release-blocking: resolved; the production Node entrypoint now serves the built Vue application and safe static assets.
 
 ### Goal
 

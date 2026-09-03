@@ -13,21 +13,21 @@ git clone https://github.com/MasRama/nara.git
 cd nara
 npm install
 cp .env.example .env
-npm run build
-npm start
+npm run dev
 ```
 
-The server listens on `http://localhost:5555` by default. Verify it with:
+The development topology uses two local ports:
+
+```text
+Browser:                 http://localhost:5173 (Vite)
+Backend implementation:  http://localhost:5555 (Hono)
+```
+
+Vite serves the Vue application and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono. Verify the backend with:
 
 ```bash
 curl http://localhost:5555/health
 # {"status":"ok"}
-```
-
-For development with the Vite frontend shell and the Hono server:
-
-```bash
-npm run dev
 ```
 
 Node.js 22 or newer and npm are required. SQLite is embedded; no database service is required.
@@ -184,9 +184,12 @@ Development configuration starts from `.env.example`:
 ```text
 NODE_ENV=development
 PORT=5555
-APP_URL=http://localhost:5555
+VITE_PORT=5173
+APP_URL=http://localhost:5173
 DB_FILE=database/dev.sqlite3
 ```
+
+`APP_URL` is the public browser-facing application origin. In development it is the Vite URL; `PORT` is the Hono listener and `VITE_PORT` is the Vite browser port.
 
 Nara's database is a local SQLite file managed by `better-sqlite3`. Apply its Feature-owned migrations before using database-backed routes:
 
@@ -196,13 +199,15 @@ npm run seed
 npm run db:check
 ```
 
-For production, copy `.env.production.example` to `.env.production`, set a real `APP_URL`, choose a production database path, and build:
+For the production Node process, copy `.env.production.example` to `.env.production`, set `APP_URL` to the public application origin, choose a production database path, and build:
 
 ```bash
 cp .env.production.example .env.production
 npm run build
 npm start
 ```
+
+Production serves the built Vue SPA, public files, and backend APIs from the same Node/Hono origin. `npm start` requires `build/client/index.html`; run `npm run build` first. The startup log identifies the browser/API URL from `APP_URL`.
 
 Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 

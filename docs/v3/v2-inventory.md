@@ -74,7 +74,7 @@ The current configuration reads or uses:
 - `NODE_ENV`: `development`, `production`, or `test`.
 - `PORT`: HTTP server port; defaults to `5555`.
 - `VITE_PORT`: Vite development port; defaults to `5173`.
-- `APP_URL`: application URL; defaults from `PORT`.
+- `APP_URL`: public browser-facing application origin; defaults to the Vite URL in development and is required in production.
 - `DB_FILE`: optional SQLite path; defaults by environment.
 - `LOG_LEVEL`: Pino level; defaults by environment.
 - `LOG_PRETTY`: optional pretty-console toggle.

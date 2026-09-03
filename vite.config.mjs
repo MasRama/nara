@@ -40,7 +40,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../dist',
+    outDir: '../build/client',
     emptyOutDir: true,
     minify: 'oxc',
     cssCodeSplit: true,

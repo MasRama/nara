@@ -20,7 +20,7 @@ cd ledger
 npm install
 npm run check
 npm run build
-npm start
+NODE_ENV=production APP_URL=http://localhost:5555 npm start
 ```
 
 For the canonical full-stack development session:
@@ -33,6 +33,8 @@ This starts Vue + Vite and Hono together. Vite serves the browser on `VITE_PORT`
 
 
 `npm run check` runs the server typecheck, Vue typecheck, and Vitest tests. `npm start` runs the generated Node server on port `5555` by default; `GET /health` returns `{"status":"ok"}`.
+
+The production build writes the browser artifact to `build/client`. The generated Node server serves that artifact, including history-mode SPA routes and hashed assets, from the same origin as Hono. Missing asset paths and reserved API/health paths stay 404s instead of receiving the SPA shell. Set `APP_URL` to the public browser origin when deploying behind a public hostname; production startup fails clearly if the client artifact or `APP_URL` is missing.
 
 The generated project is intentionally small:
 
@@ -51,7 +53,8 @@ ledger/
 │   ├── app/
 │   │   ├── App.vue
 │   │   ├── pages/
-│   │   │   └── HomePage.vue
+│   │   │   ├── HomePage.vue
+│   │   │   └── NotFoundPage.vue
 │   │   ├── router.ts
 │   │   └── server.ts
 │   ├── features/
@@ -67,7 +70,7 @@ ledger/
 └── vitest.config.mjs
 ```
 
-`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home page and future Feature-owned browser pages; `src/app/server.ts` composes the health Feature's Hono route, and `src/server.ts` serves it through `@hono/node-server`. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home and browser not-found pages; `src/app/server.ts` composes the health Feature's Hono route and production static/SPA delivery, and `src/server.ts` serves it through `@hono/node-server`. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
 
 ## Database lifecycle
 

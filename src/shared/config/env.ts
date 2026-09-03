@@ -8,13 +8,14 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_PORT),
   VITE_PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_VITE_PORT),
-  APP_URL: z.string().min(1).default(`http://localhost:${process.env.PORT || SERVER.DEFAULT_PORT}`),
+  APP_URL: z.string().optional(),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('debug'),
   DB_FILE: z.string().min(1).optional(),
   LOG_PRETTY: z.enum(['true', 'false']).optional(),
 });
 
-export type Env = z.infer<typeof EnvSchema>;
+type ParsedEnv = z.infer<typeof EnvSchema>;
+export type Env = Omit<ParsedEnv, 'APP_URL'> & { APP_URL: string };
 
 function formatIssues(error: z.ZodError): string {
   return error.issues
@@ -32,7 +33,10 @@ export function parseEnv(input: NodeJS.ProcessEnv): Env {
     throw new Error('Environment validation failed:\n  - APP_URL: required in production');
   }
 
-  return parsed.data;
+  return {
+    ...parsed.data,
+    APP_URL: parsed.data.APP_URL?.trim() || `http://localhost:${parsed.data.VITE_PORT}`,
+  };
 }
 
 export function loadEnvFile(): void {

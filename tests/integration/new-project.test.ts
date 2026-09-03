@@ -1,7 +1,7 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -142,9 +142,10 @@ async function expectUnavailable(url: string): Promise<void> {
 
 
 function startGeneratedServer(projectDirectory: string, port: number): { child: ChildProcess; output: () => string } {
+  const browserUrl = `http://127.0.0.1:${port}`;
   const child = spawn(process.execPath, ['build/server.js'], {
     cwd: projectDirectory,
-    env: { ...process.env, PORT: String(port) },
+    env: { ...process.env, NODE_ENV: 'production', PORT: String(port), APP_URL: browserUrl },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '';
@@ -216,7 +217,7 @@ async function waitForHealth(child: ChildProcess, port: number, output: () => st
 }
 
 describe('nara new fresh project', () => {
-  it('installs, runs full-stack dev, checks, validates, builds, starts, and serves health', { timeout: 300_000 }, async () => {
+  it('installs, runs full-stack dev, checks, validates, builds, starts, and serves health and browser assets', { timeout: 300_000 }, async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'nara-new-integration-'));
     try {
       const result = runCli(['new', 'fresh-app'], createIO(), { cwd: root });
@@ -256,6 +257,33 @@ describe('nara new fresh project', () => {
         const response = await fetch(`http://127.0.0.1:${port}/health`);
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toEqual({ status: 'ok' });
+
+        const shellResponse = await fetch(`http://127.0.0.1:${port}/`);
+        expect(shellResponse.status).toBe(200);
+        expect(shellResponse.headers.get('content-type')).toContain('text/html');
+        expect(shellResponse.headers.get('cache-control')).toBe('no-cache');
+        expect(await shellResponse.text()).toContain('<div id="app"></div>');
+
+        const unknownRouteResponse = await fetch(`http://127.0.0.1:${port}/unknown-browser-route`);
+        expect(unknownRouteResponse.status).toBe(200);
+        expect(unknownRouteResponse.headers.get('content-type')).toContain('text/html');
+        expect(unknownRouteResponse.headers.get('cache-control')).toBe('no-cache');
+
+        const assetFiles = readdirSync(path.join(projectDirectory, 'build', 'client', 'assets'));
+        const javascript = assetFiles.find((file) => file.endsWith('.js'));
+        if (!javascript) throw new Error('Generated production build did not emit a JavaScript asset');
+        const assetResponse = await fetch(`http://127.0.0.1:${port}/assets/${javascript}`);
+        expect(assetResponse.status).toBe(200);
+        expect(assetResponse.headers.get('content-type')).toContain('javascript');
+        expect(assetResponse.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
+
+        const missingAssetResponse = await fetch(`http://127.0.0.1:${port}/assets/missing.js`);
+        expect(missingAssetResponse.status).toBe(404);
+        expect(missingAssetResponse.headers.get('content-type')).not.toContain('text/html');
+        expect(missingAssetResponse.headers.get('cache-control')).toBe('no-store');
+        expect(await missingAssetResponse.text()).not.toContain('<div id="app"></div>');
+
+        expect(generatedServer.output()).toContain(`Browser/API: http://127.0.0.1:${port}`);
       } finally {
         await stopGeneratedServer(generatedServer.child);
       }

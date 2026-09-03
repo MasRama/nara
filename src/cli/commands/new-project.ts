@@ -48,9 +48,12 @@ function projectFiles(name: string): Record<string, string> {
           jsdom: '^30.0.1',
           tsx: '^4.19.2',
           typescript: '^5.6.3',
-          vite: '^8.2.1',
-          vitest: '^4.1.10',
+          vite: '8.2.1',
+          vitest: '4.1.10',
           'vue-tsc': '^3.3.11',
+        },
+        overrides: {
+          '@vitejs/devtools': '0.4.0',
         },
       },
       null,
@@ -129,7 +132,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     build: {
-      outDir: '../dist',
+      outDir: '../build/client',
       emptyOutDir: true,
       target: 'es2022',
     },
@@ -277,8 +280,22 @@ import { RouterView } from 'vue-router';
   </main>
 </template>
 `,
+    'src/app/pages/NotFoundPage.vue': `<template>
+  <main>
+    <p>404</p>
+    <h1>Page not found</h1>
+    <p>The browser route you requested does not exist.</p>
+    <RouterLink to="/">Return home</RouterLink>
+  </main>
+</template>
+
+<script setup lang="ts">
+import { RouterLink } from 'vue-router';
+</script>
+`,
     'src/app/router.ts': `import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from './pages/HomePage.vue';
+import NotFoundPage from './pages/NotFoundPage.vue';
 
 export default createRouter({
   history: createWebHistory(),
@@ -287,6 +304,11 @@ export default createRouter({
       path: '/',
       name: 'home',
       component: HomePage,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: NotFoundPage,
     },
   ],
 });
@@ -298,19 +320,107 @@ export default createRouter({
   export default component;
 }
 `,
-    'src/app/server.ts': `import { Hono } from 'hono';
+    'src/app/server.ts': `import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { serveStatic } from '@hono/node-server/serve-static';
+import { Hono } from 'hono';
 import { healthRoutes } from '../features/health';
+
+const frontendRoot = resolve(process.cwd(), 'build', 'client');
+const frontendIndex = join(frontendRoot, 'index.html');
+const frontendAvailable = existsSync(frontendIndex);
+
+function requestPath(context: { req: { url: string } }): { pathname: string; unsafe: boolean } {
+  const rawPathname = new URL(context.req.url).pathname;
+  try {
+    const pathname = decodeURIComponent(rawPathname);
+    const segments = pathname.split('/');
+    return {
+      pathname,
+      unsafe:
+        pathname.includes(String.fromCharCode(0)) ||
+        pathname.includes(String.fromCharCode(92)) ||
+        pathname.includes('//') ||
+        segments.includes('.') ||
+        segments.includes('..'),
+    };
+  } catch {
+    return { pathname: rawPathname, unsafe: true };
+  }
+}
+
+function isReservedPath(pathname: string): boolean {
+  return ['/api', '/health', '/ready'].some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+}
+
+function isStaticRequest(pathname: string): boolean {
+  if (pathname === '/assets' || pathname.startsWith('/assets/')) return true;
+  const filename = pathname.slice(pathname.lastIndexOf('/') + 1);
+  return filename.includes('.');
+}
+
+function cacheControl(pathname: string): string {
+  if (pathname === '/' || pathname === '/index.html') return 'no-cache';
+  if (pathname === '/assets' || pathname.startsWith('/assets/')) {
+    return 'public, max-age=31536000, immutable';
+  }
+  return 'public, max-age=3600';
+}
+
+const staticHandler = frontendAvailable ? serveStatic({ root: frontendRoot }) : undefined;
+const spaHandler = frontendAvailable ? serveStatic({ root: frontendRoot, path: 'index.html' }) : undefined;
 
 export const app = new Hono();
 app.route('/health', healthRoutes);
+
+if (staticHandler) {
+  app.use('*', async (context, next) => {
+    const requested = requestPath(context);
+    if (requested.unsafe) {
+      context.header('Cache-Control', 'no-store');
+      return context.notFound();
+    }
+    if (isReservedPath(requested.pathname)) return next();
+    context.header('Cache-Control', cacheControl(requested.pathname));
+    return staticHandler(context, next);
+  });
+}
+
+app.get('*', async (context, next) => {
+  const requested = requestPath(context);
+  if (requested.unsafe || isReservedPath(requested.pathname) || isStaticRequest(requested.pathname)) {
+    context.header('Cache-Control', 'no-store');
+    return context.notFound();
+  }
+  if (!spaHandler) {
+    return context.text('Production frontend build is unavailable. Run npm run build before npm start.', 503);
+  }
+  context.header('Cache-Control', 'no-cache');
+  return spaHandler(context, next);
+});
 `,
-    'src/server.ts': `import { serve } from '@hono/node-server';
+    'src/server.ts': `import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { serve } from '@hono/node-server';
 import { app } from './app/server';
 
 const port = Number(process.env.PORT ?? 5555);
+const vitePort = Number(process.env.VITE_PORT ?? 5173);
+const isProduction = process.env.NODE_ENV === 'production';
+const appUrl = process.env.APP_URL?.trim() || 'http://localhost:' + (isProduction ? String(port) : String(vitePort));
+
+if (isProduction && !process.env.APP_URL?.trim()) {
+  throw new Error('APP_URL is required in production');
+}
+if (isProduction && !existsSync(join(process.cwd(), 'build', 'client', 'index.html'))) {
+  throw new Error('Production frontend build is missing. Run npm run build before npm start.');
+}
 
 serve({ fetch: app.fetch, port }, (info) => {
-  process.stdout.write(\`Nara server listening on http://localhost:\${info.port}\\n\`);
+  const startupMessage = isProduction
+    ? 'Browser/API: ' + appUrl
+    : 'Browser: ' + appUrl + ' (Vite); Backend implementation: http://localhost:' + info.port;
+  process.stdout.write(startupMessage + '\\n');
 });
 `,
     'src/features/health/index.ts': `import { Hono } from 'hono';
