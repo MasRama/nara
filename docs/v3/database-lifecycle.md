@@ -97,5 +97,6 @@ No administrator account or known password is seeded. `npm run bootstrap:admin` 
 `npm run db:backup` uses the `better-sqlite3` online backup API, which snapshots a live WAL database safely into a timestamped, non-overwriting file under `database/backups/`. It does not copy only the main `.sqlite3` file.
 
 `npm run db:check` reports failure and exits non-zero if `PRAGMA quick_check` returns anything other than `ok` or `PRAGMA foreign_key_check` returns rows. A healthy database reports both checks passed.
+Both operational commands require an existing persistent database file and fail before opening SQLite when it is absent. They never initialize an empty database; run `npm run migrate` for intentional database creation.
 
 SQLite is the default local-disk architecture, not a multi-host shared database. Applications requiring high write concurrency or a database shared across hosts should use a client/server database architecture instead of stretching SQLite beyond its intended deployment boundary.

@@ -1,5 +1,5 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -96,6 +96,91 @@ function startApplication(databaseFile: string, port: number): ChildProcess & { 
     output += chunk.toString();
   });
   return Object.assign(child, { output: () => output });
+}
+
+interface MigrationProcessResult {
+  code: number | null;
+  output: string;
+}
+
+interface MigrationProcess {
+  child: ChildProcess;
+  ready: Promise<void>;
+  result: Promise<MigrationProcessResult>;
+}
+
+function startMigrationProcess(databaseFile: string, holdLock: boolean): MigrationProcess {
+  const script = holdLock
+    ? `
+const { getDatabase, migrate } = require('./src/shared/database');
+const database = getDatabase();
+database.exec('BEGIN IMMEDIATE');
+process.stdout.write('LOCK_ACQUIRED\\n');
+setTimeout(() => {
+  database.exec('COMMIT');
+  const startedAt = Date.now();
+  const result = migrate();
+  process.stdout.write('MIGRATION_RESULT:' + JSON.stringify(result) + '\\n');
+  process.stdout.write('MIGRATION_DURATION_MS:' + (Date.now() - startedAt) + '\\n');
+}, 4000);
+`
+    : `
+const { migrate } = require('./src/shared/database');
+process.stdout.write('MIGRATION_ATTEMPTING\\n');
+const startedAt = Date.now();
+const result = migrate();
+process.stdout.write('MIGRATION_RESULT:' + JSON.stringify(result) + '\\n');
+process.stdout.write('MIGRATION_DURATION_MS:' + (Date.now() - startedAt) + '\\n');
+`;
+  const child = spawn(
+    process.execPath,
+    [
+      '-r',
+      path.resolve('node_modules/ts-node/register'),
+      '-r',
+      path.resolve('node_modules/tsconfig-paths/register'),
+      '-e',
+      script,
+    ],
+    {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+        APP_URL: 'http://127.0.0.1:5555',
+        DB_FILE: databaseFile,
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  );
+
+  let output = '';
+  const readyResolvers = Promise.withResolvers<void>();
+  let readySignaled = !holdLock;
+  if (!holdLock) readyResolvers.resolve();
+
+  child.stdout?.on('data', (chunk: Buffer) => {
+    output += chunk.toString();
+    if (holdLock && !readySignaled && output.includes('LOCK_ACQUIRED')) {
+      readySignaled = true;
+      readyResolvers.resolve();
+    }
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    output += chunk.toString();
+  });
+
+  const result = new Promise<MigrationProcessResult>((resolve) => {
+    child.once('close', (code) => {
+      if (holdLock && !readySignaled) {
+        readySignaled = true;
+        readyResolvers.reject(new Error(`Migration process exited before acquiring its lock:\\n${output}`));
+      }
+      resolve({ code, output });
+    });
+  });
+
+  return { child, ready: readyResolvers.promise, result };
 }
 
 async function waitForReady(child: ChildProcess & { output: () => string }, port: number): Promise<void> {
@@ -322,6 +407,61 @@ describe('canonical SQLite migration lifecycle', () => {
     expect((failingChild as ChildProcess & { output?: () => string }).output?.()).toMatch(/not equivalent|failed/);
   });
 
+  it('serializes two migration processes against one persistent database', { timeout: 30_000 }, async () => {
+    const root = temporaryRoot();
+    const databaseFile = path.join(root, 'concurrent.sqlite3');
+    const first = startMigrationProcess(databaseFile, true);
+    let second: MigrationProcess | undefined;
+
+    try {
+      await first.ready;
+      second = startMigrationProcess(databaseFile, false);
+      const [firstResult, secondResult] = await Promise.all([first.result, second.result]);
+
+      expect(firstResult.code).toBe(0);
+      expect(secondResult.code).toBe(0);
+      expect(secondResult.output).toContain('MIGRATION_ATTEMPTING');
+      const waitedMilliseconds = Number(secondResult.output.match(/MIGRATION_DURATION_MS:(\d+)/)?.[1]);
+      expect(waitedMilliseconds).toBeGreaterThanOrEqual(1_000);
+
+      const migrationResults = [firstResult, secondResult].map(({ output }) => {
+        const payload = output.match(/MIGRATION_RESULT:(\{.*\})/);
+        expect(payload).not.toBeNull();
+        return JSON.parse(payload![1]) as { applied: string[]; skipped: string[] };
+      });
+      expect(migrationResults.some((result) => result.applied.length === 7)).toBe(true);
+      expect(migrationResults.some((result) => result.skipped.length === 7)).toBe(true);
+
+      const database = new Database(databaseFile);
+      try {
+        expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 7 });
+        expect(
+          database
+            .prepare(
+              'SELECT id FROM _nara_migrations GROUP BY id HAVING COUNT(*) > 1',
+            )
+            .all(),
+        ).toEqual([]);
+        expect(tableNames(database)).toEqual([
+          '_nara_migrations',
+          'assets',
+          'permissions',
+          'role_permissions',
+          'roles',
+          'sessions',
+          'user_roles',
+          'users',
+        ]);
+      } finally {
+        database.close();
+      }
+    } finally {
+      for (const process of [first, second]) {
+        if (process && process.child.exitCode === null) process.child.kill('SIGKILL');
+      }
+    }
+  });
+
   it('creates an openable online backup with expected data', async () => {
     const root = temporaryRoot();
     const databaseFile = path.join(root, 'source.sqlite3');
@@ -378,6 +518,46 @@ describe('canonical SQLite migration lifecycle', () => {
       },
     );
     expect(stdout).toContain('quick_check, foreign_key_check');
+  });
+
+  it('refuses backup and integrity checks when the persistent database is missing', async () => {
+    const root = temporaryRoot();
+    const missingDatabase = path.join(root, 'missing.sqlite3');
+    const command = path.resolve('scripts/database.ts');
+    const environment = {
+      ...process.env,
+      NODE_ENV: 'development',
+      APP_URL: 'http://127.0.0.1:5555',
+      DB_FILE: missingDatabase,
+      TS_NODE_PROJECT: path.resolve('tsconfig.json'),
+    };
+
+    for (const operation of ['db:backup', 'db:check']) {
+      let failure: { code?: number; stderr?: string } | undefined;
+      try {
+        await execFileAsync(
+          process.execPath,
+          [
+            '-r',
+            path.resolve('node_modules/ts-node/register'),
+            '-r',
+            path.resolve('node_modules/tsconfig-paths/register'),
+            command,
+            operation,
+          ],
+          { cwd: root, env: environment },
+        );
+      } catch (error) {
+        failure = error as { code?: number; stderr?: string };
+      }
+
+      expect(failure).toBeDefined();
+      expect(failure?.code).not.toBe(0);
+      expect(failure?.stderr).toMatch(/does not exist/);
+    }
+
+    expect(existsSync(missingDatabase)).toBe(false);
+    expect(existsSync(path.join(root, 'database'))).toBe(false);
   });
 
   it('bootstraps the previous v3 schema only when its full shape matches', () => {

@@ -583,7 +583,7 @@ Establish Vue Router as the canonical SPA composition layer.
 * architecture doctor passes
 
 ## [x] V3-035 — Establish canonical SQLite migration and data lifecycle
-> Verified 2026-09-03: Feature-owned forward SQL migrations, checksummed `_nara_migrations` ledger, atomic concurrent-safe application, startup gating, lifecycle commands, idempotent RBAC seeds, explicit secure admin bootstrap, online backup, integrity checks, and safe previous-v3 schema compatibility are implemented; `npm run check`, `npm run build`, `npm run lint`, lifecycle tests (12/12), temp-database command smokes, built startup smoke, and architecture doctor passed.
+> Verified 2026-09-03: Feature-owned forward SQL migrations, checksummed `_nara_migrations` ledger, atomic concurrent-safe application, startup gating, lifecycle commands, idempotent RBAC seeds, explicit secure admin bootstrap, online backup, integrity checks, and safe previous-v3 schema compatibility are implemented. Deterministic build cleaning removes stale migration/seed artifacts; `db:backup` and `db:check` refuse missing persistent files without creating databases; a real two-process race against one SQLite file completes successfully with one applied and one ledger-skipping result. Relevant lifecycle tests (14/14), `npm run lint`, `npm run check` (33 files, 92 tests), `npm run build`, and `npm run architecture:doctor` passed.
 
 ### Goal
 

@@ -42,6 +42,13 @@ function nextBackupPath(directory: string): string {
   return candidate;
 }
 
+function requireExistingDatabase(file: string, operation: string): void {
+  if (file === ':memory:' || existsSync(file)) return;
+  throw new Error(
+    `${operation} refused: SQLite database file does not exist at "${file}". Run npm run migrate first.`,
+  );
+}
+
 async function run(command: string | undefined): Promise<void> {
   if (!command) {
     process.stderr.write(USAGE);
@@ -83,6 +90,7 @@ async function run(command: string | undefined): Promise<void> {
       if (sourcePath === ':memory:') {
         throw new Error('Cannot create a persistent backup from an in-memory database. Set DB_FILE first.');
       }
+      requireExistingDatabase(sourcePath, 'Database backup');
       const backupDirectory = path.resolve(process.cwd(), 'database', 'backups');
       mkdirSync(backupDirectory, { recursive: true });
       const destination = nextBackupPath(backupDirectory);
@@ -91,6 +99,8 @@ async function run(command: string | undefined): Promise<void> {
       return;
     }
     case 'db:check': {
+      const sourcePath = database.getDatabasePath();
+      requireExistingDatabase(sourcePath, 'Database integrity check');
       const connection = database.getDatabase();
       const quickCheck = connection.pragma('quick_check') as Array<{ quick_check: string }>;
       const foreignKeyCheck = connection.pragma('foreign_key_check') as Array<Record<string, unknown>>;
