@@ -29,6 +29,9 @@ jobs:
       - name: Full check (lint + frontend typecheck + tests + architecture doctor)
         run: npm run check
 
+      - name: Production browser and static serving smoke test
+        run: npm run test:production-serving
+
   build:
     name: Build
     runs-on: ubuntu-latest
