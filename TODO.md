@@ -660,7 +660,7 @@ Restore the authenticated application shell and personal account workflows under
 
 ---
 
-## [ ] V3-038 — Restore users and RBAC browser surfaces
+## [x] V3-038 — Restore users and RBAC browser surfaces
 > Release-blocking: v3 exposes user and role APIs but no browser workflow for administration.
 
 ### Goal
@@ -680,6 +680,7 @@ Restore the v2 users and roles workflows as Vue pages backed by the v3 auth/user
 * a restricted user sees only permitted data/actions and receives clear forbidden diagnostics
 * self-demotion, self-delete, protected-admin, and last-admin invariants remain enforced
 * role, permission, and user-management integration tests cover the browser/API contract, including the `userCount` response shape
+> Verified 2026-09-03: Auth `/me` exposes browser-safe roles/permissions; permission-aware shell, `/users`, and `/roles` flows use Feature clients and real Hono APIs. Browser coverage proves server pagination/search, user and role CRUD, role/permission assignment, forbidden access, and deletion/protection invariants.
 
 ---
 

@@ -9,7 +9,11 @@ export type {
   AvatarUploadSuccess,
   CreateUserInput,
   DeleteUsersInput,
+  DeleteUsersResponse,
+  DeleteUsersResponseSuccess,
   ManagedUser,
+  ManagedUserResponse,
+  ManagedUserResponseSuccess,
   ProfileInput,
   UpdateUserInput,
   UserAsset,
@@ -17,6 +21,8 @@ export type {
   UserProfileError,
   UserProfileResponse,
   UserProfileSuccess,
+  UsersResponse,
+  UsersResponseSuccess,
 } from './contract';
 export { assetRoutes } from './server/assets-routes';
 export { userRoutes } from './server/routes';

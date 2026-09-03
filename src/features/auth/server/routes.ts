@@ -7,10 +7,12 @@ import {
   changePasswordInputSchema,
   loginInputSchema,
   registerInputSchema,
+  type CurrentUser,
 } from '../contract';
+import { getUserPermissions, getUserRoles } from './access';
 import { AUTH, env } from '../../../shared/config';
 import { Logger } from '../../../shared/logging';
-import { createUser, findUserByEmail, findUserById, updatePassword } from './repository';
+import { createUser, findUserByEmail, findUserById, updatePassword, type SessionUser } from './repository';
 import {
   checkPassword,
   currentUser,
@@ -165,12 +167,20 @@ const changePasswordHandler = async (context: Context) => {
   return context.json({ success: true as const, message: 'Password updated' });
 };
 
+function currentUserPayload(user: SessionUser): CurrentUser {
+  return {
+    ...user,
+    roles: getUserRoles(user.id).map((role) => role.slug),
+    permissions: getUserPermissions(user.id).map((permission) => permission.slug),
+  };
+}
+
 const currentUserHandler = (context: Context) => {
   const user = currentUser(getCookie(context, SESSION_COOKIE_NAME));
   if (!user) {
     return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
   }
-  return context.json({ success: true as const, message: 'OK', data: { user } });
+  return context.json({ success: true as const, message: 'OK', data: { user: currentUserPayload(user) } });
 };
 
 const logoutHandler = (context: Context) => {

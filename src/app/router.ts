@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import { LoginPage, RegisterPage, useAuthSession } from '../features/auth/web';
-import { ProfilePage } from '../features/users/web';
+import { LoginPage, RegisterPage, RolesPage, useAuthSession } from '../features/auth/web';
+import { ProfilePage, UsersPage } from '../features/users/web';
 import DashboardPage from './pages/DashboardPage.vue';
 import HomePage from './pages/HomePage.vue';
 
@@ -36,6 +36,18 @@ const router = createRouter({
       component: ProfilePage,
       meta: { requiresAuth: true },
     },
+    {
+      path: '/users',
+      name: 'users',
+      component: UsersPage,
+      meta: { requiresAuth: true, requiresPermission: 'users.view' },
+    },
+    {
+      path: '/roles',
+      name: 'roles',
+      component: RolesPage,
+      meta: { requiresAuth: true, requiresPermission: 'roles.view' },
+    },
   ],
 });
 
@@ -49,6 +61,10 @@ router.beforeEach(async (to) => {
       name: 'login',
       query: { redirect: to.fullPath },
     };
+  }
+  const requiredPermission = to.meta.requiresPermission;
+  if (typeof requiredPermission === 'string' && !authSession.can(requiredPermission)) {
+    return { name: 'dashboard' };
   }
 
   if (to.meta.guestOnly && authSession.isAuthenticated.value) {

@@ -54,7 +54,28 @@ export interface UserProfileSuccess {
   data: { user: UserProfile };
 }
 
+export interface ManagedUserResponseSuccess {
+  success: true;
+  message: string;
+  data: { user: ManagedUser };
+}
 
+export interface UsersResponseSuccess {
+  success: true;
+  message: string;
+  data: {
+    users: ManagedUser[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
+
+export interface DeleteUsersResponseSuccess {
+  success: true;
+  message: string;
+  data: { deleted: number };
+}
 
 export interface UserAsset {
   id: string;
@@ -68,6 +89,7 @@ export interface UserAsset {
   created_at: number;
   updated_at: number;
 }
+
 export interface UserProfileError {
   success: false;
   message: string;
@@ -76,6 +98,9 @@ export interface UserProfileError {
 }
 
 export type UserProfileResponse = UserProfileSuccess | UserProfileError;
+export type ManagedUserResponse = ManagedUserResponseSuccess | UserProfileError;
+export type UsersResponse = UsersResponseSuccess | UserProfileError;
+export type DeleteUsersResponse = DeleteUsersResponseSuccess | UserProfileError;
 export interface AvatarUploadSuccess {
   success: true;
   message: string;

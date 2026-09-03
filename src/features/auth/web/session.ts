@@ -1,23 +1,25 @@
 import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue';
-import type { AuthError, AuthSuccess, PublicUser } from '../contract';
+import type { AuthError, AuthSuccess, CurrentUser, PublicUser } from '../contract';
 import { createAuthClient, type AuthClient } from './client';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
 export interface AuthSession {
   readonly status: Readonly<Ref<AuthStatus>>;
-  readonly user: Readonly<Ref<PublicUser | null>>;
+  readonly user: Readonly<Ref<CurrentUser | null>>;
   readonly isLoading: ComputedRef<boolean>;
   readonly isAuthenticated: ComputedRef<boolean>;
   load(): Promise<void>;
   refresh(): Promise<boolean>;
-  setAuthenticated(user: PublicUser): void;
+  setAuthenticated(user: PublicUser | CurrentUser): void;
+  can(permission: string): boolean;
+  hasRole(role: string): boolean;
   logout(): Promise<AuthSuccess | AuthError>;
 }
 
 export function createAuthSession(client: AuthClient = createAuthClient()): AuthSession {
   const status = ref<AuthStatus>('loading');
-  const user = ref<PublicUser | null>(null);
+  const user = ref<CurrentUser | null>(null);
   let loaded = false;
   let currentUserRequest: Promise<boolean> | undefined;
 
@@ -69,10 +71,24 @@ export function createAuthSession(client: AuthClient = createAuthClient()): Auth
     return requestCurrentUser();
   }
 
-  function setAuthenticated(nextUser: PublicUser): void {
-    user.value = nextUser;
+  function setAuthenticated(nextUser: PublicUser | CurrentUser): void {
+    const previousUser = user.value;
+    user.value = {
+      ...nextUser,
+      roles: 'roles' in nextUser ? nextUser.roles : previousUser?.roles ?? [],
+      permissions: 'permissions' in nextUser ? nextUser.permissions : previousUser?.permissions ?? [],
+    };
     status.value = 'authenticated';
     loaded = true;
+  }
+
+  function can(permission: string): boolean {
+    const currentUser = user.value;
+    return currentUser?.roles.includes('admin') === true || currentUser?.permissions.includes(permission) === true;
+  }
+
+  function hasRole(role: string): boolean {
+    return user.value?.roles.includes(role) === true;
   }
 
   async function logout(): Promise<AuthSuccess | AuthError> {
@@ -89,6 +105,8 @@ export function createAuthSession(client: AuthClient = createAuthClient()): Auth
     load,
     refresh,
     setAuthenticated,
+    can,
+    hasRole,
     logout,
   };
 }

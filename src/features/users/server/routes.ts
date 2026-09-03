@@ -146,6 +146,7 @@ const createUserHandler = async (context: Context) => {
       422,
     );
   }
+  if (parsed.data.roles !== undefined && !isAdmin(sessionUser.id)) return forbidden(context);
 
   try {
     const user = createManagedUser({
@@ -191,6 +192,7 @@ const updateUserHandler = async (context: Context) => {
       422,
     );
   }
+  if (parsed.data.roles !== undefined && !isAdmin(sessionUser.id)) return forbidden(context);
 
   const { roles, password, ...profile } = parsed.data;
   try {

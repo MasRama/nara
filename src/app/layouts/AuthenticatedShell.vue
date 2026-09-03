@@ -9,6 +9,8 @@ const isLoggingOut = ref(false);
 const logoutError = ref('');
 
 const user = computed(() => authSession.user.value);
+const canViewUsers = computed(() => authSession.can('users.view'));
+const canViewRoles = computed(() => authSession.can('roles.view'));
 const initials = computed(() => {
   const name = user.value?.name.trim() ?? '';
   return name
@@ -56,6 +58,22 @@ async function logout(): Promise<void> {
               active-class="bg-muted text-foreground"
             >
               Dashboard
+            </RouterLink>
+            <RouterLink
+              v-if="canViewUsers"
+              to="/users"
+              class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              active-class="bg-muted text-foreground"
+            >
+              Users
+            </RouterLink>
+            <RouterLink
+              v-if="canViewRoles"
+              to="/roles"
+              class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              active-class="bg-muted text-foreground"
+            >
+              Roles
             </RouterLink>
             <RouterLink
               to="/profile"

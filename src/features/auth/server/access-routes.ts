@@ -65,6 +65,7 @@ function roleResponse(roleId: string) {
   return {
     ...role,
     permissions: getRolePermissions(role.id).map((permission) => permission.slug),
+    userCount: getUserCountsForRoles([role.id]).get(role.id) ?? 0,
   };
 }
 
@@ -82,7 +83,7 @@ const listRolesHandler = (context: Context) => {
       roles: roles.map((role) => ({
         ...role,
         permissions: getRolePermissions(role.id).map((permission) => permission.slug),
-        user_count: counts.get(role.id) ?? 0,
+        userCount: counts.get(role.id) ?? 0,
       })),
     },
   });

@@ -27,6 +27,11 @@ export interface PublicUser {
   avatar: string | null;
 }
 
+export interface CurrentUser extends PublicUser {
+  roles: readonly string[];
+  permissions: readonly string[];
+}
+
 export interface AuthSuccess<T = undefined> {
   success: true;
   message: string;
@@ -83,7 +88,7 @@ export const updateRoleInputSchema = z
   );
 
 export const deleteRolesInputSchema = z.object({
-  ids: z.array(z.string().uuid('Invalid ID format')).min(1, 'At least one ID must be selected'),
+  ids: z.array(z.string().min(1, 'Role ID is required')).min(1, 'At least one ID must be selected'),
 });
 
 export type CreateRoleInput = z.infer<typeof createRoleInputSchema>;
@@ -108,5 +113,12 @@ export interface PermissionData {
   description: string | null;
 }
 
-export interface RolesResponse extends AuthSuccess<{ roles: RoleData[] }> {}
-export type CurrentUserResponse = AuthSuccess<{ user: PublicUser }> | AuthError;
+export interface RolesResponseSuccess extends AuthSuccess<{ roles: RoleData[] }> {}
+export interface RoleResponseSuccess extends AuthSuccess<{ role: RoleData }> {}
+export interface DeleteRolesResponseSuccess extends AuthSuccess<{ deleted: number }> {}
+export interface PermissionsResponseSuccess extends AuthSuccess<Record<string, PermissionData[]>> {}
+export type RolesResponse = RolesResponseSuccess | AuthError;
+export type PermissionsResponse = PermissionsResponseSuccess | AuthError;
+export type RoleResponse = RoleResponseSuccess | AuthError;
+export type DeleteRolesResponse = DeleteRolesResponseSuccess | AuthError;
+export type CurrentUserResponse = AuthSuccess<{ user: CurrentUser }> | AuthError;
