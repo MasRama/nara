@@ -76,3 +76,10 @@ export interface UserProfileError {
 }
 
 export type UserProfileResponse = UserProfileSuccess | UserProfileError;
+export interface AvatarUploadSuccess {
+  success: true;
+  message: string;
+  data: { asset: UserAsset; url: string };
+}
+
+export type AvatarUploadResponse = AvatarUploadSuccess | UserProfileError;

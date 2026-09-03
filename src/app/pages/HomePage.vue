@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-
+import { useAuthSession } from '../../features/auth/web';
 const cloneCommand = 'git clone https://github.com/MasRama/nara.git';
 const currentYear = new Date().getFullYear();
 const isDark = ref(false);
@@ -10,6 +10,17 @@ const scrolled = ref(false);
 let copyTimer: ReturnType<typeof setTimeout> | undefined;
 
 const themeLabel = computed(() => (isDark.value ? 'Light mode' : 'Dark mode'));
+const authSession = useAuthSession();
+const authLink = computed(() =>
+  authSession.isAuthenticated.value
+    ? { label: 'Dashboard', to: '/dashboard' }
+    : { label: 'Sign in', to: '/login' },
+);
+const landingAction = computed(() =>
+  authSession.isAuthenticated.value
+    ? { label: 'Open dashboard', to: '/dashboard' }
+    : { label: 'Begin', to: '/register' },
+);
 
 function applyTheme(dark: boolean): void {
   isDark.value = dark;
@@ -73,7 +84,7 @@ onBeforeUnmount(() => {
           <span aria-hidden="true" class="font-mono-accent text-xs">&lt;/&gt;</span>
           Source
         </a>
-        <RouterLink to="/login" class="text-muted-foreground transition-colors hover:text-foreground">Sign in</RouterLink>
+        <RouterLink :to="authLink.to" class="text-muted-foreground transition-colors hover:text-foreground">{{ authLink.label }}</RouterLink>
         <span class="h-4 w-px bg-border"></span>
         <button
           type="button"
@@ -104,8 +115,8 @@ onBeforeUnmount(() => {
           </p>
 
           <div class="flex flex-wrap items-center gap-5 pt-2">
-            <RouterLink to="/register" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-              Begin
+            <RouterLink :to="landingAction.to" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
+              {{ landingAction.label }}
               <span aria-hidden="true">→</span>
             </RouterLink>
             <a
@@ -245,8 +256,8 @@ onBeforeUnmount(() => {
         <h2 class="font-heading text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-none tracking-[-0.03em] text-foreground">Begin <span class="font-medium italic text-primary">quietly.</span></h2>
         <p class="max-w-[48ch] text-lg leading-relaxed text-muted-foreground">Clone the repository. Open one file. Ask the machine for a feature. Watch it appear.</p>
         <div class="flex flex-wrap items-center justify-center gap-5 pt-2">
-          <RouterLink to="/register" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-            Begin
+          <RouterLink :to="landingAction.to" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
+            {{ landingAction.label }}
             <span aria-hidden="true">→</span>
           </RouterLink>
           <a href="https://github.com/MasRama/nara" target="_blank" rel="noreferrer" class="group inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">

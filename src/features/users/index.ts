@@ -5,6 +5,8 @@ export {
   updateUserInputSchema,
 } from './contract';
 export type {
+  AvatarUploadResponse,
+  AvatarUploadSuccess,
   CreateUserInput,
   DeleteUsersInput,
   ManagedUser,

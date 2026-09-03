@@ -636,8 +636,9 @@ Complete the auth-owned browser surface without reintroducing server-rendered pa
 
 ---
 
-## [ ] V3-037 — Restore dashboard and account browser surfaces
+## [x] V3-037 — Restore dashboard and account browser surfaces
 > Release-blocking: v2 users could reach dashboard, profile, password, avatar, and account navigation flows that have no v3 page replacement.
+> Verified 2026-09-03: Vue Router routes and the app-owned authenticated shell restore dashboard/profile navigation without reloads; users/auth public browser clients cover profile, password, avatar, session-aware landing CTAs, and logout transitions.
 
 ### Goal
 
