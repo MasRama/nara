@@ -499,9 +499,30 @@ describe('users administration browser surfaces', () => {
     expect(container.textContent).toContain('Page 2 of 3');
   });
 
-  it('creates users, validates input, and assigns a role while editing', async () => {
+  it('requires a password before creating a managed user', async () => {
     const email = `${randomUUID()}@example.com`;
     await startAuthenticatedAdmin();
+    await mountAt('/users');
+    await settle();
+
+    await click('[data-testid="create-user"]');
+    setInput('#user-name', 'Missing Browser Password');
+    setInput('#user-email', email);
+    const postCountBeforeSubmit = fetchRequests.filter(({ method, path }) => method === 'POST' && path === '/api/users').length;
+    submitForm('[data-testid="user-form"]');
+    await settle();
+
+    expect(container.textContent).toContain('Password must be at least 8 characters');
+    expect(container.textContent).toContain('Required; use at least 8 characters.');
+    expect(container.textContent).not.toContain('server fallback');
+    expect(fetchRequests.filter(({ method, path }) => method === 'POST' && path === '/api/users')).toHaveLength(postCountBeforeSubmit);
+    expect(getDatabase().prepare('SELECT id FROM users WHERE email = ?').get(email)).toBeUndefined();
+  });
+
+  it('creates users, validates input, and assigns a role while editing', async () => {
+    const email = `${randomUUID()}@example.com`;
+    const adminEmail = `${randomUUID()}@example.com`;
+    await startAuthenticatedAdmin(adminEmail);
     await mountAt('/users');
     await settle();
 
@@ -526,6 +547,7 @@ describe('users administration browser surfaces', () => {
     if (!userId) throw new Error('Created user row did not expose its id');
     expect(createdRow.textContent).toContain('No roles');
 
+    const passwordBeforeEdit = getDatabase().prepare('SELECT password FROM users WHERE id = ?').get(userId) as { password: string };
     await click(`[data-testid="edit-user-${userId}"]`);
     setInput('#user-name', 'Updated Browser User');
     await click('[data-role-slug="user"]');
@@ -536,6 +558,8 @@ describe('users administration browser surfaces', () => {
     expect(updatedRow.textContent).toContain('Updated Browser User');
     expect(updatedRow.textContent).toContain('User');
     expect(fetchRequests).toContainEqual({ method: 'PUT', path: `/api/users/${userId}` });
+    const passwordAfterEdit = getDatabase().prepare('SELECT password FROM users WHERE id = ?').get(userId) as { password: string };
+    expect(passwordAfterEdit.password).toBe(passwordBeforeEdit.password);
 
     const response = await serverApp.request(`/api/users?search=${encodeURIComponent(email)}`, { headers: { Cookie: sessionCookie! } });
     await expect(response.json()).resolves.toMatchObject({
@@ -546,12 +570,30 @@ describe('users administration browser surfaces', () => {
     const selfRow = tableRowContaining('Browser Administrator');
     const selfId = selfRow.dataset.userId;
     if (!selfId) throw new Error('Administrator row did not expose its id');
+    const selfBefore = getDatabase()
+      .prepare('SELECT id, name, email, password FROM users WHERE id = ?')
+      .get(selfId) as { id: string; name: string; email: string; password: string };
+    const selfRolesBefore = getDatabase()
+      .prepare('SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY role_id')
+      .all(selfId);
     await click(`[data-testid="edit-user-${selfId}"]`);
+    setInput('#user-name', 'Rejected Browser Administrator');
+    setInput('#user-email', `${randomUUID()}@example.com`);
+    setInput('#user-password', 'rejected browser password');
     await click('[data-role-slug="admin"]');
     submitForm('[data-testid="user-form"]');
     await settle();
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Cannot remove admin role from yourself');
     expect(useAuthSession().isAuthenticated.value).toBe(true);
+
+    const selfAfter = getDatabase()
+      .prepare('SELECT id, name, email, password FROM users WHERE id = ?')
+      .get(selfId);
+    const selfRolesAfter = getDatabase()
+      .prepare('SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY role_id')
+      .all(selfId);
+    expect(selfAfter).toEqual(selfBefore);
+    expect(selfRolesAfter).toEqual(selfRolesBefore);
   });
 
   it('hides role controls for a manager and reports forbidden role assignment', async () => {

@@ -318,8 +318,8 @@ onMounted(() => {
                     <td class="px-5 py-4 sm:px-6"><span data-testid="role-user-count">{{ role.userCount }}</span> user{{ role.userCount === 1 ? '' : 's' }}</td>
                     <td class="px-5 py-4 text-right sm:px-6">
                       <div class="flex justify-end gap-2">
-                        <button v-if="canEdit" type="button" :data-testid="`edit-role-${role.id}`" class="rounded-md border border-border px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary" @click="openEdit(role)">Edit</button>
-                        <button v-if="canDelete" type="button" :data-testid="`delete-role-${role.id}`" class="rounded-md border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10" @click="requestDelete(role)">Delete</button>
+                        <button v-if="canEdit && role.slug !== 'admin'" type="button" :data-testid="`edit-role-${role.id}`" class="rounded-md border border-border px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary" @click="openEdit(role)">Edit</button>
+                        <button v-if="canDelete && role.slug !== 'admin'" type="button" :data-testid="`delete-role-${role.id}`" class="rounded-md border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10" @click="requestDelete(role)">Delete</button>
                       </div>
                     </td>
                   </tr>

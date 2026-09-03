@@ -57,6 +57,31 @@ describe('auth access capability', () => {
     await expect(listResponse.json()).resolves.toMatchObject({ success: true });
   });
 
+  it('rejects admin-role edits without changing the canonical role', async () => {
+    const cookie = await registerAdmin();
+    const database = getDatabase();
+    const before = database.prepare('SELECT * FROM roles WHERE slug = ?').get('admin');
+    if (!before || typeof before !== 'object' || !('id' in before)) throw new Error('Missing canonical admin role');
+
+    const response = await app.request(`/api/roles/${before.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      body: JSON.stringify({
+        name: 'Renamed Administrator',
+        slug: 'renamed-administrator',
+        description: 'This mutation must be rejected',
+        permissions: [],
+      }),
+    });
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      message: 'Cannot edit the admin role',
+      code: 'PROTECTED_ROLE',
+    });
+    expect(database.prepare('SELECT * FROM roles WHERE id = ?').get(before.id)).toEqual(before);
+  });
+
   it('denies role access without a session', async () => {
     const response = await app.request('/api/roles');
     expect(response.status).toBe(401);

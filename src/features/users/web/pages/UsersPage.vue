@@ -366,8 +366,8 @@ onMounted(() => {
               </label>
               <label class="grid gap-2 text-sm font-medium" for="user-password">
                 Password
-                <input id="user-password" v-model="userPassword" type="password" autocomplete="new-password" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
-                <span class="text-xs font-normal text-muted-foreground">{{ isCreating ? 'Leave blank to use the current server fallback.' : 'Leave blank to keep the current password.' }}</span>
+                <input id="user-password" v-model="userPassword" type="password" autocomplete="new-password" :required="isCreating" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
+                <span class="text-xs font-normal text-muted-foreground">{{ isCreating ? 'Required; use at least 8 characters.' : 'Leave blank to keep the current password.' }}</span>
                 <span v-if="fieldError('password')" class="text-xs font-normal text-destructive">{{ fieldError('password') }}</span>
               </label>
 

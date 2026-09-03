@@ -6,7 +6,7 @@ import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
-import { useAuthSession } from '../web';
+import { createAccessClient, useAuthSession } from '../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 
@@ -166,6 +166,7 @@ describe('roles and permissions browser surfaces', () => {
     const adminRow = container.querySelector<HTMLTableRowElement>(`tr[data-role-id="${adminRoleId}"]`);
     expect(adminRow).not.toBeNull();
     expect(adminRow?.querySelector('[data-testid="role-user-count"]')?.textContent).toMatch(/^\d+$/);
+    const adminBefore = getDatabase().prepare('SELECT * FROM roles WHERE id = ?').get(adminRoleId);
 
     const roleSlug = `browser-role-${randomUUID()}`;
     await click('[data-testid="create-role"]');
@@ -205,10 +206,23 @@ describe('roles and permissions browser surfaces', () => {
     await settle();
     expect(container.querySelector(`tr[data-role-id="${roleId}"]`)).toBeNull();
 
-    await click(`[data-testid="delete-role-${adminRoleId}"]`);
-    await click('[data-testid="confirm-role-delete"]');
-    await settle();
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Cannot delete the admin role');
+    expect(container.querySelector(`[data-testid="edit-role-${adminRoleId}"]`)).toBeNull();
+    expect(container.querySelector(`[data-testid="delete-role-${adminRoleId}"]`)).toBeNull();
+
+    const updateResponse = await createAccessClient().updateRole(adminRoleId, { name: 'Renamed Administrator' });
+    expect(updateResponse).toMatchObject({
+      success: false,
+      message: 'Cannot edit the admin role',
+      code: 'PROTECTED_ROLE',
+    });
+    expect(getDatabase().prepare('SELECT * FROM roles WHERE id = ?').get(adminRoleId)).toEqual(adminBefore);
+
+    const deleteResponse = await createAccessClient().deleteRoles({ ids: [adminRoleId] });
+    expect(deleteResponse).toMatchObject({
+      success: false,
+      message: 'Cannot delete the admin role',
+      code: 'PROTECTED_ROLE',
+    });
     expect(container.querySelector(`tr[data-role-id="${adminRoleId}"]`)).not.toBeNull();
   });
 });

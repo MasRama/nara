@@ -150,7 +150,7 @@ const updateRoleHandler = async (context: Context) => {
   if (!roleId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
   const existing = findRoleById(roleId);
   if (!existing) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
-  if (existing.slug === 'admin' && !isAdmin(user.id)) {
+  if (existing.slug === 'admin') {
     return context.json({ success: false as const, message: 'Cannot edit the admin role', code: 'PROTECTED_ROLE' }, 403);
   }
 

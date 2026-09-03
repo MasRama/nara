@@ -8,7 +8,7 @@ export const profileInputSchema = z.object({
 export const createUserInputSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   email: z.string().email('Invalid email format').transform((value) => value.toLowerCase()),
-  password: z.string().min(8, 'Password must be at least 8 characters').max(100).optional().or(z.literal('')),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   roles: z.array(z.string().min(1, 'Role is required')).optional(),
 });
 

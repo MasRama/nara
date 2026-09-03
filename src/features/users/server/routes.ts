@@ -153,7 +153,7 @@ const createUserHandler = async (context: Context) => {
       id: randomUUID(),
       name: parsed.data.name,
       email: parsed.data.email,
-      password: hashPassword(parsed.data.password || parsed.data.email),
+      password: hashPassword(parsed.data.password),
     });
     if (isAdmin(sessionUser.id) && parsed.data.roles) {
       const roleIds = findAllRoles()
@@ -192,9 +192,26 @@ const updateUserHandler = async (context: Context) => {
       422,
     );
   }
-  if (parsed.data.roles !== undefined && !isAdmin(sessionUser.id)) return forbidden(context);
+  const sessionIsAdmin = isAdmin(sessionUser.id);
+  if (parsed.data.roles !== undefined && !sessionIsAdmin) return forbidden(context);
 
   const { roles, password, ...profile } = parsed.data;
+  const roleIds =
+    roles !== undefined && sessionIsAdmin
+      ? findAllRoles()
+          .filter((role) => roles.includes(role.slug))
+          .map((role) => role.id)
+      : undefined;
+  if (self && roleIds !== undefined) {
+    const adminRole = findRoleBySlug('admin');
+    if (adminRole && !roleIds.includes(adminRole.id)) {
+      return context.json(
+        { success: false as const, message: 'Cannot remove admin role from yourself', code: 'SELF_DEMOTION' },
+        400,
+      );
+    }
+  }
+
   try {
     const user = updateManagedUser(userId, {
       ...profile,
@@ -202,19 +219,7 @@ const updateUserHandler = async (context: Context) => {
     });
     if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
 
-    if (roles !== undefined && isAdmin(sessionUser.id)) {
-      const roleIds = findAllRoles()
-        .filter((role) => roles.includes(role.slug))
-        .map((role) => role.id);
-      if (self) {
-        const adminRole = findRoleBySlug('admin');
-        if (adminRole && !roleIds.includes(adminRole.id)) {
-          return context.json(
-            { success: false as const, message: 'Cannot remove admin role from yourself', code: 'SELF_DEMOTION' },
-            400,
-          );
-        }
-      }
+    if (roleIds !== undefined) {
       syncUserRoles(userId, roleIds);
     }
     return context.json({ success: true as const, message: 'User updated', data: { user: userWithRoles(user)! } });
