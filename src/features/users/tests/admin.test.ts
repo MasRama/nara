@@ -2,19 +2,21 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
 import { getDatabase } from '../../../shared/database';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 
 async function registerAdmin(email = `${randomUUID()}@example.com`, name = 'User Administrator'): Promise<string> {
+  const bootstrap = await issueCsrf(app);
   const response = await app.request('/api/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...csrfHeaders(bootstrap), 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name,
       email,
       password: 'correct horse battery staple',
     }),
   });
-  const cookie = response.headers.get('set-cookie')?.split(';', 1)[0];
-  if (!cookie) throw new Error('Registration did not return a session cookie');
+  const cookie = mergeResponseCookies(bootstrap.cookie, response);
+  if (!cookie.includes('auth_id=')) throw new Error('Registration did not return a session cookie');
   const payload = (await response.json()) as { data: { user: { id: string } } };
   const database = getDatabase();
   const existingRole = database.prepare('SELECT id FROM roles WHERE slug = ?').get('admin') as { id: string } | undefined;
@@ -36,16 +38,21 @@ async function registerAdmin(email = `${randomUUID()}@example.com`, name = 'User
   return cookie;
 }
 
+async function mutate(cookie: string, path: string, method: string, body: unknown) {
+  const state = await issueCsrf(app, cookie);
+  return app.request(path, {
+    method,
+    headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 describe('users administration capability', () => {
   it('creates and lists users through the users Feature', async () => {
     const cookie = await registerAdmin();
     const email = `${randomUUID()}@example.com`;
 
-    const createResponse = await app.request('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ name: 'Managed User', email, password: 'managed-password' }),
-    });
+    const createResponse = await mutate(cookie, '/api/users', 'POST', { name: 'Managed User', email, password: 'managed-password' });
     expect(createResponse.status).toBe(201);
     await expect(createResponse.json()).resolves.toMatchObject({
       success: true,
@@ -71,15 +78,11 @@ describe('users administration capability', () => {
       .prepare('SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY role_id')
       .all(before.id);
 
-    const response = await app.request(`/api/users/${before.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({
-        name: 'Rejected Administrator',
-        email: `${randomUUID()}@example.com`,
-        password: 'rejected new password',
-        roles: [],
-      }),
+    const response = await mutate(cookie, `/api/users/${before.id}`, 'PUT', {
+      name: 'Rejected Administrator',
+      email: `${randomUUID()}@example.com`,
+      password: 'rejected new password',
+      roles: [],
     });
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
@@ -102,11 +105,7 @@ describe('users administration capability', () => {
     const cookie = await registerAdmin();
     const email = `${randomUUID()}@example.com`;
 
-    const response = await app.request('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ name: 'Missing Password', email }),
-    });
+    const response = await mutate(cookie, '/api/users', 'POST', { name: 'Missing Password', email });
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toMatchObject({
       success: false,
@@ -119,21 +118,13 @@ describe('users administration capability', () => {
   it('keeps a managed user password when editing without a password', async () => {
     const cookie = await registerAdmin();
     const email = `${randomUUID()}@example.com`;
-    const createResponse = await app.request('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ name: 'Password Owner', email, password: 'original managed password' }),
-    });
+    const createResponse = await mutate(cookie, '/api/users', 'POST', { name: 'Password Owner', email, password: 'original managed password' });
     expect(createResponse.status).toBe(201);
     const created = (await createResponse.json()) as { data: { user: { id: string } } };
     const database = getDatabase();
     const before = database.prepare('SELECT password FROM users WHERE id = ?').get(created.data.user.id) as { password: string };
 
-    const updateResponse = await app.request(`/api/users/${created.data.user.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ name: 'Updated Password Owner', email }),
-    });
+    const updateResponse = await mutate(cookie, `/api/users/${created.data.user.id}`, 'PUT', { name: 'Updated Password Owner', email });
     expect(updateResponse.status).toBe(200);
     const after = database.prepare('SELECT password FROM users WHERE id = ?').get(created.data.user.id) as { password: string };
     expect(after.password).toBe(before.password);

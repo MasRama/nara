@@ -5,16 +5,65 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { createAuthSession, useAuthSession } from '../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 
 let container: HTMLDivElement;
 let application: { unmount(): void } | undefined;
-let sessionCookie: string | undefined;
+let cookieJar: Map<string, string>;
 let fetchPaths: string[];
 let pendingFetches: Set<Promise<Response>>;
 
+function syncDocumentCookies(): void {
+  for (const [name, value] of cookieJar) document.cookie = `${name}=${value}`;
+}
+
+function adoptCookieString(cookieString: string): void {
+  for (const part of cookieString.split(';')) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf('=');
+    if (separator <= 0) continue;
+    cookieJar.set(trimmed.slice(0, separator), trimmed.slice(separator + 1));
+  }
+  syncDocumentCookies();
+}
+
+function storeResponseCookies(response: Response): void {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  const setCookies =
+    typeof headers.getSetCookie === 'function'
+      ? headers.getSetCookie()
+      : headers.get('set-cookie')
+        ? [headers.get('set-cookie') as string]
+        : [];
+  for (const header of setCookies) {
+    const pair = (header.split(';', 1)[0] ?? '').trim();
+    const separator = pair.indexOf('=');
+    if (separator <= 0) continue;
+    const name = pair.slice(0, separator);
+    const value = pair.slice(separator + 1);
+    if (value.length === 0) cookieJar.delete(name);
+    else cookieJar.set(name, value);
+  }
+  syncDocumentCookies();
+}
+
+function cookieHeader(): string | undefined {
+  if (cookieJar.size === 0) return undefined;
+  return [...cookieJar].map(([name, value]) => `${name}=${value}`).join('; ');
+}
+
+function setSessionCookie(value: string | undefined): void {
+  if (value === undefined) {
+    cookieJar.delete('auth_id');
+    document.cookie = 'auth_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  } else {
+    cookieJar.set('auth_id', value);
+    document.cookie = `auth_id=${value}`;
+  }
+}
 function installApiFetch(): void {
   const request = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const inputUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
@@ -25,18 +74,15 @@ function installApiFetch(): void {
     for (const [name, value] of new Headers(init?.headers)) {
       headers.set(name, value);
     }
-    if (sessionCookie) headers.set('Cookie', sessionCookie);
+    const jar = cookieHeader();
+    if (jar) headers.set('Cookie', jar);
 
     const response = await serverApp.request(url.pathname + url.search, {
       method: init?.method,
       headers,
       body: init?.body,
     });
-    const setCookie = response.headers.get('set-cookie');
-    if (setCookie) {
-      const cookie = setCookie.split(';', 1)[0];
-      sessionCookie = cookie.endsWith('=') ? undefined : cookie;
-    }
+    storeResponseCookies(response);
     const body = await response.text();
     return {
       ok: response.ok,
@@ -57,13 +103,15 @@ function installApiFetch(): void {
 }
 
 async function registerDirect(email: string): Promise<void> {
+  const state = await issueCsrf(serverApp);
+  adoptCookieString(state.cookie);
   const response = await serverApp.request('/api/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Existing User', email, password: TEST_PASSWORD }),
   });
   expect(response.status).toBe(201);
-  sessionCookie = response.headers.get('set-cookie')?.split(';', 1)[0];
+  adoptCookieString(mergeResponseCookies(state.cookie, response));
 }
 
 async function settle(): Promise<void> {
@@ -110,7 +158,9 @@ beforeEach(async () => {
   container = document.createElement('div');
   document.body.append(container);
   application = undefined;
-  sessionCookie = undefined;
+  cookieJar = new Map();
+  document.cookie = 'auth_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   fetchPaths = [];
   pendingFetches = new Set();
   installApiFetch();
@@ -162,7 +212,7 @@ describe('browser authentication lifecycle', () => {
     expect(fetchPaths).toContain('/api/auth/register');
 
     const currentUserResponse = await serverApp.request('/api/auth/me', {
-      headers: { Cookie: sessionCookie! },
+      headers: { Cookie: cookieHeader()! },
     });
     expect(currentUserResponse.status).toBe(200);
   });
@@ -233,12 +283,12 @@ describe('browser authentication lifecycle', () => {
     expect(session.user.value?.email).toBe(email);
     expect(fetchPaths.filter((path) => path === '/api/auth/me')).toHaveLength(1);
 
-    sessionCookie = undefined;
+    setSessionCookie(undefined);
     const missingSession = createAuthSession();
     await missingSession.load();
     expect(missingSession.status.value).toBe('unauthenticated');
 
-    sessionCookie = 'auth_id=expired-session';
+    setSessionCookie('expired-session');
     const expiredSession = createAuthSession();
     await expiredSession.load();
     expect(expiredSession.status.value).toBe('unauthenticated');
@@ -285,7 +335,7 @@ describe('browser authentication lifecycle', () => {
     expect(router.currentRoute.value.name).toBe('login');
     expect(useAuthSession().status.value).toBe('unauthenticated');
     const currentUserResponse = await serverApp.request('/api/auth/me', {
-      headers: sessionCookie ? { Cookie: sessionCookie } : undefined,
+      headers: { Cookie: cookieHeader() ?? '' },
     });
     expect(currentUserResponse.status).toBe(401);
 

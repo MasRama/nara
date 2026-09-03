@@ -11,8 +11,15 @@ import {
 } from '../contract';
 import { getUserPermissions, getUserRoles } from './access';
 import { AUTH, env } from '../../../shared/config';
+import { clientIp, requestCsrfToken } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import { createUser, findUserByEmail, findUserById, updatePassword, type SessionUser } from './repository';
+import {
+  clearLoginAttempts,
+  isLockedOut,
+  recordFailedAttempt,
+  remainingLockoutMs,
+} from './login-throttle';
 import {
   checkPassword,
   currentUser,
@@ -114,20 +121,47 @@ const loginHandler = async (context: Context) => {
     );
   }
 
+  const identifier = parsed.data.email.trim().toLowerCase();
+  const ip = clientIp(context);
+
+  if (isLockedOut(identifier, ip)) {
+    const minutes = Math.max(1, Math.ceil(remainingLockoutMs(identifier, ip) / 60_000));
+    Logger.logSecurity('login_blocked_locked', { email: parsed.data.email });
+    return context.json(
+      {
+        success: false as const,
+        message: `Too many attempts. Try again in ${minutes} minutes.`,
+        code: 'RATE_LIMITED',
+      },
+      429,
+    );
+  }
+
   const user = findUserByEmail(parsed.data.email);
+  // checkPassword always runs a hash comparison (dummy hash for unknown
+  // emails) so failure timing does not disclose account existence.
   if (!checkPassword(parsed.data.password, user)) {
+    const result = recordFailedAttempt(identifier, ip);
     Logger.logSecurity('login_failed', { email: parsed.data.email });
     return context.json(
-      { success: false as const, message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
+      {
+        success: false as const,
+        message: result.isLocked
+          ? `Too many attempts. Try again in ${Math.max(1, Math.ceil(result.lockoutMs / 60_000))} minutes.`
+          : 'Invalid email or password',
+        code: 'INVALID_CREDENTIALS',
+      },
       401,
     );
   }
 
+  clearLoginAttempts(identifier, ip);
   const token = startSession(user!, context.req.header('user-agent'));
   setSessionCookie(context, token);
   Logger.logAuth('login_success', { userId: user!.id });
   return context.json({ success: true as const, message: 'Login successful' });
 };
+
 
 const changePasswordHandler = async (context: Context) => {
   const sessionUser = currentUser(getCookie(context, SESSION_COOKIE_NAME));
@@ -183,6 +217,13 @@ const currentUserHandler = (context: Context) => {
   return context.json({ success: true as const, message: 'OK', data: { user: currentUserPayload(user) } });
 };
 
+const csrfHandler = (context: Context) => {
+  // The CSRF middleware already ensured the cookie on this safe request;
+  // echo the token so browser clients can bootstrap without parsing cookies.
+  const token = requestCsrfToken(context) ?? '';
+  return context.json({ success: true as const, message: 'CSRF token issued', data: { csrfToken: token } });
+};
+
 const logoutHandler = (context: Context) => {
   endSession(getCookie(context, SESSION_COOKIE_NAME));
   deleteCookie(context, SESSION_COOKIE_NAME, { path: '/' });
@@ -190,6 +231,7 @@ const logoutHandler = (context: Context) => {
 };
 
 export const authRoutes = new Hono()
+  .get('/csrf', csrfHandler)
   .post('/register', registerHandler)
   .post('/login', loginHandler)
   .post('/change-password', changePasswordHandler)

@@ -11,19 +11,23 @@ import type {
   UsersResponse,
 } from '../contract';
 import type { userRoutes } from '..';
-
+import { csrfHeaders, ensureCsrfToken } from '../../auth/web';
 async function readResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
 async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    await ensureCsrfToken();
+  }
   return readResponse<T>(
     await fetch(url, {
       ...init,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(init.headers ?? {}),
+        ...csrfHeaders(init.headers),
       },
     }),
   );
@@ -52,7 +56,10 @@ export function createUsersClient(
   return {
     me: async () => readResponse<UserProfileResponse>(await client.me.$get()),
     updateProfile: async (input) =>
-      readResponse<UserProfileResponse>(await client.me.$patch({ json: input })),
+      jsonRequest<UserProfileResponse>(`${baseUrl.replace(/\/$/, '')}/me`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
     listUsers: async ({ page = 1, limit = 10, search = '' } = {}) => {
       const params = new URLSearchParams({
         page: String(page),
@@ -79,10 +86,12 @@ export function createUsersClient(
     uploadAvatar: async (file) => {
       const form = new FormData();
       form.set('file', file);
+      await ensureCsrfToken();
       return readResponse<AvatarUploadResponse>(
         await fetch(endpoint(assetsBaseUrl, '/avatar'), {
           method: 'POST',
           credentials: 'include',
+          headers: csrfHeaders(),
           body: form,
         }),
       );

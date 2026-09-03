@@ -2,7 +2,14 @@ export { changePasswordInputSchema } from '../contract';
 export type { ChangePasswordInput } from '../contract';
 export { createAuthClient, type AuthClient } from './client';
 export { createAuthSession, useAuthSession } from './session';
-export type { AuthSession, AuthStatus } from './session';
+export {
+  CSRF_BOOTSTRAP_PATH,
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME,
+  csrfHeaders,
+  ensureCsrfToken,
+  readCsrfToken,
+} from './csrf';
 export { createAccessClient, type AccessClient } from './access-client';
 export type {
   CurrentUser,

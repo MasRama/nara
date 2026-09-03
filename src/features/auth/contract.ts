@@ -1,18 +1,21 @@
 import { z } from 'zod';
+import { emailSchema, personNameSchema, roleDescriptionSchema, roleNameSchema, roleSlugSchema } from '../../shared/security/input';
 
 export const registerInputSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Invalid email format').transform((value) => value.toLowerCase()),
+  name: personNameSchema,
+  email: emailSchema,
+  // Passwords are length-bounded only: never trimmed or transformed.
   password: z.string().min(8, 'Password must be at least 8 characters').max(100),
 });
 
 export const loginInputSchema = z.object({
-  email: z.string().email('Invalid email format').transform((value) => value.toLowerCase()),
+  email: emailSchema,
   password: z.string().min(1, 'Password is required'),
 });
 
 export const changePasswordInputSchema = z.object({
   current_password: z.string().min(1, 'Current password is required'),
+  // Passwords are length-bounded only: never trimmed or transformed.
   new_password: z.string().min(8, 'Password must be at least 8 characters').max(100),
 });
 
@@ -50,32 +53,17 @@ export type LoginResponse = AuthSuccess | AuthError;
 export type ChangePasswordResponse = AuthSuccess | AuthError;
 
 export const createRoleInputSchema = z.object({
-  name: z.string().min(2, 'Role name must be at least 2 characters').max(100, 'Role name must be at most 100 characters'),
-  slug: z
-    .string()
-    .min(2, 'Slug must be at least 2 characters')
-    .max(100, 'Slug must be at most 100 characters')
-    .regex(/^[a-z0-9-]+$/, 'Slug may only contain lowercase letters, numbers, and hyphens')
-    .transform((value) => value.toLowerCase()),
-  description: z.string().max(500, 'Description must be at most 500 characters').nullable().optional(),
+  name: roleNameSchema,
+  slug: roleSlugSchema,
+  description: roleDescriptionSchema,
   permissions: z.array(z.string().min(1, 'Permission is required')).default([]),
 });
 
 export const updateRoleInputSchema = z
   .object({
-    name: z
-      .string()
-      .min(2, 'Role name must be at least 2 characters')
-      .max(100, 'Role name must be at most 100 characters')
-      .optional(),
-    slug: z
-      .string()
-      .min(2, 'Slug must be at least 2 characters')
-      .max(100, 'Slug must be at most 100 characters')
-      .regex(/^[a-z0-9-]+$/, 'Slug may only contain lowercase letters, numbers, and hyphens')
-      .transform((value) => value.toLowerCase())
-      .optional(),
-    description: z.string().max(500, 'Description must be at most 500 characters').nullable().optional(),
+    name: roleNameSchema.optional(),
+    slug: roleSlugSchema.optional(),
+    description: roleDescriptionSchema,
     permissions: z.array(z.string().min(1, 'Permission is required')).optional(),
   })
   .refine(
@@ -86,7 +74,6 @@ export const updateRoleInputSchema = z
       value.permissions !== undefined,
     { message: 'At least one field is required to update', path: ['_root'] },
   );
-
 export const deleteRolesInputSchema = z.object({
   ids: z.array(z.string().min(1, 'Role ID is required')).min(1, 'At least one ID must be selected'),
 });

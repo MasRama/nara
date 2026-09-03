@@ -7,19 +7,23 @@ import type {
   RolesResponse,
   UpdateRoleInput,
 } from '../contract';
-
+import { csrfHeaders, ensureCsrfToken } from './csrf';
 async function readResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
 async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    await ensureCsrfToken();
+  }
   return readResponse<T>(
     await fetch(url, {
       ...init,
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(init.headers ?? {}),
+        ...csrfHeaders(init.headers),
       },
     }),
   );

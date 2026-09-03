@@ -4,10 +4,16 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { env } from '../shared/config';
+import {
+  createRateLimiter,
+  csrfProtection,
+  jsonBodyLimit,
+  securityHeaders,
+} from '../shared/security';
 import { Logger } from '../shared/logging';
 import { handleError } from './error-handler';
 import { getDatabase, migrate } from '../shared/database';
-import { authRoutes, accessRoutes } from '../features/auth';
+import { authRoutes, accessRoutes, resetLoginThrottle } from '../features/auth';
 import { userRoutes, assetRoutes } from '../features/users';
 import { healthRoutes } from '../../official-features/health';
 
@@ -73,7 +79,45 @@ const spaHandler = frontendBuildAvailable
 
 export const app = new Hono();
 
+const isProductionServer = env.NODE_ENV === 'production';
+
+function isApiRequest(context: { req: { url: string } }): boolean {
+  return new URL(context.req.url).pathname.startsWith('/api/');
+}
+
+// Feature-neutral request protections (V3-043). Auth-specific lockout lives
+// inside the Auth Feature; everything here applies uniformly. Order mirrors
+// the effective v2 pipeline: headers → body limits → rate limits → CSRF.
+export const globalRateLimiter = createRateLimiter({
+  maxRequests: env.RATE_LIMIT_MAX,
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  name: 'global',
+  skip: (context) => !isApiRequest(context),
+});
+
+export const authRateLimiter = createRateLimiter({
+  maxRequests: env.AUTH_RATE_LIMIT_MAX,
+  windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+  name: 'auth',
+});
+
+/** Deterministic test reset: clears limiter buckets and login lockout state. */
+export function resetSecurityState(): void {
+  globalRateLimiter.reset();
+  authRateLimiter.reset();
+  resetLoginThrottle();
+}
+
 app.onError(handleError);
+
+app.use('*', securityHeaders({ isProduction: isProductionServer, viteOrigin: `http://localhost:${env.VITE_PORT}` }));
+app.use('*', jsonBodyLimit({ maxBytes: env.MAX_JSON_BODY_BYTES }));
+app.use('*', globalRateLimiter.middleware);
+app.use('/api/auth/login', authRateLimiter.middleware);
+app.use('/api/auth/register', authRateLimiter.middleware);
+app.use('/api/auth/change-password', authRateLimiter.middleware);
+app.use('/api/assets/avatar', authRateLimiter.middleware);
+app.use('*', csrfProtection({ isProduction: isProductionServer }));
 
 app.route('/health', healthRoutes);
 app.get('/ready', (context) => {

@@ -1,21 +1,23 @@
 import { z } from 'zod';
+import { emailSchema, personNameSchema } from '../../shared/security/input';
 
 export const profileInputSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Invalid email format').transform((value) => value.toLowerCase()),
+  name: personNameSchema,
+  email: emailSchema,
 });
 
 export const createUserInputSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Invalid email format').transform((value) => value.toLowerCase()),
+  name: personNameSchema,
+  email: emailSchema,
+  // Passwords are length-bounded only: never trimmed or transformed.
   password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   roles: z.array(z.string().min(1, 'Role is required')).optional(),
 });
 
 export const updateUserInputSchema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters').max(100).optional(),
-    email: z.string().email('Invalid email format').transform((value) => value.toLowerCase()).optional(),
+    name: personNameSchema.optional(),
+    email: emailSchema.optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').max(100).optional().or(z.literal('')),
     roles: z.array(z.string().min(1, 'Role is required')).optional(),
   })

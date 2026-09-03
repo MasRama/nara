@@ -2,7 +2,8 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
-import { LOGGING, SERVER } from './constants';
+
+import { LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -12,6 +13,13 @@ const EnvSchema = z.object({
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('debug'),
   DB_FILE: z.string().min(1).optional(),
   LOG_PRETTY: z.enum(['true', 'false']).optional(),
+  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(RATE_LIMIT.MAX_REQUESTS),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.WINDOW_MS),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(RATE_LIMIT.AUTH_MAX_REQUESTS),
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.AUTH_WINDOW_MS),
+  AUTH_LOCKOUT_ATTEMPTS: z.coerce.number().int().positive().default(RATE_LIMIT.MAX_LOGIN_ATTEMPTS),
+  AUTH_LOCKOUT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.LOGIN_LOCKOUT_MS),
+  MAX_JSON_BODY_BYTES: z.coerce.number().int().positive().default(SECURITY.MAX_JSON_BODY_BYTES),
 });
 
 type ParsedEnv = z.infer<typeof EnvSchema>;

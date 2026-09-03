@@ -707,8 +707,8 @@ Make the built Vue application and its safe static assets reachable through the 
 
 ---
 
-## [ ] V3-043 — Restore browser request security controls
-> Release-blocking: v2 enabled cross-cutting protections that are absent from the v3 Hono application.
+## [x] V3-043 — Restore browser request security controls
+> Verified 2026-09-04: feature-neutral Hono middleware in `src/shared/security/` (production-aware headers/CSP/HSTS, double-submit CSRF with `GET /api/auth/csrf` bootstrap, global 100/15min + auth 10/min in-memory limiters with 429 `RATE_LIMITED` metadata, 1 MB JSON cap with 413 `PAYLOAD_TOO_LARGE`, socket-IP identity) plus Auth-owned dual identifier/IP login lockout (5/15min, no existence disclosure); contracts trim/normalize and reject control bytes without touching passwords. `src/shared/security/tests/security.test.ts` (30 tests) covers headers dev/prod, CSRF lifecycle/rejections, limiter windows, lockout dimensions/reset, body limits, and input rules; all browser/integration harnesses model the real CSRF cookie flow. `npm run check` (38 files/156 tests + doctor), `npm run build`, and `npm run test:production-serving` (6/6) pass. V3-044/V3-045 untouched.
 
 ### Goal
 

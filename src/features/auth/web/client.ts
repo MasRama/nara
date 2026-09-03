@@ -1,9 +1,15 @@
 import { hc } from 'hono/client';
 import type { AuthError, AuthSuccess, ChangePasswordInput, ChangePasswordResponse, CurrentUserResponse, LoginInput, LoginResponse, RegisterInput, RegisterResponse } from '../contract';
 import type { authRoutes } from '..';
+import { CSRF_HEADER_NAME, ensureCsrfToken } from './csrf';
 
 async function readResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
+}
+
+async function csrfHeader(): Promise<Record<string, string>> {
+  const token = await ensureCsrfToken();
+  return token ? { [CSRF_HEADER_NAME]: token } : {};
 }
 
 export interface AuthClient {
@@ -18,10 +24,16 @@ export function createAuthClient(baseUrl = '/api/auth'): AuthClient {
   const client = hc<typeof authRoutes>(baseUrl, { init: { credentials: 'include' } });
 
   return {
-    register: async (input) => readResponse<RegisterResponse>(await client.register.$post({ json: input })),
-    login: async (input) => readResponse<LoginResponse>(await client.login.$post({ json: input })),
-    changePassword: async (input) => readResponse<ChangePasswordResponse>(await client['change-password'].$post({ json: input })),
+    register: async (input) =>
+      readResponse<RegisterResponse>(await client.register.$post({ json: input, header: await csrfHeader() })),
+    login: async (input) =>
+      readResponse<LoginResponse>(await client.login.$post({ json: input, header: await csrfHeader() })),
+    changePassword: async (input) =>
+      readResponse<ChangePasswordResponse>(
+        await client['change-password'].$post({ json: input, header: await csrfHeader() }),
+      ),
     me: async () => readResponse<CurrentUserResponse>(await client.me.$get()),
-    logout: async () => readResponse<AuthSuccess | AuthError>(await client.logout.$post({})),
+    logout: async () =>
+      readResponse<AuthSuccess | AuthError>(await client.logout.$post({}, { headers: await csrfHeader() })),
   };
 }

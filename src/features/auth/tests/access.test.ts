@@ -2,19 +2,21 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
 import { getDatabase } from '../../../shared/database';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 
 async function registerAdmin(): Promise<string> {
+  const bootstrap = await issueCsrf(app);
   const response = await app.request('/api/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...csrfHeaders(bootstrap), 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: 'Access Administrator',
       email: `${randomUUID()}@example.com`,
       password: 'correct horse battery staple',
     }),
   });
-  const cookie = response.headers.get('set-cookie')?.split(';', 1)[0];
-  if (!cookie) throw new Error('Registration did not return a session cookie');
+  const cookie = mergeResponseCookies(bootstrap.cookie, response);
+  if (!cookie.includes('auth_id=')) throw new Error('Registration did not return a session cookie');
   const payload = (await response.json()) as { data: { user: { id: string } } };
   const database = getDatabase();
   const existingRole = database.prepare('SELECT id FROM roles WHERE slug = ?').get('admin') as { id: string } | undefined;
@@ -41,9 +43,10 @@ describe('auth access capability', () => {
     const cookie = await registerAdmin();
     const roleName = `Billing ${randomUUID()}`;
 
+    const createState = await issueCsrf(app, cookie);
     const createResponse = await app.request('/api/roles', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      headers: { ...csrfHeaders(createState), 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: roleName, slug: `billing-${randomUUID()}`, permissions: [] }),
     });
     expect(createResponse.status).toBe(201);
@@ -63,9 +66,10 @@ describe('auth access capability', () => {
     const before = database.prepare('SELECT * FROM roles WHERE slug = ?').get('admin');
     if (!before || typeof before !== 'object' || !('id' in before)) throw new Error('Missing canonical admin role');
 
+    const editState = await issueCsrf(app, cookie);
     const response = await app.request(`/api/roles/${before.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
+      headers: { ...csrfHeaders(editState), 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'Renamed Administrator',
         slug: 'renamed-administrator',

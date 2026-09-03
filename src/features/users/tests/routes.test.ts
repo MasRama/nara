@@ -1,16 +1,27 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 
 async function registerUser(email: string): Promise<string> {
+  const bootstrap = await issueCsrf(app);
   const response = await app.request('/api/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...csrfHeaders(bootstrap), 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: 'Grace Hopper', email, password: 'correct horse battery staple' }),
   });
-  const cookie = response.headers.get('set-cookie')?.split(';', 1)[0];
-  if (!cookie) throw new Error('Registration did not return a session cookie');
+  const cookie = mergeResponseCookies(bootstrap.cookie, response);
+  if (!cookie.includes('auth_id=')) throw new Error('Registration did not return a session cookie');
   return cookie;
+}
+
+async function patchProfile(cookie: string, body: unknown) {
+  const state = await issueCsrf(app, cookie);
+  return app.request('/api/users/me', {
+    method: 'PATCH',
+    headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 describe('users feature', () => {
@@ -28,11 +39,7 @@ describe('users feature', () => {
     });
 
     const updatedEmail = `${randomUUID()}@example.com`;
-    const updateResponse = await app.request('/api/users/me', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ name: 'Grace Brewster Hopper', email: updatedEmail }),
-    });
+    const updateResponse = await patchProfile(cookie, { name: 'Grace Brewster Hopper', email: updatedEmail });
     expect(updateResponse.status).toBe(200);
     await expect(updateResponse.json()).resolves.toMatchObject({
       success: true,
@@ -44,11 +51,7 @@ describe('users feature', () => {
     const email = `${randomUUID()}@example.com`;
     const cookie = await registerUser(email);
 
-    const updateResponse = await app.request('/api/users/me', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ name: 'Grace Brewster Hopper', email: 'not-an-email' }),
-    });
+    const updateResponse = await patchProfile(cookie, { name: 'Grace Brewster Hopper', email: 'not-an-email' });
     expect(updateResponse.status).toBe(422);
     await expect(updateResponse.json()).resolves.toMatchObject({
       success: false,

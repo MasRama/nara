@@ -10,6 +10,7 @@ import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { useAuthSession } from '../../auth/web';
 import { createUsersClient } from '../web';
 
@@ -53,10 +54,54 @@ async function encodeMultipart(file: TestFile): Promise<{ body: ArrayBuffer; con
 
 let container: HTMLDivElement;
 let application: { unmount(): void } | undefined;
-let sessionCookie: string | undefined;
+let cookieJar: Map<string, string>;
 let fetchRequests: Array<{ method: string; path: string }>;
 let fetchUrls: string[];
 let pendingFetches: Set<Promise<Response>>;
+
+function syncDocumentCookies(): void {
+  for (const [name, value] of cookieJar) document.cookie = `${name}=${value}`;
+}
+
+function adoptCookieString(cookieString: string): void {
+  for (const part of cookieString.split(';')) {
+    const trimmed = part.trim();
+    const separator = trimmed.indexOf('=');
+    if (separator <= 0) continue;
+    cookieJar.set(trimmed.slice(0, separator), trimmed.slice(separator + 1));
+  }
+  syncDocumentCookies();
+}
+
+function setJar(cookieString: string): void {
+  cookieJar = new Map();
+  adoptCookieString(cookieString);
+}
+
+function storeResponseCookies(response: Response): void {
+  const headers = response.headers as Headers & { getSetCookie?: () => string[] };
+  const setCookies =
+    typeof headers.getSetCookie === 'function'
+      ? headers.getSetCookie()
+      : headers.get('set-cookie')
+        ? [headers.get('set-cookie') as string]
+        : [];
+  for (const header of setCookies) {
+    const pair = (header.split(';', 1)[0] ?? '').trim();
+    const separator = pair.indexOf('=');
+    if (separator <= 0) continue;
+    const name = pair.slice(0, separator);
+    const value = pair.slice(separator + 1);
+    if (value.length === 0) cookieJar.delete(name);
+    else cookieJar.set(name, value);
+  }
+  syncDocumentCookies();
+}
+
+function cookieHeader(): string | undefined {
+  if (cookieJar.size === 0) return undefined;
+  return [...cookieJar].map(([name, value]) => `${name}=${value}`).join('; ');
+}
 
 function installApiFetch(): void {
   const request = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -70,7 +115,8 @@ function installApiFetch(): void {
     for (const [name, value] of new Headers(init?.headers)) {
       headers.set(name, value);
     }
-    if (sessionCookie) headers.set('Cookie', sessionCookie);
+    const jar = cookieHeader();
+    if (jar) headers.set('Cookie', jar);
     let outgoingBody = init?.body;
     if (outgoingBody instanceof BrowserFormData) {
       const entries = [...outgoingBody.entries()];
@@ -89,11 +135,7 @@ function installApiFetch(): void {
       headers: outgoingRequest.headers,
       body: requestBody,
     });
-    const setCookie = response.headers.get('set-cookie');
-    if (setCookie) {
-      const cookie = setCookie.split(';', 1)[0];
-      sessionCookie = cookie.endsWith('=') ? undefined : cookie;
-    }
+    storeResponseCookies(response);
     const body = await response.text();
     return {
       ok: response.ok,
@@ -125,14 +167,15 @@ function installApiFetch(): void {
 }
 
 async function registerDirect(email: string, name = 'Existing User'): Promise<string> {
+  const state = await issueCsrf(serverApp);
   const response = await serverApp.request('/api/auth/register', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, email, password: TEST_PASSWORD }),
   });
   expect(response.status).toBe(201);
-  const cookie = response.headers.get('set-cookie')?.split(';', 1)[0];
-  if (!cookie) throw new Error('Registration did not return a session cookie');
+  const cookie = mergeResponseCookies(state.cookie, response);
+  if (!cookie.includes('auth_id=')) throw new Error('Registration did not return a session cookie');
   return cookie;
 }
 
@@ -180,7 +223,7 @@ function ensureTestRole(slug: string, permissionSlugs: string[]): string {
 }
 
 async function startAuthenticatedAdmin(email = `${randomUUID()}@example.com`): Promise<void> {
-  sessionCookie = await registerDirect(email, 'Browser Administrator');
+  adoptCookieString(await registerDirect(email, 'Browser Administrator'));
   assignRole(userIdForEmail(email), 'admin');
   await useAuthSession().refresh();
 }
@@ -188,7 +231,7 @@ async function startAuthenticatedAdmin(email = `${randomUUID()}@example.com`): P
 async function startAuthenticatedManager(email = `${randomUUID()}@example.com`): Promise<void> {
   const roleSlug = `browser-manager-${randomUUID()}`;
   ensureTestRole(roleSlug, ['users.view', 'users.edit']);
-  sessionCookie = await registerDirect(email, 'Browser Manager');
+  adoptCookieString(await registerDirect(email, 'Browser Manager'));
   const userId = userIdForEmail(email);
   const roleId = roleIdForSlug(roleSlug);
   getDatabase()
@@ -198,7 +241,7 @@ async function startAuthenticatedManager(email = `${randomUUID()}@example.com`):
 }
 
 async function startAuthenticatedUser(email = `${randomUUID()}@example.com`): Promise<void> {
-  sessionCookie = await registerDirect(email);
+  adoptCookieString(await registerDirect(email));
   await useAuthSession().refresh();
 }
 
@@ -274,7 +317,9 @@ beforeEach(async () => {
   container = document.createElement('div');
   document.body.append(container);
   application = undefined;
-  sessionCookie = undefined;
+  cookieJar = new Map();
+  document.cookie = 'auth_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   fetchRequests = [];
   fetchUrls = [];
   pendingFetches = new Set();
@@ -343,7 +388,7 @@ describe('users browser surfaces', () => {
     expect(useAuthSession().user.value).toMatchObject({ name: 'Updated User', email: updatedEmail });
     expect(fetchRequests).toContainEqual({ method: 'PATCH', path: '/api/users/me' });
 
-    const response = await serverApp.request('/api/users/me', { headers: { Cookie: sessionCookie! } });
+    const response = await serverApp.request('/api/users/me', { headers: { Cookie: cookieHeader()! } });
     await expect(response.json()).resolves.toMatchObject({
       success: true,
       data: { user: { name: 'Updated User', email: updatedEmail } },
@@ -561,7 +606,7 @@ describe('users administration browser surfaces', () => {
     const passwordAfterEdit = getDatabase().prepare('SELECT password FROM users WHERE id = ?').get(userId) as { password: string };
     expect(passwordAfterEdit.password).toBe(passwordBeforeEdit.password);
 
-    const response = await serverApp.request(`/api/users?search=${encodeURIComponent(email)}`, { headers: { Cookie: sessionCookie! } });
+    const response = await serverApp.request(`/api/users?search=${encodeURIComponent(email)}`, { headers: { Cookie: cookieHeader()! } });
     await expect(response.json()).resolves.toMatchObject({
       success: true,
       data: { users: [{ email, roles: ['user'] }] },
@@ -662,7 +707,7 @@ describe('users administration browser surfaces', () => {
     const adminId = userIdForEmail(adminEmail);
     assignRole(adminId, 'admin');
 
-    sessionCookie = managerCookie;
+    setJar(managerCookie);
     await useAuthSession().refresh();
     const response = await createUsersClient().deleteUsers({ ids: [adminId] });
 

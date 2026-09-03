@@ -26,9 +26,13 @@ We aim to confirm within 7 days and ship a fix as soon as practical. Please hold
 
 ## Security model notes
 
-- Sessions: server-side, cookie-based (60-day expiry, cleanup on startup and periodically)
-- CSRF: double-submit cookie pattern, `X-CSRF-Token` header, constant-time comparison
-- Rate limits: in-memory per-IP (`strictRateLimit`, 10 req/min) + login throttling (per-IP and per-email lockout)
-- Input sanitization: strips HTML tags from request body/query (basic XSS defense) — password fields are never mutated
+- Same-origin assumption: the Vue app and the Hono API are served from one origin. Session auth relies on it; cross-origin API use is not supported.
+- Sessions: server-side, cookie-based (`auth_id`, HttpOnly, SameSite=Lax, Secure in production, 60-day expiry, cleanup on startup and periodically)
+- CSRF: double-submit cookie pattern. The server issues a readable `csrf_token` cookie (SameSite=Lax, Secure in production, HttpOnly never) on API responses; the browser echoes it in the `X-CSRF-Token` header on POST/PUT/PATCH/DELETE under `/api/`. Bootstrap via `GET /api/auth/csrf`. Tokens are cryptographically random and compared in constant time; failures return `403 CSRF_INVALID` without leaking token material.
+- Security headers: CSP, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, restrictive `Permissions-Policy` on every response including errors. `Strict-Transport-Security` (1 year, includeSubDomains) is production-only and never emitted over local HTTP.
+- Rate limits: in-memory per-IP sliding windows. Global API budget (`RATE_LIMIT_MAX`, default 100 req / 15 min; `/health`, `/ready`, and non-API responses are exempt) plus a tighter auth budget (`AUTH_RATE_LIMIT_MAX`, default 10 req / min on login, registration, password change, and avatar upload). Exhaustion returns `429 RATE_LIMITED` with `X-RateLimit-*` and `Retry-After` metadata.
+- Login lockout: 5 failed attempts per normalized email (trimmed, lowercased) or per IP within 15 minutes locks that dimension (`AUTH_LOCKOUT_ATTEMPTS` / `AUTH_LOCKOUT_WINDOW_MS`). Responses never disclose whether the account exists, and a successful login clears the failure state.
+- Request bodies: JSON API payloads are capped at 1 MB (`MAX_JSON_BODY_BYTES`) with deterministic `413 PAYLOAD_TOO_LARGE`. Multipart avatar uploads keep their own 5 MB file policy. Client IPs come from the Node socket address; `X-Forwarded-For` is never trusted.
+- Input handling: validate-then-normalize at the owning Feature contract (trim names/emails/slugs, normalize email case, reject control bytes, bound lengths). Passwords are length-bounded only and never transformed. Vue's default interpolation escapes rendered text; no stored HTML sanitization is applied. Zod schemas discard unknown keys, which neutralizes prototype-pollution payloads.
 - Static files: path-traversal and symlink-escape guards on all served assets
 - Passwords: PBKDF2-SHA512 (100k iterations) via `hashPassword()` — never bcrypt directly
