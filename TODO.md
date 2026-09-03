@@ -609,6 +609,158 @@ Establish the canonical SQLite connection, migration, seed, bootstrap, backup, a
 * architecture doctor passes
 
 
+## [x] V3-036 — Restore browser authentication flow
+> Verified 2026-09-03: auth-owned Vue registration/login/session pages use same-origin `/api/auth/*`; current-user bootstrap, guarded redirects, cookie logout, loading/error states, and no-reload browser flows are covered by frontend integration tests.
+
+### Goal
+
+Complete the auth-owned browser surface without reintroducing server-rendered pages or a frontend framework abstraction.
+
+### Scope
+
+* add the auth-owned registration page and field diagnostics
+* compose `/login` and `/register` through the app router
+* bootstrap current-user state through the auth public interface
+* guard authenticated routes, redirect successful auth to the application, and provide browser logout
+* keep browser requests same-origin and session-cookie based
+
+### Acceptance
+
+* registration and login complete through Vue pages against `/api/auth/*`
+* authenticated sessions survive a route change and logout invalidates the browser session
+* unauthenticated access to a protected route redirects to `/login`
+* the existing login/register error and loading states are covered by frontend integration tests
+
+---
+
+## [ ] V3-037 — Restore dashboard and account browser surfaces
+> Release-blocking: v2 users could reach dashboard, profile, password, avatar, and account navigation flows that have no v3 page replacement.
+
+### Goal
+
+Restore the authenticated application shell and personal account workflows under v3 Feature ownership.
+
+### Scope
+
+* add dashboard and profile routes/pages
+* add permission-aware application navigation and sign-out
+* restore profile editing, password change, avatar upload, and avatar display
+* make the landing page CTA reflect the current session
+
+### Acceptance
+
+* authenticated users can reach `/dashboard` and `/profile` without a document reload
+* profile, password, and avatar workflows use the owning Feature public interfaces
+* navigation and dashboard actions respect the current user's session and permissions
+* frontend integration tests cover success, validation failure, unauthorized redirect, and logout transitions
+
+---
+
+## [ ] V3-038 — Restore users and RBAC browser surfaces
+> Release-blocking: v3 exposes user and role APIs but no browser workflow for administration.
+
+### Goal
+
+Restore the v2 users and roles workflows as Vue pages backed by the v3 auth/users Feature boundaries.
+
+### Scope
+
+* add `/users` and `/roles` routes/pages
+* restore user search, pagination, create, edit, delete, and role assignment
+* restore role and permission listing, create, edit, and delete
+* expose permission-aware controls and align response payloads with public contracts
+
+### Acceptance
+
+* an admin can complete the documented user and role CRUD workflows from Vue
+* a restricted user sees only permitted data/actions and receives clear forbidden diagnostics
+* self-demotion, self-delete, protected-admin, and last-admin invariants remain enforced
+* role, permission, and user-management integration tests cover the browser/API contract, including the `userCount` response shape
+
+---
+
+## [ ] V3-039 — Restore production browser and static delivery
+> Release-blocking: the v3 build emits browser assets, but the production Hono server currently returns JSON at `/` and 404s browser pages and public assets.
+
+### Goal
+
+Make the built Vue application and its safe static assets reachable through the documented production startup path.
+
+### Scope
+
+* serve the built SPA shell from the production Node entrypoint
+* provide history fallback for known client routes and a user-facing 404 for unknown routes
+* preserve safe access to built, public, storage, and avatar assets using documented v3 paths
+* define one canonical public `APP_URL` and document the Vite-development versus Node-production topology
+
+### Acceptance
+
+* `npm run build && npm start` serves `/`, `/login`, every shipped client route, and the user-facing 404 surface
+* built/public/avatar assets return the expected content type, cache policy, and path-traversal protection
+* `/health`, `/ready`, and `/api/*` remain reachable through the same production process
+* configuration examples and startup logs identify the actual public browser URL
+
+---
+
+## [ ] V3-043 — Restore browser request security controls
+> Release-blocking: v2 enabled cross-cutting protections that are absent from the v3 Hono application.
+
+### Goal
+
+Reimplement the effective v2 request protections as feature-neutral Hono middleware or equivalent application composition.
+
+### Scope
+
+* security headers, CSP, HSTS in production, frame/content/referrer/permissions policy
+* double-submit CSRF tokens for cookie-authenticated state-changing browser requests
+* global and auth-specific rate limits with login identifier/IP lockout
+* request body limits and the v2 input-sanitization contract where browser/API data requires it
+
+### Acceptance
+
+* integration tests assert required headers in development and production modes
+* state-changing browser requests fail without a valid CSRF token and succeed with one
+* auth and global limits return deterministic 429 responses with limit metadata and retry guidance
+* repeated failed logins trigger identifier/IP lockout without exposing account existence
+* oversized and unsafe input cases have explicit bounded diagnostics
+
+---
+
+## [ ] V3-044 — Restore request lifecycle observability
+> Non-blocking: these controls are developer-critical operational parity but do not replace missing user-facing workflows.
+
+### Goal
+
+Preserve the v2 request lifecycle behavior while keeping implementation in the v3 app/shared layers.
+
+### Scope
+
+* propagate or generate `X-Request-Id`
+* log non-health HTTP requests with method, path, status, duration, and request ID
+* retain compressed responses and production-safe default log verbosity
+* clean expired sessions at startup and on the documented interval
+
+### Acceptance
+
+* request integration tests verify request IDs, structured request events, and compressed responses
+* production configuration defaults to `info` unless explicitly overridden
+* expired sessions are removed on startup and during the cleanup interval
+
+---
+
+## [ ] V3-045 — Close v2 parity regression coverage
+> Non-blocking: this task makes the restored surface durable and prevents the audit gaps from returning.
+
+### Goal
+
+Make every preserved or replaced user-facing and security capability executable in deterministic tests.
+
+### Acceptance
+
+* tests exercise the Vue routes through the Vite topology and the production Node topology
+* auth, dashboard, profile, users, roles, assets, not-found, static delivery, configuration, and security controls each have a behavior-level regression test
+* test names and fixtures distinguish intentionally removed v2 behavior from accidental gaps
+
 ---
 
 # M5 — Nara CLI Foundation

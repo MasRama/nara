@@ -104,10 +104,10 @@ onBeforeUnmount(() => {
           </p>
 
           <div class="flex flex-wrap items-center gap-5 pt-2">
-            <a href="/register" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
+            <RouterLink to="/register" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
               Begin
               <span aria-hidden="true">→</span>
-            </a>
+            </RouterLink>
             <a
               href="https://github.com/MasRama/nara"
               target="_blank"
@@ -245,10 +245,10 @@ onBeforeUnmount(() => {
         <h2 class="font-heading text-[clamp(2.5rem,7vw,5rem)] font-semibold leading-none tracking-[-0.03em] text-foreground">Begin <span class="font-medium italic text-primary">quietly.</span></h2>
         <p class="max-w-[48ch] text-lg leading-relaxed text-muted-foreground">Clone the repository. Open one file. Ask the machine for a feature. Watch it appear.</p>
         <div class="flex flex-wrap items-center justify-center gap-5 pt-2">
-          <a href="/register" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
+          <RouterLink to="/register" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-7 font-heading text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
             Begin
             <span aria-hidden="true">→</span>
-          </a>
+          </RouterLink>
           <a href="https://github.com/MasRama/nara" target="_blank" rel="noreferrer" class="group inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
             View source
             <span aria-hidden="true" class="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">↗</span>

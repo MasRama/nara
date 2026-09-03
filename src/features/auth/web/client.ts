@@ -14,7 +14,7 @@ export interface AuthClient {
   logout(): Promise<AuthSuccess | AuthError>;
 }
 
-export function createAuthClient(baseUrl = ''): AuthClient {
+export function createAuthClient(baseUrl = '/api/auth'): AuthClient {
   const client = hc<typeof authRoutes>(baseUrl, { init: { credentials: 'include' } });
 
   return {
