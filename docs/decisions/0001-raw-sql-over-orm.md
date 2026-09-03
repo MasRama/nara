@@ -13,14 +13,11 @@ Nara is an AI-first starter kit. AI code generators (Claude, GPT, Cursor) write 
 
 ## Decision
 
-Use raw SQL via `better-sqlite3` with a thin wrapper (`app/services/SQLite.ts`) that provides:
-- Template literal parameterization (auto-safe from injection)
-- `one()`, `many()`, `exec()` for static SQL
-- `get()`, `all()`, `run()` for dynamic SQL with `?` params
-- `update()` for partial updates (auto-skips undefined, converts booleans)
-- `transaction()` for atomic multi-statement writes
+Use raw SQL with `better-sqlite3`. The shared database layer exposes the configured connection and lifecycle engines; Feature repositories use ordinary prepared statements.
 
-All SQL lives in `app/queries/` — handlers never write SQL.
+Feature-owned schema changes are explicit SQL files under `src/features/<feature>/server/migrations/`. They are applied forward-only, transactionally, and recorded with checksums. Reference data uses Feature-owned idempotent seeds under `server/seeds/`.
+
+SQL remains inspectable in source. Nara does not add an ORM, query builder, migration DSL, or schema inference layer.
 
 ## Consequences
 
@@ -31,7 +28,7 @@ Positive:
 - Smaller dependency tree
 
 Negative:
-- No automatic migrations from schema changes (manual migrations)
+- Schema changes require developers to write and review explicit SQL migrations
 - No type-safe query builder (types come from TypeScript interfaces, not the query)
 - Developers must know SQL (acceptable for an AI-first kit — AI knows SQL)
 

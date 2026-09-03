@@ -582,6 +582,33 @@ Establish Vue Router as the canonical SPA composition layer.
 * frontend typecheck/tests/build pass
 * architecture doctor passes
 
+## [x] V3-035 — Establish canonical SQLite migration and data lifecycle
+> Verified 2026-09-03: Feature-owned forward SQL migrations, checksummed `_nara_migrations` ledger, atomic concurrent-safe application, startup gating, lifecycle commands, idempotent RBAC seeds, explicit secure admin bootstrap, online backup, integrity checks, and safe previous-v3 schema compatibility are implemented; `npm run check`, `npm run build`, `npm run lint`, lifecycle tests (12/12), temp-database command smokes, built startup smoke, and architecture doctor passed.
+
+### Goal
+
+Establish the canonical SQLite connection, migration, seed, bootstrap, backup, and integrity lifecycle for Nara v3.
+
+### Acceptance
+
+* SQLite connection no longer owns application schema creation
+* Feature-owned forward migrations are canonical
+* migration ledger includes checksums
+* migration application is atomic
+* applied migration edits are rejected
+* migrations run before HTTP listen
+* explicit migrate/status/fresh commands work
+* fresh refuses production
+* seeds are idempotent
+* no insecure default admin seed exists
+* explicit admin bootstrap works
+* online backup works
+* database integrity check works
+* current v3 schema/data compatibility is handled safely
+* tests pass
+* architecture doctor passes
+
+
 ---
 
 # M5 — Nara CLI Foundation

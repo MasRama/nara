@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { env } from '../shared/config';
 import { Logger } from '../shared/logging';
 import { handleError } from './error-handler';
-import { getDatabase } from '../shared/database';
+import { getDatabase, migrate } from '../shared/database';
 import { authRoutes, accessRoutes } from '../features/auth';
 import { userRoutes, assetRoutes } from '../features/users';
 import { healthRoutes } from '../../official-features/health';
@@ -30,6 +30,12 @@ app.route('/api/users', userRoutes);
 
 export function startServer(port = env.PORT) {
   try {
+    const migrationResult = migrate();
+    Logger.info('Database migrations ready', {
+      applied: migrationResult.applied,
+      skipped: migrationResult.skipped,
+    });
+
     const server = serve(
       {
         fetch: app.fetch,

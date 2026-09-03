@@ -13,6 +13,8 @@ src/features/billing/
 ├── contract.ts       # feature-owned types and runtime input schemas
 ├── index.ts          # public boundary
 ├── server/           # routes, services, repositories, adapters
+│   ├── migrations/   # optional plain SQL schema evolution
+│   └── seeds/        # optional idempotent reference data
 ├── web/              # optional browser code and typed API client
 └── tests/            # feature behavior tests
 ```
@@ -28,8 +30,10 @@ src/features/auth/
 ├── server/
 │   ├── access-routes.ts
 │   ├── access.ts
+│   ├── migrations/
 │   ├── repository.ts
 │   ├── routes.ts
+│   ├── seeds/
 │   └── service.ts
 ├── tests/
 └── web/
@@ -42,6 +46,7 @@ src/features/users/
 ├── server/
 │   ├── assets-routes.ts
 │   ├── assets.ts
+│   ├── migrations/
 │   ├── repository.ts
 │   └── routes.ts
 └── tests/
@@ -149,10 +154,12 @@ Feature dependencies should be acyclic. If `billing → users`, then `users → 
 ```text
 src/shared/
 ├── config/       Environment and application constants
-├── database/     SQLite connection and schema bootstrap
+├── database/     SQLite connection, migration, and seed engines
 ├── errors/       Application error types
 └── logging/      Structured logger
 ```
+
+Feature-owned schema changes live under `src/features/<feature>/server/migrations/`; reference seeds live under `server/seeds/`. The shared database layer discovers those directories but does not own application tables or business data.
 
 Put a concept in a Feature when it has a natural business owner. Do not use `shared/` as a second global services, repositories, validators, or models layer. Shared code may support Features; it must not absorb their business decisions.
 

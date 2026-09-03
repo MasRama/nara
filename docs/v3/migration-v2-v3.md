@@ -80,15 +80,17 @@ The replacement removes the old native HTTP compatibility workaround. The Nara H
 
 ## Data and persistence
 
-V3 bootstraps its required SQLite schema from `src/shared/database/sqlite.ts`. It does not promise to replay or translate a v2 migration history automatically.
+V3 uses SQLite through `better-sqlite3` and raw SQL. The connection layer only opens and configures the local database file. Feature-owned SQL migrations under `src/features/<feature>/server/migrations/` evolve the schema forward; the migration engine does not provide production rollback/down migrations.
 
 Before moving a deployed application:
 
 1. back up the v2 database
 2. inventory tables, indexes, constraints, and data transforms
-3. compare them with the v3 schema used by the owning Features
+3. compare them with the v3 schema and migration ledger used by the owning Features
 4. write and test an explicit data migration or export/import process
 5. validate users, sessions, roles, permissions, and assets before cutover
+
+An existing v3 development database created by the former `sqlite.ts` bootstrap is recognized only when all expected tables, columns, indexes, and foreign keys match exactly; Nara then records the canonical baseline checksums without rewriting data. Partial or different schemas are left untouched and require a corrective forward migration. V2 `migrations` history is not silently translated.
 
 Do not delete a production database or assume that a fresh v3 schema preserves existing data. A source port and a data migration are separate deliverables.
 

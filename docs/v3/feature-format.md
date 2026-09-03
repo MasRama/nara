@@ -11,11 +11,13 @@ An official package is a directory named for the feature. Its contents mirror th
 ├── index.ts
 ├── contract.ts             # when the feature has a typed boundary
 ├── server/                  # when the feature owns server behavior
+│   ├── migrations/          # optional plain SQL schema changes
+│   └── seeds/               # optional idempotent reference seeds
 ├── web/                     # when the feature owns client behavior
 └── tests/                   # when the feature ships behavior tests
 ```
 
-Empty directories and placeholder files are not part of the format. A package contains only code that the capability needs. `index.ts` is the public boundary when the package exposes cross-feature behavior.
+Empty directories and placeholder files are not part of the format. A package contains only code that the capability needs. `index.ts` is the public boundary when the package exposes cross-feature behavior. A database-backed package may include `server/migrations/` and `server/seeds/`; the shared lifecycle discovers them by convention without a registry.
 
 ## Installation
 

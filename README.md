@@ -188,7 +188,15 @@ APP_URL=http://localhost:5555
 DB_FILE=database/dev.sqlite3
 ```
 
-For production, copy `.env.production.example` to `.env.production`, set a real `APP_URL`, and choose a production database path:
+Nara's database is a local SQLite file managed by `better-sqlite3`. Apply its Feature-owned migrations before using database-backed routes:
+
+```bash
+npm run migrate
+npm run seed
+npm run db:check
+```
+
+For production, copy `.env.production.example` to `.env.production`, set a real `APP_URL`, choose a production database path, and build:
 
 ```bash
 cp .env.production.example .env.production
@@ -196,7 +204,7 @@ npm run build
 npm start
 ```
 
-Production configuration fails during startup with the invalid field named in the error. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
+Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 
 ## Official feature packages
 
@@ -221,6 +229,7 @@ The installation result is inspectable source, not a hidden runtime plugin. Run 
 - [`docs/v3/migration-v2-v3.md`](./docs/v3/migration-v2-v3.md) — v2 to v3 porting guide
 - [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md) — Compose, Understand, Protect
 - [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
+- [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md) — canonical SQLite migrations, seeds, backup, and integrity lifecycle
 - [`SECURITY.md`](./SECURITY.md) — security reporting
 
 ## License

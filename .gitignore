@@ -13,9 +13,9 @@ database/*.sqlite3-shm
 database/*.sqlite3-wal
 database/*.sqlite-shm
 database/*.sqlite-wal
+database/backups/
 dev.sqlite3
 production.sqlite3
-
 # Build artifacts
 /build
 /dist

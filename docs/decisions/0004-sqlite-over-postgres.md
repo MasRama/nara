@@ -17,22 +17,22 @@ Use SQLite via `better-sqlite3` (synchronous, native binding).
 
 - Dev database: `database/dev.sqlite3`
 - Production database: `database/production.sqlite3`
-- Migrations: TypeScript files in `migrations/` with `up`/`down` SQL strings
+- Migrations: checksummed, forward-only SQL files under owning Feature `server/migrations/` directories
+- Backups: SQLite online backup API into `database/backups/`
 
 ## Consequences
 
 Positive:
 - Zero setup — no database server to install, just `npm run migrate`
-- Single-file deployment — the database is a file, easy to backup/copy
 - Synchronous queries — no async/await in query layer, simpler code
 - AI writes standard SQL — no PostgreSQL-specific syntax to learn
-- Fast enough for starter kit workloads (thousands of concurrent users with WAL mode)
+- Online backups use SQLite's supported snapshot mechanism
 
 Negative:
-- No concurrent writes (single writer) — acceptable for starter kit, switch to Postgres for high-write apps
-- No built-in replication — acceptable for starter kit
+- SQLite has a single writer — use a client/server database for high write concurrency
+- No built-in replication — acceptable for a local-disk application
 - Limited data types (no arrays, no JSON operators) — use TEXT + JSON.parse for JSON
-- File-based — can't run on serverless (Lambda) without external storage
+- File-based — keep the database and WAL files on storage local to the application host, not a shared network filesystem
 
 ## Alternatives considered
 

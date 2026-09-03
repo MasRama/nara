@@ -21,8 +21,8 @@ Reference point for the v3 rewrite. This inventory records the current v2 implem
 | Frontend API access | REIMPLEMENT | `resources/lib/api.ts` provides a generic `fetch` wrapper with CSRF headers, response parsing, and toasts. | Adapt to feature-scoped contracts/clients; do not introduce a global RPC type. |
 | Database | PRESERVE | `better-sqlite3` with SQLite files under `database/`; tests use `:memory:`. | Keep SQLite and adapt database access to shared or feature-owned v3 locations. |
 | Query layer | REIMPLEMENT | Raw SQL functions are split across `app/queries/*.ts` and imported by handlers/services. | Keep raw SQL behavior where useful, but place ownership inside features or intentionally small shared code. |
-| Migrations | PRESERVE | TypeScript migrations in `migrations/` create `users`, `sessions`, `assets`, RBAC tables, and the migration ledger. | Preserve schema behavior while adapting migration composition to the v3 application. |
-| Seeds | PRESERVE | `seeds/` creates permissions, roles, and the initial admin user. | Preserve useful seed behavior; move ownership with migrated capabilities when required. |
+| Migrations | PRESERVE | TypeScript migrations in `migrations/` create `users`, `sessions`, `assets`, RBAC tables, and the migration ledger. | Preserve schema behavior with forward-only SQL migrations under owning Features, checksummed in `_nara_migrations`. |
+| Seeds | PRESERVE | `seeds/` creates permissions, roles, and the initial admin user. | Preserve permissions, roles, and role relationships under Feature-owned idempotent seeds; replace the insecure admin seed with explicit bootstrap credentials. |
 | Authentication | REIMPLEMENT | Session-cookie authentication in `app/services/Authenticate.ts`; PBKDF2-SHA512 password hashing; login throttling; logout; password change. | Reimplement as a feature-owned capability with a public interface. Preserve session semantics unless a task says otherwise. |
 | Authorization / RBAC | REIMPLEMENT | Users, roles, permissions, `user_roles`, and `role_permissions`; permission checks live in query functions and handlers. | Reimplement with explicit feature ownership and public cross-feature access only. |
 | Configuration | REIMPLEMENT | Zod validation in `app/config/env.ts` loads `.env.production` or `.env`; constants are in `app/config/constants.ts`. | Preserve useful environment behavior under `src/shared/config` or another spec-compliant shared location. |
@@ -65,7 +65,7 @@ The reusable business capabilities to account for during migration are:
 | `permissions` | Resource/action permissions. |
 | `user_roles` | User-to-role junction with cascading foreign keys. |
 | `role_permissions` | Role-to-permission junction with cascading foreign keys. |
-| `migrations` | Applied migration ledger managed by `Migrator`. |
+| `_nara_migrations` | Checksummed forward migration ledger managed by the v3 migrator. |
 
 ## Environment variables
 
