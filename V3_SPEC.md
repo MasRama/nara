@@ -341,39 +341,44 @@ Not every feature must contain every directory.
 
 Empty structural directories should not be created unless needed.
 
-Feature-specific Vue pages, components, and composables belong under the owning Feature's `web/` directory. They must use the Feature's public boundary when consuming another capability.
+Feature-specific Vue pages, components, and composables belong under the owning Feature's `web/` directory. They must use the appropriate public boundary when consuming another capability.
 
 Application-wide Vue composition belongs under `src/app/`. It may compose Features but must not absorb business logic owned by a Feature.
 
 ---
 
-# 10. Feature Public Boundary
+# 10. Feature Public Boundaries
 
-Every feature has a public interface.
-
-Reference convention:
+Every Feature has a general/server-facing public interface:
 
 ```text
 features/<feature>/index.ts
 ```
 
-Other features may use public exports from this file.
+Other Features and application server composition use intentional exports from this root boundary.
 
-Example:
+A Feature with browser surfaces may additionally expose an explicit browser-safe public interface:
 
-```ts
-import { getUser } from "@/features/users"
+```text
+features/<feature>/web/index.ts
 ```
 
-Other features may not access internals directly.
+Application browser composition under `src/app/` may import Feature browser surfaces from this `web/index.ts` boundary. Another Feature's browser code may use it only for a legitimate browser-safe dependency. This optional browser boundary is separate from the general/server boundary; do not collapse them into one universal barrel.
 
-Invalid:
+Examples:
 
 ```ts
-import { userRepository } from "@/features/users/server/repository"
+import { authRoutes } from "@/features/auth"
+import { LoginPage } from "@/features/auth/web"
 ```
 
-This is a core invariant of Nara v3.
+Feature internals remain private. Application composition and other Features may not access `web/pages/*`, `web/components/*`, `web/client`, `server/*`, or other implementation paths directly:
+
+```ts
+import LoginPage from "@/features/auth/web/pages/LoginPage.vue"
+```
+
+This separation is a core invariant of Nara v3. Do not create additional public entrypoints unless a later specification demonstrates a need.
 
 ---
 
@@ -636,7 +641,7 @@ Where the application structure makes this statically identifiable, prevent clea
 
 ### Public interface validation
 
-Feature-to-feature access should flow through the feature public boundary.
+General or server-facing Feature-to-Feature access should flow through the target Feature root public boundary. Browser composition and legitimate browser-safe Feature dependencies may flow through the target `web/index.ts` boundary. Neither may reach arbitrary Feature internals.
 
 Diagnostics must explain how to fix problems.
 

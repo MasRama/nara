@@ -11,11 +11,12 @@ Features live under `src/features/<feature>/`. Names are lowercase kebab-case bu
 ```text
 src/features/billing/
 ├── contract.ts       # feature-owned types and runtime input schemas
-├── index.ts          # public boundary
+├── index.ts          # general/server-facing public boundary
 ├── server/           # routes, services, repositories, adapters
 │   ├── migrations/   # optional plain SQL schema evolution
 │   └── seeds/        # optional idempotent reference data
 ├── web/              # optional browser code and typed API client
+│   └── index.ts      # optional browser-safe public boundary
 └── tests/            # feature behavior tests
 ```
 
@@ -38,7 +39,9 @@ src/features/auth/
 ├── tests/
 └── web/
     ├── client.ts
-    └── index.ts
+    ├── index.ts      # browser-safe public boundary
+    ├── pages/
+    └── session.ts
 
 src/features/users/
 ├── contract.ts
@@ -64,7 +67,7 @@ app.route('/api/users', userRoutes);
 
 ## Public interface
 
-`src/features/<feature>/index.ts` is the Feature's public boundary. Other Features and application composition may import only from that boundary.
+`src/features/<feature>/index.ts` is the Feature's general/server-facing public boundary. Other Features and application server composition may import only the intentional exports from this boundary.
 
 Export the smallest interface that another capability needs:
 
@@ -74,7 +77,7 @@ export { userRoutes } from './server/routes';
 export type { UserProfile } from './contract';
 ```
 
-Consumers use the boundary:
+General or server-facing consumers use the boundary:
 
 ```ts
 import { getCurrentUser } from '@/features/auth';
@@ -87,7 +90,17 @@ They must not import implementation files:
 import { findUserById } from '@/features/auth/server/repository';
 ```
 
-Moving or splitting files under `server/` or `web/` is an internal change when the public exports remain stable. The public index is not a convenience barrel for every internal symbol; it is the capability's intentional API.
+### Browser public interface
+
+When a Feature has browser surfaces, `src/features/<feature>/web/index.ts` is its explicit browser-safe public boundary. Application-wide Vue composition under `src/app/` may import browser pages, composables, and clients from this barrel:
+
+```ts
+import { LoginPage } from '@/features/auth/web';
+```
+
+Another Feature's browser code may use another Feature's `web/index.ts` only for a legitimate browser-safe dependency. Neither app composition nor another Feature may reach into `web/pages/*`, `web/components/*`, `web/client`, or `server/*`. The browser barrel must not export server-only runtime symbols.
+
+The public indexes are intentional interfaces, not convenience barrels for every internal symbol. Arbitrary deep imports remain invalid.
 
 ## Contracts
 
@@ -107,43 +120,45 @@ Server routes validate requests with the schema. Web code can reuse contract typ
 
 ## Server and web relationship
 
-Server code belongs under `server/`. It may use databases, filesystem APIs, server-only dependencies, and private implementation details within its own Feature. The Feature exposes route sub-applications or safe functions through `index.ts`.
+Server code belongs under `server/`. It may use databases, filesystem APIs, server-only dependencies, and private implementation details within its own Feature. The Feature exposes route sub-applications or safe general functions through `index.ts`.
 
 Web code belongs under `web/` when the capability has a browser surface. It may import:
 
 - the Feature's own `contract.ts`
 - browser-safe dependencies
-- public interfaces of other Features, when the dependency is intentionally client-safe
+- the public browser boundary of another Feature, when the dependency is intentionally client-safe
 
 Web code must not import another Feature's `server/` files, `src/shared/database`, server-only built-ins, or server-only packages. `nara doctor` checks these obvious leaks. A Feature without a browser surface should omit `web/` rather than add an empty layer.
 
-The relationship is therefore:
+The two public boundaries are:
 
 ```text
-Feature contract ───────┐
-                        ├── server routes/services/repositories
-                        └── optional web client/pages/components
-
-Feature public index ─── application composition and other Features
+Feature
+├── index.ts       # general/server public API
+└── web/
+    └── index.ts   # optional browser-safe public API
 ```
+
+Application-wide browser composition uses `web/index.ts` for Feature-owned pages and browser utilities. It does not reach into the Feature's web implementation directories.
 
 ## Browser routing
 
 Application-wide browser route composition belongs under `src/app/router.ts` and uses Vue Router. Routes may point to app-owned pages under `src/app/pages/` or Feature-owned pages under `src/features/<feature>/web/pages/`.
 
-Features own their browser pages, but they do not own the global router. The app layer composes those pages into the application's client-side routes.
+Features own their browser pages, but they do not own the global router. The app layer composes those pages through the owning Feature's browser-safe public barrel, `src/features/<feature>/web/index.ts`, rather than importing page files directly.
 
 ## Dependencies
 
 Dependencies follow ownership and direction:
 
 1. Code inside a Feature may import its own internals.
-2. A Feature importing another Feature uses the target public `index.ts`.
-3. Application composition may import Feature public exports to mount routes.
-4. Shared infrastructure may be imported where needed, but it owns no business capability.
-5. Web code stays on the browser-safe side of the server boundary.
+2. A general or server-facing Feature dependency uses the target Feature's root `index.ts`.
+3. A browser-safe Feature dependency uses the target Feature's `web/index.ts` only when the dependency is legitimate and client-safe.
+4. Application browser composition under `src/app/` uses Feature `web/index.ts` for browser surfaces.
+5. Shared infrastructure may be imported where needed, but it owns no business capability.
+6. Web code stays on the browser-safe side of the server boundary.
 
-For example, the users Feature depends on the auth public interface for the current session and role checks. It does not import `auth/server/repository.ts` or `auth/server/service.ts`.
+For example, the users Feature may depend on the auth Feature's browser-safe public interface for a client-side session surface. It does not import `auth/web/pages/*`, `auth/web/client`, `auth/server/repository.ts`, or `auth/server/service.ts`.
 
 Feature dependencies should be acyclic. If `billing → users`, then `users → billing` is not a second harmless convenience; it is a cycle that obscures ownership and loading order. Move genuinely shared behavior to a lower-level capability or remove one edge.
 
@@ -232,4 +247,4 @@ A healthy project prints exactly:
 Architecture looks healthy.
 ```
 
-An invalid project exits non-zero and reports the problem, source file, Feature relationship, reason, and recommended fix. The checks cover Feature shape, cross-Feature internal imports, dependency cycles, and server/client leaks. No AI provider is required.
+The checks cover Feature shape, cross-Feature public boundaries, application-to-Feature browser boundaries, dependency cycles, and server/client leaks. No AI provider is required.

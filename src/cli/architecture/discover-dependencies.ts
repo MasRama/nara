@@ -24,9 +24,26 @@ interface ModuleImport {
   specifier: string;
   file: string;
 }
+const INDEX_PATH_PATTERN = /^index(?:\.[cm]?[jt]sx?)?$/;
+const BROWSER_PUBLIC_PATH_PATTERN = /^web(?:\/index(?:\.[cm]?[jt]sx?)?)?$/;
+
+function isPublicFeaturePath(suffix: string): boolean {
+  return suffix.length === 0 || INDEX_PATH_PATTERN.test(suffix) || BROWSER_PUBLIC_PATH_PATTERN.test(suffix);
+}
+
+function sourceForParsing(file: string): string {
+  const source = readFileSync(file, 'utf8');
+  if (!file.endsWith('.vue')) {
+    return source;
+  }
+
+  return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
+    .map((match) => match[1])
+    .join('\n');
+}
 
 function collectModuleImports(file: string): ModuleImport[] {
-  const source = readFileSync(file, 'utf8');
+  const source = sourceForParsing(file);
   const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const imports: ModuleImport[] = [];
 
@@ -95,13 +112,13 @@ function featureReferenceFromSpecifier(
     return undefined;
   }
 
-  const usesInternalPath = pathSuffix.length > 0 && !(pathSuffix.length === 1 && pathSuffix[0] === 'index');
+  const usesInternalPath = !isPublicFeaturePath(pathSuffix.join('/'));
   return { name: featurePath, usesInternalPath };
 }
 
 function featureFiles(feature: DiscoveredFeature, root: string): string[] {
   return feature.files
-    .filter((file) => /\.(?:cts|mts|ts|tsx)$/.test(file))
+    .filter((file) => /\.(?:cts|mts|ts|tsx|vue)$/.test(file))
     .map((file) => path.resolve(root, feature.directory, file));
 }
 

@@ -233,22 +233,33 @@ validators/
 models/
 ```
 
-Cross-feature communication must use the target feature's public interface.
+Cross-feature communication and application composition must use an explicit public interface.
 
-A feature's `index.ts` is its public boundary unless the specification states otherwise.
+For every feature:
 
-Never import another feature's internal implementation directly.
+* `src/features/<feature>/index.ts` is the general/server-facing public boundary.
+* If the feature has browser surfaces, `src/features/<feature>/web/index.ts` is its optional browser-safe public boundary.
 
-Forbidden example:
+Application-wide Vue composition under `src/app/` may import browser surfaces only from the Feature's `web/index.ts` boundary:
 
 ```ts
-import { db } from "@/features/users/server/repository"
+import { LoginPage } from "@/features/auth/web"
 ```
 
-Expected direction:
+Other Features' browser code may use another Feature's browser-safe boundary when that dependency is legitimate and browser-safe. General or server-facing consumers use the Feature's root boundary:
 
 ```ts
 import { getUser } from "@/features/users"
+```
+
+Feature internals remain private. Application composition and other Features must not reach into `web/pages/*`, `web/components/*`, `web/client`, `server/*`, or other implementation paths. Do not export server-only runtime symbols through `web/index.ts`.
+
+Forbidden examples:
+
+```ts
+import LoginPage from "@/features/auth/web/pages/LoginPage.vue"
+import { createAuthClient } from "@/features/auth/web/client"
+import { db } from "@/features/users/server/repository"
 ```
 
 ---

@@ -631,6 +631,9 @@ Complete the auth-owned browser surface without reintroducing server-rendered pa
 * unauthenticated access to a protected route redirects to `/login`
 * the existing login/register error and loading states are covered by frontend integration tests
 
+### Architecture follow-up (complete)
+> 2026-09-03: formalized the optional browser-safe `src/features/<feature>/web/index.ts` boundary, documented app/Feature import rules, and added deterministic doctor fixtures for valid barrels and invalid deep imports.
+
 ---
 
 ## [ ] V3-037 — Restore dashboard and account browser surfaces

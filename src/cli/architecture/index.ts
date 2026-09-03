@@ -9,8 +9,8 @@ export type {
   DependencyDiscovery,
   FeatureDependency,
 } from './discover-dependencies';
-export { detectCrossFeatureInternalImports } from './validate-boundaries';
-export type { BoundaryViolation } from './validate-boundaries';
+export { detectApplicationFeatureInternalImports, detectCrossFeatureInternalImports } from './validate-boundaries';
+export type { ApplicationBoundaryViolation, BoundaryViolation } from './validate-boundaries';
 export { detectFeatureDependencyCycles } from './detect-cycles';
 export type { FeatureDependencyCycle } from './detect-cycles';
 export { detectServerClientLeaks } from './detect-client-leaks';

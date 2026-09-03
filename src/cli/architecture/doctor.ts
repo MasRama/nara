@@ -1,4 +1,7 @@
-import { detectCrossFeatureInternalImports } from './validate-boundaries';
+import {
+  detectApplicationFeatureInternalImports,
+  detectCrossFeatureInternalImports,
+} from './validate-boundaries';
 import { detectFeatureDependencyCycles } from './detect-cycles';
 import { detectServerClientLeaks } from './detect-client-leaks';
 import { discoverFeatures } from './discover-features';
@@ -6,6 +9,7 @@ import { discoverFeatures } from './discover-features';
 export type DoctorIssueCode =
   | 'INVALID_FEATURE_SHAPE'
   | 'CROSS_FEATURE_INTERNAL_IMPORT'
+  | 'APPLICATION_FEATURE_INTERNAL_IMPORT'
   | 'CIRCULAR_FEATURE_DEPENDENCY'
   | 'SERVER_CLIENT_LEAK';
 
@@ -40,7 +44,20 @@ export function analyzeArchitecture(root = process.cwd()): DoctorReport {
       message: violation.message,
       file: violation.sourceFile,
       relationship: `${violation.sourceFeature} -> ${violation.targetFeature}`,
-      reason: 'Features may communicate only through the target feature public index.',
+      reason:
+        violation.boundary === 'browser'
+          ? 'Features may communicate only through the target Feature root index or its browser-safe web index.'
+          : 'Features may communicate only through the target feature public index.',
+      suggestion: violation.suggestion,
+    });
+  }
+  for (const violation of detectApplicationFeatureInternalImports(root)) {
+    issues.push({
+      code: violation.code,
+      message: violation.message,
+      file: violation.sourceFile,
+      relationship: `app -> ${violation.targetFeature}`,
+      reason: 'Application composition may use only a Feature root index or its browser-safe web index.',
       suggestion: violation.suggestion,
     });
   }
