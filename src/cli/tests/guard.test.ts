@@ -413,19 +413,50 @@ describe('nara guard', () => {
     const repo = initRepo();
     writeFeature(repo, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });
     commitAll(repo, 'base');
+    expect(git(repo, 'status', '--porcelain')).toBe('');
 
-    const countTempDirs = (): number =>
-      readdirSync(os.tmpdir()).filter((entry) => entry.startsWith('nara-diff-')).length;
+    // Attribute temp directories to this invocation only: point TMPDIR at a
+    // dedicated empty parent so concurrent diff/guard tests in other workers
+    // cannot change what this test observes. No production API change.
+    const runGuardIsolated = (args: string[]): { exitCode: number; stdout: string; stderr: string } => {
+      const isolatedRoot = mkdtempSync(path.join(os.tmpdir(), 'nara-guard-cleanup-'));
+      fixtures.push(isolatedRoot);
+      const previousTmpdir = process.env.TMPDIR;
+      process.env.TMPDIR = isolatedRoot;
+      try {
+        return runGuard(repo, args);
+      } finally {
+        if (previousTmpdir === undefined) {
+          delete process.env.TMPDIR;
+        } else {
+          process.env.TMPDIR = previousTmpdir;
+        }
+      }
+    };
+    const isolatedLeftovers = (): string[] => {
+      const roots = fixtures.filter((entry) => path.basename(entry).startsWith('nara-guard-cleanup-'));
+      return roots.flatMap((root) => readdirSync(root));
+    };
 
-    const beforeBase = countTempDirs();
-    const unknownBase = runGuard(repo, ['--base', 'does-not-exist-12345']);
+    const unknownBase = runGuardIsolated(['--base', 'does-not-exist-12345']);
     expect(unknownBase.exitCode).toBe(1);
-    expect(countTempDirs()).toBe(beforeBase);
+    expect(unknownBase.stderr).toContain('Unknown Git ref');
+    expect(isolatedLeftovers()).toEqual([]);
 
-    const beforeHead = countTempDirs();
-    const unknownHead = runGuard(repo, ['--base', 'HEAD', '--head', 'does-not-exist-12345']);
+    // Base materialization already occurred here and must be cleaned when
+    // head verification fails.
+    const unknownHead = runGuardIsolated(['--base', 'HEAD', '--head', 'does-not-exist-12345']);
     expect(unknownHead.exitCode).toBe(1);
-    expect(countTempDirs()).toBe(beforeHead);
+    expect(unknownHead.stderr).toContain('Unknown Git ref');
+    expect(isolatedLeftovers()).toEqual([]);
+
+    // Successful materializations clean themselves too.
+    const success = runGuardIsolated(['--base', 'HEAD']);
+    expect(success.exitCode).toBe(0);
+    expect(isolatedLeftovers()).toEqual([]);
+
+    // Worktree and index untouched: no checkout, reset, stash, or clean.
+    expect(git(repo, 'status', '--porcelain')).toBe('');
   });
 
   it('tolerates spaces, unicode, binary, and deleted paths', () => {
