@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -150,6 +150,54 @@ describe('packaged Nara lifecycle', () => {
       } finally {
         await stopServer(server);
       }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('installed nara diff explains architecture changes from working tree and refs', { timeout: 300_000 }, async () => {
+    const tarball = await ensurePackedNara();
+    const root = mkdtempSync(path.join(os.tmpdir(), 'nara-pack-diff-'));
+    try {
+      const prefix = path.join(root, 'prefix');
+      await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
+      const installedRoot = path.join(prefix, 'node_modules', 'nara');
+      expect(existsSync(path.join(installedRoot, 'dist', 'commands', 'diff.js'))).toBe(true);
+      expect(existsSync(path.join(installedRoot, 'dist', 'architecture', 'diff.js'))).toBe(true);
+      expect(existsSync(path.join(installedRoot, 'dist', 'architecture', 'snapshot.js'))).toBe(true);
+      const installedCli =
+        process.platform === 'win32'
+          ? ['node', path.join(installedRoot, 'dist', 'index.js')]
+          : [path.join(prefix, 'node_modules', '.bin', 'nara')];
+
+      const fixture = path.join(root, 'fixture');
+      mkdirSync(path.join(fixture, 'src/features/health'), { recursive: true });
+      writeFileSync(path.join(fixture, 'src/features/health/index.ts'), 'export const healthRoutes = 1;\n');
+      await runCommand('git', ['init'], fixture);
+      await runCommand('git', ['config', 'user.email', 'nara-diff@example.com'], fixture);
+      await runCommand('git', ['config', 'user.name', 'nara diff'], fixture);
+      await runCommand('git', ['add', '-A'], fixture);
+      await runCommand('git', ['commit', '-m', 'base'], fixture);
+      mkdirSync(path.join(fixture, 'src/features/billing'), { recursive: true });
+      writeFileSync(path.join(fixture, 'src/features/billing/index.ts'), 'export const billing = 1;\n');
+
+      const human = await runCommand(installedCli[0], [...installedCli.slice(1), 'diff', '--base', 'HEAD'], fixture);
+      expect(human.stdout).toContain('+ billing');
+      expect(human.stdout).toContain('Structural dependency impact:');
+      const machine = await runCommand(
+        installedCli[0],
+        [...installedCli.slice(1), 'diff', '--base', 'HEAD', '--json'],
+        fixture,
+      );
+      const payload = JSON.parse(machine.stdout) as {
+        schemaVersion: number;
+        changes: { features: { added: string[]; removed: string[] } };
+        affected: { scope: string; directlyChanged: string[] };
+      };
+      expect(payload.schemaVersion).toBe(1);
+      expect(payload.changes.features).toEqual({ added: ['billing'], removed: [] });
+      expect(payload.affected.scope).toBe('structural dependency impact');
+      expect(payload.affected.directlyChanged).toContain('billing');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

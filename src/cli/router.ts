@@ -7,9 +7,9 @@ import type { FeatureImpact } from './architecture/impact';
 import { inspectFeature } from './architecture/inspect';
 import type { FeatureInspection } from './architecture/inspect';
 import { installOfficialFeature } from './composition/install-feature';
+import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
 import { makeFeature } from './commands/make-feature';
 import { newProject } from './commands/new-project';
-
 export interface CliIO {
   stdout(message: string): void;
   stderr(message: string): void;
@@ -28,7 +28,6 @@ const HELP_TEXT = `Nara v3 CLI
 Usage:
   nara <command> [options]
 
-Commands:
   help                      Show this help message
   new <name>                Create a runnable Nara application
   make feature <name>       Create a feature using the canonical structure
@@ -36,6 +35,8 @@ Commands:
   inspect <feature> [--json] Describe one feature
   context <feature> [--json] Produce bounded coding context
   impact <feature> [--json] Show known downstream feature impact
+  diff --base <ref> [--head <ref>] [--json]
+                            Show deterministic Feature-architecture changes
   add <feature>             Install an official open-code feature
 
 Options:
@@ -76,6 +77,16 @@ const IMPACT_HELP = `Usage:
   nara impact <feature> [--json]
 
 Shows direct and transitive dependents from the known feature dependency graph.
+`;
+
+const DIFF_HELP = `Usage:
+  nara diff --base <ref> [--head <ref>] [--json]
+
+Shows deterministic Feature-architecture changes between a Git base ref and
+the working tree (default) or an explicit head ref. git diff explains text
+changes; nara diff explains Feature-architecture changes. Affected output is
+structural dependency impact, not semantic behavior prediction. No AI provider
+is required.
 `;
 
 const ADD_HELP = `Usage:
@@ -251,6 +262,70 @@ function renderImpactReport(io: CliIO, name: string, root: string | undefined, j
   }
 }
 
+function parseDiffArgs(args: string[]):
+  | { ok: true; base: string; head?: string; json: boolean }
+  | { ok: false } {
+  let base: string | undefined;
+  let head: string | undefined;
+  let json = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      json = true;
+    } else if (arg === '--base' || arg === '--head') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('-')) return { ok: false };
+      if (arg === '--base') {
+        if (base !== undefined) return { ok: false };
+        base = value;
+      } else {
+        if (head !== undefined) return { ok: false };
+        head = value;
+      }
+      index += 1;
+    } else if (arg.startsWith('--base=')) {
+      if (base !== undefined) return { ok: false };
+      const value = arg.slice('--base='.length);
+      if (!value) return { ok: false };
+      base = value;
+    } else if (arg.startsWith('--head=')) {
+      if (head !== undefined) return { ok: false };
+      const value = arg.slice('--head='.length);
+      if (!value) return { ok: false };
+      head = value;
+    } else {
+      return { ok: false };
+    }
+  }
+  if (!base) return { ok: false };
+  return { ok: true, base, head, json };
+}
+
+function renderDiffReport(io: CliIO, args: string[], root: string | undefined): number {
+  if (args.includes('--help') || args.includes('-h')) {
+    io.stdout(DIFF_HELP);
+    return 0;
+  }
+  const parsed = parseDiffArgs(args);
+  if (!parsed.ok) {
+    io.stderr(DIFF_HELP);
+    return 64;
+  }
+  try {
+    const result = runArchitectureDiff({ base: parsed.base, head: parsed.head, cwd: root });
+    if (parsed.json) {
+      io.stdout(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      io.stdout(formatDiffHuman(result));
+    }
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    io.stderr(`${message}\n`);
+    return 1;
+  }
+}
+
 export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOptions = {}): CliResult {
   const [command, ...args] = argv;
 
@@ -311,6 +386,10 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
       return { exitCode: 64 };
     }
     return { exitCode: renderImpactReport(io, name, options.cwd, format === '--json') };
+  }
+
+  if (command === 'diff') {
+    return { exitCode: renderDiffReport(io, args, options.cwd) };
   }
 
   if (command === 'add') {

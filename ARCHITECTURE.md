@@ -9,7 +9,7 @@ This document is the current architecture authority. History lives in [`docs/arc
 ## Product pillars
 
 - **Compose** — build from explicit business features (`nara make feature`, `nara add`).
-- **Understand** — inspect the architecture deterministically (`nara inspect`, `nara context`, `nara impact`, each with `--json`).
+- **Understand** — inspect the architecture deterministically (`nara inspect`, `nara context`, `nara impact`, each with `--json`) and describe how it is changing (`nara diff --base main`).
 - **Protect** — validate boundaries before drift becomes debt (`nara doctor`, plus `--json`).
 
 ## Locked stack

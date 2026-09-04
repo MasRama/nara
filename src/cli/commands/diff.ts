@@ -1,0 +1,162 @@
+import { computeAffected, diffSnapshots, type ArchitectureChanges, type AffectedSet } from '../architecture/diff';
+import {
+  gitRepoRoot,
+  materializeRef,
+  removeTempDir,
+  verifyGitRef,
+} from '../architecture/git-materialize';
+import { captureArchitectureSnapshot, type ArchitectureSnapshot } from '../architecture/snapshot';
+
+export interface DiffBaseIdentity {
+  kind: 'git-ref';
+  ref: string;
+  commit: string;
+}
+
+export interface DiffTargetRefIdentity {
+  kind: 'git-ref';
+  ref: string;
+  commit: string;
+}
+
+export interface DiffTargetWorktreeIdentity {
+  kind: 'working-tree';
+}
+
+export type DiffTargetIdentity = DiffTargetRefIdentity | DiffTargetWorktreeIdentity;
+
+export interface ArchitectureDiffResult {
+  schemaVersion: 1;
+  base: DiffBaseIdentity;
+  target: DiffTargetIdentity;
+  changes: ArchitectureChanges;
+  affected: AffectedSet;
+}
+
+export interface DiffOptions {
+  base: string;
+  head?: string;
+  cwd?: string;
+}
+
+function targetDescription(target: DiffTargetIdentity): string {
+  return target.kind === 'git-ref' ? target.ref : 'working tree';
+}
+
+export function runArchitectureDiff(options: DiffOptions): ArchitectureDiffResult {
+  const cwd = options.cwd ?? process.cwd();
+  const repoRoot = gitRepoRoot(cwd);
+  const baseCommit = verifyGitRef(options.base, repoRoot);
+
+  const tempDirs: string[] = [];
+  try {
+    const baseDir = materializeRef(options.base, repoRoot);
+    tempDirs.push(baseDir);
+    const baseSnapshot = captureArchitectureSnapshot(baseDir);
+
+    let targetSnapshot: ArchitectureSnapshot;
+    let target: DiffTargetIdentity;
+    if (options.head !== undefined) {
+      const headCommit = verifyGitRef(options.head, repoRoot);
+      const headDir = materializeRef(options.head, repoRoot);
+      tempDirs.push(headDir);
+      targetSnapshot = captureArchitectureSnapshot(headDir);
+      target = { kind: 'git-ref', ref: options.head, commit: headCommit };
+    } else {
+      // Working tree, including uncommitted source changes.
+      targetSnapshot = captureArchitectureSnapshot(repoRoot);
+      target = { kind: 'working-tree' };
+    }
+
+    const changes = diffSnapshots(baseSnapshot, targetSnapshot);
+    const affected = computeAffected(changes, targetSnapshot);
+    return {
+      schemaVersion: 1,
+      base: { kind: 'git-ref', ref: options.base, commit: baseCommit },
+      target,
+      changes,
+      affected,
+    };
+  } finally {
+    for (const directory of tempDirs) removeTempDir(directory);
+  }
+}
+
+function section(lines: string[], title: string, body: string[]): void {
+  if (body.length === 0) return;
+  lines.push(`${title}:`);
+  lines.push(...body);
+}
+
+export function formatDiffHuman(result: ArchitectureDiffResult): string {
+  const targetDesc = targetDescription(result.target);
+  const header = `Architecture changes (base ${result.base.ref} -> ${targetDesc}):`;
+  const { changes, affected } = result;
+  const empty =
+    changes.features.added.length === 0 &&
+    changes.features.removed.length === 0 &&
+    changes.publicExports.length === 0 &&
+    changes.contracts.length === 0 &&
+    changes.dependencies.added.length === 0 &&
+    changes.dependencies.removed.length === 0 &&
+    changes.surfaces.length === 0 &&
+    changes.diagnostics.added.length === 0 &&
+    changes.diagnostics.resolved.length === 0;
+  if (empty) {
+    return (
+      `No architecture changes detected (base ${result.base.ref} -> ${targetDesc}).\n` +
+      `Structural dependency impact: none.\n`
+    );
+  }
+
+  const lines: string[] = [header];
+  const featureBody: string[] = [];
+  for (const name of changes.features.added) featureBody.push(`  + ${name}`);
+  for (const name of changes.features.removed) featureBody.push(`  - ${name}`);
+  section(lines, 'Features', featureBody);
+
+  const exportBody: string[] = [];
+  for (const delta of changes.publicExports) {
+    exportBody.push(`  ${delta.feature}:`);
+    for (const name of delta.added) exportBody.push(`    + ${name}`);
+    for (const name of delta.removed) exportBody.push(`    - ${name}`);
+  }
+  section(lines, 'Public exports', exportBody);
+
+  const contractBody: string[] = [];
+  for (const delta of changes.contracts) {
+    contractBody.push(`  ${delta.feature}:`);
+    for (const name of delta.added) contractBody.push(`    + ${name}`);
+    for (const name of delta.removed) contractBody.push(`    - ${name}`);
+  }
+  section(lines, 'Contract exports', contractBody);
+
+  const dependencyBody: string[] = [];
+  for (const edge of changes.dependencies.added) dependencyBody.push(`  + ${edge.from} -> ${edge.to}`);
+  for (const edge of changes.dependencies.removed) dependencyBody.push(`  - ${edge.from} -> ${edge.to}`);
+  section(lines, 'Dependencies', dependencyBody);
+
+  const surfaceBody: string[] = [];
+  for (const delta of changes.surfaces) {
+    surfaceBody.push(`  ${delta.feature} [${delta.kind}]:`);
+    for (const file of delta.added) surfaceBody.push(`    + ${file}`);
+    for (const file of delta.removed) surfaceBody.push(`    - ${file}`);
+  }
+  section(lines, 'Surfaces', surfaceBody);
+
+  const newIssues = changes.diagnostics.added.map(
+    (diagnostic) => `  + [${diagnostic.code}] ${diagnostic.file} (${diagnostic.relationship})`,
+  );
+  section(lines, 'New architecture issues', newIssues);
+  const resolvedIssues = changes.diagnostics.resolved.map(
+    (diagnostic) => `  - [${diagnostic.code}] ${diagnostic.file} (${diagnostic.relationship})`,
+  );
+  section(lines, 'Resolved architecture issues', resolvedIssues);
+
+  lines.push('Structural dependency impact:');
+  lines.push(
+    `  Directly changed: ${affected.directlyChanged.length > 0 ? affected.directlyChanged.join(', ') : 'none'}`,
+  );
+  lines.push(`  Downstream: ${affected.downstream.length > 0 ? affected.downstream.join(', ') : 'none'}`);
+  return `${lines.join('\n')}\n`;
+}

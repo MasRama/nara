@@ -282,6 +282,23 @@ Example JSON:
 
 `impact` reports graph relationships, not semantic business impact. Review contracts and behavior after identifying the affected dependents.
 
+## `nara diff --base <ref> [--head <ref>] [--json]`
+
+Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes between a Git base ref and the current working tree (including uncommitted source changes), or between two Git refs with `--head`:
+
+```bash
+nara diff --base main
+nara diff --base origin/main
+nara diff --base v3.0.0 --head HEAD
+nara diff --base main --json
+```
+
+`--base` is required; `--head` is optional. When `--head` is omitted the base ref is compared against the working tree. When `--head` is supplied both sides are Git refs and the working tree is never modified (no checkout, reset, stash, or clean). The command never mutates user changes; ref state is materialized into an isolated temporary directory via read-only Git plumbing and always cleaned up.
+
+The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public exports and contract exports, added/removed dependency edges (`source Feature -> target Feature` with deterministic import evidence), per-Feature added/removed server/web/test surfaces, and newly introduced versus resolved doctor diagnostics. The affected set lists directly changed Features plus downstream Features reachable through the dependency graph, labeled `structural dependency impact` — never a semantic behavior prediction.
+
+A successful comparison returns exit code `0` whether or not the architecture changed. Existing baseline violations do not fail the command; policy enforcement is a later capability. No configuration file, architecture manifest, LLM, or AI provider is required.
+
 ## Exit status and failures
 
 The CLI uses stable categories instead of stack traces for expected failures:
@@ -293,7 +310,7 @@ The CLI uses stable categories instead of stack traces for expected failures:
 | `64` | Invalid command, arguments, Feature/project name, or unknown official package |
 | `73` | Duplicate target or filesystem failure |
 
-Expected failures are written as human-readable diagnostics. `--json` is supported by `doctor`, `inspect`, `context`, and `impact`; invalid JSON-mode requests still return a JSON error object where the command accepts the flag.
+Expected failures are written as human-readable diagnostics. `--json` is supported by `doctor`, `inspect`, `context`, `impact`, and `diff`; invalid JSON-mode requests still return a JSON error object where the command accepts the flag.
 
 ```bash
 npx nara context billing --json
@@ -302,4 +319,4 @@ npx nara doctor --json
 npm run lint
 npm test
 ```
-Use `inspect` before opening unrelated files, `context` for a focused implementation handoff, and `impact` before changing a public contract. Nara remains useful when no AI provider is configured.
+Use `inspect` before opening unrelated files, `context` for a focused implementation handoff, `impact` before changing a public contract, and `diff --base main` during review to see how the architecture is changing. Nara remains useful when no AI provider is configured.

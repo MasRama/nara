@@ -28,8 +28,9 @@ npx nara add audit             # install an official open-code feature
 ```
 
 Nara stays useful after creation: the same local CLI that scaffolds the
-project keeps understanding (`inspect`, `context`, `impact`) and protecting
-(`doctor`) its feature architecture in month 12. No AI provider is required.
+project keeps understanding (`inspect`, `context`, `impact`), describing
+change (`diff --base main`), and protecting (`doctor`) its feature
+architecture in month 12. No AI provider is required.
 
 To work on Nara itself instead, clone the reference repository:
 
@@ -106,15 +107,18 @@ nara doctor                    Validate architecture
 nara inspect <feature>         Show bounded feature facts
 nara context <feature>         Show coding context without source dumps
 nara impact <feature>          Show feature-graph dependents
+nara diff --base main          Show how the architecture is changing
 ```
+
+Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes, with affected output labeled structural dependency impact (never semantic behavior prediction) and no AI provider required. See [`docs/v3/cli.md`](./docs/v3/cli.md#nara-diff---base-ref---head-ref---json).
 
 Architecture facts are deterministic and available as JSON for scripts and agents:
 
 ```bash
-npx nara doctor --json
 npx nara inspect health --json
 npx nara context health --json
 npx nara impact health --json
+npx nara diff --base main --json
 ```
 
 No AI provider is required for these commands. `nara new` pins the creating

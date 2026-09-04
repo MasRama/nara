@@ -90,6 +90,15 @@ nara impact billing --json
 
 The output is intentionally bounded. It identifies where to work and what may be affected without dumping the entire repository or guessing at business meaning. `impact` reports graph relationships, not semantic product impact; people still review behavior and contracts.
 
+Nara can describe not only what the architecture is, but how the architecture is changing:
+
+```bash
+nara diff --base main
+nara diff --base main --json
+```
+
+`git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes (added/removed Features, boundary and contract deltas, dependency edges, surfaces, and new versus resolved diagnostics) with an affected set labeled structural dependency impact. It is Git-aware by design, needs no manifest or AI provider, and never claims semantic behavior impact.
+
 This understanding is deterministic. The core commands do not need an LLM, manually maintained architecture manifest, or second metadata language. AI integrations can consume Nara's facts, but AI does not define the architecture.
 
 ## Protect

@@ -17,6 +17,22 @@ export { detectServerClientLeaks } from './detect-client-leaks';
 export type { ServerClientLeak } from './detect-client-leaks';
 export { analyzeArchitecture } from './doctor';
 export type { DoctorIssue, DoctorIssueCode, DoctorReport } from './doctor';
+export { captureArchitectureSnapshot } from './snapshot';
+export type {
+  ArchitectureSnapshot,
+  SnapshotDiagnostic,
+  SnapshotEdge,
+  SnapshotFeature,
+} from './snapshot';
+export { computeAffected, diffSnapshots } from './diff';
+export type {
+  AffectedSet,
+  ArchitectureChanges,
+  DependencyDelta,
+  DiagnosticDelta,
+  ExportDelta,
+  SurfaceDelta,
+} from './diff';
 export { inspectFeature } from './inspect';
 export type { FeatureInspection, InspectFeatureResult } from './inspect';
 export { buildFeatureContext } from './context';
