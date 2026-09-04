@@ -1,26 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { featureNameIsValid } from '../feature-name';
-
-const FALLBACK_CLI_VERSION = '3.0.0';
+import { readNaraCliVersion } from '../package-root';
 
 function creatingCliVersion(): string {
-  const candidates = [
-    path.resolve(__dirname, '../../../package.json'),
-    path.resolve(__dirname, '../../../../package.json'),
-  ];
-  for (const candidate of candidates) {
-    try {
-      if (!existsSync(candidate)) continue;
-      const manifest = JSON.parse(readFileSync(candidate, 'utf8')) as { name?: string; version?: string };
-      if (manifest.name === 'nara' && typeof manifest.version === 'string' && manifest.version.length > 0) {
-        return manifest.version;
-      }
-    } catch {
-      continue;
-    }
-  }
-  return FALLBACK_CLI_VERSION;
+  return readNaraCliVersion();
 }
 
 

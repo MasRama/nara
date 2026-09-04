@@ -2,7 +2,7 @@
 
 The Nara CLI is a TypeScript command-line tool for creating Features, composing official source packages, and inspecting architecture. Core analysis is deterministic and does not call an LLM.
 
-The `nara` package is publishable and acquired from the npm registry. Inside
+The `nara` package is publishable at `packages/nara` and will be acquired from the npm registry once published; it has not been published yet. Inside
 a generated project every command below runs from the project's own pinned
 install (`npx nara <command>` or `npm run architecture:doctor`). From a Nara
 repository checkout, the equivalent command is:

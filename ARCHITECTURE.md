@@ -83,8 +83,10 @@ Five distinct things; do not conflate them:
    deterministic discovery (this document).
 3. **Nara CLI/tooling** — `nara` is a development-time architecture
    companion, not a production runtime abstraction. It ships as a
-   publishable npm package (`bin`, `files` includes the built CLI and
-   `official-features/` source) and is acquired from the registry.
+   publishable npm package at `packages/nara` (`bin` points at the staged
+   CLI, `files` includes only the staged `dist/` and `official-features/`
+   source) and will be acquired from the registry once published; it has
+   not been published yet.
 4. **Generated applications** — `nara new` output: the minimal canonical
    application (health-only, no database, no auth). Each carries the
    creating CLI as an exact-pinned devDependency, so `npm run check`

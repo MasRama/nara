@@ -4,7 +4,7 @@ Architecture-aware TypeScript application kit.
 
 Build by feature, not by layer.
 
-Nara keeps each business capability together and makes the boundaries machine-checkable. The framework stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
+Nara keeps each business capability together and makes the boundaries machine-checkable. The underlying stack stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
 
 ## Start here
 
@@ -22,8 +22,8 @@ so architecture checks travel with the project:
 ```bash
 npm run check                  # typechecks, tests, and nara doctor
 npx nara doctor                # validate architecture from the local install
-npx nara context billing --json
-npx nara impact billing --json
+npx nara context health --json
+npx nara impact health --json
 npx nara add audit             # install an official open-code feature
 ```
 
@@ -47,13 +47,9 @@ the starting point for new products — `nara new` is. Additional capabilities
 reach generated projects as explicit open-code features via `nara add`, not
 by cloning the reference app.
 
-Packaging note: the `nara` package is publish-ready (`bin`, `files` ships the
-built CLI plus `official-features/` source). The remaining external step is
-a one-time `npm run build && npm publish` from a clean tree, after which the
-commands above resolve from the registry. Until then, `npm pack` produces the
-same artifact the registry would serve.
+Packaging note: the publishable `nara` package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/` plus `official-features/` source). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
 
-The development topology uses two local ports:
+The development topology uses two local ports: Vite serves the browser on `VITE_PORT` (default `5173`) and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono on `PORT` (default `5555`).
 
 ## The core idea
 
@@ -116,9 +112,9 @@ Architecture facts are deterministic and available as JSON for scripts and agent
 
 ```bash
 npx nara doctor --json
-npx nara inspect billing --json
-npx nara context billing --json
-npx nara impact billing --json
+npx nara inspect health --json
+npx nara context health --json
+npx nara impact health --json
 ```
 
 No AI provider is required for these commands. `nara new` pins the creating

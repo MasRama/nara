@@ -1,17 +1,9 @@
 {
   "name": "nara",
   "version": "3.0.0",
+  "private": true,
   "description": "Architecture-aware TypeScript application kit. Build by feature, not by layer. Hono, Node.js, SQLite, and deterministic architecture tooling.",
   "license": "MIT",
-  "bin": {
-    "nara": "build/src/cli/index.js"
-  },
-  "files": [
-    "build/src/cli/",
-    "official-features/",
-    "LICENSE",
-    "README.md"
-  ],
   "engines": {
     "node": ">=22.0.0"
   },
@@ -36,7 +28,8 @@
     "test:official-feature": "vitest run --config vitest.integration.config.mjs tests/integration/add-official-feature.test.ts",
     "test:packaged-lifecycle": "vitest run --config vitest.integration.config.mjs tests/integration/packaged-lifecycle.test.ts",
     "perf:sanity": "node scripts/perf-sanity.mjs",
-    "validate:release": "npm run check && npm run test:production-serving && npm run test:production-startup && npm run test:http-stack-compat && npm run test:new-project && npm run test:official-feature && npm run test:packaged-lifecycle",
+    "stage:package": "node scripts/stage-package.mjs",
+    "validate:release": "npm run check && npm run build && npm run stage:package && npm run test:production-serving && npm run test:production-startup && npm run test:http-stack-compat && npm run test:new-project && npm run test:official-feature && npm run test:packaged-lifecycle",
     "validate:linux": "npm run test:linux-deployment",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -57,7 +50,6 @@
     "pino-roll": "^4.0.0",
     "sharp": "^0.35.3",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.6.3",
     "vue": "^3.5.42",
     "vue-router": "^5.3.1",
     "zod": "^4.4.3"
@@ -72,6 +64,7 @@
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.9.1",
     "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.6.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.11"

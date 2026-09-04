@@ -1,0 +1,22 @@
+{
+  "name": "nara",
+  "version": "3.0.0",
+  "description": "Architecture-aware TypeScript application kit. Build by feature, not by layer. Hono, Node.js, SQLite, and deterministic architecture tooling.",
+  "license": "MIT",
+  "bin": {
+    "nara": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "official-features/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "typescript": "^5.6.3"
+  },
+  "author": "MasRama"
+}

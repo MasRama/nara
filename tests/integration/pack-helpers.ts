@@ -19,6 +19,10 @@ export function repoRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 }
 
+export function publishablePackageDir(): string {
+  return path.join(repoRoot(), 'packages', 'nara');
+}
+
 export async function runCommand(
   command: string,
   args: string[],
@@ -43,26 +47,24 @@ export async function runCommand(
 
 let cachedTarball: string | undefined;
 
-function ensureBuildArtifact(): void {
-  if (!existsSync(path.join(repoRoot(), 'build', 'src', 'cli', 'index.js'))) {
-    throw new Error(
-      'Missing build/src/cli/index.js. Run `npm run build` before the packaged-lifecycle tests so `npm pack` ships the real CLI.',
-    );
-  }
-}
-
 /**
- * Pack the repository exactly as npm would publish it and return the tarball
- * path. Pre-publish this is the stand-in for the npm registry: generated
- * projects pin `nara: <version>`, which only resolves from the registry after
- * the first publish. Tests rewrite that spec to `file:<tarball>` (same bytes
- * the registry would serve) and assert the pinned spec before rewriting.
+ * Pack the publishable package exactly as npm would publish it and return
+ * the tarball path. Pre-publish this is the stand-in for the npm registry:
+ * generated projects pin `nara: <version>`, which only resolves from the
+ * registry after the first publish. Tests rewrite that spec to
+ * `file:<tarball>` (same bytes the registry would serve) and assert the
+ * pinned spec before rewriting.
  */
 export async function ensurePackedNara(): Promise<string> {
   if (cachedTarball && existsSync(cachedTarball)) return cachedTarball;
-  ensureBuildArtifact();
+  const packageDir = publishablePackageDir();
+  if (!existsSync(path.join(packageDir, 'dist', 'index.js'))) {
+    throw new Error(
+      'Missing packages/nara/dist/index.js. Run `npm run build && npm run stage:package` before the packaged-lifecycle tests so `npm pack` ships the real CLI.',
+    );
+  }
   const destination = mkdtempSync(path.join(os.tmpdir(), 'nara-pack-'));
-  const { stdout } = await runCommand(npmCommand, ['pack', '--pack-destination', destination], repoRoot());
+  const { stdout } = await runCommand(npmCommand, ['pack', '--pack-destination', destination], packageDir);
   const fileName = stdout.trim().split('\n').at(-1)?.trim();
   if (!fileName) throw new Error('`npm pack` did not report a tarball filename');
   cachedTarball = path.join(destination, fileName);
@@ -86,7 +88,7 @@ function localNaraEntrypoint(projectDirectory: string): { command: string; argsP
   }
   return {
     command: 'node',
-    argsPrefix: [path.join(projectDirectory, 'node_modules', 'nara', 'build', 'src', 'cli', 'index.js')],
+    argsPrefix: [path.join(projectDirectory, 'node_modules', 'nara', 'dist', 'index.js')],
   };
 }
 

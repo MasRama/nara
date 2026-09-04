@@ -9,7 +9,7 @@ import {
   ensurePackedNara,
   npmCommand,
   pointNaraAtTarball,
-  repoRoot,
+  publishablePackageDir,
   runCommand,
   runLocalNara,
 } from './pack-helpers';
@@ -87,12 +87,12 @@ describe('packaged Nara lifecycle', () => {
       const prefix = path.join(root, 'prefix');
       await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
       const installedRoot = path.join(prefix, 'node_modules', 'nara');
-      expect(existsSync(path.join(installedRoot, 'build', 'src', 'cli', 'index.js'))).toBe(true);
+      expect(existsSync(path.join(installedRoot, 'dist', 'index.js'))).toBe(true);
       expect(existsSync(path.join(installedRoot, 'official-features', 'health', 'index.ts'))).toBe(true);
       expect(existsSync(path.join(installedRoot, 'official-features', 'audit', 'index.ts'))).toBe(true);
       const installedCli =
         process.platform === 'win32'
-          ? ['node', path.join(installedRoot, 'build', 'src', 'cli', 'index.js')]
+          ? ['node', path.join(installedRoot, 'dist', 'index.js')]
           : [path.join(prefix, 'node_modules', '.bin', 'nara')];
 
       // Installed-package `nara new` works outside the repository.
@@ -106,10 +106,12 @@ describe('packaged Nara lifecycle', () => {
         devDependencies: Record<string, string>;
       };
       // Generated project pins the creating CLI version exactly (no range).
-      const repoManifest = JSON.parse(readFileSync(path.join(repoRoot(), 'package.json'), 'utf8')) as {
+      const packageManifest = JSON.parse(
+        readFileSync(path.join(publishablePackageDir(), 'package.json'), 'utf8'),
+      ) as {
         version: string;
       };
-      expect(generated.devDependencies.nara).toBe(repoManifest.version);
+      expect(generated.devDependencies.nara).toBe(packageManifest.version);
       expect(generated.scripts['architecture:doctor']).toBe('nara doctor');
       expect(generated.scripts.check).toContain('architecture:doctor');
 
