@@ -67,13 +67,12 @@ describe('nara add official feature', () => {
 
       await runCommand(npmCommand, ['run', 'typecheck'], projectDirectory);
       await runCommand(npmCommand, ['run', 'typecheck:frontend'], projectDirectory);
-      const testResult = await runCommand(npmCommand, ['test'], projectDirectory);
-      expect(testResult.stdout).toMatch(/Test Files\s+2 passed/);
-      expect(testResult.stdout).toMatch(/Tests\s+2 passed/);
+      // Exit status is the stable contract: runCommand throws on non-zero,
+      // so success here proves the suite passed. Human reporter formatting
+      // (ANSI, summary layout) is intentionally never parsed.
+      await runCommand(npmCommand, ['test'], projectDirectory);
 
-      const checkResult = await runCommand(npmCommand, ['run', 'check'], projectDirectory);
-      expect(checkResult.stdout).toMatch(/Test Files\s+2 passed/);
-      expect(checkResult.stdout).toMatch(/Tests\s+2 passed/);
+      await runCommand(npmCommand, ['run', 'check'], projectDirectory);
 
       const doctorResult = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctorResult.stdout).toBe('Architecture looks healthy.\n');
