@@ -72,6 +72,9 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Portable HTTP-stack compatibility audit (no Ultimate/uWS HTTP runtime)
+        run: npm run test:http-stack-compat
+
       - name: Start production server and prove health on the glibc 2.35 baseline
         run: |
           export NODE_ENV=production

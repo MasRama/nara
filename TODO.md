@@ -1444,8 +1444,8 @@ No undocumented manual fix is needed.
 ---
 
 ## [x] V3-111 — Linux deployment test
-> Verified 2026-09-04: clean isolated `npm ci` + `npm run build` + `npm start` serves `GET /health` 200, `/ready` 200, `/api/auth/me` 401; manifest/lockfile/source scans show no `ultimate-express`/`uWebSockets.js` dependency, import, or native binary (`tests/integration/linux-deployment.test.ts` 7/7, `npm run test:linux-deployment`); running production process maps no uWS binary (`/proc/<pid>/maps`); generated starter template depends only on `hono` + `@hono/node-server`. Local run on glibc 2.39 (Ubuntu 24.04-based); pinned `ubuntu-22.04` production-startup CI job added (`.github/workflows/ci.yml` `compat`) as the deterministic glibc 2.35 baseline — CI execution itself not observed from here.
-
+> Verified 2026-09-04: clean isolated `npm ci` + `npm run build` + `npm start` serves `GET /health` 200, `/ready` 200, `/api/auth/me` 401; manifest/lockfile/source scans show no `ultimate-express`/`uWebSockets.js` dependency, import, or native binary (old `linux-deployment.test.ts` 7/7); running production process maps no uWS binary (`/proc/<pid>/maps`); generated starter template depends only on `hono` + `@hono/node-server`. Local run on glibc 2.39 (Ubuntu 24.04-based); pinned `ubuntu-22.04` production-startup CI job (`.github/workflows/ci.yml` `compat`) as the deterministic glibc 2.35 baseline — CI execution itself not observed from here.
+> Hardened pre-RC: portable assertions moved to `tests/integration/http-stack-compat.test.ts` (`npm run test:http-stack-compat`, runs everywhere); `tests/integration/linux-deployment.test.ts` (`npm run test:linux-deployment`) explicitly requires Linux (fails fast with a clear diagnostic on non-Linux so a macOS/Windows run can never read as Ubuntu validation), always rebuilds from source before starting production, and proves `/health` 200, `/ready` 200, `/api/auth/me` 401 plus no uWS mapping in `/proc/<pid>/maps`. Contract is the narrow Hono HTTP path (other native deps out of scope). Pinned `ubuntu-22.04` CI compat job now also runs the portable audit before the production startup smoke.
 ### Goal
 
 Verify the problem that affected the old uWS path is gone.
@@ -1637,7 +1637,8 @@ Also explain what Nara deliberately does not build.
 # M14 — Release Validation
 
 ## [x] V3-130 — Run full validation
-> Verified 2026-09-04 via `npm run validate:release` (= `check` + `test:production-serving` + `test:linux-deployment` + `test:new-project`): lint PASS, frontend typecheck PASS, unit suite 203/203 PASS, `nara doctor` healthy, production-serving 7/7, linux-deployment 7/7, new-project 1/1; official-feature integration 1/1 run separately; clean-source revalidation (fresh worktree + working tree overlaid, `npm ci` + `npm run build` + linux-deployment) PASS. Linux 22.04 CI execution and cold-start/release tasks (V3-133+) remain out of scope.
+> Verified 2026-09-04 via old `validate:release` composition (`check` + `test:production-serving` + `test:linux-deployment` + `test:new-project`): lint PASS, frontend typecheck PASS, unit suite 203/203 PASS, `nara doctor` healthy, production-serving 7/7, linux-deployment 7/7, new-project 1/1; official-feature integration 1/1 run separately; clean-source revalidation (fresh worktree + working tree overlaid, `npm ci` + `npm run build` + linux-deployment) PASS.
+> Composition hardened pre-RC: `validate:release` is now portable-only (`check` + `production-serving` + `production-startup` + `http-stack-compat` + `new-project` + `official-feature`) so non-Linux runs never claim Linux evidence; Linux runtime is `validate:linux` (= `test:linux-deployment`, fails fast off-Linux). Revalidation of the new composition runs in this batch's final verification.
 
 Must pass:
 
