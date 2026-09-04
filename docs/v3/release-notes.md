@@ -43,6 +43,10 @@ Inspection and protection commands are deterministic and do not require an AI pr
 
 Official `health` and `audit` Feature packages can be installed with `nara add`. Installed source remains local and inspectable. Installation never merges with or overwrites an existing Feature.
 
+### Compose, Understand, Protect
+
+Nara stays useful after project creation: compose capabilities from explicit Features, understand the Feature graph with deterministic `inspect`/`context`/`impact` facts (no AI provider required), and protect boundaries with `nara doctor` before drift becomes debt. See [`architecture-philosophy.md`](./architecture-philosophy.md).
+
 ### Full-stack compatibility boundary
 
 The Vue 3 + Vite + TypeScript frontend shell and Tailwind styling are available for applications that need browser surfaces. Vue is the only supported frontend framework; feature-specific pages, components, and composables belong in the owning Feature's `web/`, while application-wide composition belongs under `src/app/`. `web/` remains optional inside a Feature.
@@ -60,15 +64,18 @@ Use [`migration-v2-v3.md`](./migration-v2-v3.md) for the capability mapping and 
 
 ## Automated verification currently passing
 
-The repository checks currently pass with:
-
 ```bash
-npm run check
-npm run build
-npm run architecture:doctor
+npm run validate:release   # portable gates (all green, see TODO V3-130)
+npm run validate:linux     # Linux runtime gate (green, see TODO V3-111)
+npm run perf:sanity        # catastrophic-only sanity, no regression (V3-115)
 ```
 
-Release-gating validation remains open in TODO.md. No evidence is recorded here for a clean-directory install, generated-project start/API smoke test, Linux deployment, performance measurement, agent cold-start, human cold-start, merge to `main`, or the `v3.0.0` tag. See V3-110 through V3-136 for the remaining gates.
+Covered: typechecks, unit suite, `nara doctor`, production serving and
+startup-failure behavior, portable HTTP-stack audit, fresh-project install,
+official-feature install, and the Linux production artifact on the glibc
+baseline. Agent and human cold-start gates (V3-133/V3-134), the `v3 → main`
+merge, and the `v3.0.0` tag remain open by design — see
+[`release-checklist.md`](./release-checklist.md).
 
 Architecture regression fixtures cover valid projects and these invalid cases:
 

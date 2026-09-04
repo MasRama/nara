@@ -237,9 +237,11 @@ nara add audit
 The installation result is inspectable source, not a hidden runtime plugin. Run `nara doctor` after adding a feature.
 
 ## Read next
-
 - [`AGENTS.md`](./AGENTS.md) — coding rules and agent workflow
 - [`V3_SPEC.md`](./V3_SPEC.md) — architectural source of truth
+- [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
+- [`docs/v3/release-checklist.md`](./docs/v3/release-checklist.md) — pre-RC gates and validation semantics
+- [`docs/v3/human-cold-start.md`](./docs/v3/human-cold-start.md) — unfamiliar-developer test protocol (V3-134)
 - [`TODO.md`](./TODO.md) — implementation order
 - [`docs/v3/feature-model.md`](./docs/v3/feature-model.md) — feature ownership and boundaries
 - [`docs/v3/cli.md`](./docs/v3/cli.md) — CLI command reference and JSON output
@@ -247,7 +249,6 @@ The installation result is inspectable source, not a hidden runtime plugin. Run 
 - [`docs/v3/v2-inventory.md`](./docs/v3/v2-inventory.md) — capability migration inventory
 - [`docs/v3/migration-v2-v3.md`](./docs/v3/migration-v2-v3.md) — v2 to v3 porting guide
 - [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md) — Compose, Understand, Protect
-- [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
 - [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md) — canonical SQLite migrations, seeds, backup, and integrity lifecycle
 - [`SECURITY.md`](./SECURITY.md) — security reporting
 

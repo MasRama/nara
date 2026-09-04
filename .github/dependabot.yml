@@ -12,7 +12,7 @@ updates:
           - "minor"
           - "patch"
     ignore:
-      # Major versions can break tooling (Vite, Svelte, TS, native modules).
+      # Major versions can break tooling (Vite, Vue, TS, native modules).
       # Upgrade them manually with intent — CI + review, not automation.
       - dependency-name: "*"
         update-types:
