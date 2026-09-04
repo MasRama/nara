@@ -14,6 +14,17 @@ the docs say?" is the only redirect.
 ## Prerequisites
 
 - Linux or macOS with Node.js 22+ and npm 10+
+- Facilitator-only prerequisite (do not read to the participant): confirm the
+  checkout is the pre-release `v3` branch before the session:
+
+```bash
+git branch --show-current
+# must print: v3
+```
+
+  Until `v3` is merged to `main`, a default clone lands on v2 — the session
+  must run against the actual `v3` checkout (e.g. `git clone --branch v3 …`
+  per the pre-release README note).
 - A clean `v3` checkout with dependencies installed and the CLI built:
 
 ```bash

@@ -9,12 +9,16 @@ Nara keeps each business capability together and makes the boundaries machine-ch
 ## Start here
 
 ```bash
-git clone https://github.com/MasRama/nara.git
+git clone --branch v3 https://github.com/MasRama/nara.git
 cd nara
 npm install
 cp .env.example .env
 npm run dev
 ```
+
+Pre-release note: until `v3` becomes the default/`main` branch, check out the
+`v3` branch explicitly (the command above already does). After the final
+release merge, this simplifies back to a normal default-branch clone.
 
 The development topology uses two local ports:
 
@@ -209,7 +213,7 @@ npm start
 
 Production serves the built Vue SPA, public files, and backend APIs from the same Node/Hono origin. `npm start` requires `build/client/index.html`; run `npm run build` first. The startup log identifies the browser/API URL from `APP_URL`.
 
-Linux baseline: the Hono + `@hono/node-server` HTTP path uses no Ultimate/uWebSockets native HTTP runtime, so it does not inherit the old uWebSockets `GLIBC_2.38` requirement. (Other native dependencies such as `better-sqlite3` or Sharp are legitimate and unrelated to this contract.) Release validation is split so no machine claims evidence it cannot produce:
+Linux baseline: the Hono + `@hono/node-server` HTTP path uses no Ultimate/uWebSockets native HTTP runtime, so it does not inherit the old uWebSockets `GLIBC_2.38` requirement. (Other native dependencies such as `better-sqlite3` or Sharp are legitimate and unrelated to this contract. The `/proc` gate below proves no uWS binary is mapped into the running server; it does not claim all native dependencies are absent.) Release validation is split so no machine claims evidence it cannot produce:
 
 ```bash
 npm run validate:release   # portable gates: check, production serving + startup
@@ -219,7 +223,7 @@ npm run validate:linux     # Linux-only runtime gate: fresh build, production
 npm run perf:sanity        # separate machine-sensitive sanity (catastrophic tripwires only)
 ```
 
-`validate:release` runs everywhere and never claims Linux validation. `validate:linux` fails fast with a clear diagnostic on non-Linux instead of passing silently — run it on Linux or rely on the pinned `ubuntu-22.04` CI job, which additionally runs the production startup smoke on the glibc 2.35 baseline.
+`validate:release` runs everywhere and never claims Linux validation. `validate:linux` fails fast with a clear diagnostic on non-Linux instead of passing silently — run it on Linux for local runtime evidence; the pinned `ubuntu-22.04` CI job defines the glibc 2.35 compatibility baseline and additionally runs the production startup smoke there.
 
 Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 
