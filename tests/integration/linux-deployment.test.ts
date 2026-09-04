@@ -1,5 +1,4 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { once } from 'node:events';
 import { createServer } from 'node:net';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
@@ -12,6 +11,12 @@ const execFileAsync = promisify(execFile);
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const projectRoot = process.cwd();
 const isLinux = process.platform === 'linux';
+// The real production entrypoint executed by `npm start`
+// (`package.json`: `"start": "node build/server.js"`). The test spawns this
+// file directly with the current Node binary so `server.pid` is the actual
+// production Node process — not an npm wrapper — and `/proc/<pid>/maps`
+// inspects the real server.
+const serverEntry = path.join(projectRoot, 'build', 'server.js');
 
 let server: ChildProcess | undefined;
 let serverOutput = '';
@@ -58,15 +63,37 @@ async function waitForServer(): Promise<void> {
   throw new Error(`Production server did not answer ${baseUrl}/health within 30 seconds.\n${serverOutput}`);
 }
 
+function waitForExitEvent(child: ChildProcess, milliseconds: number): Promise<boolean> {
+  if (child.exitCode !== null) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const onExit = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      child.removeListener('exit', onExit);
+      resolve(false);
+    }, milliseconds);
+    timer.unref?.();
+    child.once('exit', onExit);
+  });
+}
+
 async function stopProductionServer(): Promise<void> {
-  if (!server || server.exitCode !== null) return;
-  server.kill('SIGTERM');
-  await Promise.race([
-    once(server, 'exit'),
-    delay(5_000).then(() => {
-      throw new Error(`Production server did not stop cleanly.\n${serverOutput}`);
-    }),
-  ]);
+  const child = server;
+  if (!child || child.exitCode !== null) return;
+  try {
+    child.kill('SIGTERM');
+  } catch {
+    return;
+  }
+  if (await waitForExitEvent(child, 5_000)) return;
+  try {
+    child.kill('SIGKILL');
+  } catch {
+    // Already gone; final bounded wait below resolves immediately.
+  }
+  await waitForExitEvent(child, 5_000);
 }
 
 beforeAll(async () => {
@@ -83,7 +110,7 @@ beforeAll(async () => {
   tempDirectory = mkdtempSync(path.join(os.tmpdir(), 'nara-linux-deployment-'));
   const port = await findFreePort();
   baseUrl = `http://127.0.0.1:${port}`;
-  server = spawn(npmCommand, ['start'], {
+  server = spawn(process.execPath, [serverEntry], {
     cwd: projectRoot,
     env: {
       ...process.env,
@@ -106,12 +133,24 @@ beforeAll(async () => {
   server.stderr?.on('data', (chunk: string) => {
     serverOutput += chunk;
   });
-  await waitForServer();
+  try {
+    await waitForServer();
+  } catch (error) {
+    // A failure in setup must not orphan the production server.
+    await stopProductionServer();
+    throw error;
+  }
 }, 180_000);
 
 afterAll(async () => {
-  await stopProductionServer();
-  if (tempDirectory) rmSync(tempDirectory, { recursive: true, force: true });
+  try {
+    await stopProductionServer();
+  } finally {
+    if (tempDirectory) {
+      rmSync(tempDirectory, { recursive: true, force: true });
+      tempDirectory = '';
+    }
+  }
 });
 
 /**
@@ -119,6 +158,11 @@ afterAll(async () => {
  * newer glibc than supported Linux baselines shipped, failing before the
  * application started. This gate proves the real production artifact starts
  * and answers HTTP on Linux and loads no uWS native binary.
+ *
+ * `server.pid` is the actual `node build/server.js` process (spawned
+ * directly, no npm wrapper), so `/proc/<pid>/maps` below inspects the real
+ * production server. The assertion is narrow: no uWS/uWebSockets mapping in
+ * the running server. It does not claim all native dependencies are absent.
  *
  * Contract is narrow: the Hono + @hono/node-server HTTP path carries no
  * Ultimate/uWS native HTTP runtime. Other native dependencies (e.g.
