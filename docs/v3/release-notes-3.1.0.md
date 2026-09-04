@@ -1,6 +1,6 @@
 # Nara v3.1.0 Release Notes
 
-Status: candidate on `main` (replaces no history; [`release-notes.md`](./release-notes.md) remains the v3.0.0 record).
+Status: released as v3.1.0 on 2026-09-04.
 
 > Nara can describe not only what the architecture is, but how the architecture is changing.
 
