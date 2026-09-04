@@ -103,10 +103,20 @@ async function waitForHealth(baseUrl, child, output) {
 function stopServer(child) {
   return new Promise((resolve) => {
     if (!child || child.exitCode !== null) return resolve();
-    const done = () => resolve();
-    child.once('exit', done);
+    // Cancellable fallback: cleared on clean exit so no timer outlives the child.
+    const fallback = setTimeout(() => {
+      try {
+        child.kill('SIGKILL');
+      } finally {
+        resolve();
+      }
+    }, 5000);
+    if (typeof fallback.unref === 'function') fallback.unref();
+    child.once('exit', () => {
+      clearTimeout(fallback);
+      resolve();
+    });
     child.kill('SIGTERM');
-    setTimeout(done, 5000);
   });
 }
 

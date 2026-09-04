@@ -1517,6 +1517,7 @@ Failures are readable and intentional.
 
 ## [x] V3-115 — Performance sanity check
 > Verified 2026-09-04: `npm run perf:sanity` (`scripts/perf-sanity.mjs`) records startup median ~225ms, `GET /health` median ~3.2ms p95 ~4.3ms, `/api/auth/me` median ~3.6ms, `nara doctor` median ~1.7s (ts-node startup dominated), feature discovery ~0.3ms, dependency discovery ~33ms; no practical regression, no optimization made. Baseline recorded in `docs/v3/performance-sanity.md`. The command stays out of `npm test` and fails only on catastrophic tripwires.
+> Pre-RC lifecycle fix: `stopServer` fallback is now cancellable (cleared on clean exit, SIGKILLs on timeout) so no timer outlives its child; measurement coverage unchanged and no timing expectations added.
 
 ### Goal
 
