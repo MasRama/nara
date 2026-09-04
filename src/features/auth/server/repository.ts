@@ -84,3 +84,15 @@ export function findUserBySessionId(sessionId: string): SessionUser | undefined 
 export function deleteSession(sessionId: string): void {
   getDatabase().prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);
 }
+
+/**
+ * Auth-owned expired-session cleanup. Deletes rows whose expiry has passed
+ * and returns the removed count. Scheduling lives with the App lifecycle;
+ * this function never creates timers.
+ */
+export function cleanupExpiredSessions(now: number = Date.now()): number {
+  const result = getDatabase()
+    .prepare('DELETE FROM sessions WHERE expires_at IS NOT NULL AND expires_at <= ?')
+    .run(now);
+  return Number(result.changes);
+}

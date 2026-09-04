@@ -3,8 +3,12 @@ import { HTTPException } from 'hono/http-exception';
 import { env } from '../shared/config';
 import { isApplicationError, isValidationError } from '../shared/errors';
 import { Logger } from '../shared/logging';
-
+import { getRequestId } from './observability';
 export const handleError: ErrorHandler = (error, context) => {
+  // Thrown errors bypass middleware unwinding, so stamp the request ID here
+  // for 500 correlation; the response header alone is sufficient publicly.
+  const requestId = getRequestId(context);
+  if (requestId) context.header('X-Request-Id', requestId);
   if (error instanceof HTTPException) {
     return context.json(
       {
@@ -39,10 +43,12 @@ export const handleError: ErrorHandler = (error, context) => {
     );
   }
 
-  Logger.error(
-    'Unhandled application error',
-    error instanceof Error ? error : { error: String(error) },
-  );
+  Logger.error('Unhandled application error', {
+    requestId,
+    method: context.req.method,
+    path: new URL(context.req.url).pathname,
+    ...(error instanceof Error ? { err: error } : { error: String(error) }),
+  });
 
   return context.json(
     {

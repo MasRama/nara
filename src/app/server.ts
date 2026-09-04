@@ -2,8 +2,9 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
+import { compress } from 'hono/compress';
 import { Hono } from 'hono';
-import { UPLOAD, env } from '../shared/config';
+import { AUTH, UPLOAD, env } from '../shared/config';
 import {
   apiBodyLimit,
   createRateLimiter,
@@ -12,8 +13,9 @@ import {
 } from '../shared/security';
 import { Logger } from '../shared/logging';
 import { handleError } from './error-handler';
+import { requestId, requestLifecycleLog } from './observability';
+import { authRoutes, accessRoutes, cleanupExpiredSessions, resetLoginThrottle } from '../features/auth';
 import { getDatabase, migrate } from '../shared/database';
-import { authRoutes, accessRoutes, resetLoginThrottle } from '../features/auth';
 import { userRoutes, assetRoutes } from '../features/users';
 import { healthRoutes } from '../../official-features/health';
 
@@ -110,7 +112,16 @@ export function resetSecurityState(): void {
 
 app.onError(handleError);
 
+// Request lifecycle (V3-044) runs outermost so the request ID is stashed
+// before any security middleware can reject (401/403/404/413/429 all carry
+// it) and the completion event covers the full pipeline. Health/readiness
+// keep IDs but stay out of normal logs. Compression follows: it only touches
+// compressible types above its threshold and never alters security headers.
+app.use('*', requestId());
+app.use('*', requestLifecycleLog());
 app.use('*', securityHeaders({ isProduction: isProductionServer, viteOrigin: `http://localhost:${env.VITE_PORT}` }));
+app.use('*', compress());
+
 // Route-owned body budgets: every state-changing /api/* request is bounded
 // by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
 // POST /api/assets/avatar owns the narrowly larger upload request budget
@@ -180,6 +191,45 @@ function ensureProductionFrontend(): void {
   }
 }
 
+export interface SessionCleanupHandle {
+  stop: () => void;
+}
+
+let sessionCleanupTimer: NodeJS.Timeout | undefined;
+
+/**
+ * App-owned session cleanup scheduling. Runs Auth's expired-session delete
+ * once the database is ready, then on one periodic interval. Exactly one
+ * timer exists; it is unref'd so it never blocks process exit, and
+ * {@link stopSessionCleanup} clears it on shutdown. No timers are created
+ * at import time.
+ */
+export function startSessionCleanup(options?: { intervalMs?: number; now?: number }): SessionCleanupHandle {
+  stopSessionCleanup();
+  const removed = cleanupExpiredSessions(options?.now ?? Date.now());
+  if (removed > 0) Logger.info('Expired sessions removed', { removed });
+  const timer = setInterval(
+    () => {
+      try {
+        cleanupExpiredSessions();
+      } catch (error) {
+        Logger.error('Expired session cleanup failed', error instanceof Error ? error : new Error(String(error)));
+      }
+    },
+    options?.intervalMs ?? AUTH.SESSION_CLEANUP_INTERVAL_MS,
+  );
+  if (typeof timer.unref === 'function') timer.unref();
+  sessionCleanupTimer = timer;
+  return { stop: stopSessionCleanup };
+}
+
+export function stopSessionCleanup(): void {
+  if (sessionCleanupTimer) {
+    clearInterval(sessionCleanupTimer);
+    sessionCleanupTimer = undefined;
+  }
+}
+
 export function startServer(port = env.PORT) {
   try {
     ensureProductionFrontend();
@@ -188,7 +238,7 @@ export function startServer(port = env.PORT) {
       applied: migrationResult.applied,
       skipped: migrationResult.skipped,
     });
-
+    startSessionCleanup();
     const server = serve(
       {
         fetch: app.fetch,
@@ -209,6 +259,9 @@ export function startServer(port = env.PORT) {
 
     server.on('error', (error: Error) => {
       Logger.error('Nara v3 server error', error);
+    });
+    server.on('close', () => {
+      stopSessionCleanup();
     });
 
     return server;

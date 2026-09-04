@@ -23,6 +23,13 @@ describe('v3 configuration', () => {
     );
   });
 
+  it('defaults production logging to info unless explicitly overridden', () => {
+    expect(parseEnv({ NODE_ENV: 'production', APP_URL: 'https://app.example.com' }).LOG_LEVEL).toBe('info');
+    expect(
+      parseEnv({ NODE_ENV: 'production', APP_URL: 'https://app.example.com', LOG_LEVEL: 'debug' }).LOG_LEVEL,
+    ).toBe('debug');
+  });
+
   it('reports malformed values with their field names', () => {
     expect(() => parseEnv({ PORT: 'not-a-port' })).toThrow(/PORT/);
   });

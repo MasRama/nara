@@ -43,8 +43,16 @@ export function parseEnv(input: NodeJS.ProcessEnv): Env {
     throw new Error('Environment validation failed:\n  - APP_URL: required in production');
   }
 
+  // Operational default: production stays at info unless explicitly
+  // overridden; development keeps the verbose debug default. No redundant
+  // logging variables.
+  const explicitLogLevel = input.LOG_LEVEL?.trim();
+  const logLevel =
+    explicitLogLevel ? parsed.data.LOG_LEVEL : parsed.data.NODE_ENV === 'production' ? 'info' : parsed.data.LOG_LEVEL;
+
   return {
     ...parsed.data,
+    LOG_LEVEL: logLevel,
     APP_URL: parsed.data.APP_URL?.trim() || `http://localhost:${parsed.data.VITE_PORT}`,
   };
 }

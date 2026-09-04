@@ -4,6 +4,7 @@ export const SERVER = {
 } as const;
 export const AUTH = {
   SESSION_EXPIRY_MS: 60 * 24 * 60 * 60 * 1000,
+  SESSION_CLEANUP_INTERVAL_MS: 60 * 60 * 1000,
 } as const;
 export const RATE_LIMIT = {
   MAX_REQUESTS: 100,

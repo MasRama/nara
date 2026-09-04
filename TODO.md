@@ -731,8 +731,8 @@ Reimplement the effective v2 request protections as feature-neutral Hono middlew
 
 ---
 
-## [ ] V3-044 — Restore request lifecycle observability
-> Non-blocking: these controls are developer-critical operational parity but do not replace missing user-facing workflows.
+## [x] V3-044 — Restore request lifecycle observability
+> Sealed 2026-09-04: `src/app/observability.ts` provides validated request IDs (safe opaque IDs preserved, oversized/unsafe replaced with UUID, `X-Request-Id` on 401/403/404/413/429/500), one structured non-health completion event per request (method/path/status/duration/requestId, no secrets, health/ready excluded but ID'd), error correlation via `handleError`, `hono/compress` production compression, production `LOG_LEVEL=info` default, Auth-owned `cleanupExpiredSessions` with App-owned startup + hourly scheduling (`stopSessionCleanup` on shutdown, no import-time timers). `src/app/observability.test.ts` (17 tests) green.
 
 ### Goal
 

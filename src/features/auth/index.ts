@@ -1,6 +1,7 @@
 export { authRoutes } from './server/routes';
 export { currentUser as getCurrentUser, hashPassword, SESSION_COOKIE_NAME } from './server/service';
 export { resetLoginThrottle, setThrottleMaxKeysForTests } from './server/login-throttle';
+export { cleanupExpiredSessions } from './server/repository';
 export type { SessionUser } from './server/repository';
 export {
   changePasswordInputSchema,
