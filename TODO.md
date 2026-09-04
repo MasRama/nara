@@ -1715,8 +1715,8 @@ If it fails, improve architecture/docs before adding more prompt files.
 
 ---
 
-## [ ] V3-135 — Release candidate
-> Reopened during the v3 consistency audit: no release-candidate artifact was created and blocking gates remain open.
+## [x] V3-135 — Release candidate
+> Completed 2026-09-04 in the finalization run: `npm run validate:release` green (`check` incl. lint, frontend typecheck, unit suite, and doctor; production-serving; production-startup; http-stack-compat 5/5; new-project; official-feature), `npm run validate:linux` green (2/2, real production artifact on Linux), `npm run build` green, `npm run perf:sanity` within catastrophic budgets with no new tripwire. Manual developer/product validation completed by the project owner throughout v3 development/review. Release notes and migration guide reviewed; no pinned distro/glibc baseline required; no unfamiliar-human gate required (V3-134 removed, see above). Ready for final v3.0.0 transition (V3-136).
 
 Create the v3 release candidate only after all blocking v3 TODO items pass.
 
