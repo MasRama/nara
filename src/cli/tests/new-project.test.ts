@@ -66,10 +66,10 @@ describe('new project', () => {
       'vue-router',
     ]);
     expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
+      '@nara-web/cli',
       '@types/node',
       '@vitejs/plugin-vue',
       'jsdom',
-      'nara',
       'tsx',
       'typescript',
       'vite',
@@ -79,8 +79,8 @@ describe('new project', () => {
     const rootManifest = JSON.parse(
       readFileSync(path.join(__dirname, '..', '..', '..', 'package.json'), 'utf8'),
     ) as { version: string };
-    expect(packageJson.devDependencies.nara).toBe(rootManifest.version);
-    expect(packageJson.devDependencies.nara).not.toMatch(/^[ ^~]/);
+    expect(packageJson.devDependencies['@nara-web/cli']).toBe(rootManifest.version);
+    expect(packageJson.devDependencies['@nara-web/cli']).not.toMatch(/^[ ^~]/);
 
     const expectedFiles = [
       'scripts/dev.ts',

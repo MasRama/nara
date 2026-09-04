@@ -2,7 +2,15 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Resolve the nearest enclosing `nara` package root by walking upward from
+ * Canonical Nara package identities. Source/reference execution resolves
+ * the private root package (`nara`); installed execution resolves the
+ * published artifact (`@nara-web/cli`). Both are legitimate Nara package
+ * roots — anything else is not a Nara installation.
+ */
+const NARA_PACKAGE_NAMES: ReadonlySet<string> = new Set(['nara', '@nara-web/cli']);
+
+/**
+ * Resolve the nearest enclosing Nara package root by walking upward from
  * the executing CLI file. Used by both CLI version discovery and
  * official-feature discovery so staged (`packages/nara/dist`), built
  * (`build/src/cli`), and source (`src/cli`) execution all resolve to the
@@ -18,7 +26,7 @@ export function resolveNaraPackageRoot(startDirectory: string = __dirname): stri
         const manifest = JSON.parse(readFileSync(candidate, 'utf8')) as {
           name?: unknown;
         };
-        if (manifest.name === 'nara') {
+        if (typeof manifest.name === 'string' && NARA_PACKAGE_NAMES.has(manifest.name)) {
           return current;
         }
       } catch {
@@ -32,7 +40,7 @@ export function resolveNaraPackageRoot(startDirectory: string = __dirname): stri
     current = parent;
   }
   throw new Error(
-    `Nara package root not found: walked upward from ${origin} without finding a package.json with name "nara".`,
+    `Nara package root not found: walked upward from ${origin} without finding a package.json with a canonical Nara package name (${[...NARA_PACKAGE_NAMES].join(', ')}).`,
   );
 }
 

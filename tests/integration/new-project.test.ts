@@ -253,7 +253,8 @@ describe('nara new fresh project', () => {
       const generatedManifest = JSON.parse(
         readFileSync(path.join(projectDirectory, 'package.json'), 'utf8'),
       ) as { devDependencies: Record<string, string> };
-      expect(generatedManifest.devDependencies.nara).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(generatedManifest.devDependencies['@nara-web/cli']).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(generatedManifest.devDependencies.nara).toBeUndefined();
       // Pre-publish stand-in for the registry: same tarball bytes via file:.
       pointNaraAtTarball(projectDirectory, await ensurePackedNara());
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);

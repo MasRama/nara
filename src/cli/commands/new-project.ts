@@ -50,10 +50,10 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
           'vue-router': '^5.3.1',
         },
         devDependencies: {
+          '@nara-web/cli': cliVersion,
           '@types/node': '^22.20.1',
           '@vitejs/plugin-vue': '^6.0.8',
           jsdom: '^30.0.1',
-          nara: cliVersion,
           tsx: '^4.19.2',
           typescript: '^5.6.3',
           vite: '8.2.1',

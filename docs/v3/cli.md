@@ -2,9 +2,9 @@
 
 The Nara CLI is a TypeScript command-line tool for creating Features, composing official source packages, and inspecting architecture. Core analysis is deterministic and does not call an LLM.
 
-The `nara` package is publishable at `packages/nara` and will be acquired from the npm registry once published; it has not been published yet. Inside
+The `nara` CLI is distributed on npm as `@nara-web/cli` (not yet published; see the packaging note in [`README.md`](../../README.md)) and the package exposes the `nara` executable. Inside
 a generated project every command below runs from the project's own pinned
-install (`npx nara <command>` or `npm run architecture:doctor`). From a Nara
+`@nara-web/cli` install (`npx nara <command>` or `npm run architecture:doctor`). From a Nara
 repository checkout, the equivalent command is:
 
 Run `nara --help` for the command list and `-h`/`--help` for command-specific usage.
@@ -13,7 +13,7 @@ Run `nara --help` for the command list and `-h`/`--help` for command-specific us
 Create a runnable minimal Nara v3 application in a new sibling directory. `nara new` writes the project files but does not install dependencies:
 
 ```bash
-npx nara new ledger
+npx @nara-web/cli new ledger
 cd ledger
 npm install
 npm run check
@@ -22,9 +22,9 @@ NODE_ENV=production APP_URL=http://localhost:5555 npm start
 ```
 
 Every generated project exact-pins the version of the Nara CLI that created
-it as a devDependency (no range), so architecture-rule changes
-arrive only through an explicit dependency update — never silently (see ADR
-0011). Its `npm run check` ends with `npm run architecture:doctor`, and
+it as `@nara-web/cli` in devDependencies (no range), so architecture-rule
+changes arrive only through an explicit dependency update — never silently
+(see ADR 0011). Its `npm run check` ends with `npm run architecture:doctor`, and
 `nara inspect/context/impact/doctor/add` all run from the project's own
 install with no global CLI and no network service. Production serving needs
 no Nara runtime: the CLI is development tooling, not request-path
@@ -121,7 +121,7 @@ npx nara add health
 npx nara add audit
 ```
 
-Packages resolve from the installed `nara` package's `official-features/`
+Packages resolve from the installed `@nara-web/cli` package's `official-features/`
 source (shipped inside the published artifact), never from the network at
 install time. The package is copied as inspectable TypeScript source.
 Installation refuses unknown package names and existing targets. It stages the copy before renaming it into place, so a failed copy does not leave a partial Feature directory.

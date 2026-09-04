@@ -9,7 +9,7 @@ Nara keeps each business capability together and makes the boundaries machine-ch
 ## Start here
 
 ```bash
-npx nara new my-app
+npx @nara-web/cli new my-app
 cd my-app
 npm install
 npm run dev
@@ -48,8 +48,7 @@ Nara capabilities (auth, RBAC, users, assets, SQLite lifecycle). It is not
 the starting point for new products — `nara new` is. Additional capabilities
 reach generated projects as explicit open-code features via `nara add`, not
 by cloning the reference app.
-
-Packaging note: the publishable `nara` package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/` plus `official-features/` source). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
+Packaging note: Nara is distributed on npm as `@nara-web/cli`. The package exposes the `nara` executable, so generated projects continue using commands such as `nara doctor`, `nara diff`, and `nara guard`. The publishable package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/` plus `official-features/` source). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
 
 The development topology uses two local ports: Vite serves the browser on `VITE_PORT` (default `5173`) and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono on `PORT` (default `5555`).
 
@@ -125,8 +124,9 @@ npx nara guard --base origin/main --json
 ```
 
 No AI provider is required for these commands. `nara new` pins the creating
-CLI version exactly in the generated project, so architecture-rule changes
-arrive only through an explicit dependency update (see ADR 0011).
+CLI version exactly as `@nara-web/cli` in the generated project, so
+architecture-rule changes arrive only through an explicit dependency update
+(see ADR 0011).
 
 ## HTTP and application structure
 

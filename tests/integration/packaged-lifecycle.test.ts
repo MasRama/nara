@@ -86,7 +86,7 @@ describe('packaged Nara lifecycle', () => {
       // Install the packed artifact exactly as a user would (no repo checkout).
       const prefix = path.join(root, 'prefix');
       await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
-      const installedRoot = path.join(prefix, 'node_modules', 'nara');
+      const installedRoot = path.join(prefix, 'node_modules', '@nara-web', 'cli');
       expect(existsSync(path.join(installedRoot, 'dist', 'index.js'))).toBe(true);
       expect(existsSync(path.join(installedRoot, 'official-features', 'health', 'index.ts'))).toBe(true);
       expect(existsSync(path.join(installedRoot, 'official-features', 'audit', 'index.ts'))).toBe(true);
@@ -111,7 +111,8 @@ describe('packaged Nara lifecycle', () => {
       ) as {
         version: string;
       };
-      expect(generated.devDependencies.nara).toBe(packageManifest.version);
+      expect(generated.devDependencies['@nara-web/cli']).toBe(packageManifest.version);
+      expect(generated.devDependencies.nara).toBeUndefined();
       expect(generated.scripts['architecture:doctor']).toBe('nara doctor');
       expect(generated.scripts.check).toContain('architecture:doctor');
 
@@ -161,7 +162,7 @@ describe('packaged Nara lifecycle', () => {
     try {
       const prefix = path.join(root, 'prefix');
       await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
-      const installedRoot = path.join(prefix, 'node_modules', 'nara');
+      const installedRoot = path.join(prefix, 'node_modules', '@nara-web', 'cli');
       expect(existsSync(path.join(installedRoot, 'dist', 'commands', 'diff.js'))).toBe(true);
       expect(existsSync(path.join(installedRoot, 'dist', 'architecture', 'diff.js'))).toBe(true);
       expect(existsSync(path.join(installedRoot, 'dist', 'architecture', 'snapshot.js'))).toBe(true);
@@ -209,7 +210,7 @@ describe('packaged Nara lifecycle', () => {
     try {
       const prefix = path.join(root, 'prefix');
       await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
-      const installedRoot = path.join(prefix, 'node_modules', 'nara');
+      const installedRoot = path.join(prefix, 'node_modules', '@nara-web', 'cli');
       expect(existsSync(path.join(installedRoot, 'dist', 'commands', 'guard.js'))).toBe(true);
       const installedCli =
         process.platform === 'win32'

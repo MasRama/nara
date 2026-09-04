@@ -1,4 +1,6 @@
-# Nara CLI
+# `@nara-web/cli`
+
+Nara is distributed on npm as `@nara-web/cli`. The package exposes the `nara` executable, so generated projects continue using commands such as `nara doctor`, `nara diff`, and `nara guard`.
 
 Architecture-aware TypeScript application kit. Build by feature, not by layer.
 
@@ -11,7 +13,7 @@ from `packages/nara` (via `npm run stage:package` from the repository root)
 produces the same artifact the registry would serve.
 
 ```bash
-npx nara new my-app
+npx @nara-web/cli new my-app
 cd my-app
 npm install
 npm run dev

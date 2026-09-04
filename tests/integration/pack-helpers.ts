@@ -50,7 +50,7 @@ let cachedTarball: string | undefined;
 /**
  * Pack the publishable package exactly as npm would publish it and return
  * the tarball path. Pre-publish this is the stand-in for the npm registry:
- * generated projects pin `nara: <version>`, which only resolves from the
+ * generated projects pin `@nara-web/cli: <version>`, which only resolves from the
  * registry after the first publish. Tests rewrite that spec to
  * `file:<tarball>` (same bytes the registry would serve) and assert the
  * pinned spec before rewriting.
@@ -78,7 +78,7 @@ export function pointNaraAtTarball(projectDirectory: string, tarball: string): v
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
     devDependencies: Record<string, string>;
   };
-  manifest.devDependencies.nara = `file:${tarball}`;
+  manifest.devDependencies['@nara-web/cli'] = `file:${tarball}`;
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
@@ -88,7 +88,7 @@ function localNaraEntrypoint(projectDirectory: string): { command: string; argsP
   }
   return {
     command: 'node',
-    argsPrefix: [path.join(projectDirectory, 'node_modules', 'nara', 'dist', 'index.js')],
+    argsPrefix: [path.join(projectDirectory, 'node_modules', '@nara-web', 'cli', 'dist', 'index.js')],
   };
 }
 

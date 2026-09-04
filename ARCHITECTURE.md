@@ -83,17 +83,20 @@ Five distinct things; do not conflate them:
 2. **Nara's architecture model** — feature ownership, public boundaries,
    deterministic discovery (this document).
 3. **Nara CLI/tooling** — `nara` is a development-time architecture
-   companion, not a production runtime abstraction. It ships as a
-   publishable npm package at `packages/nara` (`bin` points at the staged
-   CLI, `files` includes only the staged `dist/` and `official-features/`
-   source) and will be acquired from the registry once published; it has
+   companion, not a production runtime abstraction. It ships as the
+   publishable npm package `@nara-web/cli` at `packages/nara` (`bin`
+   exposes the `nara` executable from the staged CLI, `files` includes
+   only the staged `dist/` and `official-features/` source) and will be
+   acquired from the registry once published; it has not been published
+   yet.
 4. **Generated applications** — `nara new` output: the minimal canonical
    application (health-only, no database, no auth). Each carries the
-   creating CLI as an exact-pinned devDependency, so `npm run check`
-   (which ends in `nara doctor`) and `nara add/inspect/context/impact/diff/guard`
-   work reproducibly from the project's own install. Guard is an explicit
-   CI/review command there (`npx nara guard --base origin/main`) because a
-   new project has no universal baseline ref to assume.
+   creating CLI as an exact-pinned `@nara-web/cli` devDependency, so
+   `npm run check` (which ends in `nara doctor`) and
+   `nara add/inspect/context/impact/diff/guard` work reproducibly from
+   the project's own install. Guard is an explicit CI/review command
+   there (`npx nara guard --base origin/main`) because a new project has
+   no universal baseline ref to assume.
 5. **Official open-code features** — optional installable source
    (`health`, `audit`). `nara add` copies versioned package source into
    `src/features/<name>`; the result is ordinary project code.
