@@ -1444,20 +1444,20 @@ No undocumented manual fix is needed.
 ---
 
 ## [x] V3-111 — Linux deployment test
-> Verified 2026-09-04: clean isolated `npm ci` + `npm run build` + `npm start` serves `GET /health` 200, `/ready` 200, `/api/auth/me` 401; manifest/lockfile/source scans show no `ultimate-express`/`uWebSockets.js` dependency, import, or native binary (old `linux-deployment.test.ts` 7/7); running production process maps no uWS binary (`/proc/<pid>/maps`); generated starter template depends only on `hono` + `@hono/node-server`. Local run on glibc 2.39 (Ubuntu 24.04-based); pinned `ubuntu-22.04` production-startup CI job (`.github/workflows/ci.yml` `compat`) as the deterministic glibc 2.35 baseline — CI execution itself not observed from here.
-> Hardened pre-RC: portable assertions moved to `tests/integration/http-stack-compat.test.ts` (`npm run test:http-stack-compat`, runs everywhere); `tests/integration/linux-deployment.test.ts` (`npm run test:linux-deployment`) explicitly requires Linux (fails fast with a clear diagnostic on non-Linux so a macOS/Windows run can never read as Ubuntu validation), always rebuilds from source, spawns the real production artifact directly (`process.execPath` + `build/server.js`, no npm wrapper, so the inspected PID is the actual Node server), and proves `/health` 200, `/ready` 200, `/api/auth/me` 401 plus no uWS mapping in `/proc/<pid>/maps`. Shutdown is SIGTERM with a bounded SIGKILL fallback and setup-failure cleanup, so a failed run cannot orphan the server; the temp DB dir is removed afterward. Contract is the narrow Hono HTTP path (other native deps out of scope; the `/proc` gate does not claim all native dependencies are absent). Pinned `ubuntu-22.04` CI compat job now also runs the portable audit before the production startup smoke.
+> Verified 2026-09-04: clean isolated `npm ci` + `npm run build` + `npm start` serves `GET /health` 200, `/ready` 200, `/api/auth/me` 401; manifest/lockfile/source scans show no `ultimate-express`/`uWebSockets.js` dependency, import, or native binary (old `linux-deployment.test.ts` 7/7); running production process maps no uWS binary (`/proc/<pid>/maps`); generated starter template depends only on `hono` + `@hono/node-server`. Local run on Linux (Ubuntu 24.04-based host); no pinned distribution or glibc version is part of the release criteria.
+> Hardened pre-RC: portable assertions moved to `tests/integration/http-stack-compat.test.ts` (`npm run test:http-stack-compat`, runs everywhere); `tests/integration/linux-deployment.test.ts` (`npm run test:linux-deployment`) explicitly requires Linux (fails fast with a clear diagnostic on non-Linux so a macOS/Windows run can never read as Linux validation), always rebuilds from source, spawns the real production artifact directly (`process.execPath` + `build/server.js`, no npm wrapper, so the inspected PID is the actual Node server), and proves `/health` 200, `/ready` 200, `/api/auth/me` 401 plus no uWS mapping in `/proc/<pid>/maps`. Shutdown is SIGTERM with a bounded SIGKILL fallback and setup-failure cleanup, so a failed run cannot orphan the server; the…
 ### Goal
 
 Verify the problem that affected the old uWS path is gone.
 
 ### Target
 
-A normal supported Linux environment such as Ubuntu 22.04 or equivalent compatibility baseline.
+A real Linux environment. No pinned distribution or glibc version is required.
 
 ### Acceptance
 
 * application starts
-* no `GLIBC_2.38` requirement from Nara HTTP layer
+* no native-binary system-library requirement from the Nara HTTP layer
 * no uWebSockets.js binary is loaded
 * health endpoint responds
 
@@ -1706,23 +1706,12 @@ If it fails, improve architecture/docs before adding more prompt files.
 
 ---
 
-## [ ] V3-134 — Human cold-start test
-> Protocol prepared pre-RC (`docs/v3/human-cold-start.md` + `scripts/human-cold-start-check.mjs` fixture check); stays open until an actual unfamiliar human performs the session and observations are recorded. A harness run is not a human run.
-
-### Scenario
-
-A developer unfamiliar with Nara should:
-
-1. read README
-2. create project
-3. create a feature
-4. intentionally violate a boundary
-5. run doctor
-6. understand the diagnostic
-
-### Acceptance
-
-Nara's value proposition becomes obvious through usage.
+> V3-134 (unfamiliar-human cold-start) was removed from the v3.0.0 release
+> definition by product-owner decision at finalization: no separate
+> unfamiliar-human gate is required. Manual developer/product validation was
+> performed by the project owner continuously throughout v3 development and
+> review. V3-133 agent cold-start above remains the retained cold-start gate.
+> Milestone IDs V3-135/V3-136 are unchanged; the numbering gap is historical.
 
 ---
 

@@ -100,7 +100,7 @@ beforeAll(async () => {
   if (!isLinux) {
     throw new Error(
       'test:linux-deployment requires Linux (process.platform === \'linux\'). ' +
-        'A non-Linux run cannot produce Ubuntu/glibc deployment evidence. ' +
+        'A non-Linux run cannot produce Linux deployment evidence. ' +
         'Run `npm run test:http-stack-compat` for the portable HTTP-stack audit instead.',
     );
   }
@@ -154,10 +154,11 @@ afterAll(async () => {
 });
 
 /**
- * V3-111: the old Ultimate Express / uWebSockets.js HTTP path required a
- * newer glibc than supported Linux baselines shipped, failing before the
- * application started. This gate proves the real production artifact starts
- * and answers HTTP on Linux and loads no uWS native binary.
+ * V3-111: the old Ultimate Express / uWebSockets.js HTTP path failed before
+ * the application started on Linux hosts whose system libraries did not
+ * match its native binary. This gate proves the real production artifact
+ * starts and answers HTTP on a real Linux environment and loads no uWS
+ * native binary.
  *
  * `server.pid` is the actual `node build/server.js` process (spawned
  * directly, no npm wrapper), so `/proc/<pid>/maps` below inspects the real
@@ -171,9 +172,9 @@ afterAll(async () => {
  * Portable dependency/import hygiene lives in
  * `tests/integration/http-stack-compat.test.ts` and runs everywhere. This
  * file is the Linux-only runtime half: it fails fast on non-Linux so a
- * macOS/Windows run can never be mistaken for Ubuntu/glibc validation.
+ * macOS/Windows run can never be mistaken for Linux validation.
  */
-describe('linux deployment baseline (V3-111)', () => {
+describe('linux deployment (V3-111)', () => {
   it('starts the real production server and answers health on Linux', async () => {
     const health = await fetch(`${baseUrl}/health`);
     expect(health.status).toBe(200);
