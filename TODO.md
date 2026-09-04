@@ -1443,8 +1443,8 @@ No undocumented manual fix is needed.
 
 ---
 
-## [ ] V3-111 — Linux deployment test
-> Reopened during the v3 consistency audit: no supported-Linux deployment evidence is present.
+## [x] V3-111 — Linux deployment test
+> Verified 2026-09-04: clean isolated `npm ci` + `npm run build` + `npm start` serves `GET /health` 200, `/ready` 200, `/api/auth/me` 401; manifest/lockfile/source scans show no `ultimate-express`/`uWebSockets.js` dependency, import, or native binary (`tests/integration/linux-deployment.test.ts` 7/7, `npm run test:linux-deployment`); running production process maps no uWS binary (`/proc/<pid>/maps`); generated starter template depends only on `hono` + `@hono/node-server`. Local run on glibc 2.39 (Ubuntu 24.04-based); pinned `ubuntu-22.04` production-startup CI job added (`.github/workflows/ci.yml` `compat`) as the deterministic glibc 2.35 baseline — CI execution itself not observed from here.
 
 ### Goal
 

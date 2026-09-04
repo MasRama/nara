@@ -51,3 +51,40 @@ jobs:
 
       - name: Build project
         run: npm run build
+
+  compat:
+    name: Linux deployment baseline (Ubuntu 22.04)
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Start production server and prove health on the glibc 2.35 baseline
+        run: |
+          export NODE_ENV=production
+          export PORT=5555
+          export APP_URL=http://127.0.0.1:5555
+          export DB_FILE="$RUNNER_TEMP/compat.sqlite3"
+          node build/server.js > "$RUNNER_TEMP/compat.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/compat.pid"
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5555/health > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:5555/health
+          curl -fsS http://127.0.0.1:5555/ready
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5555/api/auth/me)" = "401"
+          kill "$(cat "$RUNNER_TEMP/compat.pid")"
