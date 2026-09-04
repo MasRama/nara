@@ -64,6 +64,13 @@ describe('Vue frontend shell', () => {
     expect(container.querySelector('form')).not.toBeNull();
   });
 
+  it('renders the Vue 404 surface for unknown browser routes', async () => {
+    await mountAt('/this-route-does-not-exist');
+
+    expect(container.querySelector('[data-testid="not-found-page"]')).not.toBeNull();
+    expect(container.querySelector('h1')?.textContent).toContain('Page not found');
+  });
+
   it('preserves landing theme and copy interactions', async () => {
     await mountAt('/');
 

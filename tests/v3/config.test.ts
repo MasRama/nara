@@ -30,6 +30,15 @@ describe('v3 configuration', () => {
     ).toBe('debug');
   });
 
+  it('validates reverse-proxy trust and security numeric settings', () => {
+    const base = { NODE_ENV: 'development' } as Record<string, string>;
+    expect(parseEnv({ ...base, TRUST_PROXY: 'true', TRUST_PROXY_HOPS: '2' }).TRUST_PROXY_HOPS).toBe(2);
+    expect(() => parseEnv({ ...base, TRUST_PROXY: 'yes' })).toThrow(/TRUST_PROXY/);
+    expect(() => parseEnv({ ...base, TRUST_PROXY_HOPS: '11' })).toThrow(/TRUST_PROXY_HOPS/);
+    expect(() => parseEnv({ ...base, MAX_JSON_BODY_BYTES: '-1' })).toThrow(/MAX_JSON_BODY_BYTES/);
+    expect(() => parseEnv({ ...base, AUTH_RATE_LIMIT_MAX: '0' })).toThrow(/AUTH_RATE_LIMIT_MAX/);
+  });
+
   it('reports malformed values with their field names', () => {
     expect(() => parseEnv({ PORT: 'not-a-port' })).toThrow(/PORT/);
   });

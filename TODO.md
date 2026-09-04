@@ -753,8 +753,8 @@ Preserve the v2 request lifecycle behavior while keeping implementation in the v
 
 ---
 
-## [ ] V3-045 — Close v2 parity regression coverage
-> Non-blocking: this task makes the restored surface durable and prevents the audit gaps from returning.
+## [x] V3-045 — Close v2 parity regression coverage
+> Sealed 2026-09-04: `docs/v3/parity-matrix.md` maps every preserved/replaced capability to executable tests; real Vite topology smoke (`tests/v3/vite-topology.test.ts`: Vite document + /health and /api/auth/me proxied to Hono) complements behavior-level Vue suites and the production serving smoke; auth/account/users-RBAC/static/config/database/security/observability umbrellas closed (Vue 404, TRUST_PROXY validation, removed-stack manifest+import scan); generated project stays minimal with `test:new-project` green. Full `npm test` (203 tests), `npm run check`, `build`, `architecture:doctor`, `test:production-serving`, `test:new-project` all green.
 
 ### Goal
 
