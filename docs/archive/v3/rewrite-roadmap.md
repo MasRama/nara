@@ -1,3 +1,5 @@
+> **Archived.** Completed v2 → v3 rewrite roadmap (all tasks `[x]` at v3.0.0 release). Not an active task authority — see [`ARCHITECTURE.md`](../../../ARCHITECTURE.md) and [`AGENTS.md`](../../../AGENTS.md) for current guidance.
+
 # Nara v3 TODO
 
 Target: `v3.0.0`

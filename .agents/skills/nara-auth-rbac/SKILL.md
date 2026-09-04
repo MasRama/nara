@@ -1,9 +1,9 @@
 ---
-trigger: Adding auth guards, permission checks, role management, or session handling
-status: active-v3
+name: nara-auth-rbac
+description: Adding auth guards, permission checks, role management, or session handling
 ---
 
-# Auth & RBAC (v3)
+# Auth & RBAC
 
 ## When to use
 
@@ -35,7 +35,7 @@ The server is authoritative. Resolve the session from the auth Feature and rejec
 ```typescript
 import { getCookie } from 'hono/cookie';
 import type { Context } from 'hono';
-import { getCurrentUser, SESSION_COOKIE_NAME } from '@features/auth';
+import { getCurrentUser, SESSION_COOKIE_NAME } from '@/features/auth';
 
 export function requireSession(context: Context) {
   const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));

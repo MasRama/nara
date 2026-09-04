@@ -1,3 +1,5 @@
+> **Current with notes (2026-09-04).** The decision stands: root `AGENTS.md` is the primary AI context. Structure details below are v2-era: v3 uses one concise root `AGENTS.md` (no nested per-directory files), one directory per skill under `.agents/skills/<name>/SKILL.md` (not flat `*.md` names like `crud-pattern`), and `npm run check` (there are no `check:agents` / `lint:layers` scripts). Body preserved as history.
+
 # ADR 0008: AGENTS.md as primary AI context
 
 Date: 2025-06-28

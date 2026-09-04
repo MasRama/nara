@@ -1,9 +1,9 @@
 ---
-trigger: Writing Hono routes that return JSON, handling errors, or writing validation
-status: active-v3
+name: nara-api-contracts
+description: Writing Hono routes that return JSON, handling errors, or writing validation
 ---
 
-# API Contract & Error Handling (v3)
+# API Contracts & Error Handling
 
 ## Response shapes
 

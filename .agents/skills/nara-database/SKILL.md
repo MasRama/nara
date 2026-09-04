@@ -1,9 +1,9 @@
 ---
-trigger: Writing SQL queries, transactions, dynamic updates, or any database access
-status: active-v3
+name: nara-database
+description: Writing SQL queries, transactions, dynamic updates, or any database access
 ---
 
-# SQLite Usage (v3)
+# Database (SQLite Usage)
 
 ## Ownership
 

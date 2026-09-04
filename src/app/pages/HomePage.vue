@@ -174,9 +174,9 @@ onBeforeUnmount(() => {
             </div>
             <div class="space-y-2.5 p-4">
               <p class="text-foreground"><span class="text-primary">$</span> add a products feature. fields: name, price, description.</p>
-              <p class="text-[11px] text-muted-foreground/60">reads AGENTS.md · loads skill: crud-pattern.md · writes 7 files</p>
-              <div class="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground"><span>types</span><span>migration</span><span>queries</span><span>validator</span><span>handlers</span><span>routes</span><span>page</span></div>
-              <p class="border-t border-border/50 pt-1 text-[11px] text-muted-foreground/60"><span class="text-green-500/70">✓</span> lint · 17 layer rules · tests — all passed</p>
+              <p class="text-[11px] text-muted-foreground/60">reads AGENTS.md · loads skill: nara-feature-development · writes a feature</p>
+              <div class="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground"><span>contract</span><span>index</span><span>server</span><span>web</span><span>tests</span><span>doctor</span></div>
+              <p class="border-t border-border/50 pt-1 text-[11px] text-muted-foreground/60"><span class="text-green-500/70">✓</span> lint · doctor · tests — all passed</p>
             </div>
           </div>
 

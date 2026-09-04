@@ -1,3 +1,5 @@
+> **Archived.** v2 → v3 rewrite implementation specification (draft-era planning document, preserved for history). Current architecture: [`ARCHITECTURE.md`](../../../ARCHITECTURE.md).
+
 # Nara v3 Specification
 
 Status: Draft implementation specification

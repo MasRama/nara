@@ -1,9 +1,9 @@
 ---
-trigger: Writing Vue pages, components, composables, or frontend API clients in Nara v3
-status: active-v3
+name: nara-frontend
+description: Writing Vue pages, components, composables, or frontend API clients in Nara v3
 ---
 
-# Vue Patterns (Frontend)
+# Frontend Patterns (Vue 3 + Vite + Router)
 
 ## When to use
 
@@ -31,8 +31,9 @@ Cross-feature browser code uses public Feature exports. Never import another Fea
 // resources/app.ts
 import { createApp } from 'vue';
 import App from '../src/app/App.vue';
+import router from '../src/app/router';
 
-createApp(App).mount('#app');
+createApp(App).use(router).mount('#app');
 ```
 
 Use Vue Composition API in single-file components:
@@ -63,13 +64,15 @@ Keep request and response types in the Feature contract. Handle loading, validat
 
 ## Navigation
 
-Use ordinary links for browser navigation unless a later specification adds a router:
+Browser routes live in `src/app/router.ts` (Vue Router via the `vue-router` package, `createWebHistory`). App-owned pages sit under `src/app/pages/`; feature pages are composed through the owning feature's `web/index.ts` barrel — never a deep page import:
 
-```html
-<a href="/dashboard">Dashboard</a>
+```typescript
+import { LoginPage } from '@/features/auth/web';
+
+{ path: '/login', name: 'login', component: LoginPage, meta: { guestOnly: true } },
 ```
 
-Do not add Inertia navigation, server-rendered page props, or a second routing framework. SSR is out of scope unless a later specification explicitly enables it.
+Route guards (`requiresAuth`, `requiresPermission`) are UX only; the Hono route stays authoritative. In pages, navigate with `<RouterLink>` or `useRouter()` — not `window.location`. Do not add Inertia navigation, server-rendered page props, or a second routing framework. SSR is out of scope unless a later specification explicitly enables it.
 
 ## UI and accessibility
 

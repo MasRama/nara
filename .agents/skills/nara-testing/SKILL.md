@@ -1,9 +1,9 @@
 ---
-trigger: Writing or modifying tests for a Feature, Hono route, repository, Vue page, or CLI command
-status: active-v3
+name: nara-testing
+description: Writing or modifying tests for a feature, Hono route, repository, Vue page, or CLI command
 ---
 
-# Testing Pattern (v3)
+# Testing Patterns
 
 ## Test layout
 
@@ -35,7 +35,7 @@ Before delivery, run the repository check:
 npm run check
 ```
 
-The check covers TypeScript, Vue typechecking, architecture checks, security checks, documentation checks, and the Vitest suite.
+The check covers the server typecheck (`lint`), the Vue typecheck (`check:frontend`), the Vitest suite, and `nara doctor` (`architecture:doctor`). Finish with `npm run build` when the change affects production serving.
 
 ## Hono route tests
 

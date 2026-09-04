@@ -77,7 +77,7 @@ runs on the same host, not across hosts.
 
 Each checkbox below means "rerun green for the RC candidate on a clean
 tree". An unchecked box does not imply the area was never validated —
-historical evidence lives in TODO — only that it must be freshly observed
+historical evidence lives in docs/archive/v3/rewrite-roadmap.md — only that it must be freshly observed
 immediately before RC.
 
 - [x] `npm run validate:release` green on a clean tree (2026-09-04 finalization run)

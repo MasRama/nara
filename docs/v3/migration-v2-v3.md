@@ -106,7 +106,7 @@ cd my-app
 npm install
 ```
 
-For an existing repository, create a v3 branch or a clean target directory. Read [`V3_SPEC.md`](../../V3_SPEC.md) and [`AGENTS.md`](../../AGENTS.md) before copying code.
+For an existing repository, create a clean target directory. Read [`ARCHITECTURE.md`](../../ARCHITECTURE.md) and [`AGENTS.md`](../../AGENTS.md) before copying code.
 
 ### 2. Inventory capabilities
 

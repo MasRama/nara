@@ -1,9 +1,9 @@
 ---
-trigger: Before writing code — read this to avoid common AI mistakes
-status: active-v3
+name: nara-pitfalls
+description: Before writing code — read this to avoid common Nara v3 mistakes
 ---
 
-# Common Pitfalls (v3)
+# Common Pitfalls
 
 Mistakes coding agents make in Nara v3. Read before changing code.
 
@@ -19,9 +19,9 @@ Mistakes coding agents make in Nara v3. Read before changing code.
 
 **Fix:** Import only the target Feature's public exports from its `index.ts`.
 
-### 3. Putting feature pages in a global frontend directory
+### 3. Putting feature pages in the app layer
 
-**Wrong:** Creating `resources/Pages/Users.vue` for a users capability.
+**Wrong:** Creating `src/app/pages/UsersPage.vue` for a users capability.
 
 **Fix:** Place feature-specific pages, components, and composables under `src/features/users/web/`. Keep application-wide Vue composition under `src/app/`.
 

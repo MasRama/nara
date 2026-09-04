@@ -118,4 +118,4 @@ The following v2 runtime elements are intentionally not preserved:
 - Express-compatible Nara HTTP abstractions as the v3 server boundary
 - Global technical-layer organization as the primary application model
 
-This file is an inventory only. It does not define new v3 architecture beyond the decisions already closed in `V3_SPEC.md`.
+This file is an inventory only. It does not define new v3 architecture beyond the decisions closed in `ARCHITECTURE.md` (rewrite-era record: `docs/archive/v3/rewrite-spec.md`).

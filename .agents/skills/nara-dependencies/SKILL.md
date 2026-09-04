@@ -1,6 +1,6 @@
 ---
-trigger: Adding a dependency, or before suggesting a library/package
-status: active-v3
+name: nara-dependencies
+description: Adding a dependency, or before suggesting a library or package
 ---
 
 # Dependency Policy
@@ -10,8 +10,8 @@ Do not add dependencies without checking this table. If a category is banned, us
 | Category | Allowed | Banned | Why |
 |---|---|---|---|
 | Database | `better-sqlite3` | Prisma, Drizzle, Knex, Sequelize, TypeORM | ADR 0001 — raw SQL keeps intent explicit |
-| HTTP framework | `hono`, `@hono/node-server` | Express, Ultimate Express, Fastify, NestJS, `uWebSockets.js` | V3_SPEC — portable Node HTTP stack |
-| Frontend framework | `vue` | React, Svelte, Solid, Angular, Nuxt, `@inertiajs/*` | V3_SPEC §7 — Vue 3 is the sole supported framework |
+| HTTP framework | `hono`, `@hono/node-server` | Express, Ultimate Express, Fastify, NestJS, `uWebSockets.js` | ARCHITECTURE.md — portable Node HTTP stack |
+| Frontend framework | `vue`, `vue-router` | React, Svelte, Solid, Angular, Nuxt, `@inertiajs/*` | ARCHITECTURE.md — Vue 3 is the sole supported framework |
 | Frontend build/typecheck | `vite`, `@vitejs/plugin-vue`, `vue-tsc` | `@sveltejs/vite-plugin-svelte`, `svelte-check`, framework-specific SSR tooling | Direct Vue + Vite + TypeScript |
 | UI primitives | Native Vue elements and existing Tailwind/CSS | `bits-ui`, Svelte-only component libraries, custom Nara UI framework | Keep browser composition direct and framework-transparent |
 | HTTP client | Feature-scoped Hono typed clients, native `fetch` where required | axios, got, node-fetch, global RPC wrappers | Keep contracts feature-owned and transport visible |

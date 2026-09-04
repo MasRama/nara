@@ -65,9 +65,9 @@ Use [`migration-v2-v3.md`](./migration-v2-v3.md) for the capability mapping and 
 ## Automated verification passing
 
 ```bash
-npm run validate:release   # portable gates (all green, see TODO V3-130)
-npm run validate:linux     # Linux runtime gate (green, see TODO V3-111)
-npm run perf:sanity        # catastrophic-only sanity, no regression (V3-115)
+npm run validate:release   # portable gates (all green; rewrite gate record: docs/archive/v3/rewrite-roadmap.md V3-130)
+npm run validate:linux     # Linux runtime gate (green; rewrite gate record: docs/archive/v3/rewrite-roadmap.md V3-111)
+npm run perf:sanity        # catastrophic-only sanity, no regression (rewrite gate record: V3-115)
 ```
 
 Covered: typechecks, unit suite, `nara doctor`, production serving and
@@ -95,7 +95,7 @@ Architecture regression fixtures cover valid projects and these invalid cases:
 ## Read before publishing
 
 - [`README.md`](../../README.md) — first-run overview
-- [`V3_SPEC.md`](../../V3_SPEC.md) — source of truth
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md) — architecture authority
 - [`feature-model.md`](./feature-model.md) — Feature ownership and boundaries
 - [`cli.md`](./cli.md) — command and JSON reference
 - [`migration-v2-v3.md`](./migration-v2-v3.md) — v2 porting guide

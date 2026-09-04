@@ -26,12 +26,12 @@ AI agents that understand WHY a convention exists make better decisions:
 |---|---|---|
 | [0001](./0001-raw-sql-over-orm.md) | Raw SQL over ORM | Accepted |
 | [0002](./0002-functions-over-classes.md) | Functions over classes | Accepted |
-| [0003](./0003-inertia-over-separate-api.md) | Inertia.js over separate API + SPA | Superseded by V3_SPEC.md §7 Frontend |
+| [0003](./0003-inertia-over-separate-api.md) | Inertia.js over separate API + SPA | Superseded by ARCHITECTURE.md (Locked stack) |
 | [0004](./0004-sqlite-over-postgres.md) | SQLite over PostgreSQL for starter kit | Accepted |
 | [0005](./0005-session-auth-over-jwt.md) | Session-based auth over JWT | Accepted |
 | [0006](./0006-zod-over-joi.md) | Zod over Joi for validation | Accepted |
-| [0007](./0007-bits-ui-over-custom-ui.md) | Bits UI over custom UI primitives | Superseded by V3_SPEC.md §7 Frontend |
-| [0008](./0008-agents-md-over-readme.md) | AGENTS.md as primary AI context | Accepted |
+| [0007](./0007-bits-ui-over-custom-ui.md) | Bits UI over custom UI primitives | Superseded by ARCHITECTURE.md (Locked stack) |
+| [0008](./0008-agents-md-over-readme.md) | AGENTS.md as primary AI context | Accepted with v3 structure notes |
 | [0009](./0009-descriptive-handler-names.md) | Descriptive handler names over REST conventions | Accepted |
 | [0010](./0010-english-error-messages.md) | English for user-facing messages | Accepted |
 

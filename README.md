@@ -238,10 +238,9 @@ The installation result is inspectable source, not a hidden runtime plugin. Run 
 
 ## Read next
 - [`AGENTS.md`](./AGENTS.md) — coding rules and agent workflow
-- [`V3_SPEC.md`](./V3_SPEC.md) — architectural source of truth
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — architecture authority
 - [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
 - [`docs/v3/release-checklist.md`](./docs/v3/release-checklist.md) — pre-RC gates and validation semantics
-- [`TODO.md`](./TODO.md) — implementation order
 - [`docs/v3/feature-model.md`](./docs/v3/feature-model.md) — feature ownership and boundaries
 - [`docs/v3/cli.md`](./docs/v3/cli.md) — CLI command reference and JSON output
 - [`docs/v3/feature-format.md`](./docs/v3/feature-format.md) — installable feature format

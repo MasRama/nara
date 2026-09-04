@@ -1,7 +1,7 @@
 # Nara v3 Parity Matrix (V3-045)
 
 Concise map from preserved/replaced v2 capabilities to executable v3 tests.
-Full inventory: `docs/v3/v2-inventory.md`. Audit: TODO V3-036–V3-044.
+Full inventory: `docs/v3/v2-inventory.md`. Audit record: `docs/archive/v3/rewrite-roadmap.md` V3-036–V3-044.
 
 Legend: **PRESERVED** = behavior kept as-is · **REIMPLEMENTED** = behavior
 kept, implementation replaced · **REMOVED** = intentionally dropped, guarded

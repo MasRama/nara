@@ -1,7 +1,7 @@
 # ADR 0007: Bits UI over custom UI primitives (Superseded)
 
 Date: 2025-01-15 (rev. 2026-08-17)
-Status: Superseded by V3_SPEC.md §7 Frontend
+Status: Superseded by ARCHITECTURE.md (Locked stack)
 
 > **Historical v2 decision.** This ADR is retained to explain why v2 chose Bits UI for Svelte. Nara v3 uses direct Vue composition and Tailwind; do not add Bits UI to v3.
 
