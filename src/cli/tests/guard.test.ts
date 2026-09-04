@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -407,5 +407,73 @@ describe('nara guard', () => {
     expect(outcome.exitCode).toBe(1);
     expect(readFileSync(path.join(repo, 'src/features/billing/server/checkout.ts'), 'utf8')).toBe(before);
     expect(git(repo, 'status', '--porcelain')).not.toBe('');
+  });
+
+  it('leaves no temporary directories behind on ref failures', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });
+    commitAll(repo, 'base');
+
+    const countTempDirs = (): number =>
+      readdirSync(os.tmpdir()).filter((entry) => entry.startsWith('nara-diff-')).length;
+
+    const beforeBase = countTempDirs();
+    const unknownBase = runGuard(repo, ['--base', 'does-not-exist-12345']);
+    expect(unknownBase.exitCode).toBe(1);
+    expect(countTempDirs()).toBe(beforeBase);
+
+    const beforeHead = countTempDirs();
+    const unknownHead = runGuard(repo, ['--base', 'HEAD', '--head', 'does-not-exist-12345']);
+    expect(unknownHead.exitCode).toBe(1);
+    expect(countTempDirs()).toBe(beforeHead);
+  });
+
+  it('tolerates spaces, unicode, binary, and deleted paths', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });
+    writeFileSync(path.join(repo, 'notes with spaces.txt'), 'plain notes\n');
+    writeFileSync(path.join(repo, 'notizen-äöü.txt'), 'unicode notes\n');
+    writeFileSync(path.join(repo, 'blob.bin'), Buffer.from([0x00, 0xff, 0x89, 0x50]));
+    writeFileSync(path.join(repo, 'doomed.txt'), 'about to be deleted\n');
+    commitAll(repo, 'base with awkward paths');
+    rmSync(path.join(repo, 'doomed.txt'), { force: true });
+
+    const outcome = runGuard(repo, ['--base', 'HEAD']);
+    expect(outcome.exitCode).toBe(0);
+    expect(outcome.stdout).toContain('Architecture guard passed.');
+
+    const machine = runGuardJson(repo, ['--base', 'HEAD']);
+    expect(machine.exitCode).toBe(0);
+    expect(machine.json).toMatchObject({ passed: true });
+  });
+
+  it('orders multiple same-code diagnostics deterministically by file', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });
+    commitAll(repo, 'clean base');
+    writeFeature(repo, 'users', {
+      'index.ts': 'export const users = 1;\n',
+      'server/repository.ts': 'export const findUserById = 1;\n',
+    });
+    writeFeature(repo, 'billing', {
+      'index.ts': 'export const billing = 1;\n',
+      'server/zebra.ts':
+        "import { findUserById } from '@/features/users/server/repository';\nexport const zebra = 1;\n",
+      'server/alpha.ts':
+        "import { findUserById } from '@/features/users/server/repository';\nexport const alpha = 1;\n",
+    });
+
+    const first = runGuard(repo, ['--base', 'HEAD', '--json']);
+    const second = runGuard(repo, ['--base', 'HEAD', '--json']);
+    expect(first.exitCode).toBe(1);
+    expect(second.stdout).toBe(first.stdout);
+    const json = JSON.parse(first.stdout) as {
+      regression: { introducedIssues: Array<{ code: string; file: string; relationship: string }> };
+    };
+    expect(json.regression.introducedIssues).toHaveLength(2);
+    expect(json.regression.introducedIssues.map((issue) => issue.file)).toEqual([
+      'src/features/billing/server/alpha.ts',
+      'src/features/billing/server/zebra.ts',
+    ]);
   });
 });

@@ -17,7 +17,7 @@ export function gitRepoRoot(cwd = process.cwd()): string {
     return root;
   } catch {
     throw new DiffGitError(
-      `Not inside a Git repository (working directory: ${cwd}). Run nara diff from a Git checkout.`,
+      `Not inside a Git repository (working directory: ${cwd}). Run nara diff/guard from a Git checkout.`,
     );
   }
 }

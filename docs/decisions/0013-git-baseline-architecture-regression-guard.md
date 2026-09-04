@@ -52,7 +52,7 @@ stay equal or improve, and new debt cannot enter unnoticed.
   application has no universal Git baseline ref to assume. Guard is
   documented as an explicit CI/review command
   (`npx nara guard --base origin/main`).
-- v3.2 is not a generic policy engine: no user-authored rules, severity
+- Nara guard is not a generic policy engine: no user-authored rules, severity
   levels, exemptions, suppressions, or plugin system.
 
 ## Consequences

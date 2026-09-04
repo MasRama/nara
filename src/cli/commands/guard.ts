@@ -92,11 +92,21 @@ export function runArchitectureGuard(options: GuardOptions): ArchitectureGuardRe
 
     const baseByKey = new Map(base.issues.map((issue) => [issueKey(issue), issue]));
     const targetByKey = new Map(targetIssues.map((issue) => [issueKey(issue), issue]));
-    const introducedIssues = changes.diagnostics.added.map(
-      (diagnostic) => targetByKey.get(diagnosticKey(diagnostic)) as DoctorIssue,
+    const resolveTargetIssue = (key: string): DoctorIssue => {
+      const issue = targetByKey.get(key);
+      if (!issue) throw new Error(`Architecture guard invariant violated: missing target diagnostic for ${JSON.stringify(key)}.`);
+      return issue;
+    };
+    const resolveBaseIssue = (key: string): DoctorIssue => {
+      const issue = baseByKey.get(key);
+      if (!issue) throw new Error(`Architecture guard invariant violated: missing baseline diagnostic for ${JSON.stringify(key)}.`);
+      return issue;
+    };
+    const introducedIssues = changes.diagnostics.added.map((diagnostic) =>
+      resolveTargetIssue(diagnosticKey(diagnostic)),
     );
-    const resolvedIssues = changes.diagnostics.resolved.map(
-      (diagnostic) => baseByKey.get(diagnosticKey(diagnostic)) as DoctorIssue,
+    const resolvedIssues = changes.diagnostics.resolved.map((diagnostic) =>
+      resolveBaseIssue(diagnosticKey(diagnostic)),
     );
 
     const baselineIssueCount = base.issues.length;

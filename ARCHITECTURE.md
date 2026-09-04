@@ -103,6 +103,17 @@ richer capabilities (auth, RBAC, users, assets, SQLite lifecycle) but is
 not the starting point for new products. Cloning it is for Nara
 contributors; building on Nara starts with `nara new`.
 
+## Versioning
+
+Nara does not assign a new minor version when development of a single
+capability begins. Minor versions represent coherent public release
+milestones. `main` may contain unreleased additive capabilities while
+retaining the latest released package version until release preparation
+begins. SemVer still applies at release time: a bugfix-only public
+release is a patch candidate, an additive public capability is a minor
+candidate, and an incompatible public contract is a major candidate.
+Release numbering is decided when a release bundle is ready, not when
+the first commit lands.
 
 ## What Nara does not build
 
