@@ -26,6 +26,7 @@
     "test:new-project": "vitest run --config vitest.integration.config.mjs tests/integration/new-project.test.ts",
     "test:linux-deployment": "vitest run --config vitest.integration.config.mjs tests/integration/linux-deployment.test.ts",
     "perf:sanity": "node scripts/perf-sanity.mjs",
+    "validate:release": "npm run check && npm run test:production-serving && npm run test:linux-deployment && npm run test:new-project",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",

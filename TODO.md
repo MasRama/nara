@@ -1636,8 +1636,8 @@ Also explain what Nara deliberately does not build.
 
 # M14 — Release Validation
 
-## [ ] V3-130 — Run full validation
-> Reopened during the v3 consistency audit: the checklist includes fresh-install and other release gates that remain open.
+## [x] V3-130 — Run full validation
+> Verified 2026-09-04 via `npm run validate:release` (= `check` + `test:production-serving` + `test:linux-deployment` + `test:new-project`): lint PASS, frontend typecheck PASS, unit suite 203/203 PASS, `nara doctor` healthy, production-serving 7/7, linux-deployment 7/7, new-project 1/1; official-feature integration 1/1 run separately; clean-source revalidation (fresh worktree + working tree overlaid, `npm ci` + `npm run build` + linux-deployment) PASS. Linux 22.04 CI execution and cold-start/release tasks (V3-133+) remain out of scope.
 
 Must pass:
 
