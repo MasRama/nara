@@ -1707,7 +1707,7 @@ If it fails, improve architecture/docs before adding more prompt files.
 ---
 
 ## [ ] V3-134 — Human cold-start test
-> Reopened during the v3 consistency audit: no human cold-start validation record is present.
+> Protocol prepared pre-RC (`docs/v3/human-cold-start.md` + `scripts/human-cold-start-check.mjs` fixture check); stays open until an actual unfamiliar human performs the session and observations are recorded. A harness run is not a human run.
 
 ### Scenario
 
