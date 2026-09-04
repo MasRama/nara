@@ -72,10 +72,15 @@ npm run perf:sanity        # catastrophic-only sanity, no regression (V3-115)
 
 Covered: typechecks, unit suite, `nara doctor`, production serving and
 startup-failure behavior, portable HTTP-stack audit, fresh-project install,
-official-feature install, and the Linux production artifact on the glibc
-baseline. Agent and human cold-start gates (V3-133/V3-134), the `v3 → main`
-merge, and the `v3.0.0` tag remain open by design — see
-[`release-checklist.md`](./release-checklist.md).
+official-feature install, and the Linux production artifact. The Hono
+`@hono/node-server` HTTP path carries no Ultimate/uWS native HTTP runtime;
+other native dependencies (e.g. `better-sqlite3`, Sharp) are legitimate and
+unrelated to that contract. Local Linux runtime behavior is covered by
+`validate:linux`; the pinned `ubuntu-22.04` CI job defines the glibc 2.35
+compatibility baseline (CI execution itself not observed from here).
+V3-133 agent cold-start passed (see [`agent-cold-start.md`](./agent-cold-start.md)).
+V3-134 human cold-start, the `v3 → main` merge, and the `v3.0.0` tag remain
+open by design — see [`release-checklist.md`](./release-checklist.md).
 
 Architecture regression fixtures cover valid projects and these invalid cases:
 
