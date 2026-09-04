@@ -1676,9 +1676,8 @@ Remove unnecessary v3 rewrite infrastructure that does not.
 
 ---
 
-## [ ] V3-133 — Agent cold-start test
-> Reopened during the v3 consistency audit: no fresh coding-agent execution record is present.
-
+## [x] V3-133 — Agent cold-start test
+> Passed 2026-09-04: a genuinely fresh harness task subagent (no prior Nara conversation, only AGENTS.md/V3_SPEC.md/TODO.md plus the task) added `getDisplayName` to the users Feature in a disposable detached worktree (node_modules symlinked, worktree removed after). It chose `src/features/users/`, exported via `users/index.ts`, tested via `../index` in `users/tests/`, touched nothing else, and ran the users suites green (independently re-verified 4/4 + tsc clean). Evidence: `docs/v3/agent-cold-start.md`. Exercise code was discarded, not merged.
 ### Scenario
 
 Use a fresh coding agent with no previous Nara conversation.
