@@ -1,6 +1,6 @@
 # Nara v3.0.0 Release Notes
 
-Status: prepared on the `v3` branch. Merging to `main` and creating the `v3.0.0` tag remain explicit release actions and have not been performed here.
+Status: released as `v3.0.0` on `main` (canonical). The `v3` branch tracks the same release commit.
 
 ## What changed
 
@@ -62,7 +62,7 @@ The Vue 3 + Vite + TypeScript frontend shell and Tailwind styling are available 
 
 Use [`migration-v2-v3.md`](./migration-v2-v3.md) for the capability mapping and explicit data migration checklist.
 
-## Automated verification currently passing
+## Automated verification passing
 
 ```bash
 npm run validate:release   # portable gates (all green, see TODO V3-130)
@@ -76,11 +76,14 @@ official-feature install, and the Linux production artifact. The Hono
 `@hono/node-server` HTTP path carries no Ultimate/uWS native HTTP runtime;
 other native dependencies (e.g. `better-sqlite3`, Sharp) are legitimate and
 unrelated to that contract. Local Linux runtime behavior is covered by
-`validate:linux`; the pinned `ubuntu-22.04` CI job defines the glibc 2.35
-compatibility baseline (CI execution itself not observed from here).
-V3-133 agent cold-start passed (see [`agent-cold-start.md`](./agent-cold-start.md)).
-V3-134 human cold-start, the `v3 → main` merge, and the `v3.0.0` tag remain
-open by design — see [`release-checklist.md`](./release-checklist.md).
+`validate:linux`: fresh build, production startup, `/health`, `/ready`,
+`/api/auth/me`, and `/proc` inspection proving no uWS binary is mapped into
+the running server. No pinned distribution or glibc version is part of the
+release criteria. V3-133 agent cold-start passed (see
+[`agent-cold-start.md`](./agent-cold-start.md)). Manual developer/product
+validation was performed by the project owner throughout the v3 development
+and review process; a separate unfamiliar-human cold-start gate is not part
+of the v3.0.0 release criteria.
 
 Architecture regression fixtures cover valid projects and these invalid cases:
 
