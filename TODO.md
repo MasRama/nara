@@ -1463,8 +1463,8 @@ A normal supported Linux environment such as Ubuntu 22.04 or equivalent compatib
 
 ---
 
-## [ ] V3-112 — Production build test
-> Reopened during the v3 consistency audit: the current build check does not establish generated-server startup, API smoke, and configuration-error acceptance.
+## [x] V3-112 — Production build test
+> Verified 2026-09-04 from an isolated clean worktree (`npm ci`, `npm run build`, `npm start` with production env): SPA shell 200, `/health` 200, `/ready` 200, `/api/auth/me` 401 `UNAUTHORIZED`, unknown API 404 (never SPA); missing `APP_URL`, invalid `MAX_JSON_BODY_BYTES=-1`, and missing `build/client/index.html` each exit non-zero naming the cause; `build/server.js` runs built output only (no tsx/Vite dev). `tests/integration/production-serving.test.ts` 7/7 and `tests/integration/new-project.test.ts` 1/1 re-run green, so generated-project production behavior is covered without a second suite.
 
 ### Acceptance
 
