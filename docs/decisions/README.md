@@ -34,6 +34,7 @@ AI agents that understand WHY a convention exists make better decisions:
 | [0008](./0008-agents-md-over-readme.md) | AGENTS.md as primary AI context | Accepted with v3 structure notes |
 | [0009](./0009-descriptive-handler-names.md) | Descriptive handler names over REST conventions | Accepted |
 | [0010](./0010-english-error-messages.md) | English for user-facing messages | Accepted |
+| [0011](./0011-pinned-local-cli-over-global-install.md) | Pinned local Nara CLI over global install | Accepted |
 
 ## Format
 

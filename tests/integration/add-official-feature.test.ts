@@ -5,9 +5,8 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import { runCli, type CliIO } from '../../src/cli/router';
-
+import { ensurePackedNara, npmCommand, pointNaraAtTarball, runLocalNara } from './pack-helpers';
 const execFileAsync = promisify(execFile);
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 type CommandFailure = Error & {
   stdout?: string;
@@ -53,12 +52,13 @@ describe('nara add official feature', () => {
       expect(newResult.exitCode).toBe(0);
 
       const projectDirectory = path.join(root, 'clean-app');
+      // Pre-publish stand-in for the registry: same tarball bytes via file:.
+      pointNaraAtTarball(projectDirectory, await ensurePackedNara());
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
 
-      const addIO = createIO();
-      const addResult = runCli(['add', 'audit'], addIO, { cwd: projectDirectory });
-      expect(addResult.exitCode).toBe(0);
-      expect(addIO.output.join('')).toContain('src/features/audit/index.ts');
+      // `nara add` and `nara doctor` run from the generated project's own tooling.
+      const addResult = await runLocalNara(projectDirectory, ['add', 'audit']);
+      expect(addResult.stdout).toContain('src/features/audit/index.ts');
 
       const auditDirectory = path.join(projectDirectory, 'src', 'features', 'audit');
       expect(existsSync(auditDirectory)).toBe(true);
@@ -75,11 +75,9 @@ describe('nara add official feature', () => {
       expect(checkResult.stdout).toMatch(/Test Files\s+2 passed/);
       expect(checkResult.stdout).toMatch(/Tests\s+2 passed/);
 
-      const doctorIO = createIO();
-      const doctorResult = runCli(['doctor'], doctorIO, { cwd: projectDirectory });
-      expect(doctorResult.exitCode).toBe(0);
-      expect(doctorIO.output.join('')).toBe('Architecture looks healthy.\n');
-      expect(doctorIO.errors).toHaveLength(0);
+      const doctorResult = await runLocalNara(projectDirectory, ['doctor']);
+      expect(doctorResult.stdout).toBe('Architecture looks healthy.\n');
+      expect(doctorResult.stderr).toBe('');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

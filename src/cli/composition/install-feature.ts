@@ -18,9 +18,15 @@ export type InstallFeatureResult =
   | { ok: false; error: FeatureInstallError };
 
 function officialFeatureDirectory(name: string): string {
+  // Order matters: tsc follows the root app's `../../official-features`
+  // import and emits compiled JS into build/official-features, so the
+  // build-relative candidate must never shadow real source. The package-root
+  // candidate hits first for the built CLI and installed packages; the
+  // fallback covers src-checkout execution (vitest/ts-node).
+  // official-features/ ships inside the published package via "files".
   const candidates = [
-    path.resolve(__dirname, '../../../official-features', name),
     path.resolve(__dirname, '../../../../official-features', name),
+    path.resolve(__dirname, '../../../official-features', name),
   ];
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 }

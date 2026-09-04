@@ -1,12 +1,18 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import { runCli, type CliIO } from '../../src/cli/router';
+import {
+  ensurePackedNara,
+  pointNaraAtTarball,
+  runLocalNara,
+  runLocalNaraExpectingFailure,
+} from './pack-helpers';
 
 const execFileAsync = promisify(execFile);
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
@@ -224,6 +230,12 @@ describe('nara new fresh project', () => {
       expect(result.exitCode).toBe(0);
 
       const projectDirectory = path.join(root, 'fresh-app');
+      const generatedManifest = JSON.parse(
+        readFileSync(path.join(projectDirectory, 'package.json'), 'utf8'),
+      ) as { devDependencies: Record<string, string> };
+      expect(generatedManifest.devDependencies.nara).toMatch(/^\d+\.\d+\.\d+$/);
+      // Pre-publish stand-in for the registry: same tarball bytes via file:.
+      pointNaraAtTarball(projectDirectory, await ensurePackedNara());
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
 
       const { vitePort, serverPort } = await findDistinctPorts();
@@ -243,11 +255,27 @@ describe('nara new fresh project', () => {
       await runCommand(npmCommand, ['test'], projectDirectory);
       await runCommand(npmCommand, ['run', 'check'], projectDirectory);
 
-      const doctorIO = createIO();
-      const doctorResult = runCli(['doctor'], doctorIO, { cwd: projectDirectory });
-      expect(doctorResult.exitCode).toBe(0);
-      expect(doctorIO.output.join('')).toBe('Architecture looks healthy.\n');
-      expect(doctorIO.errors).toHaveLength(0);
+      // The generated project's own installed tooling validates the architecture.
+      const doctor = await runLocalNara(projectDirectory, ['doctor']);
+      expect(doctor.stdout).toBe('Architecture looks healthy.\n');
+
+      // A deliberate boundary violation must fail the generated check with a diagnostic.
+      const billingDirectory = path.join(projectDirectory, 'src', 'features', 'billing');
+      mkdirSync(billingDirectory, { recursive: true });
+      const violation = await runLocalNaraExpectingFailure(projectDirectory, ['doctor']);
+      expect(violation.status).not.toBe(0);
+      expect(violation.stdout).toContain('INVALID_FEATURE_SHAPE');
+      let architectureCheckFailed = false;
+      try {
+        await runCommand(npmCommand, ['run', 'architecture:doctor'], projectDirectory);
+      } catch (error) {
+        architectureCheckFailed = true;
+        expect(String(error)).toContain('INVALID_FEATURE_SHAPE');
+      }
+      expect(architectureCheckFailed).toBe(true);
+      rmSync(billingDirectory, { recursive: true, force: true });
+      const recovered = await runLocalNara(projectDirectory, ['doctor']);
+      expect(recovered.stdout).toBe('Architecture looks healthy.\n');
       await runCommand(npmCommand, ['run', 'build'], projectDirectory);
 
       const port = await findFreePort();

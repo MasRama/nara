@@ -1,6 +1,28 @@
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { featureNameIsValid } from '../feature-name';
+
+const FALLBACK_CLI_VERSION = '3.0.0';
+
+function creatingCliVersion(): string {
+  const candidates = [
+    path.resolve(__dirname, '../../../package.json'),
+    path.resolve(__dirname, '../../../../package.json'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (!existsSync(candidate)) continue;
+      const manifest = JSON.parse(readFileSync(candidate, 'utf8')) as { name?: string; version?: string };
+      if (manifest.name === 'nara' && typeof manifest.version === 'string' && manifest.version.length > 0) {
+        return manifest.version;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return FALLBACK_CLI_VERSION;
+}
+
 
 export interface CreatedProject {
   name: string;
@@ -17,7 +39,7 @@ export type NewProjectResult =
   | { ok: true; project: CreatedProject }
   | { ok: false; error: ProjectGenerationError };
 
-function projectFiles(name: string): Record<string, string> {
+function projectFiles(name: string, cliVersion: string): Record<string, string> {
   return {
     'package.json': `${JSON.stringify(
       {
@@ -34,7 +56,8 @@ function projectFiles(name: string): Record<string, string> {
           lint: 'npm run typecheck',
           'typecheck:frontend': 'vue-tsc --noEmit -p tsconfig.frontend.json',
           test: 'vitest run',
-          check: 'npm run typecheck && npm run typecheck:frontend && npm test',
+          'architecture:doctor': 'nara doctor',
+          check: 'npm run typecheck && npm run typecheck:frontend && npm test && npm run architecture:doctor',
         },
         dependencies: {
           '@hono/node-server': '^2.1.1',
@@ -46,6 +69,7 @@ function projectFiles(name: string): Record<string, string> {
           '@types/node': '^22.20.1',
           '@vitejs/plugin-vue': '^6.0.8',
           jsdom: '^30.0.1',
+          nara: cliVersion,
           tsx: '^4.19.2',
           typescript: '^5.6.3',
           vite: '8.2.1',
@@ -217,6 +241,7 @@ This is a minimal Nara v3 application.
 
 - Runtime: TypeScript, Node.js, Hono, and @hono/node-server.
 - Browser stack: Vue 3 + Vite + TypeScript.
+- Architecture tooling: the local Nara CLI is a pinned devDependency (npm run architecture:doctor runs nara doctor from this project).
 - Run npm run dev for the full-stack development session; it starts Vue/Vite and Hono together.
 - During development, Vite proxies /api, /health, and /ready to Hono.
 - Business capabilities belong under src/features/<feature>.
@@ -224,7 +249,8 @@ This is a minimal Nara v3 application.
 - Application-wide Vue composition belongs under src/app/; src/app/router.ts owns browser routes and src/app/pages holds app-owned pages.
 - Feature-specific browser code belongs under that Feature's web/ directory, including Feature-owned pages.
 - Keep server code separate from browser code; do not add SSR, a second framework, or custom RPC.
-- Run npm run check before handing off changes.
+- Inspect architecture with the local CLI: npx nara context <feature> --json, npx nara impact <feature> --json, npx nara doctor --json.
+- Run npm run check before handing off changes (it includes the architecture check).
 
 The development ports default to Vite 5173 and Hono 5555; set VITE_PORT and PORT to override them.
 The app entrypoint is resources/app.ts. The Hono composition is src/app/server.ts, and the production server is src/server.ts.
@@ -477,7 +503,7 @@ export function newProject(name: string, root = process.cwd()): NewProjectResult
   }
 
   try {
-    const files = projectFiles(name);
+    const files = projectFiles(name, creatingCliVersion());
     if (existsSync(directory)) {
       return {
         ok: false,

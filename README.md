@@ -9,6 +9,31 @@ Nara keeps each business capability together and makes the boundaries machine-ch
 ## Start here
 
 ```bash
+npx nara new my-app
+cd my-app
+npm install
+npm run dev
+```
+
+This is the canonical lifecycle: `nara new` creates a minimal runnable
+application that carries its own pinned Nara tooling as a devDependency,
+so architecture checks travel with the project:
+
+```bash
+npm run check                  # typechecks, tests, and nara doctor
+npx nara doctor                # validate architecture from the local install
+npx nara context billing --json
+npx nara impact billing --json
+npx nara add audit             # install an official open-code feature
+```
+
+Nara stays useful after creation: the same local CLI that scaffolds the
+project keeps understanding (`inspect`, `context`, `impact`) and protecting
+(`doctor`) its feature architecture in month 12. No AI provider is required.
+
+To work on Nara itself instead, clone the reference repository:
+
+```bash
 git clone https://github.com/MasRama/nara.git
 cd nara
 npm install
@@ -16,21 +41,19 @@ cp .env.example .env
 npm run dev
 ```
 
+The repository root is the development/reference application proving richer
+Nara capabilities (auth, RBAC, users, assets, SQLite lifecycle). It is not
+the starting point for new products — `nara new` is. Additional capabilities
+reach generated projects as explicit open-code features via `nara add`, not
+by cloning the reference app.
+
+Packaging note: the `nara` package is publish-ready (`bin`, `files` ships the
+built CLI plus `official-features/` source). The remaining external step is
+a one-time `npm run build && npm publish` from a clean tree, after which the
+commands above resolve from the registry. Until then, `npm pack` produces the
+same artifact the registry would serve.
+
 The development topology uses two local ports:
-
-```text
-Browser:                 http://localhost:5173 (Vite)
-Backend implementation:  http://localhost:5555 (Hono)
-```
-
-Vite serves the Vue application and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono. Verify the backend with:
-
-```bash
-curl http://localhost:5555/health
-# {"status":"ok"}
-```
-
-Node.js 22 or newer and npm are required. SQLite is embedded; no database service is required.
 
 ## The core idea
 
@@ -61,15 +84,16 @@ The second import couples one feature to another feature's implementation. `nara
 
 ## CLI
 
-Build the CLI from this repository, then use the `nara` executable from an installed package:
+Inside a generated project the CLI is a pinned local devDependency — every
+command below runs from the project's own install, reproducibly:
 
 ```bash
-npm run build
-nara make feature billing
-nara doctor
+npm run architecture:doctor    # local nara doctor
+npx nara make feature billing
+npx nara doctor
 ```
 
-When working directly from a checkout, use the equivalent command:
+When working directly from a Nara checkout, use the equivalent command:
 
 ```bash
 node build/src/cli/index.js make feature billing
@@ -91,13 +115,15 @@ nara impact <feature>          Show feature-graph dependents
 Architecture facts are deterministic and available as JSON for scripts and agents:
 
 ```bash
-nara doctor --json
-nara inspect billing --json
-nara context billing --json
-nara impact billing --json
+npx nara doctor --json
+npx nara inspect billing --json
+npx nara context billing --json
+npx nara impact billing --json
 ```
 
-No AI provider is required for these commands.
+No AI provider is required for these commands. `nara new` pins the creating
+CLI version exactly in the generated project, so architecture-rule changes
+arrive only through an explicit dependency update (see ADR 0011).
 
 ## HTTP and application structure
 
@@ -119,7 +145,7 @@ Hono application (src/app/server.ts)
         └── error handling
 ```
 
-The current application exposes:
+The reference application (repository root) exposes:
 
 | Surface | Purpose |
 |---|---|
@@ -223,18 +249,27 @@ npm run perf:sanity        # separate machine-sensitive sanity (catastrophic tri
 
 Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 
-Reverse-proxy client IP: by default Nara uses the Node socket address and ignores `X-Forwarded-For`, so all clients behind a proxy share one limiter identity until trust is configured. For a single nginx/Caddy hop, set `TRUST_PROXY=true` (and `TRUST_PROXY_HOPS=1` unless the chain is longer) so rate limits and login lockout distinguish real clients via the trusted suffix of `X-Forwarded-For`. Only enable trust when the Node process is not directly reachable; `TRUST_PROXY` defaults to `false`. Development HTML is served by Vite and is not covered by Hono security headers; production is authoritative for page headers.
+Development HTML is served by Vite and is not covered by Hono security headers; production is authoritative for page headers.
 
 ## Official feature packages
 
 Official features are open TypeScript source installed into `src/features/<name>` without merging or overwriting local code:
 
 ```bash
-nara add health
-nara add audit
+npx nara add health
+npx nara add audit
 ```
 
-The installation result is inspectable source, not a hidden runtime plugin. Run `nara doctor` after adding a feature.
+The installation result is inspectable source, not a hidden runtime plugin. Run `npx nara doctor` after adding a feature.
+
+The catalog is intentionally small. The reference application's `auth` and
+`users` capabilities are not official packages: they depend on shared
+infrastructure (`shared/config`, `shared/database`, `shared/security`),
+feature-owned migrations, and application-level route/session composition,
+so extracting them would require hidden cross-directory patches — exactly
+what open-code composition forbids. They stay reference implementations
+until a capability can be packaged with zero out-of-feature changes.
+
 
 ## Read next
 - [`AGENTS.md`](./AGENTS.md) — coding rules and agent workflow

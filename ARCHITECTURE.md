@@ -73,7 +73,32 @@ nara context <feature> [--json]
 nara impact <feature> [--json]
 ```
 
-Reference: [`docs/v3/cli.md`](./docs/v3/cli.md). Database lifecycle (`migrate`, `seed`, `db:check`, …): [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md).
+## Product lifecycle
+
+Five distinct things; do not conflate them:
+
+1. **Ecosystem/runtime stack** — Hono, Vue, SQLite, TypeScript. Nara never
+   wraps these behind a custom runtime.
+2. **Nara's architecture model** — feature ownership, public boundaries,
+   deterministic discovery (this document).
+3. **Nara CLI/tooling** — `nara` is a development-time architecture
+   companion, not a production runtime abstraction. It ships as a
+   publishable npm package (`bin`, `files` includes the built CLI and
+   `official-features/` source) and is acquired from the registry.
+4. **Generated applications** — `nara new` output: the minimal canonical
+   application (health-only, no database, no auth). Each carries the
+   creating CLI as an exact-pinned devDependency, so `npm run check`
+   (which ends in `nara doctor`) and `nara add/inspect/context/impact`
+   work reproducibly from the project's own install.
+5. **Official open-code features** — optional installable source
+   (`health`, `audit`). `nara add` copies versioned package source into
+   `src/features/<name>`; the result is ordinary project code.
+
+The repository root is the development/reference application: it proves
+richer capabilities (auth, RBAC, users, assets, SQLite lifecycle) but is
+not the starting point for new products. Cloning it is for Nara
+contributors; building on Nara starts with `nara new`.
+
 
 ## What Nara does not build
 

@@ -56,7 +56,8 @@ describe('new project', () => {
       lint: 'npm run typecheck',
       'typecheck:frontend': 'vue-tsc --noEmit -p tsconfig.frontend.json',
       test: 'vitest run',
-      check: 'npm run typecheck && npm run typecheck:frontend && npm test',
+      'architecture:doctor': 'nara doctor',
+      check: 'npm run typecheck && npm run typecheck:frontend && npm test && npm run architecture:doctor',
     });
     expect(Object.keys(packageJson.dependencies).sort()).toEqual([
       '@hono/node-server',
@@ -68,12 +69,18 @@ describe('new project', () => {
       '@types/node',
       '@vitejs/plugin-vue',
       'jsdom',
+      'nara',
       'tsx',
       'typescript',
       'vite',
       'vitest',
       'vue-tsc',
     ]);
+    const rootManifest = JSON.parse(
+      readFileSync(path.join(__dirname, '..', '..', '..', 'package.json'), 'utf8'),
+    ) as { version: string };
+    expect(packageJson.devDependencies.nara).toBe(rootManifest.version);
+    expect(packageJson.devDependencies.nara).not.toMatch(/^[ ^~]/);
 
     const expectedFiles = [
       'scripts/dev.ts',
