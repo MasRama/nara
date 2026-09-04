@@ -297,7 +297,37 @@ nara diff --base main --json
 
 The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public exports and contract exports, added/removed dependency edges (`source Feature -> target Feature` with deterministic import evidence), per-Feature added/removed server/web/test surfaces, and newly introduced versus resolved doctor diagnostics. The affected set lists directly changed Features plus downstream Features reachable through the dependency graph, labeled `structural dependency impact` — never a semantic behavior prediction.
 
-A successful comparison returns exit code `0` whether or not the architecture changed. Existing baseline violations do not fail the command; policy enforcement is a later capability. No configuration file, architecture manifest, LLM, or AI provider is required.
+A successful comparison returns exit code `0` whether or not the architecture changed. Existing baseline violations do not fail the command; policy enforcement is `nara guard`. No configuration file, architecture manifest, LLM, or AI provider is required.
+
+## `nara guard --base <ref> [--head <ref>] [--json]`
+
+Nara can distinguish existing architecture debt from architecture debt introduced by the current change. `nara doctor` asks whether the target architecture is healthy; `nara guard` asks whether the target introduced new violations compared with an existing Git baseline:
+
+```bash
+nara guard --base main
+nara guard --base origin/main
+nara guard --base origin/main --head HEAD
+nara guard --base main --json
+```
+
+`--base` is required and is the regression baseline — no baseline file, no configuration. Git semantics exactly match `nara diff`: without `--head` the base ref is compared against the working tree including uncommitted source changes; with `--head` two refs are compared and the working tree is never modified. The guard fails (exit `1`) only when the target introduces one or more new `nara doctor` diagnostics that did not exist in the base snapshot. Inherited baseline violations do not fail the guard, resolved violations are reported positively, and unchanged baseline debt is acknowledged but not dumped per-issue in human output. Architecture changes themselves (Features, exports, contracts, edges, surfaces, affected dependents) are informational and never fail the guard.
+
+```text
+Architecture guard passed.
+No new architecture violations.
+
+Baseline issues: 3
+Resolved: 1
+Remaining baseline issues: 2
+```
+
+A failing result starts clearly, lists each new diagnostic with the same stable facts as `nara doctor` (`code`, `file`, `relationship`, `reason`, `suggestion`), and shows the structurally affected Feature set as the review surface.
+
+JSON (`schemaVersion: 1`) reports `passed` (true exactly when no issue was introduced), the base/target identities, the `regression` counts with full `introducedIssues`/`resolvedIssues` doctor structures in deterministic order, and the `affected` structural set. `passed` is suitable for CI gates and coding agents:
+
+```bash
+npx nara guard --base origin/main
+```
 
 ## Exit status and failures
 
@@ -305,12 +335,12 @@ The CLI uses stable categories instead of stack traces for expected failures:
 
 | Status | Meaning |
 |---:|---|
-| `0` | Command completed successfully |
-| `1` | Requested Feature or architecture analysis failed |
+| `0` | Command completed successfully (`guard` passes only with no new violations) |
+| `1` | Requested Feature or architecture analysis failed (including a `guard` regression or an unresolvable Git comparison) |
 | `64` | Invalid command, arguments, Feature/project name, or unknown official package |
 | `73` | Duplicate target or filesystem failure |
 
-Expected failures are written as human-readable diagnostics. `--json` is supported by `doctor`, `inspect`, `context`, `impact`, and `diff`; invalid JSON-mode requests still return a JSON error object where the command accepts the flag.
+Expected failures are written as human-readable diagnostics. `--json` is supported by `doctor`, `inspect`, `context`, `impact`, `diff`, and `guard`; invalid JSON-mode requests still return a JSON error object where the command accepts the flag.
 
 ```bash
 npx nara context billing --json
@@ -319,4 +349,4 @@ npx nara doctor --json
 npm run lint
 npm test
 ```
-Use `inspect` before opening unrelated files, `context` for a focused implementation handoff, `impact` before changing a public contract, and `diff --base main` during review to see how the architecture is changing. Nara remains useful when no AI provider is configured.
+Use `inspect` before opening unrelated files, `context` for a focused implementation handoff, `impact` before changing a public contract, `diff --base main` during review to see how the architecture is changing, and `guard --base origin/main` in CI to block newly introduced architecture violations. Nara remains useful when no AI provider is configured.

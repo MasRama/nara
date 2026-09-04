@@ -8,6 +8,7 @@ import { inspectFeature } from './architecture/inspect';
 import type { FeatureInspection } from './architecture/inspect';
 import { installOfficialFeature } from './composition/install-feature';
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
+import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
 import { makeFeature } from './commands/make-feature';
 import { newProject } from './commands/new-project';
 export interface CliIO {
@@ -37,6 +38,8 @@ Usage:
   impact <feature> [--json] Show known downstream feature impact
   diff --base <ref> [--head <ref>] [--json]
                             Show deterministic Feature-architecture changes
+  guard --base <ref> [--head <ref>] [--json]
+                            Fail when the change introduces new architecture violations
   add <feature>             Install an official open-code feature
 
 Options:
@@ -87,6 +90,17 @@ the working tree (default) or an explicit head ref. git diff explains text
 changes; nara diff explains Feature-architecture changes. Affected output is
 structural dependency impact, not semantic behavior prediction. No AI provider
 is required.
+`;
+
+const GUARD_HELP = `Usage:
+  nara guard --base <ref> [--head <ref>] [--json]
+
+Compares a Git base ref against the working tree (default) or an explicit
+head ref and fails when the target introduces new nara doctor diagnostics
+that did not exist in the base. Existing baseline violations do not fail
+the guard; resolved violations are reported. Affected output is structural
+dependency impact, not semantic behavior prediction. No AI provider is
+required.
 `;
 
 const ADD_HELP = `Usage:
@@ -326,6 +340,70 @@ function renderDiffReport(io: CliIO, args: string[], root: string | undefined): 
   }
 }
 
+function parseGuardArgs(args: string[]):
+  | { ok: true; base: string; head?: string; json: boolean }
+  | { ok: false } {
+  let base: string | undefined;
+  let head: string | undefined;
+  let json = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--json') {
+      json = true;
+    } else if (arg === '--base' || arg === '--head') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('-')) return { ok: false };
+      if (arg === '--base') {
+        if (base !== undefined) return { ok: false };
+        base = value;
+      } else {
+        if (head !== undefined) return { ok: false };
+        head = value;
+      }
+      index += 1;
+    } else if (arg.startsWith('--base=')) {
+      if (base !== undefined) return { ok: false };
+      const value = arg.slice('--base='.length);
+      if (!value) return { ok: false };
+      base = value;
+    } else if (arg.startsWith('--head=')) {
+      if (head !== undefined) return { ok: false };
+      const value = arg.slice('--head='.length);
+      if (!value) return { ok: false };
+      head = value;
+    } else {
+      return { ok: false };
+    }
+  }
+  if (!base) return { ok: false };
+  return { ok: true, base, head, json };
+}
+
+function renderGuardReport(io: CliIO, args: string[], root: string | undefined): number {
+  if (args.includes('--help') || args.includes('-h')) {
+    io.stdout(GUARD_HELP);
+    return 0;
+  }
+  const parsed = parseGuardArgs(args);
+  if (!parsed.ok) {
+    io.stderr(GUARD_HELP);
+    return 64;
+  }
+  try {
+    const result = runArchitectureGuard({ base: parsed.base, head: parsed.head, cwd: root });
+    if (parsed.json) {
+      io.stdout(`${JSON.stringify(result, null, 2)}\n`);
+    } else {
+      io.stdout(formatGuardHuman(result));
+    }
+    return result.passed ? 0 : 1;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    io.stderr(`${message}\n`);
+    return 1;
+  }
+}
+
 export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOptions = {}): CliResult {
   const [command, ...args] = argv;
 
@@ -390,6 +468,10 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
 
   if (command === 'diff') {
     return { exitCode: renderDiffReport(io, args, options.cwd) };
+  }
+
+  if (command === 'guard') {
+    return { exitCode: renderGuardReport(io, args, options.cwd) };
   }
 
   if (command === 'add') {

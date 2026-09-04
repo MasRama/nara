@@ -36,6 +36,7 @@ AI agents that understand WHY a convention exists make better decisions:
 | [0010](./0010-english-error-messages.md) | English for user-facing messages | Accepted |
 | [0011](./0011-pinned-local-cli-over-global-install.md) | Pinned local Nara CLI over global install | Accepted |
 | [0012](./0012-architecture-diff-over-text-diff.md) | Architecture-aware change intelligence via `nara diff` | Accepted |
+| [0013](./0013-git-baseline-architecture-regression-guard.md) | Git-baseline architecture regression guard via `nara guard` | Accepted |
 
 ## Format
 

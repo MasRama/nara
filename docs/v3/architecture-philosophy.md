@@ -99,15 +99,23 @@ nara diff --base main --json
 
 `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes (added/removed Features, boundary and contract deltas, dependency edges, surfaces, and new versus resolved diagnostics) with an affected set labeled structural dependency impact. It is Git-aware by design, needs no manifest or AI provider, and never claims semantic behavior impact.
 
-This understanding is deterministic. The core commands do not need an LLM, manually maintained architecture manifest, or second metadata language. AI integrations can consume Nara's facts, but AI does not define the architecture.
+The progression is deliberate:
+
+```text
+doctor  -> protect current architecture
+diff    -> understand architecture change
+guard   -> protect architecture change
+```
 
 ## Protect
 
-Protect the boundaries before drift becomes debt.
+Protect the boundaries before drift becomes debt, and protect changes before new debt enters unnoticed.
 
 ```bash
 nara doctor
 nara doctor --json
+nara guard --base origin/main
+nara guard --base origin/main --json
 ```
 
 `doctor` checks the current structural rules:
@@ -137,6 +145,8 @@ Found 1 architecture issue.
 ```
 
 Machine-readable output preserves the same facts in a stable object. Valid and invalid repository fixtures keep these rules regression-tested.
+
+`doctor` is absolute correctness: any diagnostic means the architecture is unhealthy. `guard` is the relative ratchet for teams carrying existing debt: it compares a Git baseline against the working tree (or a head ref), passes when no new diagnostic appears — even when baseline violations remain — and fails only on newly introduced violations, reporting resolved ones positively. Architecture changes themselves stay informational; enforcement never invents policy beyond the existing structural rules. There is no baseline file and no configuration: the baseline is the Git ref.
 
 ## Interesting architecture on boring technology
 

@@ -202,4 +202,58 @@ describe('packaged Nara lifecycle', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('installed nara guard passes clean trees and fails new violations', { timeout: 300_000 }, async () => {
+    const tarball = await ensurePackedNara();
+    const root = mkdtempSync(path.join(os.tmpdir(), 'nara-pack-guard-'));
+    try {
+      const prefix = path.join(root, 'prefix');
+      await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
+      const installedRoot = path.join(prefix, 'node_modules', 'nara');
+      expect(existsSync(path.join(installedRoot, 'dist', 'commands', 'guard.js'))).toBe(true);
+      const installedCli =
+        process.platform === 'win32'
+          ? ['node', path.join(installedRoot, 'dist', 'index.js')]
+          : [path.join(prefix, 'node_modules', '.bin', 'nara')];
+
+      const fixture = path.join(root, 'fixture');
+      mkdirSync(path.join(fixture, 'src/features/health'), { recursive: true });
+      writeFileSync(path.join(fixture, 'src/features/health/index.ts'), 'export const healthRoutes = 1;\n');
+      await runCommand('git', ['init'], fixture);
+      await runCommand('git', ['config', 'user.email', 'nara-guard@example.com'], fixture);
+      await runCommand('git', ['config', 'user.name', 'nara guard'], fixture);
+      await runCommand('git', ['add', '-A'], fixture);
+      await runCommand('git', ['commit', '-m', 'clean base'], fixture);
+      const baseCommit = (await runCommand('git', ['rev-parse', 'HEAD'], fixture)).stdout.trim();
+
+      const clean = await runCommand(installedCli[0], [...installedCli.slice(1), 'guard', '--base', 'HEAD'], fixture);
+      expect(clean.stdout).toContain('Architecture guard passed.');
+
+      mkdirSync(path.join(fixture, 'src/features/users/server'), { recursive: true });
+      mkdirSync(path.join(fixture, 'src/features/billing/server'), { recursive: true });
+      writeFileSync(path.join(fixture, 'src/features/users/index.ts'), 'export const users = 1;\n');
+      writeFileSync(
+        path.join(fixture, 'src/features/users/server/repository.ts'),
+        'export const findUserById = 1;\n',
+      );
+      writeFileSync(path.join(fixture, 'src/features/billing/index.ts'), 'export const billing = 1;\n');
+      writeFileSync(
+        path.join(fixture, 'src/features/billing/server/checkout.ts'),
+        "import { findUserById } from '@/features/users/server/repository';\nexport const checkout = 1;\n",
+      );
+
+      await expect(
+        runCommand(installedCli[0], [...installedCli.slice(1), 'guard', '--base', 'HEAD'], fixture),
+      ).rejects.toThrow('Architecture guard failed.');
+
+      await runCommand('git', ['add', '-A'], fixture);
+      await runCommand('git', ['commit', '-m', 'head with violation'], fixture);
+      const headCommit = (await runCommand('git', ['rev-parse', 'HEAD'], fixture)).stdout.trim();
+      await expect(
+        runCommand(installedCli[0], [...installedCli.slice(1), 'guard', '--base', baseCommit, '--head', headCommit], fixture),
+      ).rejects.toThrow('CROSS_FEATURE_INTERNAL_IMPORT');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

@@ -29,8 +29,9 @@ npx nara add audit             # install an official open-code feature
 
 Nara stays useful after creation: the same local CLI that scaffolds the
 project keeps understanding (`inspect`, `context`, `impact`), describing
-change (`diff --base main`), and protecting (`doctor`) its feature
-architecture in month 12. No AI provider is required.
+change (`diff --base main`), and protecting (`doctor` for current
+architecture, `guard --base origin/main` for architecture change) its
+feature architecture in month 12. No AI provider is required.
 
 To work on Nara itself instead, clone the reference repository:
 
@@ -108,9 +109,10 @@ nara inspect <feature>         Show bounded feature facts
 nara context <feature>         Show coding context without source dumps
 nara impact <feature>          Show feature-graph dependents
 nara diff --base main          Show how the architecture is changing
+nara guard --base origin/main  Fail when the change introduces new violations
 ```
 
-Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes, with affected output labeled structural dependency impact (never semantic behavior prediction) and no AI provider required. See [`docs/v3/cli.md`](./docs/v3/cli.md#nara-diff---base-ref---head-ref---json).
+Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes, with affected output labeled structural dependency impact (never semantic behavior prediction) and no AI provider required. `nara guard` turns that intelligence into a regression ratchet: it fails only when the change introduces new `doctor` diagnostics compared with the Git baseline, so existing debt is tolerated while new debt cannot enter unnoticed. See [`docs/v3/cli.md`](./docs/v3/cli.md#nara-diff---base-ref---head-ref---json).
 
 Architecture facts are deterministic and available as JSON for scripts and agents:
 
@@ -119,6 +121,7 @@ npx nara inspect health --json
 npx nara context health --json
 npx nara impact health --json
 npx nara diff --base main --json
+npx nara guard --base origin/main --json
 ```
 
 No AI provider is required for these commands. `nara new` pins the creating

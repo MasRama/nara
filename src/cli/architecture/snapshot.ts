@@ -1,7 +1,6 @@
-import { analyzeArchitecture } from './doctor';
+import { analyzeArchitecture, type DoctorIssue } from './doctor';
 import { discoverFeatureDependencies } from './discover-dependencies';
 import { inspectFeature } from './inspect';
-
 /**
  * Deterministic internal architecture snapshot used by `nara diff`.
  * Derived only from facts Nara already owns (discovery, inspection,
@@ -36,11 +35,14 @@ export interface ArchitectureSnapshot {
   diagnostics: SnapshotDiagnostic[];
 }
 
-function toPosix(value: string): string {
+export function toPosix(value: string): string {
   return value.replaceAll('\\', '/');
 }
 
-export function captureArchitectureSnapshot(root = process.cwd()): ArchitectureSnapshot {
+export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
+  snapshot: ArchitectureSnapshot;
+  issues: DoctorIssue[];
+} {
   const discovery = discoverFeatureDependencies(root);
   const names = discovery.features.map((feature) => feature.name).sort();
 
@@ -75,8 +77,9 @@ export function captureArchitectureSnapshot(root = process.cwd()): ArchitectureS
     }))
     .sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
 
-  const diagnostics: SnapshotDiagnostic[] = analyzeArchitecture(root)
-    .issues.map((issue) => ({
+  const issues = analyzeArchitecture(root).issues;
+  const diagnostics: SnapshotDiagnostic[] = issues
+    .map((issue) => ({
       code: issue.code,
       file: toPosix(issue.file),
       relationship: issue.relationship,
@@ -88,5 +91,9 @@ export function captureArchitectureSnapshot(root = process.cwd()): ArchitectureS
         left.relationship.localeCompare(right.relationship),
     );
 
-  return { schemaVersion: 1, features, dependencies, diagnostics };
+  return { snapshot: { schemaVersion: 1, features, dependencies, diagnostics }, issues };
+}
+
+export function captureArchitectureSnapshot(root = process.cwd()): ArchitectureSnapshot {
+  return captureArchitectureSnapshotWithIssues(root).snapshot;
 }

@@ -2,15 +2,13 @@
 
 Nara is an **architecture-aware TypeScript application kit**. Build by feature, not by layer.
 
-Nara stays useful after project creation: compose capabilities from explicit features, understand the feature graph with deterministic CLI facts (no AI provider required), and protect boundaries with `nara doctor` before drift becomes debt.
+Nara stays useful after project creation: compose capabilities from explicit features, understand the feature graph with deterministic CLI facts (no AI provider required), protect current boundaries with `nara doctor`, and protect architecture change with `nara guard --base origin/main` before new debt enters unnoticed.
 
 This document is the current architecture authority. History lives in [`docs/archive/v3/](./docs/archive/v3/)` and [`docs/decisions/`](./docs/decisions/).
 
-## Product pillars
-
 - **Compose** — build from explicit business features (`nara make feature`, `nara add`).
 - **Understand** — inspect the architecture deterministically (`nara inspect`, `nara context`, `nara impact`, each with `--json`) and describe how it is changing (`nara diff --base main`).
-- **Protect** — validate boundaries before drift becomes debt (`nara doctor`, plus `--json`).
+- **Protect** — validate current architecture (`nara doctor`, plus `--json`) and protect architecture change (`nara guard --base origin/main`, plus `--json`): the change ratchet fails only on newly introduced diagnostics.
 
 ## Locked stack
 
@@ -68,9 +66,12 @@ nara new <name>            Create a runnable application
 nara make feature <name>   Create the canonical feature skeleton
 nara add <feature>         Install an official open-code feature
 nara doctor [--json]       Validate architecture
+nara guard --base <ref> [--head <ref>] [--json]
+                           Fail when the change introduces new violations
 nara inspect <feature> [--json]
 nara context <feature> [--json]
 nara impact <feature> [--json]
+nara diff --base <ref> [--head <ref>] [--json]
 ```
 
 ## Product lifecycle
@@ -86,12 +87,13 @@ Five distinct things; do not conflate them:
    publishable npm package at `packages/nara` (`bin` points at the staged
    CLI, `files` includes only the staged `dist/` and `official-features/`
    source) and will be acquired from the registry once published; it has
-   not been published yet.
 4. **Generated applications** — `nara new` output: the minimal canonical
    application (health-only, no database, no auth). Each carries the
    creating CLI as an exact-pinned devDependency, so `npm run check`
-   (which ends in `nara doctor`) and `nara add/inspect/context/impact`
-   work reproducibly from the project's own install.
+   (which ends in `nara doctor`) and `nara add/inspect/context/impact/diff/guard`
+   work reproducibly from the project's own install. Guard is an explicit
+   CI/review command there (`npx nara guard --base origin/main`) because a
+   new project has no universal baseline ref to assume.
 5. **Official open-code features** — optional installable source
    (`health`, `audit`). `nara add` copies versioned package source into
    `src/features/<name>`; the result is ordinary project code.

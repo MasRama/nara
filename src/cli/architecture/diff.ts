@@ -51,7 +51,7 @@ function edgeKey(edge: { from: string; to: string }): string {
   return `${edge.from}\0${edge.to}`;
 }
 
-function diagnosticKey(diagnostic: SnapshotDiagnostic): string {
+export function diagnosticKey(diagnostic: { code: string; file: string; relationship: string }): string {
   return `${diagnostic.code}\0${diagnostic.file}\0${diagnostic.relationship}`;
 }
 
