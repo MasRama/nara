@@ -20,12 +20,23 @@ const store = new Map<string, ThrottleEntry>();
  * Hard ceiling on throttle keys. Creation is already gated by the global and
  * auth rate limiters, and entries expire after the lockout window + 60s, but
  * identifier rotation (`id:<email>`) is attacker-controlled so expiry alone
- * cannot bound cardinality. Evicting the oldest key first keeps memory bounded
- * without a cache framework; eviction only forgives an old bucket.
+ * cannot bound cardinality. Sweeping expired entries runs first; when the
+ * ceiling is still full of active entries, unseen identities fail closed
+ * (treated as locked) instead of evicting active lockout/failure state to
+ * admit attacker-controlled churn. Evicting the active oldest key would
+ * forgive a locked-out attacker, so saturation never forgives.
  */
-const MAX_THROTTLE_KEYS = 10_000;
-
+const DEFAULT_MAX_THROTTLE_KEYS = 10_000;
+let maxThrottleKeys = DEFAULT_MAX_THROTTLE_KEYS;
 let lastSweep = Date.now();
+
+/**
+ * Test-only override for the throttle cardinality ceiling. Production keeps
+ * the default; tests use tiny capacities to prove saturation semantics.
+ */
+export function setThrottleMaxKeysForTests(value: number): void {
+  maxThrottleKeys = value;
+}
 
 function config(now: () => number = Date.now): ThrottleConfig {
   return {
@@ -45,14 +56,11 @@ function sweep(currentTime: number, windowMs: number): void {
   }
 }
 
-function entryFor(key: string, currentTime: number): ThrottleEntry {
+function entryFor(key: string, currentTime: number): ThrottleEntry | undefined {
   const existing = store.get(key);
   if (existing) return existing;
-  while (store.size >= MAX_THROTTLE_KEYS) {
-    const oldest = store.keys().next().value;
-    if (oldest === undefined) break;
-    store.delete(oldest);
-  }
+  // Saturated with active entries: preserve protected state, do not admit.
+  if (store.size >= maxThrottleKeys) return undefined;
   const created: ThrottleEntry = { attempts: 0, firstAttempt: currentTime, lockedUntil: null };
   store.set(key, created);
   return created;
@@ -102,8 +110,16 @@ export function recordFailedAttempt(
   const currentTime = now();
   sweep(currentTime, windowMs);
   const [idKey, ipKey] = keys(identifier, ip);
-  const idEntry = entryFor(idKey, currentTime);
-  const ipEntry = entryFor(ipKey, currentTime);
+  // Capacity check before any mutation: never partially admit one dimension
+  // while dropping the other, and never evict active state to make room.
+  const missing = (store.get(idKey) ? 0 : 1) + (store.get(ipKey) ? 0 : 1);
+  if (store.size + missing > maxThrottleKeys) {
+    // Saturated with active entries: preserve lockout state and fail closed
+    // for the untracked identity instead of forgiving a locked attacker.
+    return { isLocked: true, lockoutMs };
+  }
+  const idEntry = entryFor(idKey, currentTime)!;
+  const ipEntry = entryFor(ipKey, currentTime)!;
   resetIfExpired(idEntry, currentTime, windowMs);
   resetIfExpired(ipEntry, currentTime, windowMs);
   idEntry.attempts += 1;
@@ -136,4 +152,5 @@ export function clearLoginAttempts(identifier: string, ip: string): void {
 export function resetLoginThrottle(): void {
   store.clear();
   lastSweep = Date.now();
+  maxThrottleKeys = DEFAULT_MAX_THROTTLE_KEYS;
 }

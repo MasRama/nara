@@ -4,7 +4,13 @@ import { Hono } from 'hono';
 import { afterEach, describe, expect, it } from 'vitest';
 import { UPLOAD, env } from '../../config';
 import { app } from '../../../app/server';
-import { jsonBodyLimit, multipartBodyLimit } from '../body-limit';
+import { apiBodyLimit } from '../body-limit';
+import {
+  isLockedOut,
+  recordFailedAttempt,
+  resetLoginThrottle,
+  setThrottleMaxKeysForTests,
+} from '../../../features/auth/server/login-throttle';
 import { csrfProtection } from '../csrf';
 import { securityHeaders } from '../headers';
 import { clientIp } from '../ip';
@@ -561,21 +567,25 @@ describe('CSRF middleware scope', () => {
     expect((await probe.request('/page', { method: 'POST' })).status).toBe(200);
   });
 
-  it('keeps JSON limits scoped to JSON APIs', async () => {
+  it('bounds budgets by route, never by Content-Type', async () => {
     const probe = new Hono();
-    probe.use('*', jsonBodyLimit({ maxBytes: 8 }));
+    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, uploadMaxBytes: 1024 }));
     probe.post('/api/json', (context) => context.json({ ok: true }));
-    probe.post('/api/upload', (context) => context.json({ ok: true }));
+    probe.post('/api/assets/avatar', (context) => context.json({ ok: true }));
     const blocked = await probe.request('/api/json', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'way too long for eight bytes' }),
     });
     expect(blocked.status).toBe(413);
+    // The avatar endpoint owns the larger request budget.
     const form = new FormData();
     form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
-    const allowed = await probe.request('/api/upload', { method: 'POST', body: form });
+    const allowed = await probe.request('/api/assets/avatar', { method: 'POST', body: form });
     expect(allowed.status).toBe(200);
+    // An unrelated endpoint gains nothing from declaring multipart.
+    const smuggled = await probe.request('/api/json', { method: 'POST', body: form });
+    expect(smuggled.status).toBe(413);
   });
 });
 
@@ -633,6 +643,62 @@ describe('request body Content-Type bypass', () => {
     await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
   });
 
+  it('denies the avatar upload budget to register declaring multipart', async () => {
+    const big = JSON.stringify({ name: 'x'.repeat(env.MAX_JSON_BODY_BYTES), email: uniqueEmail(), password: TEST_PASSWORD });
+    const response = await oversizedRegister({ 'Content-Type': 'multipart/form-data; boundary=----smuggled' }, big);
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('denies the avatar upload budget for misleading mixed Content-Type parameters', async () => {
+    const big = JSON.stringify({ name: 'x'.repeat(env.MAX_JSON_BODY_BYTES), email: uniqueEmail(), password: TEST_PASSWORD });
+    const response = await oversizedRegister({ 'Content-Type': 'application/json; note=multipart/form-data' }, big);
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('bounds oversized bodies sent without any Content-Type', async () => {
+    const state = await issueCsrf(app);
+    const big = JSON.stringify({ name: 'x'.repeat(env.MAX_JSON_BODY_BYTES), email: uniqueEmail(), password: TEST_PASSWORD });
+    const response = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        ...csrfHeaders(state),
+        'Content-Length': String(new TextEncoder().encode(big).length),
+        ...testIp(),
+      },
+      body: big,
+    });
+    // Undici defaults string bodies to text/plain; either way the JSON budget applies.
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
+  it('rejects oversized streamed multipart smuggled to a normal endpoint', async () => {
+    const state = await issueCsrf(app);
+    const big = new Uint8Array(env.MAX_JSON_BODY_BYTES + 1024).fill(0x61);
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(big);
+        controller.close();
+      },
+    });
+    const request = new Request('http://localhost/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'multipart/form-data; boundary=----smuggled',
+        Cookie: state.cookie,
+        'X-CSRF-Token': state.token,
+        ...testIp(),
+      },
+      body: stream,
+      duplex: 'half',
+    } as RequestInit);
+    const response = await app.request(request);
+    expect(response.status).toBe(413);
+    await expect(response.json()).resolves.toMatchObject({ code: 'PAYLOAD_TOO_LARGE' });
+  });
+
   it('accepts small valid JSON regardless of declared media type', async () => {
     const email = uniqueEmail();
     const state = await issueCsrf(app);
@@ -644,14 +710,14 @@ describe('request body Content-Type bypass', () => {
     expect(response.status).toBe(201);
   });
 
-  it('does not buffer multipart through the JSON limiter', async () => {
+  it('denies the upload budget to unrelated endpoints declaring multipart', async () => {
     const probe = new Hono();
-    probe.use('*', jsonBodyLimit({ maxBytes: 8 }));
+    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, uploadMaxBytes: 1024 }));
     probe.post('/api/upload', (context) => context.json({ ok: true }));
     const form = new FormData();
     form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
-    const allowed = await probe.request('/api/upload', { method: 'POST', body: form });
-    expect(allowed.status).toBe(200);
+    const smuggled = await probe.request('/api/upload', { method: 'POST', body: form });
+    expect(smuggled.status).toBe(413);
   });
 });
 
@@ -681,7 +747,7 @@ describe('multipart early bound', () => {
   it('enforces the multipart request cap on streamed bodies', async () => {
     const probe = new Hono();
     const cap = 1024;
-    probe.use('*', multipartBodyLimit({ maxBytes: cap }));
+    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, uploadMaxBytes: cap }));
     probe.post('/api/assets/avatar', (context) => context.json({ ok: true }));
     const big = new Uint8Array(cap + 512).fill(0x61);
     const stream = new ReadableStream({
@@ -757,6 +823,33 @@ describe('proxy trust', () => {
     const payload = (await response.json()) as { ip: string };
     expect(payload.ip).not.toBe('not-an-ip');
   });
+
+  it('honors the second-from-right entry with two trusted hops', async () => {
+    process.env.TRUST_PROXY = 'true';
+    process.env.TRUST_PROXY_HOPS = '2';
+    const probe = new Hono();
+    probe.get('/ip', (context) => context.json({ ip: clientIp(context) }));
+    const response = await probe.request('/ip', {
+      headers: { 'X-Forwarded-For': '203.0.113.7, 198.51.100.1, 192.0.2.1' },
+    });
+    expect(response.status).toBe(200);
+    // Two trusted hops: the middle entry is the client behind two proxies.
+    await expect(response.json()).resolves.toMatchObject({ ip: '198.51.100.1' });
+  });
+
+  it('falls back to socket identity when the chain is shorter than the trust depth', async () => {
+    process.env.TRUST_PROXY = 'true';
+    process.env.TRUST_PROXY_HOPS = '2';
+    const limiterProbe = trustedProbe();
+    // One-entry chain with two required hops: no trusted suffix exists, so
+    // both requests share the socket bucket and the second is limited.
+    expect((await limiterProbe.request('/api/thing', { headers: { 'X-Forwarded-For': '198.51.100.10' } })).status).toBe(
+      200,
+    );
+    expect((await limiterProbe.request('/api/thing', { headers: { 'X-Forwarded-For': '198.51.100.11' } })).status).toBe(
+      429,
+    );
+  });
 });
 
 describe('auth limiter logout parity', () => {
@@ -781,7 +874,7 @@ describe('auth limiter logout parity', () => {
 });
 
 describe('limiter store boundedness', () => {
-  it('evicts the oldest bucket when maxKeys is exceeded', async () => {
+  it('fails closed for unseen identities at saturation without forgiving active buckets', async () => {
     const limiter = createRateLimiter({ maxRequests: 1, windowMs: 60_000, name: 'bounded', maxKeys: 2 });
     const probe = new Hono();
     probe.use('*', limiter.middleware);
@@ -789,8 +882,59 @@ describe('limiter store boundedness', () => {
     const via = (ip: string) => probe.request('/api/thing', { headers: { 'x-test-ip': ip } });
     expect((await via('10.0.0.1')).status).toBe(200);
     expect((await via('10.0.0.2')).status).toBe(200);
-    // Admitting a third key evicts the oldest; the evicted identity gets budget again.
-    expect((await via('10.0.0.3')).status).toBe(200);
+    // Saturated with active entries: the unseen identity is rejected with a
+    // deterministic 429 instead of evicting protected state.
+    const saturated = await via('10.0.0.3');
+    expect(saturated.status).toBe(429);
+    await expect(saturated.json()).resolves.toMatchObject({ code: 'RATE_LIMITED' });
+    // Active buckets keep their budget accounting: the throttled identity is
+    // still throttled, not silently refilled by churn.
+    expect((await via('10.0.0.1')).status).toBe(429);
+  });
+
+  it('admits new identities again after expired buckets are swept', async () => {
+    let now = Date.now();
+    const limiter = createRateLimiter({
+      maxRequests: 1,
+      windowMs: 1_000,
+      name: 'bounded-sweep',
+      maxKeys: 1,
+      now: () => now,
+    });
+    const probe = new Hono();
+    probe.use('*', limiter.middleware);
+    probe.get('/api/thing', (context) => context.json({ ok: true }));
+    const via = (ip: string) => probe.request('/api/thing', { headers: { 'x-test-ip': ip } });
     expect((await via('10.0.0.1')).status).toBe(200);
+    expect((await via('10.0.0.2')).status).toBe(429);
+    now += 2_000;
+    expect((await via('10.0.0.2')).status).toBe(200);
+  });
+
+  it('preserves active login lockout state under throttle cardinality pressure', async () => {
+    resetLoginThrottle();
+    // Tiny ceiling: two tracked identities (id + IP keys each) fill the store.
+    setThrottleMaxKeysForTests(4);
+    try {
+      const locked = recordFailedAttempt('locked@example.com', '10.9.9.1');
+      // One failure is far below the 5-attempt lockout threshold.
+      expect(locked.isLocked).toBe(false);
+      // A second identity fills the remaining slots with its own id + IP keys.
+      expect(recordFailedAttempt('other@example.com', '10.9.9.2').isLocked).toBe(false);
+      // Saturation: the untracked identity fails closed, and the recorded
+      // failure state is preserved rather than evicted for churn.
+      const saturated = recordFailedAttempt('attacker@example.com', '10.9.9.9');
+      expect(saturated.isLocked).toBe(true);
+      expect(isLockedOut('locked@example.com', '10.9.9.1')).toBe(false);
+      // Four more failures still lock the tracked identity: its counter was
+      // never wiped by saturation churn.
+      setThrottleMaxKeysForTests(10_000);
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        recordFailedAttempt('locked@example.com', '10.9.9.1');
+      }
+      expect(isLockedOut('locked@example.com', '10.9.9.1')).toBe(true);
+    } finally {
+      resetLoginThrottle();
+    }
   });
 });

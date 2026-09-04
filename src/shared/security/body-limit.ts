@@ -1,34 +1,40 @@
 import type { Context, Next } from 'hono';
 
 /**
- * Bounded API request body handling. Route handlers call `context.req.json()`
- * regardless of the declared media type, so enforcement cannot depend on an
- * attacker-controlled `Content-Type`. Both limiters bound the API
- * request/body boundary before handlers parse anything, without buffering
- * unbounded bodies: the declared length is checked first, then at most
- * `maxBytes + 1` are streamed from a cloned request so the original body
- * remains readable downstream.
+ * Route-owned API request body budgets. Handlers call `context.req.json()`
+ * regardless of the declared media type, so enforcement must not depend on
+ * attacker-controlled `Content-Type`: an unrelated endpoint never gains the
+ * larger avatar upload budget merely by declaring `multipart/form-data`.
  *
- * - `jsonBodyLimit` covers every state-changing `/api/` request except
- *   `multipart/*` (avatar uploads keep their own file policy plus the
- *   request-level multipart bound below).
- * - `multipartBodyLimit` early-bounds `multipart/*` request bodies before
- *   `parseBody()` materializes an arbitrarily large upload. The
- *   request-level cap is narrowly higher than the 5 MB file limit to allow
- *   multipart framing; the Feature-level file check stays authoritative.
+ * - Every state-changing `/api/` request is bounded by `jsonMaxBytes`
+ *   (default 1 MB) regardless of media type.
+ * - Only `POST /api/assets/avatar` receives the narrowly larger
+ *   `uploadMaxBytes` request budget (5 MB file + 256 KiB framing allowance).
+ *   The Feature-level 5 MB file check stays authoritative; this bound only
+ *   rejects before `parseBody()` can materialize an arbitrarily large upload.
+ *
+ * Bodies are bounded without buffering unbounded input: the declared length
+ * is checked first, then at most `maxBytes + 1` are streamed from a cloned
+ * request so the original body remains readable downstream.
  */
-export interface BodyLimitOptions {
-  maxBytes: number;
+export interface ApiBodyLimitOptions {
+  jsonMaxBytes: number;
+  uploadMaxBytes: number;
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const AVATAR_UPLOAD_PATH = '/api/assets/avatar';
 
 function isApiRequest(context: Context): boolean {
   return new URL(context.req.url).pathname.startsWith('/api/');
 }
 
-function isMultipart(context: Context): boolean {
-  return (context.req.header('content-type') ?? '').toLowerCase().includes('multipart/');
+/** Only the avatar upload endpoint owns the larger request budget. */
+function isAvatarUpload(context: Context): boolean {
+  return (
+    context.req.method.toUpperCase() === 'POST' &&
+    new URL(context.req.url).pathname === AVATAR_UPLOAD_PATH
+  );
 }
 
 async function exceedsBound(raw: Request, maxBytes: number): Promise<boolean> {
@@ -37,7 +43,12 @@ async function exceedsBound(raw: Request, maxBytes: number): Promise<boolean> {
   try {
     const clone = raw.clone();
     const reader = clone.body?.getReader();
-    if (!reader) return false;
+    if (!reader) {
+      // Body exists but cannot be streamed back: fail closed only when the
+      // sender actually claims a body. Bodyless requests stay unaffected.
+      const declared = Number(raw.headers.get('content-length'));
+      return Number.isFinite(declared) && declared > 0;
+    }
     let seen = 0;
     for (;;) {
       const { done, value } = await reader.read();
@@ -53,9 +64,10 @@ async function exceedsBound(raw: Request, maxBytes: number): Promise<boolean> {
     }
     return false;
   } catch {
-    // Body already consumed or unavailable; fall through to the handler,
-    // which validates whatever it can parse.
-    return false;
+    // An unread body exists but size enforcement cannot inspect it. Fail
+    // closed: silently allowing it would permit unbounded parsing.
+    // Bodyless requests return before this point, so they are unaffected.
+    return true;
   }
 }
 
@@ -64,35 +76,14 @@ function declaredExceeds(context: Context, maxBytes: number): boolean {
   return Number.isFinite(declared) && declared > maxBytes;
 }
 
-export function jsonBodyLimit(options: BodyLimitOptions) {
-  const { maxBytes } = options;
+export function apiBodyLimit(options: ApiBodyLimitOptions) {
+  const { jsonMaxBytes, uploadMaxBytes } = options;
 
-  return async function jsonBodyLimitMiddleware(context: Context, next: Next): Promise<Response | void> {
+  return async function apiBodyLimitMiddleware(context: Context, next: Next): Promise<Response | void> {
     if (!isApiRequest(context)) return next();
     if (SAFE_METHODS.has(context.req.method.toUpperCase())) return next();
-    // Multipart uploads are exempt here; multipartBodyLimit bounds them.
-    if (isMultipart(context)) return next();
-
-    if (declaredExceeds(context, maxBytes)) {
-      return payloadTooLarge(context);
-    }
-    if (await exceedsBound(context.req.raw, maxBytes)) {
-      return payloadTooLarge(context);
-    }
-    return next();
-  };
-}
-
-export function multipartBodyLimit(options: BodyLimitOptions) {
-  const { maxBytes } = options;
-
-  return async function multipartBodyLimitMiddleware(
-    context: Context,
-    next: Next,
-  ): Promise<Response | void> {
-    if (!isApiRequest(context)) return next();
-    if (SAFE_METHODS.has(context.req.method.toUpperCase())) return next();
-    if (!isMultipart(context)) return next();
+    // Route-owned budget: endpoint policy decides, never Content-Type.
+    const maxBytes = isAvatarUpload(context) ? uploadMaxBytes : jsonMaxBytes;
 
     if (declaredExceeds(context, maxBytes)) {
       return payloadTooLarge(context);

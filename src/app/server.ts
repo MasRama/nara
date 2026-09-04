@@ -5,10 +5,9 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { UPLOAD, env } from '../shared/config';
 import {
+  apiBodyLimit,
   createRateLimiter,
   csrfProtection,
-  jsonBodyLimit,
-  multipartBodyLimit,
   securityHeaders,
 } from '../shared/security';
 import { Logger } from '../shared/logging';
@@ -112,11 +111,11 @@ export function resetSecurityState(): void {
 app.onError(handleError);
 
 app.use('*', securityHeaders({ isProduction: isProductionServer, viteOrigin: `http://localhost:${env.VITE_PORT}` }));
-// JSON/API bodies are bounded independent of Content-Type (handlers call
-// req.json() regardless); multipart has a narrowly higher request-level cap
+// Route-owned body budgets: every state-changing /api/* request is bounded
+// by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
+// POST /api/assets/avatar owns the narrowly larger upload request budget
 // (5 MB file + 256 KiB framing) with the Feature file check authoritative.
-app.use('*', jsonBodyLimit({ maxBytes: env.MAX_JSON_BODY_BYTES }));
-app.use('*', multipartBodyLimit({ maxBytes: UPLOAD.MAX_FILE_SIZE + 256 * 1024 }));
+app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: UPLOAD.MAX_FILE_SIZE + 256 * 1024 }));
 app.use('*', globalRateLimiter.middleware);
 app.use('/api/auth/login', authRateLimiter.middleware);
 app.use('/api/auth/register', authRateLimiter.middleware);

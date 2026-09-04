@@ -6,10 +6,12 @@ import { clientIp } from './ip';
  * architecture. No Redis, no distributed state, no per-key intervals.
  *
  * Boundedness is explicit: stale buckets are swept lazily each window, and
- * key cardinality has a hard ceiling (`maxKeys`, default 10_000). When the
- * ceiling is reached the oldest bucket is evicted before a new key is
- * admitted, so memory cannot grow without bound even if an attacker rotates
- * identifiers. Eviction only forgives an old bucket; it never invents budget.
+ * key cardinality has a hard ceiling (`maxKeys`, default 10_000). Sweeping
+ * expired entries runs first; when the ceiling is still full of active
+ * entries, unseen identities fail closed with deterministic `429
+ * RATE_LIMITED` instead of evicting active protected state to admit
+ * attacker-controlled churn. Evicting the active oldest key would hand a
+ * throttled attacker a fresh budget, so saturation never forgives.
  */
 export interface RateLimitOptions {
   maxRequests: number;
@@ -22,7 +24,7 @@ export interface RateLimitOptions {
   skip?: (context: Context) => boolean;
   /** Overrideable clock for deterministic tests. */
   now?: () => number;
-  /** Hard ceiling on distinct keys; oldest evicted first. Defaults to 10_000. */
+  /** Hard ceiling on distinct keys; unseen identities fail closed at saturation. Defaults to 10_000. */
   maxKeys?: number;
 }
 export interface RateLimiter {
@@ -47,16 +49,12 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
     }
   }
 
-  function admit(key: string): number[] {
+  function admit(key: string): number[] | undefined {
     const existing = buckets.get(key);
     if (existing) return existing;
-    // Hard ceiling: evict oldest first-inserted keys before admitting a new
-    // one, so cardinality never exceeds maxKeys even under identifier rotation.
-    while (buckets.size >= maxKeys) {
-      const oldest = buckets.keys().next().value;
-      if (oldest === undefined) break;
-      buckets.delete(oldest);
-    }
+    // Saturated with active entries: do not evict protected state merely to
+    // admit an unseen identity. The caller fails closed instead.
+    if (buckets.size >= maxKeys) return undefined;
     const created: number[] = [];
     buckets.set(key, created);
     return created;
@@ -82,8 +80,13 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
       const key = `${name}:${keyGenerator(context)}`;
       const cutoff = currentTime - windowMs;
       const timestamps = admit(key);
+      if (!timestamps) {
+        context.header('X-RateLimit-Limit', String(maxRequests));
+        context.header('X-RateLimit-Remaining', '0');
+        context.header('X-RateLimit-Reset', String(Math.ceil((currentTime + windowMs) / 1000)));
+        return rateLimited(context, windowMs);
+      }
       while (timestamps.length > 0 && timestamps[0]! <= cutoff) timestamps.shift();
-
       if (timestamps.length >= maxRequests) {
         const oldest = timestamps[0] ?? currentTime;
         const resetMs = Math.max(0, oldest + windowMs - currentTime);
