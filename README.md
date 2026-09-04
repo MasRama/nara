@@ -235,17 +235,13 @@ npm start
 
 Production serves the built Vue SPA, public files, and backend APIs from the same Node/Hono origin. `npm start` requires `build/client/index.html`; run `npm run build` first. The startup log identifies the browser/API URL from `APP_URL`.
 
-Linux runtime: the Hono + `@hono/node-server` HTTP path uses no Ultimate/uWebSockets native HTTP runtime. (Other native dependencies such as `better-sqlite3` or Sharp are legitimate and unrelated to this contract. The `/proc` gate below proves no uWS binary is mapped into the running server; it does not claim all native dependencies are absent.) Release validation is split so no machine claims evidence it cannot produce:
+Linux runtime: the Hono + `@hono/node-server` HTTP path uses no Ultimate/uWebSockets native HTTP runtime. (Other native dependencies such as `better-sqlite3` or Sharp are legitimate and unrelated to this contract; the portable HTTP-stack audit in release validation guards against reintroducing the old runtime.) Canonical validation is one gate:
 
 ```bash
-npm run validate:release   # portable gates: check, production serving + startup
+npm run validate:release   # check, production serving + startup
                            # failures, HTTP-stack audit, fresh project, official feature
-npm run validate:linux     # Linux-only runtime gate: fresh build, production
-                           # startup, health/ready/auth checks, /proc inspection
 npm run perf:sanity        # separate machine-sensitive sanity (catastrophic tripwires only)
 ```
-
-`validate:release` runs everywhere and never claims Linux validation. `validate:linux` fails fast with a clear diagnostic on non-Linux instead of passing silently — run it on Linux for local runtime evidence.
 
 Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
 

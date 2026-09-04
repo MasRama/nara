@@ -65,21 +65,18 @@ Use [`migration-v2-v3.md`](./migration-v2-v3.md) for the capability mapping and 
 ## Automated verification passing
 
 ```bash
-npm run validate:release   # portable gates (all green; rewrite gate record: docs/archive/v3/rewrite-roadmap.md V3-130)
-npm run validate:linux     # Linux runtime gate (green; rewrite gate record: docs/archive/v3/rewrite-roadmap.md V3-111)
+npm run validate:release   # canonical gate (all green; rewrite gate record: docs/archive/v3/rewrite-roadmap.md V3-130)
 npm run perf:sanity        # catastrophic-only sanity, no regression (rewrite gate record: V3-115)
 ```
 
 Covered: typechecks, unit suite, `nara doctor`, production serving and
 startup-failure behavior, portable HTTP-stack audit, fresh-project install,
-official-feature install, and the Linux production artifact. The Hono
-`@hono/node-server` HTTP path carries no Ultimate/uWS native HTTP runtime;
-other native dependencies (e.g. `better-sqlite3`, Sharp) are legitimate and
-unrelated to that contract. Local Linux runtime behavior is covered by
-`validate:linux`: fresh build, production startup, `/health`, `/ready`,
-`/api/auth/me`, and `/proc` inspection proving no uWS binary is mapped into
-the running server. No pinned distribution or glibc version is part of the
-release criteria. V3-133 agent cold-start passed (see
+and official-feature install. The Hono `@hono/node-server` HTTP path carries
+no Ultimate/uWS native HTTP runtime; other native dependencies (e.g.
+`better-sqlite3`, Sharp) are legitimate and unrelated to that contract. The
+portable HTTP-stack audit is the canonical regression protection against
+reintroducing the old runtime. No pinned distribution or glibc version is
+part of the release criteria. V3-133 agent cold-start passed (see
 [`agent-cold-start.md`](./agent-cold-start.md)). Manual developer/product
 validation was performed by the project owner throughout the v3 development
 and review process; a separate unfamiliar-human cold-start gate is not part

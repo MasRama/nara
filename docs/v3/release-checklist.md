@@ -52,19 +52,6 @@ Portable gates; runs on any platform and never claims Linux evidence:
   clean generated project, then typechecks, tests, `check`, `doctor`
 
 ```text
-npm run validate:linux
-```
-
-Linux-only runtime gate (`test:linux-deployment`). Always rebuilds from
-source, spawns the real production artifact directly (`node build/server.js`,
-no npm wrapper, so the observed PID is the actual server), and proves
-`GET /health` 200, `GET /ready` 200, `GET /api/auth/me` 401 plus no uWS
-mapping in `/proc/<pid>/maps`. The `/proc` assertion is narrow: it proves no
-Ultimate/uWS native HTTP binary is mapped into the running server, not that
-all native dependencies are absent. Fails fast with a clear diagnostic on
-non-Linux instead of passing silently.
-
-```text
 npm run perf:sanity
 ```
 

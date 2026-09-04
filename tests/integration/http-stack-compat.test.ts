@@ -25,10 +25,8 @@ function walkFiles(directory: string, extension: (file: string) => boolean, foun
  * runtime. Other native dependencies (e.g. better-sqlite3, Sharp) are
  * legitimate and out of scope here.
  *
- * This audit proves dependency/import hygiene only. Actual Linux runtime
- * evidence (production startup + /proc inspection on Linux) belongs to
- * `tests/integration/linux-deployment.test.ts`, which explicitly requires
- * Linux. See docs/v3/release-checklist.md for how the two compose.
+ * This audit is the canonical regression protection against reintroducing
+ * the old runtime: it runs on any platform as part of release validation.
  */
 describe('http stack compatibility audit (portable)', () => {
   it('declares Hono without an Ultimate Express / uWebSockets HTTP dependency', () => {
