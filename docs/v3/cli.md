@@ -21,8 +21,8 @@ npm run build
 NODE_ENV=production APP_URL=http://localhost:5555 npm start
 ```
 
-Every generated project pins the creating CLI version as an exact
-devDependency (`"nara": "3.0.0"`, no range), so architecture-rule changes
+Every generated project exact-pins the version of the Nara CLI that created
+it as a devDependency (no range), so architecture-rule changes
 arrive only through an explicit dependency update — never silently (see ADR
 0011). Its `npm run check` ends with `npm run architecture:doctor`, and
 `nara inspect/context/impact/doctor/add` all run from the project's own

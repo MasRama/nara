@@ -1,6 +1,6 @@
 {
   "name": "nara",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "private": true,
   "description": "Architecture-aware TypeScript application kit. Build by feature, not by layer. Hono, Node.js, SQLite, and deterministic architecture tooling.",
   "license": "MIT",
@@ -28,7 +28,8 @@
     "test:packaged-lifecycle": "vitest run --config vitest.integration.config.mjs tests/integration/packaged-lifecycle.test.ts",
     "perf:sanity": "node scripts/perf-sanity.mjs",
     "stage:package": "node scripts/stage-package.mjs",
-    "validate:release": "npm run check && npm run build && npm run stage:package && npm run test:production-serving && npm run test:production-startup && npm run test:http-stack-compat && npm run test:new-project && npm run test:official-feature && npm run test:packaged-lifecycle",
+    "validate:version": "node scripts/validate-version.mjs",
+    "validate:release": "npm run validate:version && npm run check && npm run build && npm run stage:package && npm run test:production-serving && npm run test:production-startup && npm run test:http-stack-compat && npm run test:new-project && npm run test:official-feature && npm run test:packaged-lifecycle",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
