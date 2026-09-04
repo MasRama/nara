@@ -131,6 +131,10 @@ export default defineConfig(({ mode }) => {
     root: 'resources',
     plugins: [vue()],
     server: {
+      // Explicit loopback binding: the dev test dials 127.0.0.1 and the
+      // Hono proxy target below uses 127.0.0.1, so never rely on implicit
+      // localhost resolution (IPv4 vs IPv6 varies across machines/CI).
+      host: '127.0.0.1',
       port: vitePort,
       strictPort: true,
       proxy: {
@@ -160,6 +164,8 @@ export default defineConfig({
 `,
     '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\n',
     'scripts/dev.ts': `import { spawn, type ChildProcess } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 
 const isWindows = process.platform === 'win32';
 const children: ChildProcess[] = [];
@@ -170,8 +176,19 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+function resolveBin(name: string): string {
+  // Prefer the project's own install so dev never depends on ambient PATH.
+  // Falls back to the bare name (global install) with an actionable error
+  // below when neither resolves.
+  const binary = isWindows ? name + '.cmd' : name;
+  const local = path.join(process.cwd(), 'node_modules', '.bin', binary);
+  if (existsSync(local)) return local;
+  return name;
+}
+
 function start(command: string, args: string[], label: string): ChildProcess {
-  const child = spawn(command, args, {
+  const resolved = resolveBin(command);
+  const child = spawn(resolved, args, {
     stdio: 'inherit',
     shell: isWindows,
     env: { ...process.env, FORCE_COLOR: '1' },
@@ -180,13 +197,15 @@ function start(command: string, args: string[], label: string): ChildProcess {
 
   child.once('error', (error) => {
     if (shuttingDown) return;
-    process.stderr.write('[' + label + '] failed: ' + error.message + '\\n');
+    process.stderr.write('[' + label + '] failed to start ' + resolved + ' ' + args.join(' ') + ': ' + error.message + '\\n');
+    process.stderr.write('[' + label + '] run npm install in this project, then retry npm run dev.\\n');
     void shutdown(1);
   });
   child.once('exit', (code, signal) => {
     if (shuttingDown) return;
     const reason = signal ? 'signal ' + signal : 'code ' + String(code ?? 'unknown');
-    process.stderr.write('[' + label + '] exited unexpectedly (' + reason + ')\\n');
+    process.stderr.write('[' + label + '] exited unexpectedly (' + reason + '). Both Vite and Hono must stay up for npm run dev.\\n');
+    process.stderr.write('[' + label + '] see the [' + label + '] output above for the underlying failure.\\n');
     void shutdown(signal === 'SIGINT' || signal === 'SIGTERM' ? 0 : 1);
   });
 
@@ -425,11 +444,10 @@ if (isProduction && !process.env.APP_URL?.trim()) {
 if (isProduction && !existsSync(join(process.cwd(), 'build', 'client', 'index.html'))) {
   throw new Error('Production frontend build is missing. Run npm run build before npm start.');
 }
-
-serve({ fetch: app.fetch, port }, (info) => {
+serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
   const startupMessage = isProduction
     ? 'Browser/API: ' + appUrl
-    : 'Browser: ' + appUrl + ' (Vite); Backend implementation: http://localhost:' + info.port;
+    : 'Browser: ' + appUrl + ' (Vite); Backend implementation: http://127.0.0.1:' + info.port;
   process.stdout.write(startupMessage + '\\n');
 });
 `,

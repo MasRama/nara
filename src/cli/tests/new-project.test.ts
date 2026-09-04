@@ -117,6 +117,11 @@ describe('new project', () => {
     for (const file of result.project.files) {
       expect(readFileSync(file, 'utf8')).not.toMatch(obsoleteStack);
     }
+    expect(readFileSync(path.join(projectDirectory, 'vite.config.mjs'), 'utf8')).toContain("host: '127.0.0.1'");
+    expect(readFileSync(path.join(projectDirectory, 'vite.config.mjs'), 'utf8')).toContain('http://127.0.0.1:${serverPort}');
+    expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("hostname: '127.0.0.1'");
+    expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain('resolveBin');
+    expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain("node_modules', '.bin'");
   });
 
   it('rejects unsafe project names', () => {

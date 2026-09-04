@@ -110,10 +110,15 @@ function startGeneratedDevServer(
 async function waitForDevelopmentHealth(
   child: ChildProcess,
   vitePort: number,
+  serverPort: number,
   output: () => string,
 ): Promise<void> {
   const frontendUrl = `http://127.0.0.1:${vitePort}/`;
   const healthUrl = `http://127.0.0.1:${vitePort}/health`;
+  const backendUrl = `http://127.0.0.1:${serverPort}/health`;
+  let lastFrontend = 'unreached';
+  let lastViaVite = 'unreached';
+  let lastBackend = 'unreached';
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
@@ -121,16 +126,31 @@ async function waitForDevelopmentHealth(
     }
     try {
       const frontendResponse = await fetch(frontendUrl);
+      lastFrontend = String(frontendResponse.status);
       if (frontendResponse.status === 200) {
-        const healthResponse = await fetch(healthUrl);
-        if (healthResponse.status === 200) return;
+        try {
+          const healthResponse = await fetch(healthUrl);
+          lastViaVite = String(healthResponse.status);
+          if (healthResponse.status === 200) return;
+        } catch {
+          lastViaVite = 'unreached';
+        }
+        try {
+          const backendResponse = await fetch(backendUrl);
+          lastBackend = String(backendResponse.status);
+        } catch {
+          lastBackend = 'unreached';
+        }
       }
     } catch {
-      // Vite and Hono may still be binding their ports.
+      lastFrontend = 'unreached';
     }
     await delay(100);
   }
-  throw new Error(`Generated development server did not answer ${healthUrl} within 30 seconds.\n${output()}`);
+  throw new Error(
+    `Generated development server did not answer ${healthUrl} within 30 seconds. ` +
+      `last frontend ${frontendUrl}=${lastFrontend}, via-Vite health=${lastViaVite}, direct backend ${backendUrl}=${lastBackend}.\n${output()}`,
+  );
 }
 
 async function expectUnavailable(url: string): Promise<void> {
@@ -241,7 +261,7 @@ describe('nara new fresh project', () => {
       const { vitePort, serverPort } = await findDistinctPorts();
       const generatedDevServer = startGeneratedDevServer(projectDirectory, vitePort, serverPort);
       try {
-        await waitForDevelopmentHealth(generatedDevServer.child, vitePort, generatedDevServer.output);
+        await waitForDevelopmentHealth(generatedDevServer.child, vitePort, serverPort, generatedDevServer.output);
         const response = await fetch(`http://127.0.0.1:${vitePort}/health`);
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toEqual({ status: 'ok' });
