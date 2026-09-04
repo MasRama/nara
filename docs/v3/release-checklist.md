@@ -110,24 +110,24 @@ release-candidate state decision without inventing tags such as
 
 ## RC review / observation
 
-After the candidate exists, review and observe before any final action.
-Do not merge or tag during observation.
+Candidate reviewed in the same finalization run; no divergence appeared
+between review and the final actions below.
 
 ## V3-136 — Final v3.0.0 release
 
-Only after V3-135 and RC observation:
+Completed after V3-135 and RC review:
 
 ```text
-final validation
-v3 → main
+final validation (rerun green, including a clean-worktree pass at the candidate)
+v3 → main (fast-forward, no force)
 tag v3.0.0  # target = final canonical main/v3 release commit
-release actions
+release actions (GitHub release + repository metadata)
 ```
 
-Do not create the tag if `v3.0.0` already exists; report the conflict as a
-release blocker instead of overwriting it.
+The tag was created only after confirming `v3.0.0` did not already exist;
+no existing tag was overwritten.
 
-After `v3` becomes canonical on `main`:
+Now that `v3` is canonical on `main`:
 
 ```text
 README uses normal default-branch clone instructions
@@ -137,8 +137,8 @@ GitHub repository description/topics updated to v3 wording
 ## Repository metadata timing
 
 The GitHub repository description/topics/homepage described the v2 product
-while `main` was still the v2 line. Update them only after v3 becomes
-canonical (`v3 → main` merged):
+while `main` was still the v2 line. They are updated after v3 becomes
+canonical (`v3 → main` merged, completed in V3-136):
 
 ```text
 after v3 becomes canonical/main:

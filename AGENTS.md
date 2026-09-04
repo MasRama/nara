@@ -27,13 +27,12 @@ Do not reinterpret product or architecture decisions that are already defined in
 
 ## 2. Branch
 
-Nara v3 is a full rewrite developed on the `v3` branch.
+Nara v3 is the canonical line on `main` (released as `v3.0.0`).
 
 Rules:
 
-* Treat `main` as the stable Nara v2 line until v3 is ready.
-* Do not merge `v3` into `main` unless explicitly instructed.
-* Do not modify `main`.
+* Treat `main` as the stable Nara v3 line.
+* The `v3` branch tracks the final release commit; keep it aligned with `main`.
 * Do not preserve v2 compatibility unless a task explicitly requires it.
 * Do not add compatibility wrappers merely to keep old APIs alive.
 * Reuse lessons and proven behavior from v2, not necessarily its implementation.

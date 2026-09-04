@@ -1718,39 +1718,37 @@ If it fails, improve architecture/docs before adding more prompt files.
 ## [x] V3-135 — Release candidate
 > Completed 2026-09-04 in the finalization run: `npm run validate:release` green (`check` incl. lint, frontend typecheck, unit suite, and doctor; production-serving; production-startup; http-stack-compat 5/5; new-project; official-feature), `npm run validate:linux` green (2/2, real production artifact on Linux), `npm run build` green, `npm run perf:sanity` within catastrophic budgets with no new tripwire. Manual developer/product validation completed by the project owner throughout v3 development/review. Release notes and migration guide reviewed; no pinned distro/glibc baseline required; no unfamiliar-human gate required (V3-134 removed, see above). Ready for final v3.0.0 transition (V3-136).
 
-Create the v3 release candidate only after all blocking v3 TODO items pass.
-
-Do not merge to `main` yet unless explicitly instructed.
+Release candidate created from the green finalization run above; `v3` was
+transitioned to `main` in the V3-136 final release below (tag follows on the
+release-record commit).
 
 ---
 
-## [ ] V3-136 — Final v3.0.0 release
-> Reopened during the v3 consistency audit: merge to `main` and the `v3.0.0` tag were not performed, and blocking gates remain open.
+## [x] V3-136 — Final v3.0.0 release
+> Completed 2026-09-04: `v3` transitioned to `main` via fast-forward (`ccddb94` → `de29971`, no force, no divergence), final technical gates passed (`npm run validate:release` green on a clean worktree at the candidate commit, `npm run build` green, `npm run perf:sanity` within budgets, `npm run validate:linux` 2/2 green, `npm run check` green on the final `main` tree), and this release-record commit prepared for the `v3.0.0` tag.
 
-Before release:
+Verified before release:
 
-* verify release notes
-* verify migration guide
-* verify fresh install
-* verify deployment
-* verify docs
-* verify architecture fixtures
-* verify agent cold-start
-* verify no v2 compatibility baggage accidentally remains
+* release notes accurate
+* migration guide accurate (deliberate architecture port, no automatic migration)
+* fresh install (`nara new` journey green)
+* deployment (production serving/startup + Linux runtime green)
+* docs match implementation
+* architecture fixtures green
+* agent cold-start passed (V3-133); manual owner validation recorded (V3-134 removed, not passed)
+* no v2 compatibility baggage in the runtime
 
-Then prepare:
+Then prepared:
 
 ```text
-v3 → main
+v3 → main (fast-forward, completed)
 ```
 
 and tag:
 
 ```text
-v3.0.0
+v3.0.0 (target = this final release-record commit)
 ```
-
-only when explicitly instructed.
 
 ---
 
