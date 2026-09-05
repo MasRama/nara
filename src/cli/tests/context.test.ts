@@ -349,6 +349,76 @@ describe('context command', () => {
     expect(outcome.stdout).toContain('CROSS_FEATURE_INTERNAL_IMPORT');
   });
 
+
+  it('includes integrations and relevant application roots for feature and file targets', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'users', {
+      'index.ts': 'export const userRoutes = true;\n',
+      'server/routes.ts': 'export const routeSurface = true;\n',
+      'web/index.ts': 'export const UsersPage = true;\n',
+    });
+    writeFile(
+      fixture,
+      'src/app/server.ts',
+      `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+    );
+    writeFile(
+      fixture,
+      'src/app/router.ts',
+      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', name: 'users', component: UsersPage }] });\n`,
+    );
+
+    const human = runContext(fixture, ['users']);
+    expect(human.stdout).toContain('Application integration:');
+    expect(human.stdout).toContain('Server routes:\n- /api/users via userRoutes');
+    expect(human.stdout).toContain('Web routes:\n- /users via UsersPage (name: users)');
+    const byFeature = runContextJson(fixture, ['users']).payload;
+    const byFile = runContextJson(fixture, ['--file', 'src/features/users/server/routes.ts']).payload;
+
+    expect(byFeature.integrations).toEqual({
+      applicationImports: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          boundary: 'web',
+          symbols: ['UsersPage'],
+        },
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          boundary: 'public',
+          symbols: ['userRoutes'],
+        },
+      ],
+      serverRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          exportName: 'userRoutes',
+          mountPath: '/api/users',
+        },
+      ],
+      webRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          exportName: 'UsersPage',
+          path: '/users',
+          name: 'users',
+        },
+      ],
+    });
+    const { target: _featureTarget, ...featureFacts } = byFeature;
+    const { target: _fileTarget, ...fileFacts } = byFile;
+    expect(fileFacts).toEqual(featureFacts);
+    const readingPaths = (byFeature.readingOrder as Array<{ path: string }>).map((entry) => entry.path);
+    expect(readingPaths.slice(0, 4)).toEqual([
+      'src/features/users/index.ts',
+      'src/app/server.ts',
+      'src/app/router.ts',
+      'src/features/users/server/routes.ts',
+    ]);
+  });
   it('lists direct dependency boundaries in reading order without duplicates', () => {
     const fixture = createFixture();
     writeChain(fixture);

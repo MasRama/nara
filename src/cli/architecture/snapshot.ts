@@ -1,5 +1,6 @@
 import { analyzeArchitecture, type DoctorIssue } from './doctor';
 import { discoverFeatureDependencies } from './discover-dependencies';
+import { discoverFeatureIntegrations, type FeatureIntegrationFacts } from './discover-integrations';
 import { inspectFeature } from './inspect';
 /**
  * Deterministic internal architecture snapshot used by `nara diff`.
@@ -26,6 +27,7 @@ export interface SnapshotFeature {
   serverSurfaces: string[];
   webSurfaces: string[];
   testSurfaces: string[];
+  integrations: FeatureIntegrationFacts;
 }
 
 export interface ArchitectureSnapshot {
@@ -44,6 +46,7 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
   issues: DoctorIssue[];
 } {
   const discovery = discoverFeatureDependencies(root);
+  const integrations = discoverFeatureIntegrations(root);
   const names = discovery.features.map((feature) => feature.name).sort();
 
   const features: SnapshotFeature[] = names.map((name) => {
@@ -56,8 +59,18 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
         serverSurfaces: [],
         webSurfaces: [],
         testSurfaces: [],
+        integrations: integrations[name] ?? {
+          applicationImports: [],
+          serverRoutes: [],
+          webRoutes: [],
+        },
       };
     }
+    const featureIntegrations = integrations[name] ?? {
+      applicationImports: [],
+      serverRoutes: [],
+      webRoutes: [],
+    };
     return {
       name,
       publicExports: [...inspected.feature.publicExports].sort(),
@@ -65,6 +78,14 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
       serverSurfaces: [...inspected.feature.serverEntrypoints].sort(),
       webSurfaces: [...inspected.feature.webEntrypoints].sort(),
       testSurfaces: [...inspected.feature.tests].sort(),
+      integrations: {
+        applicationImports: featureIntegrations.applicationImports.map((fact) => ({
+          ...fact,
+          symbols: [...fact.symbols].sort(),
+        })),
+        serverRoutes: featureIntegrations.serverRoutes.map((route) => ({ ...route })),
+        webRoutes: featureIntegrations.webRoutes.map((route) => ({ ...route })),
+      },
     };
   });
 

@@ -15,9 +15,22 @@ export interface DependencyDiscovery extends FeatureDiscovery {
   dependencies: FeatureDependency[];
 }
 
-interface FeatureReference {
+export interface FeatureReference {
   name: string;
   usesInternalPath: boolean;
+  boundary: FeatureBoundary | undefined;
+}
+
+export type FeatureBoundary = 'public' | 'web';
+
+function featureBoundary(suffix: string): FeatureBoundary | undefined {
+  if (suffix.length === 0 || INDEX_PATH_PATTERN.test(suffix)) {
+    return 'public';
+  }
+  if (BROWSER_PUBLIC_PATH_PATTERN.test(suffix)) {
+    return 'web';
+  }
+  return undefined;
 }
 
 interface ModuleImport {
@@ -28,7 +41,7 @@ const INDEX_PATH_PATTERN = /^index(?:\.[cm]?[jt]sx?)?$/;
 const BROWSER_PUBLIC_PATH_PATTERN = /^web(?:\/index(?:\.[cm]?[jt]sx?)?)?$/;
 
 function isPublicFeaturePath(suffix: string): boolean {
-  return suffix.length === 0 || INDEX_PATH_PATTERN.test(suffix) || BROWSER_PUBLIC_PATH_PATTERN.test(suffix);
+  return featureBoundary(suffix) !== undefined;
 }
 
 function sourceForParsing(file: string): string {
@@ -75,7 +88,7 @@ function collectModuleImports(file: string): ModuleImport[] {
   return imports;
 }
 
-function featureReferenceFromSpecifier(
+export function featureReferenceFromSpecifier(
   specifier: string,
   file: string,
   root: string,
@@ -112,8 +125,12 @@ function featureReferenceFromSpecifier(
     return undefined;
   }
 
-  const usesInternalPath = !isPublicFeaturePath(pathSuffix.join('/'));
-  return { name: featurePath, usesInternalPath };
+  const normalizedSuffix = pathSuffix.join('/');
+  return {
+    name: featurePath,
+    usesInternalPath: !isPublicFeaturePath(normalizedSuffix),
+    boundary: featureBoundary(normalizedSuffix),
+  };
 }
 
 function featureFiles(feature: DiscoveredFeature, root: string): string[] {

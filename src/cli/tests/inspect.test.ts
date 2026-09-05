@@ -50,6 +50,15 @@ describe('inspect command', () => {
       'web/client.ts': 'export {};\n',
       'tests/routes.test.ts': 'export {};\n',
     });
+    mkdirSync(path.join(fixture, 'src/app'), { recursive: true });
+    writeFileSync(
+      path.join(fixture, 'src/app/server.ts'),
+      `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+    );
+    writeFileSync(
+      path.join(fixture, 'src/app/router.ts'),
+      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', component: UsersPage }] });\n`,
+    );
     const io = createIO();
 
     const result = runCli(['inspect', 'users'], io, { cwd: fixture });
@@ -64,6 +73,10 @@ describe('inspect command', () => {
     expect(output).toContain('Web:\n- web/client.ts');
     expect(output).toContain('Contracts:\n- UserProfile');
     expect(output).toContain('Tests:\n- tests/routes.test.ts');
+    expect(output).toContain('Application integration:');
+    expect(output).toContain('Server routes:\n- /api/users via userRoutes');
+    expect(output).toContain('Web routes:\n- /users via UsersPage');
+    expect(output).toContain('Application consumers:\n- src/app/router.ts: web: UsersPage');
     expect(io.errors).toHaveLength(0);
   });
 
@@ -85,11 +98,15 @@ describe('inspect command', () => {
       path: 'src/features/users',
       publicExports: ['profile'],
       contracts: ['UserProfile'],
+      integrations: {
+        applicationImports: [],
+        serverRoutes: [],
+        webRoutes: [],
+      },
     });
     expect(output).not.toContain('Feature:');
     expect(io.errors).toHaveLength(0);
   });
-
   it('reports an unknown feature without a stack trace', () => {
     const fixture = createFixture();
     writeFeature(fixture, 'auth', { 'index.ts': 'export {};\n' });

@@ -4,7 +4,7 @@ Architecture-aware TypeScript application kit.
 
 Build by feature, not by layer.
 
-Nara keeps each business capability together and makes the boundaries machine-checkable. The underlying stack stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
+Nara keeps each business capability together and makes the boundaries and statically provable application integrations machine-checkable. The underlying stack stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
 
 ## Start here
 
@@ -31,7 +31,7 @@ Nara stays useful after creation: the same local CLI that scaffolds the
 project keeps understanding (`inspect`, `context`, `impact`), describing
 change (`diff --base main`), and protecting (`doctor` for current
 architecture, `guard --base origin/main` for architecture change) its
-feature architecture in month 12. No AI provider is required.
+feature architecture in month 12, including which canonical application roots consume each Feature and which static routes expose it. No AI provider is required.
 
 To work on Nara itself instead, clone the reference repository:
 
@@ -111,7 +111,7 @@ nara diff --base main          Show how the architecture is changing
 nara guard --base origin/main  Fail when the change introduces new violations
 ```
 
-Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes, with affected output labeled structural dependency impact (never semantic behavior prediction) and no AI provider required. `nara guard` turns that intelligence into a regression ratchet: it fails only when the change introduces new `doctor` diagnostics compared with the Git baseline, so existing debt is tolerated while new debt cannot enter unnoticed. See [`docs/v3/cli.md`](./docs/v3/cli.md#nara-diff---base-ref---head-ref---json).
+Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes, including canonical application imports, Hono mounts, and Vue Router records, with affected output labeled structural dependency impact (never semantic behavior prediction) and no AI provider required. `nara guard` turns that intelligence into a regression ratchet: it fails only when the change introduces new `doctor` diagnostics compared with the Git baseline, so existing debt is tolerated while new debt cannot enter unnoticed. See [`docs/v3/cli.md`](./docs/v3/cli.md#nara-diff---base-ref---head-ref---json).
 
 Architecture facts are deterministic and available as JSON for scripts and agents:
 
@@ -159,7 +159,7 @@ The reference application (repository root) exposes:
 | `/api/users` | Profile and user administration |
 | `/api/assets` | Avatar upload and delivery |
 
-Hono is the HTTP layer. Nara does not replace it with a custom runtime or a native HTTP dependency.
+Hono is the HTTP layer. Nara records static Feature composition from `src/app/server.ts` and Vue route composition from `src/app/router.ts`; it does not replace either with a custom runtime or a native HTTP dependency.
 
 ## Source map
 
@@ -182,7 +182,7 @@ resources/                Vue 3/Vite/TypeScript frontend shell
 └── fixtures/architecture Valid and invalid architecture projects
 ```
 
-`web/` is optional inside a feature. A backend-only feature is valid. The supported browser stack is Vue 3 + Vite + TypeScript; feature-specific Vue pages, components, and composables live in the owning Feature's `web/`, while application-wide composition lives under `src/app/`.
+`web/` is optional inside a feature. A backend-only feature is valid. The supported browser stack is Vue 3 + Vite + TypeScript; feature-specific Vue pages, components, and composables live in the owning Feature's `web/`, while application-wide composition lives under `src/app/`. The architecture CLI treats only the canonical `server.ts` and `router.ts` roots as application integration evidence.
 
 ## Development loop
 

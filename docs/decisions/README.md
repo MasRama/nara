@@ -37,6 +37,7 @@ AI agents that understand WHY a convention exists make better decisions:
 | [0011](./0011-pinned-local-cli-over-global-install.md) | Pinned local Nara CLI over global install | Accepted |
 | [0012](./0012-architecture-diff-over-text-diff.md) | Architecture-aware change intelligence via `nara diff` | Accepted |
 | [0013](./0013-git-baseline-architecture-regression-guard.md) | Git-baseline architecture regression guard via `nara guard` | Accepted |
+| [0014](./0014-application-integration-as-architecture-fact.md) | Application integration as an architecture fact | Accepted |
 
 ## Format
 

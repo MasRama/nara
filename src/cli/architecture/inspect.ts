@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { discoverFeatureDependencies } from './discover-dependencies';
+import { discoverFeatureIntegrations, type FeatureIntegrationFacts } from './discover-integrations';
 
 export interface FeatureInspection {
   name: string;
@@ -13,6 +14,7 @@ export interface FeatureInspection {
   webEntrypoints: string[];
   contracts: string[];
   tests: string[];
+  integrations: FeatureIntegrationFacts;
 }
 
 export type InspectFeatureResult =
@@ -89,6 +91,11 @@ export function inspectFeature(name: string, root = process.cwd()): InspectFeatu
     .filter((dependency) => dependency.to === name)
     .map((dependency) => dependency.from)
     .sort();
+  const integrations = discoverFeatureIntegrations(root)[name] ?? {
+    applicationImports: [],
+    serverRoutes: [],
+    webRoutes: [],
+  };
 
   return {
     ok: true,
@@ -104,6 +111,14 @@ export function inspectFeature(name: string, root = process.cwd()): InspectFeatu
         ? exportedNames(path.resolve(root, feature.directory, 'contract.ts'))
         : [],
       tests: normalizedFiles(feature.files, 'tests'),
+      integrations: {
+        applicationImports: integrations.applicationImports.map((fact) => ({
+          ...fact,
+          symbols: [...fact.symbols],
+        })),
+        serverRoutes: integrations.serverRoutes.map((route) => ({ ...route })),
+        webRoutes: integrations.webRoutes.map((route) => ({ ...route })),
+      },
     },
   };
 }

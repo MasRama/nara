@@ -6,6 +6,7 @@ import { inspectFeatureImpact } from './architecture/impact';
 import type { FeatureImpact } from './architecture/impact';
 import { inspectFeature } from './architecture/inspect';
 import type { FeatureInspection } from './architecture/inspect';
+import type { FeatureIntegrationFacts } from './architecture/discover-integrations';
 import { installOfficialFeature } from './composition/install-feature';
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
 import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
@@ -67,7 +68,7 @@ Checks feature shape, public boundaries, dependency cycles, and server/client bo
 const INSPECT_HELP = `Usage:
   nara inspect <feature> [--json]
 
-Describes one feature's public interface, dependencies, entrypoints, contracts, and tests.
+Describes one feature's public interface, dependencies, entrypoints, application integration, contracts, and tests.
 `;
 
 const CONTEXT_HELP = `Usage:
@@ -76,7 +77,8 @@ const CONTEXT_HELP = `Usage:
 
 Builds a deterministic Architecture Context Pack for humans and coding agents
 before they modify a Feature: ownership, public API, relationships, surfaces,
-constraints, Feature-local diagnostics, and a reading order. Never dumps source.
+application integration, constraints, Feature-local diagnostics, and a reading
+order. Never dumps source.
 `;
 
 const IMPACT_HELP = `Usage:
@@ -90,7 +92,8 @@ const DIFF_HELP = `Usage:
 
 Shows deterministic Feature-architecture changes between a Git base ref and
 the working tree (default) or an explicit head ref. git diff explains text
-changes; nara diff explains Feature-architecture changes. Affected output is
+changes; nara diff explains Feature-architecture changes, including canonical
+application imports and static server/web routes. Affected output is
 structural dependency impact, not semantic behavior prediction. No AI provider
 is required.
 `;
@@ -164,6 +167,37 @@ function renderFeatureList(io: CliIO, label: string, values: string[]): void {
   }
 }
 
+function renderFeatureIntegration(io: CliIO, integrations: FeatureIntegrationFacts): void {
+  const serverRoutes = integrations.serverRoutes.map((route) => `${route.mountPath} via ${route.exportName}`);
+  const webRoutes = integrations.webRoutes.map(
+    (route) => `${route.path} via ${route.exportName}${route.name === undefined ? '' : ` (name: ${route.name})`}`,
+  );
+  const consumers = new Map<string, Set<string>>();
+  for (const fact of integrations.applicationImports) {
+    const symbols = consumers.get(fact.appFile) ?? new Set<string>();
+    const importedSymbols = fact.symbols.length > 0 ? fact.symbols : ['(side-effect)'];
+    for (const symbol of importedSymbols) {
+      symbols.add(`${fact.boundary}: ${symbol}`);
+    }
+    consumers.set(fact.appFile, symbols);
+  }
+
+  renderFeatureList(io, 'Server routes', serverRoutes);
+  renderFeatureList(io, 'Web routes', webRoutes);
+  renderFeatureList(
+    io,
+    'Application consumers',
+    [...consumers.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([appFile, symbols]) => `${appFile}: ${[...symbols].sort().join(', ')}`),
+  );
+}
+
+function renderApplicationIntegration(io: CliIO, integrations: FeatureIntegrationFacts): void {
+  io.stdout('Application integration:\n');
+  renderFeatureIntegration(io, integrations);
+}
+
 function renderFeatureInspection(io: CliIO, feature: FeatureInspection): void {
   io.stdout(`Feature: ${feature.name}\n`);
   io.stdout(`Path: ${feature.path}\n\n`);
@@ -174,7 +208,10 @@ function renderFeatureInspection(io: CliIO, feature: FeatureInspection): void {
   renderFeatureList(io, 'Web', feature.webEntrypoints);
   renderFeatureList(io, 'Contracts', feature.contracts);
   renderFeatureList(io, 'Tests', feature.tests);
+  io.stdout('\n');
+  renderApplicationIntegration(io, feature.integrations);
 }
+
 
 function renderInspectReport(io: CliIO, name: string, root: string | undefined, json = false): number {
   try {
@@ -218,6 +255,8 @@ function renderContextPack(io: CliIO, context: ArchitectureContextPack): void {
     ...context.relationships.directDependents,
     ...context.relationships.transitiveDependents,
   ]);
+  io.stdout('\n');
+  renderApplicationIntegration(io, context.integrations);
   renderFeatureList(
     io,
     'Architecture constraints',

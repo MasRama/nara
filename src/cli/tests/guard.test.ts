@@ -56,6 +56,12 @@ function writeFeature(cwd: string, name: string, files: Record<string, string>):
   }
 }
 
+function writeFile(cwd: string, relativePath: string, content: string): void {
+  const filePath = path.join(cwd, relativePath);
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content);
+}
+
 function writeCrossFeatureViolation(cwd: string): void {
   writeFeature(cwd, 'users', {
     'index.ts': 'export const users = 1;\n',
@@ -105,6 +111,35 @@ describe('nara guard', () => {
         introducedIssues: [],
         resolvedIssues: [],
         remainingBaselineIssueCount: 0,
+      },
+    });
+  });
+
+  it('passes integration-only changes without treating them as violations', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'users', { 'index.ts': 'export const userRoutes = 1;\n' });
+    writeFile(
+      repo,
+      'src/app/server.ts',
+      `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+    );
+    commitAll(repo, 'clean base');
+    writeFile(
+      repo,
+      'src/app/server.ts',
+      `import { userRoutes } from '../features/users';\napp.route('/api/members', userRoutes);\n`,
+    );
+
+    const machine = runGuardJson(repo, ['--base', 'HEAD']);
+    expect(machine.exitCode).toBe(0);
+    expect(machine.json).toMatchObject({
+      passed: true,
+      regression: {
+        introducedIssues: [],
+      },
+      affected: {
+        directlyChanged: ['users'],
+        downstream: [],
       },
     });
   });

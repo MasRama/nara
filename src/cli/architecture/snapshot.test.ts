@@ -56,6 +56,11 @@ describe('architecture snapshot', () => {
   it('produces stable output without timestamps or absolute paths', () => {
     const fixture = createFixture();
     writeFeature(fixture, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });
+    mkdirSync(path.join(fixture, 'src/app'), { recursive: true });
+    writeFileSync(
+      path.join(fixture, 'src/app/server.ts'),
+      `import { healthRoutes } from '../features/health';\napp.route('/health', healthRoutes);\n`,
+    );
 
     const first = JSON.stringify(captureArchitectureSnapshot(fixture));
     const second = JSON.stringify(captureArchitectureSnapshot(fixture));
@@ -90,5 +95,59 @@ describe('architecture snapshot', () => {
         expect(file).not.toContain('\\');
       }
     }
+
+  });
+  it('captures application integrations for each Feature', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'users', {
+      'index.ts': 'export const userRoutes = true;\n',
+      'web/index.ts': 'export { default as UsersPage } from "./UsersPage.vue";\n',
+    });
+    mkdirSync(path.join(fixture, 'src/app'), { recursive: true });
+    writeFileSync(
+      path.join(fixture, 'src/app/server.ts'),
+      `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+    );
+    writeFileSync(
+      path.join(fixture, 'src/app/router.ts'),
+      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', name: 'users', component: UsersPage }] });\n`,
+    );
+
+    const snapshot = captureArchitectureSnapshot(fixture);
+
+    expect(snapshot.features).toHaveLength(1);
+    expect(snapshot.features[0].integrations).toEqual({
+      applicationImports: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          boundary: 'web',
+          symbols: ['UsersPage'],
+        },
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          boundary: 'public',
+          symbols: ['userRoutes'],
+        },
+      ],
+      serverRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          exportName: 'userRoutes',
+          mountPath: '/api/users',
+        },
+      ],
+      webRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          exportName: 'UsersPage',
+          path: '/users',
+          name: 'users',
+        },
+      ],
+    });
   });
 });

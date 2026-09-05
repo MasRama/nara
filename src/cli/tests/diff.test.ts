@@ -52,6 +52,12 @@ function writeFeature(cwd: string, name: string, files: Record<string, string>):
   }
 }
 
+function writeFile(cwd: string, relativePath: string, content: string): void {
+  const filePath = path.join(cwd, relativePath);
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content);
+}
+
 function runDiff(cwd: string, args: string[]): { exitCode: number; stdout: string; stderr: string } {
   const io = createIO();
   const result = runCli(['diff', ...args], io, { cwd });
@@ -202,6 +208,90 @@ describe('nara diff', () => {
     });
   });
 
+
+  it('reports dirty and ref-to-ref application composition changes', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'users', {
+      'index.ts': 'export const userRoutes = true;\n',
+      'web/index.ts': 'export const UsersPage = true;\n',
+    });
+    writeFeature(repo, 'billing', {
+      'index.ts': "import '@/features/users';\nexport const billing = true;\n",
+    });
+    writeFile(repo, 'src/app/server.ts', `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`);
+    writeFile(
+      repo,
+      'src/app/router.ts',
+      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', component: UsersPage }] });\n`,
+    );
+    const base = commitAll(repo, 'base composition');
+
+    writeFile(repo, 'src/app/server.ts', `import { userRoutes } from '../features/users';\napp.route('/api/members', userRoutes);\n`);
+    writeFile(
+      repo,
+      'src/app/router.ts',
+      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/people', component: UsersPage }] });\n`,
+    );
+
+    const dirty = runDiffJson(repo, ['--base', base]);
+    const dirtyChanges = dirty.json.changes as {
+      integrations: {
+        applicationImports: { added: unknown[]; removed: unknown[] };
+        serverRoutes: { added: Array<{ mountPath: string }>; removed: Array<{ mountPath: string }> };
+        webRoutes: { added: Array<{ path: string }>; removed: Array<{ path: string }> };
+      };
+    };
+    expect(dirtyChanges.integrations.applicationImports).toEqual({ added: [], removed: [] });
+    expect(dirtyChanges.integrations.serverRoutes).toEqual({
+      added: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          exportName: 'userRoutes',
+          mountPath: '/api/members',
+        },
+      ],
+      removed: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          exportName: 'userRoutes',
+          mountPath: '/api/users',
+        },
+      ],
+    });
+    expect(dirtyChanges.integrations.webRoutes).toEqual({
+      added: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          exportName: 'UsersPage',
+          path: '/people',
+        },
+      ],
+      removed: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          exportName: 'UsersPage',
+          path: '/users',
+        },
+      ],
+    });
+    expect(dirty.json.affected).toMatchObject({
+      directlyChanged: ['users'],
+      downstream: ['billing'],
+    });
+    const human = runDiff(repo, ['--base', base]);
+    expect(human.stdout).toContain('Application integration changes:');
+    expect(human.stdout).toContain('+ server route /api/members via userRoutes');
+    expect(human.stdout).toContain('- web route /users via UsersPage');
+
+    const target = commitAll(repo, 'changed composition');
+    const refToRef = runDiffJson(repo, ['--base', base, '--head', target]);
+    expect(refToRef.json.changes).toEqual(dirty.json.changes);
+    expect(refToRef.json.affected).toEqual(dirty.json.affected);
+  });
   it('reports a newly introduced doctor diagnostic', () => {
     const repo = initRepo();
     writeFeature(repo, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });

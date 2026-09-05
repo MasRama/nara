@@ -7,8 +7,17 @@ export type {
 export { discoverFeatureDependencies } from './discover-dependencies';
 export type {
   DependencyDiscovery,
+  FeatureBoundary,
   FeatureDependency,
 } from './discover-dependencies';
+export { discoverFeatureIntegrations } from './discover-integrations';
+export type {
+  ApplicationFeatureImport,
+  FeatureIntegrationFacts,
+  FeatureIntegrationFactsByFeature,
+  ServerRouteIntegration,
+  WebRouteIntegration,
+} from './discover-integrations';
 export { detectApplicationFeatureInternalImports, detectCrossFeatureInternalImports } from './validate-boundaries';
 export type { ApplicationBoundaryViolation, BoundaryViolation } from './validate-boundaries';
 export { detectFeatureDependencyCycles } from './detect-cycles';
@@ -31,6 +40,8 @@ export type {
   DependencyDelta,
   DiagnosticDelta,
   ExportDelta,
+  IntegrationChanges,
+  IntegrationDelta,
   SurfaceDelta,
 } from './diff';
 export { inspectFeature } from './inspect';

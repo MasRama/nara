@@ -4,6 +4,7 @@ import { analyzeArchitecture, type DoctorIssue } from './doctor';
 import { discoverFeatures } from './discover-features';
 import { inspectFeature } from './inspect';
 import { inspectFeatureImpact } from './impact';
+import type { FeatureIntegrationFacts } from './discover-integrations';
 
 export interface ArchitectureContextTarget {
   feature: string;
@@ -51,6 +52,7 @@ export interface ArchitectureContextPack {
   publicApi: ArchitectureContextPublicApi;
   relationships: ArchitectureContextRelationships;
   surfaces: ArchitectureContextSurfaces;
+  integrations: FeatureIntegrationFacts;
   constraints: ArchitectureConstraint[];
   diagnostics: DoctorIssue[];
   readingOrder: ArchitectureReadingEntry[];
@@ -189,6 +191,21 @@ function assembleContextPack(
   if (discovered.hasContract) {
     push(`${directory}/contract.ts`, `Shared contract of the ${name} Feature.`);
   }
+
+  const hasServerIntegration =
+    feature.integrations.applicationImports.some((fact) => fact.appFile === 'src/app/server.ts') ||
+    feature.integrations.serverRoutes.some((route) => route.appFile === 'src/app/server.ts');
+  if (hasServerIntegration) {
+    push('src/app/server.ts', `Application server composition for the ${name} Feature.`);
+  }
+
+  const hasWebIntegration =
+    feature.integrations.applicationImports.some((fact) => fact.appFile === 'src/app/router.ts') ||
+    feature.integrations.webRoutes.some((route) => route.appFile === 'src/app/router.ts');
+  if (hasWebIntegration) {
+    push('src/app/router.ts', `Application web-route composition for the ${name} Feature.`);
+  }
+
   for (const entry of server) {
     push(entry, `Server surface of the ${name} Feature.`);
   }
@@ -215,6 +232,14 @@ function assembleContextPack(
         transitiveDependents: [...impact.impact.transitiveDependents],
       },
       surfaces: { server, web, tests },
+      integrations: {
+        applicationImports: feature.integrations.applicationImports.map((fact) => ({
+          ...fact,
+          symbols: [...fact.symbols],
+        })),
+        serverRoutes: feature.integrations.serverRoutes.map((route) => ({ ...route })),
+        webRoutes: feature.integrations.webRoutes.map((route) => ({ ...route })),
+      },
       constraints: ARCHITECTURE_CONSTRAINTS.map((constraint) => ({ ...constraint })),
       diagnostics,
       readingOrder,

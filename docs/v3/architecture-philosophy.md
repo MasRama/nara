@@ -45,7 +45,7 @@ src/features/billing/
 └── tests/
 ```
 
-The Feature's `index.ts` is its public boundary. Application composition mounts the public route export, and other Features consume public operations or types. Internal repositories and services remain implementation details.
+The Feature's `index.ts` is its public boundary. Application composition mounts the public route export, and other Features consume public operations or types. Internal repositories and services remain implementation details. Nara records the application integration when the canonical composition roots statically prove a Feature import, Hono mount, or Vue Router record.
 
 Composition is intentionally ordinary:
 
@@ -71,6 +71,7 @@ Nara's architecture engine derives bounded facts from ordinary conventions and T
 - which public Feature dependencies are visible
 - which Features depend on a target
 - which server, web, contract, and test surfaces belong to one Feature
+- which Feature imports, server route mounts, and web route records are statically provable from `src/app/server.ts` and `src/app/router.ts`
 
 The CLI exposes these facts:
 
@@ -97,7 +98,7 @@ nara diff --base main
 nara diff --base main --json
 ```
 
-`git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes (added/removed Features, boundary and contract deltas, dependency edges, surfaces, and new versus resolved diagnostics) with an affected set labeled structural dependency impact. It is Git-aware by design, needs no manifest or AI provider, and never claims semantic behavior impact.
+`git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes (added/removed Features, boundary and contract deltas, dependency edges, surfaces, application integration imports and route changes, and new versus resolved diagnostics) with an affected set labeled structural dependency impact. It is Git-aware by design, needs no manifest or AI provider, and never claims semantic behavior impact or runtime reachability.
 
 The progression is deliberate:
 
@@ -146,7 +147,7 @@ Found 1 architecture issue.
 
 Machine-readable output preserves the same facts in a stable object. Valid and invalid repository fixtures keep these rules regression-tested.
 
-`doctor` is absolute correctness: any diagnostic means the architecture is unhealthy. `guard` is the relative ratchet for teams carrying existing debt: it compares a Git baseline against the working tree (or a head ref), passes when no new diagnostic appears — even when baseline violations remain — and fails only on newly introduced violations, reporting resolved ones positively. Architecture changes themselves stay informational; enforcement never invents policy beyond the existing structural rules. There is no baseline file and no configuration: the baseline is the Git ref.
+`doctor` is absolute correctness: any diagnostic means the architecture is unhealthy. `guard` is the relative ratchet for teams carrying existing debt: it compares a Git baseline against the working tree (or a head ref), passes when no new diagnostic appears — even when baseline violations remain — and fails only on newly introduced violations, reporting resolved ones positively. Application integration changes are informational and do not fail `guard`; enforcement never invents policy beyond the existing structural rules. There is no baseline file and no configuration: the baseline is the Git ref.
 
 ## Interesting architecture on boring technology
 
@@ -221,6 +222,7 @@ new capability
   → Feature owner
   → public contract
   → explicit dependency
+  → statically provable application integration
   → inspectable graph
   → protected boundary
 ```

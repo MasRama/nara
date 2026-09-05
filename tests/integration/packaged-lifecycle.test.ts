@@ -47,7 +47,7 @@ function startProductionServer(projectDirectory: string, port: number): ChildPro
 
 async function waitForHealth(child: ChildProcess, port: number): Promise<void> {
   const deadline = Date.now() + 60_000;
-  for (;;) {
+  for (; ;) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/health`);
       if (response.status === 200) {
@@ -174,6 +174,17 @@ describe('packaged Nara lifecycle', () => {
       const fixture = path.join(root, 'fixture');
       mkdirSync(path.join(fixture, 'src/features/health'), { recursive: true });
       writeFileSync(path.join(fixture, 'src/features/health/index.ts'), 'export const healthRoutes = 1;\n');
+      mkdirSync(path.join(fixture, 'src/features/users'), { recursive: true });
+      writeFileSync(path.join(fixture, 'src/features/users/index.ts'), 'export const userRoutes = 1;\n');
+      mkdirSync(path.join(fixture, 'src/app'), { recursive: true });
+      writeFileSync(
+        path.join(fixture, 'src/app/server.ts'),
+        `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+      );
+      writeFileSync(
+        path.join(fixture, 'src/app/router.ts'),
+        `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', component: UsersPage }] });\n`,
+      );
       await runCommand('git', ['init'], fixture);
       await runCommand('git', ['config', 'user.email', 'nara-diff@example.com'], fixture);
       await runCommand('git', ['config', 'user.name', 'nara diff'], fixture);
@@ -181,10 +192,20 @@ describe('packaged Nara lifecycle', () => {
       await runCommand('git', ['commit', '-m', 'base'], fixture);
       mkdirSync(path.join(fixture, 'src/features/billing'), { recursive: true });
       writeFileSync(path.join(fixture, 'src/features/billing/index.ts'), 'export const billing = 1;\n');
+      writeFileSync(
+        path.join(fixture, 'src/app/server.ts'),
+        `import { userRoutes } from '../features/users';\napp.route('/api/members', userRoutes);\n`,
+      );
+      writeFileSync(
+        path.join(fixture, 'src/app/router.ts'),
+        `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/people', component: UsersPage }] });\n`,
+      );
 
       const human = await runCommand(installedCli[0], [...installedCli.slice(1), 'diff', '--base', 'HEAD'], fixture);
       expect(human.stdout).toContain('+ billing');
       expect(human.stdout).toContain('Structural dependency impact:');
+      expect(human.stdout).toContain('+ server route /api/members via userRoutes');
+      expect(human.stdout).toContain('- web route /users via UsersPage');
       const machine = await runCommand(
         installedCli[0],
         [...installedCli.slice(1), 'diff', '--base', 'HEAD', '--json'],
@@ -192,13 +213,32 @@ describe('packaged Nara lifecycle', () => {
       );
       const payload = JSON.parse(machine.stdout) as {
         schemaVersion: number;
-        changes: { features: { added: string[]; removed: string[] } };
+        changes: {
+          features: { added: string[]; removed: string[] };
+          integrations: {
+            applicationImports: { added: unknown[]; removed: unknown[] };
+            serverRoutes: {
+              added: Array<{ mountPath: string }>;
+              removed: Array<{ mountPath: string }>;
+            };
+            webRoutes: { added: Array<{ path: string }>; removed: Array<{ path: string }> };
+          };
+        };
         affected: { scope: string; directlyChanged: string[] };
       };
       expect(payload.schemaVersion).toBe(1);
       expect(payload.changes.features).toEqual({ added: ['billing'], removed: [] });
+      expect(payload.changes.integrations.applicationImports).toEqual({ added: [], removed: [] });
+      expect(payload.changes.integrations.serverRoutes.added.map((route) => route.mountPath)).toEqual([
+        '/api/members',
+      ]);
+      expect(payload.changes.integrations.serverRoutes.removed.map((route) => route.mountPath)).toEqual([
+        '/api/users',
+      ]);
+      expect(payload.changes.integrations.webRoutes.added.map((route) => route.path)).toEqual(['/people']);
+      expect(payload.changes.integrations.webRoutes.removed.map((route) => route.path)).toEqual(['/users']);
       expect(payload.affected.scope).toBe('structural dependency impact');
-      expect(payload.affected.directlyChanged).toContain('billing');
+      expect(payload.affected.directlyChanged).toEqual(['billing', 'users']);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -100,6 +100,12 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     changes.dependencies.added.length === 0 &&
     changes.dependencies.removed.length === 0 &&
     changes.surfaces.length === 0 &&
+    changes.integrations.applicationImports.added.length === 0 &&
+    changes.integrations.applicationImports.removed.length === 0 &&
+    changes.integrations.serverRoutes.added.length === 0 &&
+    changes.integrations.serverRoutes.removed.length === 0 &&
+    changes.integrations.webRoutes.added.length === 0 &&
+    changes.integrations.webRoutes.removed.length === 0 &&
     changes.diagnostics.added.length === 0 &&
     changes.diagnostics.resolved.length === 0;
   if (empty) {
@@ -143,6 +149,42 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     for (const file of delta.removed) surfaceBody.push(`    - ${file}`);
   }
   section(lines, 'Surfaces', surfaceBody);
+
+  const integrationBodyByFeature = new Map<string, string[]>();
+  function integrationLine(feature: string, line: string): void {
+    const linesForFeature = integrationBodyByFeature.get(feature) ?? [];
+    linesForFeature.push(line);
+    integrationBodyByFeature.set(feature, linesForFeature);
+  }
+  for (const fact of changes.integrations.applicationImports.added) {
+    const symbols = fact.symbols.length > 0 ? fact.symbols.join(', ') : '(module import)';
+    integrationLine(fact.feature, `    + application import ${fact.appFile} [${fact.boundary}]: ${symbols}`);
+  }
+  for (const fact of changes.integrations.applicationImports.removed) {
+    const symbols = fact.symbols.length > 0 ? fact.symbols.join(', ') : '(module import)';
+    integrationLine(fact.feature, `    - application import ${fact.appFile} [${fact.boundary}]: ${symbols}`);
+  }
+  for (const route of changes.integrations.serverRoutes.added) {
+    integrationLine(route.feature, `    + server route ${route.mountPath} via ${route.exportName}`);
+  }
+  for (const route of changes.integrations.serverRoutes.removed) {
+    integrationLine(route.feature, `    - server route ${route.mountPath} via ${route.exportName}`);
+  }
+  for (const route of changes.integrations.webRoutes.added) {
+    const name = route.name === undefined ? '' : ` (name: ${route.name})`;
+    integrationLine(route.feature, `    + web route ${route.path} via ${route.exportName}${name}`);
+  }
+  for (const route of changes.integrations.webRoutes.removed) {
+    const name = route.name === undefined ? '' : ` (name: ${route.name})`;
+    integrationLine(route.feature, `    - web route ${route.path} via ${route.exportName}${name}`);
+  }
+  const integrationBody: string[] = [];
+  for (const [feature, featureLines] of [...integrationBodyByFeature.entries()].sort(([left], [right]) =>
+    left.localeCompare(right),
+  )) {
+    integrationBody.push(`  ${feature}:`, ...featureLines);
+  }
+  section(lines, 'Application integration changes', integrationBody);
 
   const newIssues = changes.diagnostics.added.map(
     (diagnostic) => `  + [${diagnostic.code}] ${diagnostic.file} (${diagnostic.relationship})`,

@@ -1,4 +1,10 @@
 import type { ArchitectureSnapshot, SnapshotDiagnostic, SnapshotEdge } from './snapshot';
+import type {
+  ApplicationFeatureImport,
+  FeatureIntegrationFacts,
+  ServerRouteIntegration,
+  WebRouteIntegration,
+} from './discover-integrations';
 
 export interface ExportDelta {
   feature: string;
@@ -20,7 +26,18 @@ export interface DependencyDelta {
   sourceFiles: string[];
 }
 
-export interface DiagnosticDelta extends SnapshotDiagnostic {}
+export type DiagnosticDelta = SnapshotDiagnostic;
+
+export interface IntegrationDelta<T> {
+  added: T[];
+  removed: T[];
+}
+
+export interface IntegrationChanges {
+  applicationImports: IntegrationDelta<ApplicationFeatureImport>;
+  serverRoutes: IntegrationDelta<ServerRouteIntegration>;
+  webRoutes: IntegrationDelta<WebRouteIntegration>;
+}
 
 export interface ArchitectureChanges {
   features: { added: string[]; removed: string[] };
@@ -28,6 +45,7 @@ export interface ArchitectureChanges {
   contracts: ExportDelta[];
   dependencies: { added: DependencyDelta[]; removed: DependencyDelta[] };
   surfaces: SurfaceDelta[];
+  integrations: IntegrationChanges;
   diagnostics: { added: DiagnosticDelta[]; resolved: DiagnosticDelta[] };
 }
 
@@ -58,6 +76,51 @@ export function diagnosticKey(diagnostic: { code: string; file: string; relation
 function featureNameFromFile(file: string): string | undefined {
   const match = /^src\/features\/([^/]+)\//.exec(file);
   return match?.[1];
+}
+
+function emptyIntegrationFacts(): FeatureIntegrationFacts {
+  return { applicationImports: [], serverRoutes: [], webRoutes: [] };
+}
+
+function compareApplicationImports(left: ApplicationFeatureImport, right: ApplicationFeatureImport): number {
+  return (
+    left.feature.localeCompare(right.feature) ||
+    left.appFile.localeCompare(right.appFile) ||
+    left.boundary.localeCompare(right.boundary) ||
+    left.symbols.join('\0').localeCompare(right.symbols.join('\0'))
+  );
+}
+
+function compareServerRoutes(left: ServerRouteIntegration, right: ServerRouteIntegration): number {
+  return (
+    left.feature.localeCompare(right.feature) ||
+    left.appFile.localeCompare(right.appFile) ||
+    left.mountPath.localeCompare(right.mountPath) ||
+    left.exportName.localeCompare(right.exportName)
+  );
+}
+
+function compareWebRoutes(left: WebRouteIntegration, right: WebRouteIntegration): number {
+  return (
+    left.feature.localeCompare(right.feature) ||
+    left.appFile.localeCompare(right.appFile) ||
+    left.path.localeCompare(right.path) ||
+    (left.name ?? '').localeCompare(right.name ?? '') ||
+    left.exportName.localeCompare(right.exportName)
+  );
+}
+
+function integrationDelta<T>(
+  base: T[],
+  target: T[],
+  key: (value: T) => string,
+  compare: (left: T, right: T) => number,
+): IntegrationDelta<T> {
+  const baseByKey = new Map(base.map((value) => [key(value), value]));
+  const targetByKey = new Map(target.map((value) => [key(value), value]));
+  const added = [...targetByKey.values()].filter((value) => !baseByKey.has(key(value))).sort(compare);
+  const removed = [...baseByKey.values()].filter((value) => !targetByKey.has(key(value))).sort(compare);
+  return { added, removed };
 }
 
 export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSnapshot): ArchitectureChanges {
@@ -128,6 +191,41 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
   dependencyAdded.sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
   dependencyRemoved.sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
 
+  const integrations: IntegrationChanges = {
+    applicationImports: { added: [], removed: [] },
+    serverRoutes: { added: [], removed: [] },
+    webRoutes: { added: [], removed: [] },
+  };
+  const integrationNames = [...new Set([...baseNames, ...targetNames])].sort();
+  for (const name of integrationNames) {
+    const left = baseByName.get(name)?.integrations ?? emptyIntegrationFacts();
+    const right = targetByName.get(name)?.integrations ?? emptyIntegrationFacts();
+    const applicationImports = integrationDelta(
+      left.applicationImports,
+      right.applicationImports,
+      (fact) => JSON.stringify([fact.feature, fact.appFile, fact.boundary, fact.symbols]),
+      compareApplicationImports,
+    );
+    const serverRoutes = integrationDelta(
+      left.serverRoutes,
+      right.serverRoutes,
+      (route) => JSON.stringify([route.feature, route.appFile, route.exportName, route.mountPath]),
+      compareServerRoutes,
+    );
+    const webRoutes = integrationDelta(
+      left.webRoutes,
+      right.webRoutes,
+      (route) => JSON.stringify([route.feature, route.appFile, route.exportName, route.path, route.name ?? null]),
+      compareWebRoutes,
+    );
+    integrations.applicationImports.added.push(...applicationImports.added);
+    integrations.applicationImports.removed.push(...applicationImports.removed);
+    integrations.serverRoutes.added.push(...serverRoutes.added);
+    integrations.serverRoutes.removed.push(...serverRoutes.removed);
+    integrations.webRoutes.added.push(...webRoutes.added);
+    integrations.webRoutes.removed.push(...webRoutes.removed);
+  }
+
   const baseDiagnostics = new Map(base.diagnostics.map((d) => [diagnosticKey(d), d]));
   const targetDiagnostics = new Map(target.diagnostics.map((d) => [diagnosticKey(d), d]));
   const diagnosticsAdded = [...targetDiagnostics.values()]
@@ -143,6 +241,7 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
     contracts,
     dependencies: { added: dependencyAdded, removed: dependencyRemoved },
     surfaces,
+    integrations,
     diagnostics: { added: diagnosticsAdded, resolved: diagnosticsResolved },
   };
 }
@@ -157,6 +256,15 @@ export function computeAffected(
   for (const delta of changes.publicExports) directly.add(delta.feature);
   for (const delta of changes.contracts) directly.add(delta.feature);
   for (const delta of changes.surfaces) directly.add(delta.feature);
+  for (const delta of [
+    changes.integrations.applicationImports,
+    changes.integrations.serverRoutes,
+    changes.integrations.webRoutes,
+  ]) {
+    for (const integration of [...delta.added, ...delta.removed]) {
+      directly.add(integration.feature);
+    }
+  }
   for (const edge of changes.dependencies.added) {
     directly.add(edge.from);
     directly.add(edge.to);

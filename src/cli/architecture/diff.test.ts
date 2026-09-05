@@ -40,6 +40,7 @@ function featureSnapshot(
     serverSurfaces: string[];
     webSurfaces: string[];
     testSurfaces: string[];
+    integrations: ArchitectureSnapshot['features'][number]['integrations'];
   }> = {},
 ): ArchitectureSnapshot['features'][number] {
   return {
@@ -49,6 +50,11 @@ function featureSnapshot(
     serverSurfaces: [],
     webSurfaces: [],
     testSurfaces: [],
+    integrations: {
+      applicationImports: [],
+      serverRoutes: [],
+      webRoutes: [],
+    },
     ...overrides,
   };
 }
@@ -67,6 +73,11 @@ describe('architecture diff', () => {
     expect(changes.contracts).toEqual([]);
     expect(changes.dependencies).toEqual({ added: [], removed: [] });
     expect(changes.surfaces).toEqual([]);
+    expect(changes.integrations).toEqual({
+      applicationImports: { added: [], removed: [] },
+      serverRoutes: { added: [], removed: [] },
+      webRoutes: { added: [], removed: [] },
+    });
     expect(changes.diagnostics).toEqual({ added: [], resolved: [] });
     expect(computeAffected(changes, target)).toMatchObject({
       scope: 'structural dependency impact',
@@ -178,6 +189,93 @@ describe('architecture diff', () => {
       { feature: 'billing', kind: 'server', added: ['server/routes.ts'], removed: ['server/old.ts'] },
       { feature: 'billing', kind: 'test', added: ['tests/billing.test.ts'], removed: [] },
     ]);
+  });
+
+  it('reports application integration changes and seeds affected Features', () => {
+    const usersBase = {
+      applicationImports: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          boundary: 'public' as const,
+          symbols: ['userRoutes'],
+        },
+      ],
+      serverRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          exportName: 'userRoutes',
+          mountPath: '/api/users',
+        },
+      ],
+      webRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          exportName: 'UsersPage',
+          path: '/users',
+          name: 'users',
+        },
+      ],
+    };
+    const usersTarget = {
+      applicationImports: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          boundary: 'public' as const,
+          symbols: ['userRoutes', 'resetUsers'],
+        },
+      ],
+      serverRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/server.ts',
+          exportName: 'userRoutes',
+          mountPath: '/api/members',
+        },
+      ],
+      webRoutes: [
+        {
+          feature: 'users',
+          appFile: 'src/app/router.ts',
+          exportName: 'UsersPage',
+          path: '/people',
+          name: 'people',
+        },
+      ],
+    };
+    const base: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('users', { integrations: usersBase }), featureSnapshot('billing')],
+      dependencies: [{ from: 'billing', to: 'users', imports: [], sourceFiles: [] }],
+    };
+    const target: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('users', { integrations: usersTarget }), featureSnapshot('billing')],
+      dependencies: [{ from: 'billing', to: 'users', imports: [], sourceFiles: [] }],
+    };
+
+    const changes = diffSnapshots(base, target);
+
+    expect(changes.integrations.applicationImports).toEqual({
+      added: [{ ...usersTarget.applicationImports[0] }],
+      removed: [{ ...usersBase.applicationImports[0] }],
+    });
+    expect(changes.integrations.serverRoutes).toEqual({
+      added: [usersTarget.serverRoutes[0]],
+      removed: [usersBase.serverRoutes[0]],
+    });
+    expect(changes.integrations.webRoutes).toEqual({
+      added: [usersTarget.webRoutes[0]],
+      removed: [usersBase.webRoutes[0]],
+    });
+    expect(computeAffected(changes, target)).toMatchObject({
+      directlyChanged: ['users'],
+      downstream: ['billing'],
+      all: ['billing', 'users'],
+    });
   });
 
   it('detects newly introduced and resolved doctor diagnostics', () => {

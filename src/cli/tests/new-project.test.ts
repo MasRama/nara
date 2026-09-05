@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { newProject } from '../commands/new-project';
 import { runCli, type CliIO } from '../router';
+import { discoverFeatureIntegrations } from '../architecture/discover-integrations';
 
 const fixtures: string[] = [];
 
@@ -122,6 +123,27 @@ describe('new project', () => {
     expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("hostname: '127.0.0.1'");
     expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain('resolveBin');
     expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain("node_modules', '.bin'");
+    expect(discoverFeatureIntegrations(projectDirectory)).toEqual({
+      health: {
+        applicationImports: [
+          {
+            feature: 'health',
+            appFile: 'src/app/server.ts',
+            boundary: 'public',
+            symbols: ['healthRoutes'],
+          },
+        ],
+        serverRoutes: [
+          {
+            feature: 'health',
+            appFile: 'src/app/server.ts',
+            exportName: 'healthRoutes',
+            mountPath: '/health',
+          },
+        ],
+        webRoutes: [],
+      },
+    });
   });
 
   it('rejects unsafe project names', () => {
