@@ -104,7 +104,7 @@ The public indexes are intentional interfaces, not convenience barrels for every
 
 ### Consumer evidence
 
-Nara derives cross-Feature consumer facts from statically declared imports and re-exports. Symbol-level evidence records the source Feature and file, target boundary, imported symbol, local/export alias, and whether the usage is type-only or runtime. A namespace import, side-effect import, `require`, dynamic import, or `export *` proves only a module dependency; Nara does not infer an exact symbol from those forms. These facts are evidence of declared architecture, not a prediction of runtime reachability or behavior.
+Nara derives cross-Feature consumer facts from statically declared imports and re-exports. Symbol-level evidence records the source Feature and file, target boundary, imported symbol, local/export alias, and whether the syntax is explicitly type-only or value-capable. Nara distinguishes explicitly type-only syntax from value-capable import/export syntax; it does not resolve declaration categories through the TypeScript type checker. A namespace import, side-effect import, `require`, dynamic import, or `export *` proves only a module dependency; Nara does not infer an exact symbol from those forms. These facts are evidence of declared architecture, not a prediction of runtime reachability or behavior.
 
 ### Boundary export provenance
 

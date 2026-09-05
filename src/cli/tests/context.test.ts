@@ -88,6 +88,10 @@ describe('context command', () => {
     expect(outcome.stdout).toContain('Public boundary: src/features/users/index.ts');
     expect(outcome.stdout).toContain('Public API:\n- login');
     expect(outcome.stdout).toContain('Public boundary provenance:\n- login [local]');
+    expect(outcome.stdout).toContain(
+      'Public API consumers:\n- login\n  - billing — src/features/billing/index.ts [value-capable]',
+    );
+    expect(outcome.stdout).not.toContain('[value]');
     expect(outcome.stdout).toContain('Contracts:\n- UserProfile');
     expect(outcome.stdout).toContain('Depends on:\n- auth');
     expect(outcome.stdout).toContain('Affected dependents:\n- billing\n- reports');

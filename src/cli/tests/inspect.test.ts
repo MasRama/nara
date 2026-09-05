@@ -70,6 +70,9 @@ createRouter({ routes: [{ path: '/users', component: UsersPage }] });
 
     const result = runCli(['inspect', 'users'], io, { cwd: fixture });
     const output = io.output.join('');
+    expect(output.match(/^Public boundary provenance:$/gm)).toHaveLength(1);
+    expect(output.match(/^Web boundary provenance:$/gm)).toHaveLength(1);
+    expect(output).toContain('Web boundary provenance:\n- none');
 
     expect(result.exitCode).toBe(0);
     expect(output).toContain('Feature: users');
@@ -149,11 +152,15 @@ import * as AuthWeb from '@/features/auth/web';
     const io = createIO();
     const result = runCli(['inspect', 'auth'], io, { cwd: fixture });
     const output = io.output.join('');
+    expect(output.match(/^Public boundary provenance:$/gm)).toHaveLength(1);
+    expect(output.match(/^Web boundary provenance:$/gm)).toHaveLength(1);
 
     expect(result.exitCode).toBe(0);
-    expect(output).toContain('Public API consumers:\n- requireAuth\n  - users — src/features/users/index.ts [value]');
-    expect(output).toContain('  - users — src/features/users/index.ts [type]');
-    expect(output).toContain('Web boundary consumers:\n- LoginPage\n  - users — src/features/users/web/router.ts [value]');
+    expect(output).toContain('Public API consumers:\n- requireAuth\n  - users — src/features/users/index.ts [value-capable]');
+    expect(output).toContain('  - users — src/features/users/index.ts [type-only]');
+    expect(output).toContain('Web boundary consumers:\n- LoginPage\n  - users — src/features/users/web/router.ts [value-capable]');
+    expect(output).not.toContain('[value]');
+    expect(output).not.toContain('[type]');
 
     const machine = createIO();
     runCli(['inspect', 'auth', '--json'], machine, { cwd: fixture });

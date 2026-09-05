@@ -48,7 +48,7 @@ function formatConsumerEvidence(evidence: FeatureImportEvidence): string {
   const boundary = evidence.boundary === undefined ? '' : ` [${evidence.boundary}]`;
   const usage =
     evidence.precision === 'symbol'
-      ? `${evidence.importedSymbol} [${evidence.typeOnly ? 'type' : 'value'}]`
+      ? `${evidence.importedSymbol} [${evidence.typeOnly ? 'type-only' : 'value-capable'}]`
       : '(module import)';
   return `${evidence.from} -> ${evidence.to}${boundary}: ${usage} ${evidence.sourceFile}`;
 }
@@ -56,7 +56,7 @@ function formatBoundaryExportProvenance(evidence: BoundaryExportEvidence): strin
   const syntax = evidence.typeOnly
     ? ' [type-only]'
     : evidence.kind === 'named-reexport'
-      ? ' [value-capable syntax]'
+      ? ' [value-capable]'
       : '';
   if (evidence.kind === 'local') {
     return `${evidence.exportedName ?? '(unnamed)'} [local${evidence.typeOnly ? ', type-only' : ''}]`;
@@ -252,7 +252,7 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     );
     for (const consumer of impact.consumers) {
       removedConsumerBody.push(
-        `    ${consumer.targetState}: ${consumer.from} — ${consumer.sourceFile} [${consumer.typeOnly ? 'type' : 'value'}]`,
+        `    ${consumer.targetState}: ${consumer.from} — ${consumer.sourceFile} [${consumer.typeOnly ? 'type-only' : 'value-capable'}]`,
       );
     }
   }

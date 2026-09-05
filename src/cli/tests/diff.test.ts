@@ -186,8 +186,8 @@ describe('nara diff', () => {
     const human = runDiff(repo, ['--base', 'HEAD']);
     expect(human.stdout).toContain('Boundary export provenance changes:');
     expect(human.stdout).toContain('auth [public] User:');
-    expect(human.stdout).toContain('- ./contract::User [value-capable syntax]');
-    expect(human.stdout).toContain('+ ./server/user::User [value-capable syntax]');
+    expect(human.stdout).toContain('- ./contract::User [value-capable]');
+    expect(human.stdout).toContain('+ ./server/user::User [value-capable]');
   });
 
 
@@ -253,6 +253,10 @@ describe('nara diff', () => {
     expect(human.stdout).toContain('Removed public API consumer impact:');
     expect(human.stdout).toContain('oldApi');
     expect(human.stdout).toContain('still-imported');
+    expect(human.stdout).toContain('still-imported: users — src/features/users/index.ts [value-capable]');
+    expect(human.stdout).toContain('still-imported: users — src/features/users/web/router.ts [value-capable]');
+    expect(human.stdout).not.toContain('[value]');
+    expect(human.stdout).not.toContain('[type]');
 
     writeFeature(repo, 'users', {
       'index.ts': 'export const users = 1;\n',

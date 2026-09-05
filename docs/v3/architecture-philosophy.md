@@ -69,7 +69,7 @@ Nara's architecture engine derives bounded facts from ordinary conventions and T
 
 - which Features exist and whether their shape is valid
 - which public Feature dependencies are visible
-- which exact public or browser-safe symbols a Feature consumes, including type-only versus runtime evidence and source-file/alias provenance
+- which exact public or browser-safe symbols a Feature consumes, including explicitly type-only versus value-capable syntax evidence and source-file/alias provenance; Nara does not resolve declaration categories through the TypeScript type checker
 - which module-level imports establish a dependency without proving an exact symbol (`namespace`, side-effect, `require`, dynamic import, and `export *`)
 - which Features depend on a target
 - which server, web, contract, and test surfaces belong to one Feature

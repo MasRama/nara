@@ -86,8 +86,10 @@ describe('impact command', () => {
     const humanResult = runCli(['impact', 'auth'], humanIO, { cwd: fixture });
     expect(humanResult.exitCode).toBe(0);
     expect(humanIO.output.join('')).toContain('Direct consumer evidence:\n- users');
-    expect(humanIO.output.join('')).toContain('requireAuth — src/features/users/index.ts [value]');
-    expect(humanIO.output.join('')).toContain('SessionUser — src/features/users/index.ts [type]');
+    expect(humanIO.output.join('')).toContain('requireAuth — src/features/users/index.ts [value-capable]');
+    expect(humanIO.output.join('')).toContain('SessionUser — src/features/users/index.ts [type-only]');
+    expect(humanIO.output.join('')).not.toContain('[value]');
+    expect(humanIO.output.join('')).not.toContain('[type]');
 
     const machineIO = createIO();
     runCli(['impact', 'auth', '--json'], machineIO, { cwd: fixture });

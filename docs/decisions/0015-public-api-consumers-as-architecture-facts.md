@@ -5,7 +5,7 @@ Status: Accepted
 
 ## Context
 
-Nara already derives Feature ownership, dependency edges, public boundaries, and statically provable application integration from repository conventions. A dependency edge answers which Feature depends on another Feature, but it does not explain which public symbol is consumed, whether the usage is type-only or runtime, or which consumer remains after a public symbol is removed.
+Nara already derives Feature ownership, dependency edges, public boundaries, and statically provable application integration from repository conventions. A dependency edge answers which Feature depends on another Feature, but it does not explain which public symbol is consumed, whether the usage is explicitly type-only or value-capable syntax, or which consumer remains after a public symbol is removed.
 
 That gap makes contract review unnecessarily manual. The architecture model must become more useful without turning into a compiler, runtime tracer, or semantic breakage predictor.
 
@@ -17,7 +17,7 @@ Nara derives deterministic cross-Feature import evidence from statically declare
 - source file and original module specifier
 - public or browser-safe boundary when the path proves one
 - imported symbol, local alias, or re-export alias when syntax proves one
-- import form and type-only versus runtime usage
+- import form and explicitly type-only versus value-capable syntax
 - `symbol` precision or conservative `module` precision
 - internal-path status used by existing boundary diagnostics
 
@@ -36,7 +36,7 @@ Application composition remains a separate architecture fact. The consumer model
 Positive:
 
 - `inspect`, `context`, and `impact` provide bounded public API consumer intelligence.
-- Reviewers can distinguish type-only contracts from runtime value consumers.
+- Reviewers can distinguish explicitly type-only contracts from value-capable syntax consumers.
 - `diff` shows the consumer evidence that changed and the baseline consumers of removed symbols.
 - Existing dependency edges, diagnostics, guard policy, and application-integration facts retain their contracts.
 - Output remains deterministic, relative-path based, and independent of an AI provider.

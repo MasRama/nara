@@ -174,7 +174,6 @@ function renderBoundaryExportEvidence(io: CliIO, title: string, evidence: Bounda
     io.stdout('- none\n');
     return;
   }
-  io.stdout(`${title}:\n`);
   for (const current of evidence) {
     if (current.kind === 'local') {
       io.stdout(
@@ -188,7 +187,7 @@ function renderBoundaryExportEvidence(io: CliIO, title: string, evidence: Bounda
       );
     } else {
       io.stdout(
-        `- ${current.exportedName ?? '(unnamed)'} ← ${current.sourceSpecifier ?? '(unknown module)'}::${current.sourceSymbol ?? '(unknown symbol)'}${current.typeOnly ? ' [type-only]' : ' [value-capable syntax]'}\n`,
+        `- ${current.exportedName ?? '(unnamed)'} ← ${current.sourceSpecifier ?? '(unknown module)'}::${current.sourceSymbol ?? '(unknown symbol)'}${current.typeOnly ? ' [type-only]' : ' [value-capable]'}\n`,
       );
     }
   }
@@ -247,7 +246,7 @@ function renderConsumerEvidence(
         left.sourceFile.localeCompare(right.sourceFile) ||
         Number(left.typeOnly) - Number(right.typeOnly),
     )) {
-      io.stdout(`  - ${entry.from} — ${entry.sourceFile} [${entry.typeOnly ? 'type' : 'value'}]\n`);
+      io.stdout(`  - ${entry.from} — ${entry.sourceFile} [${entry.typeOnly ? 'type-only' : 'value-capable'}]\n`);
     }
   }
 }
@@ -416,7 +415,7 @@ function renderFeatureImpact(io: CliIO, impact: FeatureImpact): void {
           Number(left.typeOnly) - Number(right.typeOnly),
       )) {
         io.stdout(
-          `  - ${entry.importedSymbol} — ${entry.sourceFile} [${entry.typeOnly ? 'type' : 'value'}]\n`,
+          `  - ${entry.importedSymbol} — ${entry.sourceFile} [${entry.typeOnly ? 'type-only' : 'value-capable'}]\n`,
         );
       }
     }

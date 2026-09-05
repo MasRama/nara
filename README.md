@@ -30,9 +30,11 @@ npx nara add audit             # install an official open-code feature
 Nara stays useful after creation: the same local CLI that scaffolds the
 project keeps understanding (`inspect`, `context`, `impact`), including which
 Features consume exact public or browser-safe symbols and whether each usage is
-type-only or runtime, describing change (`diff --base main`), and protecting
-(`doctor` for current architecture, `guard --base origin/main` for architecture
-change) its feature architecture in month 12. No AI provider is required.
+explicitly type-only or uses value-capable syntax. Nara does not resolve
+declaration categories through the TypeScript type checker. It describes change
+(`diff --base main`), and protects (`doctor` for current architecture,
+`guard --base origin/main` for architecture change) its feature architecture in
+month 12. No AI provider is required.
 
 To work on Nara itself instead, clone the reference repository:
 
