@@ -6,6 +6,7 @@ import {
   verifyGitRef,
 } from '../architecture/git-materialize';
 import { captureArchitectureSnapshot, type ArchitectureSnapshot } from '../architecture/snapshot';
+import type { FeatureImportEvidence } from '../architecture/discover-import-evidence';
 
 export interface DiffBaseIdentity {
   kind: 'git-ref';
@@ -42,6 +43,15 @@ export interface DiffOptions {
 function targetDescription(target: DiffTargetIdentity): string {
   return target.kind === 'git-ref' ? target.ref : 'working tree';
 }
+function formatConsumerEvidence(evidence: FeatureImportEvidence): string {
+  const boundary = evidence.boundary === undefined ? '' : ` [${evidence.boundary}]`;
+  const usage =
+    evidence.precision === 'symbol'
+      ? `${evidence.importedSymbol} [${evidence.typeOnly ? 'type' : 'value'}]`
+      : '(module import)';
+  return `${evidence.from} -> ${evidence.to}${boundary}: ${usage} ${evidence.sourceFile}`;
+}
+
 
 export function runArchitectureDiff(options: DiffOptions): ArchitectureDiffResult {
   const cwd = options.cwd ?? process.cwd();
@@ -96,6 +106,7 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     changes.features.added.length === 0 &&
     changes.features.removed.length === 0 &&
     changes.publicExports.length === 0 &&
+    changes.webPublicExports.length === 0 &&
     changes.contracts.length === 0 &&
     changes.dependencies.added.length === 0 &&
     changes.dependencies.removed.length === 0 &&
@@ -106,6 +117,9 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     changes.integrations.serverRoutes.removed.length === 0 &&
     changes.integrations.webRoutes.added.length === 0 &&
     changes.integrations.webRoutes.removed.length === 0 &&
+    changes.consumerEvidence.added.length === 0 &&
+    changes.consumerEvidence.removed.length === 0 &&
+    changes.removedPublicApiConsumers.length === 0 &&
     changes.diagnostics.added.length === 0 &&
     changes.diagnostics.resolved.length === 0;
   if (empty) {
@@ -128,6 +142,13 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     for (const name of delta.removed) exportBody.push(`    - ${name}`);
   }
   section(lines, 'Public exports', exportBody);
+  const webExportBody: string[] = [];
+  for (const delta of changes.webPublicExports) {
+    webExportBody.push(`  ${delta.feature}:`);
+    for (const name of delta.added) webExportBody.push(`    + ${name}`);
+    for (const name of delta.removed) webExportBody.push(`    - ${name}`);
+  }
+  section(lines, 'Web public exports', webExportBody);
 
   const contractBody: string[] = [];
   for (const delta of changes.contracts) {
@@ -185,6 +206,27 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     integrationBody.push(`  ${feature}:`, ...featureLines);
   }
   section(lines, 'Application integration changes', integrationBody);
+  const consumerBody: string[] = [];
+  for (const evidence of changes.consumerEvidence.added) {
+    consumerBody.push(`  + ${formatConsumerEvidence(evidence)}`);
+  }
+  for (const evidence of changes.consumerEvidence.removed) {
+    consumerBody.push(`  - ${formatConsumerEvidence(evidence)}`);
+  }
+  section(lines, 'Consumer changes', consumerBody);
+
+  const removedConsumerBody: string[] = [];
+  for (const impact of changes.removedPublicApiConsumers) {
+    removedConsumerBody.push(
+      `  ${impact.feature} [${impact.boundary}] ${impact.symbol} (${impact.exportKind} export):`,
+    );
+    for (const consumer of impact.consumers) {
+      removedConsumerBody.push(
+        `    ${consumer.targetState}: ${consumer.from} — ${consumer.sourceFile} [${consumer.typeOnly ? 'type' : 'value'}]`,
+      );
+    }
+  }
+  section(lines, 'Removed public API consumer impact', removedConsumerBody);
 
   const newIssues = changes.diagnostics.added.map(
     (diagnostic) => `  + [${diagnostic.code}] ${diagnostic.file} (${diagnostic.relationship})`,

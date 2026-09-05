@@ -71,6 +71,37 @@ describe('impact command', () => {
     expect(io.errors).toHaveLength(0);
   });
 
+  it('explains direct symbol consumers without attributing symbols transitively', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'auth', 'export const requireAuth = true;\n');
+    writeFeature(
+      fixture,
+      'users',
+      `import { requireAuth as authenticate, type SessionUser } from '@/features/auth';
+`,
+    );
+    writeFeature(fixture, 'reports', "import '@/features/users';\n");
+
+    const humanIO = createIO();
+    const humanResult = runCli(['impact', 'auth'], humanIO, { cwd: fixture });
+    expect(humanResult.exitCode).toBe(0);
+    expect(humanIO.output.join('')).toContain('Direct consumer evidence:\n- users');
+    expect(humanIO.output.join('')).toContain('requireAuth — src/features/users/index.ts [value]');
+    expect(humanIO.output.join('')).toContain('SessionUser — src/features/users/index.ts [type]');
+
+    const machineIO = createIO();
+    runCli(['impact', 'auth', '--json'], machineIO, { cwd: fixture });
+    const payload = JSON.parse(machineIO.output.join('')) as {
+      directDependents: string[];
+      transitiveDependents: string[];
+      directConsumerEvidence: Array<Record<string, unknown>>;
+    };
+    expect(payload.directDependents).toEqual(['users']);
+    expect(payload.transitiveDependents).toEqual(['reports']);
+    expect(payload.directConsumerEvidence).toHaveLength(2);
+    expect(payload.directConsumerEvidence.every((evidence) => evidence.from === 'users')).toBe(true);
+    expect(machineIO.errors).toHaveLength(0);
+  });
   it('reports unknown features without a stack trace', () => {
     const fixture = createFixture();
     const io = createIO();

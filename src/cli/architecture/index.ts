@@ -7,9 +7,15 @@ export type {
 export { discoverFeatureDependencies } from './discover-dependencies';
 export type {
   DependencyDiscovery,
-  FeatureBoundary,
   FeatureDependency,
 } from './discover-dependencies';
+export { discoverFeatureImportEvidence } from './discover-import-evidence';
+export type {
+  FeatureBoundary,
+  FeatureImportEvidence,
+  FeatureImportKind,
+  FeatureReference,
+} from './discover-import-evidence';
 export { discoverFeatureIntegrations } from './discover-integrations';
 export type {
   ApplicationFeatureImport,
@@ -42,6 +48,9 @@ export type {
   ExportDelta,
   IntegrationChanges,
   IntegrationDelta,
+  RemovedConsumerEvidence,
+  RemovedConsumerTargetState,
+  RemovedPublicApiConsumerImpact,
   SurfaceDelta,
 } from './diff';
 export { inspectFeature } from './inspect';

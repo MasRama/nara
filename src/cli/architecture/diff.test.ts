@@ -4,6 +4,24 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { computeAffected, diffSnapshots } from './diff';
 import { captureArchitectureSnapshot, type ArchitectureSnapshot } from './snapshot';
+import type { FeatureImportEvidence } from './discover-import-evidence';
+
+function importEvidence(overrides: Partial<FeatureImportEvidence> = {}): FeatureImportEvidence {
+  return {
+    from: 'users',
+    to: 'auth',
+    sourceFile: 'src/features/users/index.ts',
+    specifier: '@/features/auth',
+    boundary: 'public',
+    usesInternalPath: false,
+    kind: 'named-import',
+    precision: 'symbol',
+    importedSymbol: 'requireAuth',
+    localName: 'requireAuth',
+    typeOnly: false,
+    ...overrides,
+  };
+}
 
 const fixtures: string[] = [];
 
@@ -29,13 +47,14 @@ function writeFeature(fixture: string, name: string, files: Record<string, strin
 }
 
 function emptySnapshot(): ArchitectureSnapshot {
-  return { schemaVersion: 1, features: [], dependencies: [], diagnostics: [] };
+  return { schemaVersion: 1, features: [], importEvidence: [], dependencies: [], diagnostics: [] };
 }
 
 function featureSnapshot(
   name: string,
   overrides: Partial<{
     publicExports: string[];
+    webPublicExports: string[];
     contractExports: string[];
     serverSurfaces: string[];
     webSurfaces: string[];
@@ -46,6 +65,7 @@ function featureSnapshot(
   return {
     name,
     publicExports: [],
+    webPublicExports: [],
     contractExports: [],
     serverSurfaces: [],
     webSurfaces: [],
@@ -78,6 +98,12 @@ describe('architecture diff', () => {
       serverRoutes: { added: [], removed: [] },
       webRoutes: { added: [], removed: [] },
     });
+    expect(changes.webPublicExports).toEqual([]);
+    expect(changes.consumerEvidence).toEqual({
+      added: [],
+      removed: [],
+    });
+    expect(changes.removedPublicApiConsumers).toEqual([]);
     expect(changes.diagnostics).toEqual({ added: [], resolved: [] });
     expect(computeAffected(changes, target)).toMatchObject({
       scope: 'structural dependency impact',
@@ -120,6 +146,36 @@ describe('architecture diff', () => {
     ]);
   });
 
+  it('detects web public export changes and marks the provider directly changed', () => {
+    const base: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [
+        featureSnapshot('auth', { webPublicExports: [] }),
+        featureSnapshot('users'),
+      ],
+      dependencies: [{ from: 'users', to: 'auth', imports: [], sourceFiles: [] }],
+    };
+    const target: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [
+        featureSnapshot('auth', { webPublicExports: ['LoginPage'] }),
+        featureSnapshot('users'),
+      ],
+      dependencies: [{ from: 'users', to: 'auth', imports: [], sourceFiles: [] }],
+    };
+
+    const changes = diffSnapshots(base, target);
+
+    expect(changes.webPublicExports).toEqual([
+      { feature: 'auth', added: ['LoginPage'], removed: [] },
+    ]);
+    expect(computeAffected(changes, target)).toMatchObject({
+      directlyChanged: ['auth'],
+      downstream: ['users'],
+      all: ['auth', 'users'],
+    });
+  });
+
   it('detects added and removed contract exports per feature', () => {
     const base: ArchitectureSnapshot = {
       ...emptySnapshot(),
@@ -133,6 +189,141 @@ describe('architecture diff', () => {
     expect(diffSnapshots(base, target).contracts).toEqual([
       { feature: 'billing', added: ['NewInput'], removed: ['OldInput'] },
     ]);
+  });
+
+  it('connects removed public, web, and contract symbols to baseline consumers', () => {
+    const baseEvidence = [
+      importEvidence(),
+      importEvidence({
+        boundary: 'web',
+        specifier: '@/features/auth/web',
+        importedSymbol: 'LoginPage',
+        localName: 'Page',
+      }),
+      importEvidence({
+        importedSymbol: 'SessionUser',
+        localName: 'SessionUser',
+        typeOnly: true,
+      }),
+    ];
+    const base: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [
+        featureSnapshot('auth', {
+          publicExports: ['requireAuth'],
+          webPublicExports: ['LoginPage'],
+          contractExports: ['SessionUser'],
+        }),
+        featureSnapshot('users'),
+      ],
+      importEvidence: baseEvidence,
+    };
+    const target: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth'), featureSnapshot('users')],
+      importEvidence: baseEvidence,
+    };
+
+    const changes = diffSnapshots(base, target);
+
+    expect(changes.removedPublicApiConsumers).toHaveLength(3);
+    expect(changes.removedPublicApiConsumers).toEqual(
+      expect.arrayContaining([
+        {
+          feature: 'auth',
+          boundary: 'public',
+          symbol: 'requireAuth',
+          exportKind: 'public',
+          change: 'removed',
+          consumers: [
+            {
+              ...baseEvidence[0],
+              targetState: 'still-imported',
+            },
+          ],
+        },
+        {
+          feature: 'auth',
+          boundary: 'web',
+          symbol: 'LoginPage',
+          exportKind: 'web',
+          change: 'removed',
+          consumers: [
+            {
+              ...baseEvidence[1],
+              targetState: 'still-imported',
+            },
+          ],
+        },
+        {
+          feature: 'auth',
+          boundary: 'public',
+          symbol: 'SessionUser',
+          exportKind: 'contract',
+          change: 'removed',
+          consumers: [
+            {
+              ...baseEvidence[2],
+              targetState: 'still-imported',
+            },
+          ],
+        },
+      ]),
+    );
+    expect(computeAffected(changes, target).directlyChanged).toEqual(['auth']);
+
+    const consumerRemoved = diffSnapshots(base, {
+      ...target,
+      importEvidence: [],
+    });
+    expect(consumerRemoved.removedPublicApiConsumers.flatMap((impact) => impact.consumers.map((consumer) => consumer.targetState)))
+      .toEqual(['removed-in-change', 'removed-in-change', 'removed-in-change']);
+  });
+
+  it('does not claim symbol impact for module-level namespace evidence', () => {
+    const moduleImport = importEvidence({
+      kind: 'namespace-import',
+      precision: 'module',
+      importedSymbol: undefined,
+      localName: 'Auth',
+    });
+    const base: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth', { publicExports: ['requireAuth'] }), featureSnapshot('users')],
+      importEvidence: [moduleImport],
+    };
+    const target: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth'), featureSnapshot('users')],
+      importEvidence: [],
+    };
+
+    const changes = diffSnapshots(base, target);
+
+    expect(changes.consumerEvidence.removed).toEqual([moduleImport]);
+    expect(changes.removedPublicApiConsumers).toEqual([]);
+  });
+
+  it('treats an alias-only consumer change as still imported', () => {
+    const base: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth', { publicExports: ['requireAuth'] }), featureSnapshot('users')],
+      importEvidence: [importEvidence({ localName: 'authenticate' })],
+    };
+    const target: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth'), featureSnapshot('users')],
+      importEvidence: [importEvidence({ localName: 'authorize' })],
+    };
+
+    const changes = diffSnapshots(base, target);
+
+    expect(changes.publicExports).toEqual([
+      { feature: 'auth', added: [], removed: ['requireAuth'] },
+    ]);
+    expect(changes.consumerEvidence.added).toHaveLength(1);
+    expect(changes.consumerEvidence.removed).toHaveLength(1);
+    expect(changes.removedPublicApiConsumers[0]?.consumers[0]?.targetState).toBe('still-imported');
   });
 
   it('detects added and removed dependency edges with evidence', () => {
@@ -159,6 +350,41 @@ describe('architecture diff', () => {
     expect(changes.dependencies.removed).toEqual([
       { from: 'a', to: 'b', imports: ['@/features/b'], sourceFiles: ['src/features/a/index.ts'] },
     ]);
+  });
+
+  it('reports symbol consumer changes and seeds only consuming Features', () => {
+    const typeEvidence = importEvidence({
+      importedSymbol: 'SessionUser',
+      localName: 'SessionUser',
+      typeOnly: true,
+    });
+    const base: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth'), featureSnapshot('users'), featureSnapshot('reports')],
+      dependencies: [
+        { from: 'users', to: 'auth', imports: [], sourceFiles: [] },
+        { from: 'reports', to: 'users', imports: [], sourceFiles: [] },
+      ],
+    };
+    const target: ArchitectureSnapshot = {
+      ...emptySnapshot(),
+      features: [featureSnapshot('auth'), featureSnapshot('users'), featureSnapshot('reports')],
+      dependencies: base.dependencies,
+      importEvidence: [importEvidence(), typeEvidence],
+    };
+
+    const changes = diffSnapshots(base, target);
+
+    expect(changes.consumerEvidence.removed).toEqual([]);
+    expect(changes.consumerEvidence.added).toEqual(
+      expect.arrayContaining([importEvidence(), typeEvidence]),
+    );
+    expect(changes.consumerEvidence.added).toHaveLength(2);
+    expect(computeAffected(changes, target)).toMatchObject({
+      directlyChanged: ['users'],
+      downstream: ['reports'],
+      all: ['reports', 'users'],
+    });
   });
 
   it('detects added and removed server, web, and test surfaces', () => {

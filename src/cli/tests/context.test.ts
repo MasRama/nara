@@ -492,4 +492,74 @@ createRouter({ routes: [{ path: '/users', name: 'users', component: UsersPage }]
     );
     expect(JSON.parse(rawFile)).toEqual(expectedFile);
   });
+  it('includes bounded public and web consumer evidence without consumer files', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'auth', {
+      'index.ts': 'export const requireAuth = true;\nexport type SessionUser = { id: string };\n',
+      'web/index.ts': 'export const LoginPage = true;\n',
+    });
+    writeFeature(fixture, 'users', {
+      'index.ts': `import { requireAuth as authenticate, type SessionUser } from '@/features/auth';
+`,
+    });
+    writeFeature(fixture, 'admin', {
+      'index.ts': 'export const admin = true;\n',
+      'web/router.ts': "import { LoginPage as Page } from '@/features/auth/web';\n",
+    });
+
+    const human = runContext(fixture, ['auth']);
+    expect(human.stdout).toContain('Public API consumers:\n- requireAuth');
+    expect(human.stdout).toContain('Web boundary consumers:\n- LoginPage');
+
+    const payload = runContextJson(fixture, ['auth']).payload;
+    expect(payload.publicApi).toEqual({
+      exports: ['SessionUser', 'requireAuth'],
+      webExports: ['LoginPage'],
+      contracts: [],
+    });
+    expect(payload.consumers).toEqual([
+      {
+        from: 'admin',
+        to: 'auth',
+        sourceFile: 'src/features/admin/web/router.ts',
+        specifier: '@/features/auth/web',
+        boundary: 'web',
+        usesInternalPath: false,
+        kind: 'named-import',
+        precision: 'symbol',
+        importedSymbol: 'LoginPage',
+        localName: 'Page',
+        typeOnly: false,
+      },
+      {
+        from: 'users',
+        to: 'auth',
+        sourceFile: 'src/features/users/index.ts',
+        specifier: '@/features/auth',
+        boundary: 'public',
+        usesInternalPath: false,
+        kind: 'named-import',
+        precision: 'symbol',
+        importedSymbol: 'requireAuth',
+        localName: 'authenticate',
+        typeOnly: false,
+      },
+      {
+        from: 'users',
+        to: 'auth',
+        sourceFile: 'src/features/users/index.ts',
+        specifier: '@/features/auth',
+        boundary: 'public',
+        usesInternalPath: false,
+        kind: 'named-import',
+        importedSymbol: 'SessionUser',
+        localName: 'SessionUser',
+        precision: 'symbol',
+        typeOnly: true,
+      },
+    ]);
+    const readingPaths = (payload.readingOrder as Array<{ path: string }>).map((entry) => entry.path);
+    expect(readingPaths).not.toContain('src/features/users/index.ts');
+    expect(readingPaths).not.toContain('src/features/admin/web/router.ts');
+  });
 });

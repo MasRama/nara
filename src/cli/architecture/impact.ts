@@ -1,9 +1,11 @@
 import { discoverFeatureDependencies } from './discover-dependencies';
+import type { FeatureImportEvidence } from './discover-import-evidence';
 
 export interface FeatureImpact {
   name: string;
   directDependents: string[];
   transitiveDependents: string[];
+  directConsumerEvidence: FeatureImportEvidence[];
   scope: 'feature dependency graph';
 }
 
@@ -36,6 +38,15 @@ export function inspectFeatureImpact(name: string, root = process.cwd()): Featur
 
   const directDependents = reverseDependencies[name] ?? [];
   const directSet = new Set(directDependents);
+  const directConsumerEvidence = discovery.importEvidence
+    .filter(
+      (evidence) =>
+        evidence.to === name &&
+        directSet.has(evidence.from) &&
+        evidence.precision === 'symbol' &&
+        evidence.boundary !== undefined,
+    )
+    .map((evidence) => ({ ...evidence }));
   const visited = new Set<string>([name]);
   const queue = [...directDependents];
   const transitiveDependents: string[] = [];
@@ -64,6 +75,7 @@ export function inspectFeatureImpact(name: string, root = process.cwd()): Featur
       name,
       directDependents,
       transitiveDependents,
+      directConsumerEvidence,
       scope: 'feature dependency graph',
     },
   };

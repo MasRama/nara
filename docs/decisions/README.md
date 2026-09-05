@@ -38,6 +38,7 @@ AI agents that understand WHY a convention exists make better decisions:
 | [0012](./0012-architecture-diff-over-text-diff.md) | Architecture-aware change intelligence via `nara diff` | Accepted |
 | [0013](./0013-git-baseline-architecture-regression-guard.md) | Git-baseline architecture regression guard via `nara guard` | Accepted |
 | [0014](./0014-application-integration-as-architecture-fact.md) | Application integration as an architecture fact | Accepted |
+| [0015](./0015-public-api-consumers-as-architecture-facts.md) | Public API consumers as architecture facts | Accepted |
 
 ## Format
 

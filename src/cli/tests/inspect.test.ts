@@ -104,7 +104,9 @@ createRouter({ routes: [{ path: '/users', component: UsersPage }] });
       name: 'users',
       path: 'src/features/users',
       publicExports: ['profile'],
+      webPublicExports: [],
       contracts: ['UserProfile'],
+      consumerEvidence: [],
       integrations: {
         applicationImports: [],
         serverRoutes: [],
@@ -113,6 +115,72 @@ createRouter({ routes: [{ path: '/users', component: UsersPage }] });
     });
     expect(output).not.toContain('Feature:');
     expect(io.errors).toHaveLength(0);
+  });
+  it('exposes public and web symbol consumers with type/value precision', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'auth', {
+      'index.ts': 'export const requireAuth = true;\nexport type SessionUser = { id: string };\n',
+      'web/index.ts': 'export const LoginPage = true;\n',
+    });
+    writeFeature(fixture, 'users', {
+      'index.ts': `import { requireAuth as authenticate, type SessionUser } from '@/features/auth';
+import * as Auth from '@/features/auth';
+import '@/features/auth';
+`,
+      'web/router.ts': `import { LoginPage as Page } from '@/features/auth/web';
+import * as AuthWeb from '@/features/auth/web';
+`,
+    });
+    const io = createIO();
+    const result = runCli(['inspect', 'auth'], io, { cwd: fixture });
+    const output = io.output.join('');
+
+    expect(result.exitCode).toBe(0);
+    expect(output).toContain('Public API consumers:\n- requireAuth\n  - users — src/features/users/index.ts [value]');
+    expect(output).toContain('  - users — src/features/users/index.ts [type]');
+    expect(output).toContain('Web boundary consumers:\n- LoginPage\n  - users — src/features/users/web/router.ts [value]');
+
+    const machine = createIO();
+    runCli(['inspect', 'auth', '--json'], machine, { cwd: fixture });
+    const payload = JSON.parse(machine.output.join('')) as {
+      webPublicExports: string[];
+      consumerEvidence: Array<Record<string, unknown>>;
+    };
+    expect(payload.webPublicExports).toEqual(['LoginPage']);
+    expect(payload.consumerEvidence).toHaveLength(3);
+    expect(payload.consumerEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          from: 'users',
+          to: 'auth',
+          boundary: 'public',
+          importedSymbol: 'requireAuth',
+          localName: 'authenticate',
+          typeOnly: false,
+          precision: 'symbol',
+        }),
+        expect.objectContaining({
+          from: 'users',
+          to: 'auth',
+          boundary: 'public',
+          importedSymbol: 'SessionUser',
+          localName: 'SessionUser',
+          typeOnly: true,
+          precision: 'symbol',
+        }),
+        expect.objectContaining({
+          from: 'users',
+          to: 'auth',
+          boundary: 'web',
+          importedSymbol: 'LoginPage',
+          localName: 'Page',
+          typeOnly: false,
+          precision: 'symbol',
+        }),
+      ]),
+    );
+    expect(payload.consumerEvidence.every((evidence) => evidence.precision === 'symbol')).toBe(true);
+    expect(machine.errors).toHaveLength(0);
   });
   it('reports an unknown feature without a stack trace', () => {
     const fixture = createFixture();

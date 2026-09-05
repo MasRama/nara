@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { discoverFeatures } from './discover-features';
-import { featureReferenceFromSpecifier, type FeatureBoundary } from './discover-dependencies';
+import { featureReferenceFromSpecifier, type FeatureBoundary } from './discover-import-evidence';
 
 export interface ApplicationFeatureImport {
   feature: string;

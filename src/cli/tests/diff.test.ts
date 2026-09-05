@@ -141,6 +141,87 @@ describe('nara diff', () => {
     expect(changes.contracts).toEqual([{ feature: 'billing', added: ['NewInput'], removed: ['OldInput'] }]);
   });
 
+  it('reports symbol consumers and removed API impact across public and web boundaries', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'auth', {
+      'index.ts': 'export const oldApi = 1;\n',
+      'web/index.ts': 'export const OldPage = true;\n',
+    });
+    writeFeature(repo, 'users', {
+      'index.ts': "import { oldApi as legacyApi } from '@/features/auth';\n",
+      'web/router.ts': "import { OldPage as Page } from '@/features/auth/web';\n",
+    });
+    commitAll(repo, 'base');
+    writeFeature(repo, 'auth', {
+      'index.ts': 'export const newApi = 1;\n',
+      'web/index.ts': 'export const NewPage = true;\n',
+    });
+
+    const changed = runDiffJson(repo, ['--base', 'HEAD']);
+    const changes = changed.json.changes as {
+      publicExports: Array<{ feature: string; added: string[]; removed: string[] }>;
+      webPublicExports: Array<{ feature: string; added: string[]; removed: string[] }>;
+      consumerEvidence: { added: unknown[]; removed: unknown[] };
+      removedPublicApiConsumers: Array<{
+        symbol: string;
+        boundary: string;
+        exportKind: string;
+        consumers: Array<{ targetState: string }>;
+      }>;
+    };
+    expect(changes.publicExports).toEqual([
+      { feature: 'auth', added: ['newApi'], removed: ['oldApi'] },
+    ]);
+    expect(changes.webPublicExports).toEqual([
+      { feature: 'auth', added: ['NewPage'], removed: ['OldPage'] },
+    ]);
+    expect(changes.consumerEvidence).toEqual({ added: [], removed: [] });
+    expect(changes.removedPublicApiConsumers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          symbol: 'oldApi',
+          boundary: 'public',
+          exportKind: 'public',
+          consumers: expect.arrayContaining([
+            expect.objectContaining({ targetState: 'still-imported' }),
+          ]),
+        }),
+        expect.objectContaining({
+          symbol: 'OldPage',
+          boundary: 'web',
+          exportKind: 'web',
+          consumers: expect.arrayContaining([
+            expect.objectContaining({ targetState: 'still-imported' }),
+          ]),
+        }),
+      ]),
+    );
+    expect(changed.json.affected).toMatchObject({ directlyChanged: ['auth'] });
+
+    const human = runDiff(repo, ['--base', 'HEAD']);
+    expect(human.stdout).toContain('Web public exports:');
+    expect(human.stdout).toContain('Removed public API consumer impact:');
+    expect(human.stdout).toContain('oldApi');
+    expect(human.stdout).toContain('still-imported');
+
+    writeFeature(repo, 'users', {
+      'index.ts': 'export const users = 1;\n',
+      'web/router.ts': 'export const router = true;\n',
+    });
+    const removed = runDiffJson(repo, ['--base', 'HEAD']);
+    const removedChanges = removed.json.changes as {
+      consumerEvidence: { added: unknown[]; removed: unknown[] };
+      removedPublicApiConsumers: Array<{ consumers: Array<{ targetState: string }> }>;
+    };
+    expect(removedChanges.consumerEvidence.added).toEqual([]);
+    expect(removedChanges.consumerEvidence.removed).toHaveLength(2);
+    expect(
+      removedChanges.removedPublicApiConsumers.flatMap((impact) =>
+        impact.consumers.map((consumer) => consumer.targetState),
+      ),
+    ).toEqual(['removed-in-change', 'removed-in-change']);
+  });
+
   it('detects added and removed dependency edges', () => {
     const repo = initRepo();
     writeFeature(repo, 'users', { 'index.ts': 'export const users = 1;\n' });

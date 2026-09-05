@@ -7,6 +7,7 @@ import type { FeatureImpact } from './architecture/impact';
 import { inspectFeature } from './architecture/inspect';
 import type { FeatureInspection } from './architecture/inspect';
 import type { FeatureIntegrationFacts } from './architecture/discover-integrations';
+import type { FeatureImportEvidence } from './architecture/discover-import-evidence';
 import { installOfficialFeature } from './composition/install-feature';
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
 import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
@@ -192,6 +193,39 @@ function renderFeatureIntegration(io: CliIO, integrations: FeatureIntegrationFac
       .map(([appFile, symbols]) => `${appFile}: ${[...symbols].sort().join(', ')}`),
   );
 }
+function renderConsumerEvidence(
+  io: CliIO,
+  title: string,
+  evidence: FeatureImportEvidence[],
+  boundary: 'public' | 'web',
+): void {
+  io.stdout(`${title}:\n`);
+  const bySymbol = new Map<string, FeatureImportEvidence[]>();
+  for (const current of evidence) {
+    if (current.boundary !== boundary || current.precision !== 'symbol' || !current.importedSymbol) {
+      continue;
+    }
+    const entries = bySymbol.get(current.importedSymbol) ?? [];
+    entries.push(current);
+    bySymbol.set(current.importedSymbol, entries);
+  }
+  if (bySymbol.size === 0) {
+    io.stdout('- none\n');
+    return;
+  }
+  for (const [symbol, entries] of [...bySymbol.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+    io.stdout(`- ${symbol}\n`);
+    for (const entry of entries.sort(
+      (left, right) =>
+        left.from.localeCompare(right.from) ||
+        left.sourceFile.localeCompare(right.sourceFile) ||
+        Number(left.typeOnly) - Number(right.typeOnly),
+    )) {
+      io.stdout(`  - ${entry.from} — ${entry.sourceFile} [${entry.typeOnly ? 'type' : 'value'}]\n`);
+    }
+  }
+}
+
 
 function renderApplicationIntegration(io: CliIO, integrations: FeatureIntegrationFacts): void {
   io.stdout('Application integration:\n');
@@ -202,6 +236,7 @@ function renderFeatureInspection(io: CliIO, feature: FeatureInspection): void {
   io.stdout(`Feature: ${feature.name}\n`);
   io.stdout(`Path: ${feature.path}\n\n`);
   renderFeatureList(io, 'Public exports', feature.publicExports);
+  renderFeatureList(io, 'Web public exports', feature.webPublicExports);
   renderFeatureList(io, 'Dependencies', feature.dependencies);
   renderFeatureList(io, 'Dependents', feature.dependents);
   renderFeatureList(io, 'Server', feature.serverEntrypoints);
@@ -210,6 +245,8 @@ function renderFeatureInspection(io: CliIO, feature: FeatureInspection): void {
   renderFeatureList(io, 'Tests', feature.tests);
   io.stdout('\n');
   renderApplicationIntegration(io, feature.integrations);
+  renderConsumerEvidence(io, 'Public API consumers', feature.consumerEvidence, 'public');
+  renderConsumerEvidence(io, 'Web boundary consumers', feature.consumerEvidence, 'web');
 }
 
 
@@ -249,6 +286,7 @@ function renderContextPack(io: CliIO, context: ArchitectureContextPack): void {
   io.stdout(`Work in: ${context.ownership.directory}\n`);
   io.stdout(`Public boundary: ${context.ownership.publicBoundary}\n\n`);
   renderFeatureList(io, 'Public API', context.publicApi.exports);
+  renderFeatureList(io, 'Web public API', context.publicApi.webExports);
   renderFeatureList(io, 'Contracts', context.publicApi.contracts);
   renderFeatureList(io, 'Depends on', context.relationships.dependencies);
   renderFeatureList(io, 'Affected dependents', [
@@ -257,6 +295,8 @@ function renderContextPack(io: CliIO, context: ArchitectureContextPack): void {
   ]);
   io.stdout('\n');
   renderApplicationIntegration(io, context.integrations);
+  renderConsumerEvidence(io, 'Public API consumers', context.consumers, 'public');
+  renderConsumerEvidence(io, 'Web boundary consumers', context.consumers, 'web');
   renderFeatureList(
     io,
     'Architecture constraints',
@@ -325,6 +365,32 @@ function renderFeatureImpact(io: CliIO, impact: FeatureImpact): void {
   io.stdout(`Feature impact: ${impact.name}\n`);
   renderFeatureList(io, 'Direct dependents', impact.directDependents);
   renderFeatureList(io, 'Transitive dependents', impact.transitiveDependents);
+  io.stdout('Direct consumer evidence:\n');
+  const byDependent = new Map<string, FeatureImportEvidence[]>();
+  for (const evidence of impact.directConsumerEvidence) {
+    const entries = byDependent.get(evidence.from) ?? [];
+    entries.push(evidence);
+    byDependent.set(evidence.from, entries);
+  }
+  if (byDependent.size === 0) {
+    io.stdout('- none\n');
+  } else {
+    for (const [dependent, entries] of [...byDependent.entries()].sort(([left], [right]) =>
+      left.localeCompare(right),
+    )) {
+      io.stdout(`- ${dependent}\n`);
+      for (const entry of entries.sort(
+        (left, right) =>
+          (left.importedSymbol ?? '').localeCompare(right.importedSymbol ?? '') ||
+          left.sourceFile.localeCompare(right.sourceFile) ||
+          Number(left.typeOnly) - Number(right.typeOnly),
+      )) {
+        io.stdout(
+          `  - ${entry.importedSymbol} — ${entry.sourceFile} [${entry.typeOnly ? 'type' : 'value'}]\n`,
+        );
+      }
+    }
+  }
   io.stdout(`Scope: ${impact.scope}; this is a feature-graph relationship, not semantic impact.\n`);
 }
 

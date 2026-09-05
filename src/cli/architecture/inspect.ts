@@ -1,19 +1,22 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 import { discoverFeatureDependencies } from './discover-dependencies';
 import { discoverFeatureIntegrations, type FeatureIntegrationFacts } from './discover-integrations';
+import type { FeatureImportEvidence } from './discover-import-evidence';
 
 export interface FeatureInspection {
   name: string;
   path: string;
   publicExports: string[];
+  webPublicExports: string[];
   dependencies: string[];
   dependents: string[];
   serverEntrypoints: string[];
   webEntrypoints: string[];
   contracts: string[];
   tests: string[];
+  consumerEvidence: FeatureImportEvidence[];
   integrations: FeatureIntegrationFacts;
 }
 
@@ -83,6 +86,7 @@ export function inspectFeature(name: string, root = process.cwd()): InspectFeatu
   }
 
   const indexFile = path.resolve(root, feature.directory, 'index.ts');
+  const webIndexFile = path.resolve(root, feature.directory, 'web', 'index.ts');
   const dependencies = discovery.dependencies
     .filter((dependency) => dependency.from === name)
     .map((dependency) => dependency.to)
@@ -91,6 +95,12 @@ export function inspectFeature(name: string, root = process.cwd()): InspectFeatu
     .filter((dependency) => dependency.to === name)
     .map((dependency) => dependency.from)
     .sort();
+  const consumerEvidence = discovery.importEvidence
+    .filter(
+      (evidence) =>
+        evidence.to === name && evidence.precision === 'symbol' && evidence.boundary !== undefined,
+    )
+    .map((evidence) => ({ ...evidence }));
   const integrations = discoverFeatureIntegrations(root)[name] ?? {
     applicationImports: [],
     serverRoutes: [],
@@ -103,6 +113,7 @@ export function inspectFeature(name: string, root = process.cwd()): InspectFeatu
       name: feature.name,
       path: feature.directory,
       publicExports: exportedNames(indexFile),
+      webPublicExports: existsSync(webIndexFile) ? exportedNames(webIndexFile) : [],
       dependencies,
       dependents,
       serverEntrypoints: normalizedFiles(feature.files, 'server'),
@@ -111,6 +122,7 @@ export function inspectFeature(name: string, root = process.cwd()): InspectFeatu
         ? exportedNames(path.resolve(root, feature.directory, 'contract.ts'))
         : [],
       tests: normalizedFiles(feature.files, 'tests'),
+      consumerEvidence,
       integrations: {
         applicationImports: integrations.applicationImports.map((fact) => ({
           ...fact,

@@ -102,6 +102,10 @@ Another Feature's browser code may use another Feature's `web/index.ts` only for
 
 The public indexes are intentional interfaces, not convenience barrels for every internal symbol. Arbitrary deep imports remain invalid.
 
+### Consumer evidence
+
+Nara derives cross-Feature consumer facts from statically declared imports and re-exports. Symbol-level evidence records the source Feature and file, target boundary, imported symbol, local/export alias, and whether the usage is type-only or runtime. A namespace import, side-effect import, `require`, dynamic import, or `export *` proves only a module dependency; Nara does not infer an exact symbol from those forms. These facts are evidence of declared architecture, not a prediction of runtime reachability or behavior.
+
 ## Contracts
 
 `contract.ts` owns the data crossing the Feature boundary. Keep runtime validators and their TypeScript types together when external input is involved:
@@ -157,6 +161,8 @@ Dependencies follow ownership and direction:
 4. Application browser composition under `src/app/` uses Feature `web/index.ts` for browser surfaces.
 5. Shared infrastructure may be imported where needed, but it owns no business capability.
 6. Web code stays on the browser-safe side of the server boundary.
+
+Dependency discovery retains every static cross-Feature module reference as deterministic evidence. It aggregates those references into the existing Feature graph, while preserving the richer symbol-level facts separately. This keeps graph compatibility for module-level imports without overstating which exported symbol a namespace or dynamic module consumer uses.
 
 For example, the users Feature may depend on the auth Feature's browser-safe public interface for a client-side session surface. It does not import `auth/web/pages/*`, `auth/web/client`, `auth/server/repository.ts`, or `auth/server/service.ts`.
 

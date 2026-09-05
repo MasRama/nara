@@ -5,11 +5,27 @@ import type {
   ServerRouteIntegration,
   WebRouteIntegration,
 } from './discover-integrations';
+import type { FeatureBoundary, FeatureImportEvidence } from './discover-import-evidence';
 
 export interface ExportDelta {
   feature: string;
   added: string[];
   removed: string[];
+}
+
+export type RemovedConsumerTargetState = 'still-imported' | 'removed-in-change';
+
+export type RemovedConsumerEvidence = FeatureImportEvidence & {
+  targetState: RemovedConsumerTargetState;
+};
+
+export interface RemovedPublicApiConsumerImpact {
+  feature: string;
+  boundary: FeatureBoundary;
+  symbol: string;
+  exportKind: 'public' | 'web' | 'contract';
+  change: 'removed';
+  consumers: RemovedConsumerEvidence[];
 }
 
 export interface SurfaceDelta {
@@ -42,10 +58,13 @@ export interface IntegrationChanges {
 export interface ArchitectureChanges {
   features: { added: string[]; removed: string[] };
   publicExports: ExportDelta[];
+  webPublicExports: ExportDelta[];
   contracts: ExportDelta[];
   dependencies: { added: DependencyDelta[]; removed: DependencyDelta[] };
   surfaces: SurfaceDelta[];
   integrations: IntegrationChanges;
+  consumerEvidence: IntegrationDelta<FeatureImportEvidence>;
+  removedPublicApiConsumers: RemovedPublicApiConsumerImpact[];
   diagnostics: { added: DiagnosticDelta[]; resolved: DiagnosticDelta[] };
 }
 
@@ -109,6 +128,118 @@ function compareWebRoutes(left: WebRouteIntegration, right: WebRouteIntegration)
     left.exportName.localeCompare(right.exportName)
   );
 }
+function compareFeatureImportEvidence(left: FeatureImportEvidence, right: FeatureImportEvidence): number {
+  return (
+    left.from.localeCompare(right.from) ||
+    left.to.localeCompare(right.to) ||
+    (left.boundary ?? '').localeCompare(right.boundary ?? '') ||
+    left.sourceFile.localeCompare(right.sourceFile) ||
+    left.specifier.localeCompare(right.specifier) ||
+    left.kind.localeCompare(right.kind) ||
+    left.precision.localeCompare(right.precision) ||
+    (left.importedSymbol ?? '').localeCompare(right.importedSymbol ?? '') ||
+    (left.localName ?? '').localeCompare(right.localName ?? '') ||
+    (left.exportedName ?? '').localeCompare(right.exportedName ?? '') ||
+    Number(left.typeOnly) - Number(right.typeOnly)
+  );
+}
+
+function featureImportEvidenceKey(evidence: FeatureImportEvidence): string {
+  return JSON.stringify([
+    evidence.from,
+    evidence.to,
+    evidence.sourceFile,
+    evidence.specifier,
+    evidence.boundary ?? null,
+    evidence.usesInternalPath,
+    evidence.kind,
+    evidence.precision,
+    evidence.importedSymbol ?? null,
+    evidence.localName ?? null,
+    evidence.exportedName ?? null,
+    evidence.typeOnly,
+  ]);
+}
+
+function consumerIdentityKey(evidence: FeatureImportEvidence): string {
+  return JSON.stringify([
+    evidence.from,
+    evidence.to,
+    evidence.sourceFile,
+    evidence.boundary ?? null,
+    evidence.precision,
+    evidence.importedSymbol ?? null,
+    evidence.typeOnly,
+  ]);
+}
+
+function removedConsumerImpact(
+  baseEvidence: FeatureImportEvidence[],
+  targetEvidence: FeatureImportEvidence[],
+  feature: string,
+  boundary: FeatureBoundary,
+  symbol: string,
+  exportKind: RemovedPublicApiConsumerImpact['exportKind'],
+): RemovedPublicApiConsumerImpact | undefined {
+  const baseline = baseEvidence.filter(
+    (evidence) =>
+      evidence.to === feature &&
+      evidence.boundary === boundary &&
+      evidence.precision === 'symbol' &&
+      evidence.importedSymbol === symbol,
+  );
+  if (baseline.length === 0) {
+    return undefined;
+  }
+
+  const targetIdentities = new Set(
+    targetEvidence
+      .filter(
+        (evidence) =>
+          evidence.to === feature &&
+          evidence.boundary === boundary &&
+          evidence.precision === 'symbol' &&
+          evidence.importedSymbol === symbol,
+      )
+      .map(consumerIdentityKey),
+  );
+  const seen = new Set<string>();
+  const consumers: RemovedConsumerEvidence[] = [];
+  for (const evidence of baseline.sort(compareFeatureImportEvidence)) {
+    const identity = consumerIdentityKey(evidence);
+    if (seen.has(identity)) {
+      continue;
+    }
+    seen.add(identity);
+    consumers.push({
+      ...evidence,
+      targetState: targetIdentities.has(identity) ? 'still-imported' : 'removed-in-change',
+    });
+  }
+
+  return {
+    feature,
+    boundary,
+    symbol,
+    exportKind,
+    change: 'removed',
+    consumers,
+  };
+}
+
+function sortRemovedConsumerImpacts(impacts: RemovedPublicApiConsumerImpact[]): void {
+  impacts.sort(
+    (left, right) =>
+      left.feature.localeCompare(right.feature) ||
+      left.boundary.localeCompare(right.boundary) ||
+      left.symbol.localeCompare(right.symbol) ||
+      left.exportKind.localeCompare(right.exportKind),
+  );
+  for (const impact of impacts) {
+    impact.consumers.sort(compareFeatureImportEvidence);
+  }
+}
+
 
 function integrationDelta<T>(
   base: T[],
@@ -137,6 +268,7 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
   const common = [...baseNames].filter((name) => targetNames.has(name)).sort();
 
   const publicExports: ExportDelta[] = [];
+  const webPublicExports: ExportDelta[] = [];
   const contracts: ExportDelta[] = [];
   const surfaces: SurfaceDelta[] = [];
   for (const name of common) {
@@ -146,6 +278,10 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
     const exports = addedRemoved(left.publicExports, right.publicExports);
     if (exports.added.length > 0 || exports.removed.length > 0) {
       publicExports.push({ feature: name, ...exports });
+    }
+    const webExports = addedRemoved(left.webPublicExports, right.webPublicExports);
+    if (webExports.added.length > 0 || webExports.removed.length > 0) {
+      webPublicExports.push({ feature: name, ...webExports });
     }
     const contract = addedRemoved(left.contractExports, right.contractExports);
     if (contract.added.length > 0 || contract.removed.length > 0) {
@@ -226,6 +362,64 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
     integrations.webRoutes.removed.push(...webRoutes.removed);
   }
 
+  const baseImportEvidence = base.importEvidence;
+  const targetImportEvidence = target.importEvidence;
+  const consumerEvidence = integrationDelta(
+    baseImportEvidence,
+    targetImportEvidence,
+    featureImportEvidenceKey,
+    compareFeatureImportEvidence,
+  );
+  const removedPublicApiConsumers: RemovedPublicApiConsumerImpact[] = [];
+  for (const delta of publicExports) {
+    for (const symbol of delta.removed) {
+      const impact = removedConsumerImpact(
+        baseImportEvidence,
+        targetImportEvidence,
+        delta.feature,
+        'public',
+        symbol,
+        'public',
+      );
+      if (impact) {
+        removedPublicApiConsumers.push(impact);
+      }
+    }
+  }
+  for (const delta of webPublicExports) {
+    for (const symbol of delta.removed) {
+      const impact = removedConsumerImpact(
+        baseImportEvidence,
+        targetImportEvidence,
+        delta.feature,
+        'web',
+        symbol,
+        'web',
+      );
+      if (impact) {
+        removedPublicApiConsumers.push(impact);
+      }
+    }
+  }
+  for (const delta of contracts) {
+    for (const symbol of delta.removed) {
+      for (const boundary of ['public', 'web'] as const) {
+        const impact = removedConsumerImpact(
+          baseImportEvidence,
+          targetImportEvidence,
+          delta.feature,
+          boundary,
+          symbol,
+          'contract',
+        );
+        if (impact) {
+          removedPublicApiConsumers.push(impact);
+        }
+      }
+    }
+  }
+  sortRemovedConsumerImpacts(removedPublicApiConsumers);
+
   const baseDiagnostics = new Map(base.diagnostics.map((d) => [diagnosticKey(d), d]));
   const targetDiagnostics = new Map(target.diagnostics.map((d) => [diagnosticKey(d), d]));
   const diagnosticsAdded = [...targetDiagnostics.values()]
@@ -238,13 +432,17 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
   return {
     features: { added, removed },
     publicExports,
+    webPublicExports,
     contracts,
     dependencies: { added: dependencyAdded, removed: dependencyRemoved },
     surfaces,
     integrations,
+    consumerEvidence,
+    removedPublicApiConsumers,
     diagnostics: { added: diagnosticsAdded, resolved: diagnosticsResolved },
   };
 }
+
 
 export function computeAffected(
   changes: ArchitectureChanges,
@@ -254,6 +452,7 @@ export function computeAffected(
   for (const name of changes.features.added) directly.add(name);
   for (const name of changes.features.removed) directly.add(name);
   for (const delta of changes.publicExports) directly.add(delta.feature);
+  for (const delta of changes.webPublicExports) directly.add(delta.feature);
   for (const delta of changes.contracts) directly.add(delta.feature);
   for (const delta of changes.surfaces) directly.add(delta.feature);
   for (const delta of [
@@ -264,6 +463,9 @@ export function computeAffected(
     for (const integration of [...delta.added, ...delta.removed]) {
       directly.add(integration.feature);
     }
+  }
+  for (const evidence of [...changes.consumerEvidence.added, ...changes.consumerEvidence.removed]) {
+    directly.add(evidence.from);
   }
   for (const edge of changes.dependencies.added) {
     directly.add(edge.from);

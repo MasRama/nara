@@ -198,7 +198,7 @@ Describe one discovered Feature without opening all source files:
 nara inspect users
 ```
 
-Human output lists the public exports, dependencies, dependents, server entrypoints, web entrypoints, contracts, tests, and statically provable application integrations (server routes, web routes, and application consumers). Route integrations require the framework composition chain itself to be statically proven from the canonical root; uncertain composition is omitted.
+Human output lists the public exports, browser-safe public exports, exact public/web API consumers, type-only versus runtime usage, dependencies, dependents, server entrypoints, web entrypoints, contracts, tests, and statically provable application integrations (server routes, web routes, and application consumers). Route integrations require the framework composition chain itself to be statically proven from the canonical root; uncertain composition is omitted.
 
 Use machine-readable output when selecting a bounded change surface:
 
@@ -212,13 +212,29 @@ The result contains these fields:
 {
   "name": "users",
   "path": "src/features/users",
-  "publicExports": ["..."],
+  "publicExports": ["userRoutes"],
+  "webPublicExports": ["UsersPage"],
   "dependencies": ["auth"],
   "dependents": [],
   "serverEntrypoints": ["server/routes.ts"],
   "webEntrypoints": [],
-  "contracts": ["..."],
+  "contracts": ["UserProfile"],
   "tests": ["tests/routes.test.ts"],
+  "consumerEvidence": [
+    {
+      "from": "billing",
+      "to": "users",
+      "sourceFile": "src/features/billing/index.ts",
+      "specifier": "@/features/users",
+      "boundary": "public",
+      "usesInternalPath": false,
+      "kind": "named-import",
+      "precision": "symbol",
+      "importedSymbol": "userRoutes",
+      "localName": "userRoutes",
+      "typeOnly": false
+    }
+  ],
   "integrations": {
     "applicationImports": [{ "feature": "users", "appFile": "src/app/server.ts", "boundary": "public", "symbols": ["userRoutes"] }],
     "serverRoutes": [{ "feature": "users", "appFile": "src/app/server.ts", "exportName": "userRoutes", "mountPath": "/api/users" }],
@@ -226,6 +242,8 @@ The result contains these fields:
   }
 }
 ```
+
+`consumerEvidence` is limited to symbol-level imports and re-exports through the public or web boundary. Module-level forms remain visible through dependency facts and diff consumer changes, but Nara does not invent an exact symbol for them.
 
 Unknown Features return a readable error and exit non-zero. Available Feature names are included when any exist.
 
@@ -245,7 +263,8 @@ The pack answers: *if I am about to change this Feature, what architectural cont
 
 - `target`: selected Feature, how it was selected (`feature` | `file`), and the normalized source file when file-selected
 - `ownership`: Feature directory, public boundary, and every owned source file (sorted)
-- `publicApi`: public exports from `index.ts` and contract exports from `contract.ts` (via `inspect`)
+- `publicApi`: public exports from `index.ts`, browser-safe exports from `web/index.ts`, and contract exports from `contract.ts` (via `inspect`)
+- `consumers`: symbol-level public/web consumer evidence with source Feature, source file, boundary, imported symbol, aliases, and type-only versus runtime provenance; module-level evidence is intentionally not promoted to an exact symbol claim
 - `relationships`: dependencies, direct dependents, and transitive dependents (via the dependency graph and `impact` primitives) — what this Feature relies on and what could be structurally affected
 - `surfaces`: server, web, and test surfaces
 - `constraints`: the architecture rules in force while editing (public boundary is `index.ts`, cross-Feature imports use the public boundary, internals are private, server code stays out of browser surfaces, canonical shape stays valid)
@@ -263,9 +282,24 @@ Example JSON:
     "publicBoundary": "src/features/users/index.ts",
     "ownedFiles": ["src/features/users/contract.ts", "src/features/users/index.ts"]
   },
-  "publicApi": { "exports": ["usersRoutes"], "contracts": ["User"] },
+  "publicApi": { "exports": ["usersRoutes"], "webExports": ["UsersPage"], "contracts": ["User"] },
   "relationships": { "dependencies": ["auth"], "directDependents": [], "transitiveDependents": [] },
   "surfaces": { "server": ["src/features/users/server/routes.ts"], "web": [], "tests": [] },
+  "consumers": [
+    {
+      "from": "billing",
+      "to": "users",
+      "sourceFile": "src/features/billing/index.ts",
+      "specifier": "@/features/users",
+      "boundary": "public",
+      "usesInternalPath": false,
+      "kind": "named-import",
+      "precision": "symbol",
+      "importedSymbol": "usersRoutes",
+      "localName": "usersRoutes",
+      "typeOnly": false
+    }
+  ],
   "integrations": {
     "applicationImports": [{ "feature": "users", "appFile": "src/app/server.ts", "boundary": "public", "symbols": ["usersRoutes"] }],
     "serverRoutes": [{ "feature": "users", "appFile": "src/app/server.ts", "exportName": "usersRoutes", "mountPath": "/api/users" }],
@@ -299,11 +333,26 @@ Example JSON:
   "name": "auth",
   "directDependents": ["users"],
   "transitiveDependents": [],
+  "directConsumerEvidence": [
+    {
+      "from": "users",
+      "to": "auth",
+      "sourceFile": "src/features/users/index.ts",
+      "specifier": "@/features/auth",
+      "boundary": "public",
+      "usesInternalPath": false,
+      "kind": "named-import",
+      "precision": "symbol",
+      "importedSymbol": "requireAuth",
+      "localName": "requireAuth",
+      "typeOnly": false
+    }
+  ],
   "scope": "feature dependency graph"
 }
 ```
 
-`impact` reports graph relationships, not semantic business impact. Review contracts and behavior after identifying the affected dependents.
+`impact` reports graph relationships and direct statically proven symbol-consumer evidence, not semantic business impact. Consumer evidence is limited to direct dependents and exact public/web symbols; module-level imports remain dependency facts. Review contracts and behavior after identifying the affected dependents.
 
 ## `nara diff --base <ref> [--head <ref>] [--json]`
 
@@ -318,7 +367,7 @@ nara diff --base main --json
 
 `--base` is required; `--head` is optional. When `--head` is omitted the base ref is compared against the working tree. When `--head` is supplied both sides are Git refs and the working tree is never modified (no checkout, reset, stash, or clean). The command never mutates user changes; ref state is materialized into an isolated temporary directory via read-only Git plumbing and always cleaned up.
 
-The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public exports and contract exports, added/removed dependency edges (`source Feature -> target Feature` with deterministic import evidence), per-Feature added/removed server/web/test surfaces, added/removed canonical application imports, statically proven Hono server routes, and statically proven Vue web routes, and newly introduced versus resolved doctor diagnostics. A changed route path is represented as a removal plus an addition.
+The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public and web-boundary exports and contract exports, added/removed dependency edges with deterministic module and symbol import evidence, per-Feature added/removed server/web/test surfaces, added/removed canonical application imports, statically proven Hono server routes, statically proven Vue web routes, and newly introduced versus resolved doctor diagnostics. `consumerEvidence` reports exact import/re-export changes with source, boundary, aliases, and type-only versus runtime provenance. `removedPublicApiConsumers` connects removed public/web/contract symbols to baseline consumers and labels whether each consumer remains declared or was removed in the same change; it does not predict breakage. A changed route path is represented as a removal plus an addition.
 
 A successful comparison returns exit code `0` whether or not the architecture changed. Existing baseline violations do not fail the command; policy enforcement is `nara guard`. No configuration file, architecture manifest, LLM, or AI provider is required.
 

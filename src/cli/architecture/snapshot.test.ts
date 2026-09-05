@@ -74,6 +74,62 @@ app.route('/health', healthRoutes);
     expect(first).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
   });
 
+  it('persists public and web consumer evidence with relative paths', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'auth', {
+      'index.ts': 'export const requireAuth = true;\nexport type SessionUser = { id: string };\n',
+      'web/index.ts': 'export const LoginPage = true;\n',
+    });
+    writeFeature(fixture, 'users', {
+      'index.ts': `import { requireAuth as authenticate, type SessionUser } from '@/features/auth';
+`,
+      'web/router.ts': "import { LoginPage as Page } from '@/features/auth/web';\n",
+    });
+
+    const snapshot = captureArchitectureSnapshot(fixture);
+    const auth = snapshot.features.find((feature) => feature.name === 'auth');
+
+    expect(auth?.webPublicExports).toEqual(['LoginPage']);
+    expect(snapshot.importEvidence).toHaveLength(3);
+    expect(snapshot.importEvidence).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          from: 'users',
+          to: 'auth',
+          sourceFile: 'src/features/users/index.ts',
+          boundary: 'public',
+          importedSymbol: 'requireAuth',
+          localName: 'authenticate',
+          precision: 'symbol',
+          typeOnly: false,
+        }),
+        expect.objectContaining({
+          from: 'users',
+          to: 'auth',
+          sourceFile: 'src/features/users/index.ts',
+          boundary: 'public',
+          importedSymbol: 'SessionUser',
+          precision: 'symbol',
+          typeOnly: true,
+        }),
+        expect.objectContaining({
+          from: 'users',
+          to: 'auth',
+          sourceFile: 'src/features/users/web/router.ts',
+          boundary: 'web',
+          importedSymbol: 'LoginPage',
+          localName: 'Page',
+          precision: 'symbol',
+          typeOnly: false,
+        }),
+      ]),
+    );
+    for (const evidence of snapshot.importEvidence) {
+      expect(path.isAbsolute(evidence.sourceFile)).toBe(false);
+      expect(evidence.sourceFile).not.toContain('\\\\');
+    }
+  });
+
   it('sorts dependencies and diagnostics deterministically', () => {
     const fixture = createFixture();
     writeFeature(fixture, 'users', { 'index.ts': 'export const users = 1;\n' });

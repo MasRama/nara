@@ -5,6 +5,7 @@ import { discoverFeatures } from './discover-features';
 import { inspectFeature } from './inspect';
 import { inspectFeatureImpact } from './impact';
 import type { FeatureIntegrationFacts } from './discover-integrations';
+import type { FeatureImportEvidence } from './discover-import-evidence';
 
 export interface ArchitectureContextTarget {
   feature: string;
@@ -20,6 +21,7 @@ export interface ArchitectureContextOwnership {
 
 export interface ArchitectureContextPublicApi {
   exports: string[];
+  webExports: string[];
   contracts: string[];
 }
 
@@ -53,6 +55,7 @@ export interface ArchitectureContextPack {
   relationships: ArchitectureContextRelationships;
   surfaces: ArchitectureContextSurfaces;
   integrations: FeatureIntegrationFacts;
+  consumers: FeatureImportEvidence[];
   constraints: ArchitectureConstraint[];
   diagnostics: DoctorIssue[];
   readingOrder: ArchitectureReadingEntry[];
@@ -225,7 +228,11 @@ function assembleContextPack(
       schemaVersion: 1,
       target,
       ownership: { directory, publicBoundary, ownedFiles },
-      publicApi: { exports: [...feature.publicExports], contracts: [...feature.contracts] },
+      publicApi: {
+        exports: [...feature.publicExports],
+        webExports: [...feature.webPublicExports],
+        contracts: [...feature.contracts],
+      },
       relationships: {
         dependencies: [...feature.dependencies],
         directDependents: [...impact.impact.directDependents],
@@ -240,6 +247,7 @@ function assembleContextPack(
         serverRoutes: feature.integrations.serverRoutes.map((route) => ({ ...route })),
         webRoutes: feature.integrations.webRoutes.map((route) => ({ ...route })),
       },
+      consumers: feature.consumerEvidence.map((evidence) => ({ ...evidence })),
       constraints: ARCHITECTURE_CONSTRAINTS.map((constraint) => ({ ...constraint })),
       diagnostics,
       readingOrder,

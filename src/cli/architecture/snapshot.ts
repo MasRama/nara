@@ -2,6 +2,7 @@ import { analyzeArchitecture, type DoctorIssue } from './doctor';
 import { discoverFeatureDependencies } from './discover-dependencies';
 import { discoverFeatureIntegrations, type FeatureIntegrationFacts } from './discover-integrations';
 import { inspectFeature } from './inspect';
+import type { FeatureImportEvidence } from './discover-import-evidence';
 /**
  * Deterministic internal architecture snapshot used by `nara diff`.
  * Derived only from facts Nara already owns (discovery, inspection,
@@ -23,6 +24,7 @@ export interface SnapshotDiagnostic {
 export interface SnapshotFeature {
   name: string;
   publicExports: string[];
+  webPublicExports: string[];
   contractExports: string[];
   serverSurfaces: string[];
   webSurfaces: string[];
@@ -33,6 +35,7 @@ export interface SnapshotFeature {
 export interface ArchitectureSnapshot {
   schemaVersion: 1;
   features: SnapshotFeature[];
+  importEvidence: FeatureImportEvidence[];
   dependencies: SnapshotEdge[];
   diagnostics: SnapshotDiagnostic[];
 }
@@ -55,6 +58,7 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
       return {
         name,
         publicExports: [],
+        webPublicExports: [],
         contractExports: [],
         serverSurfaces: [],
         webSurfaces: [],
@@ -74,6 +78,7 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
     return {
       name,
       publicExports: [...inspected.feature.publicExports].sort(),
+      webPublicExports: [...inspected.feature.webPublicExports].sort(),
       contractExports: [...inspected.feature.contracts].sort(),
       serverSurfaces: [...inspected.feature.serverEntrypoints].sort(),
       webSurfaces: [...inspected.feature.webEntrypoints].sort(),
@@ -89,6 +94,10 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
     };
   });
 
+  const importEvidence = discovery.importEvidence.map((evidence) => ({
+    ...evidence,
+    sourceFile: toPosix(evidence.sourceFile),
+  }));
   const dependencies: SnapshotEdge[] = discovery.dependencies
     .map((dependency) => ({
       from: dependency.from,
@@ -112,7 +121,7 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
         left.relationship.localeCompare(right.relationship),
     );
 
-  return { snapshot: { schemaVersion: 1, features, dependencies, diagnostics }, issues };
+  return { snapshot: { schemaVersion: 1, features, importEvidence, dependencies, diagnostics }, issues };
 }
 
 export function captureArchitectureSnapshot(root = process.cwd()): ArchitectureSnapshot {
