@@ -253,6 +253,7 @@ This is a minimal Nara v3 application.
 - Feature-specific browser code belongs under that Feature's web/ directory, including Feature-owned pages.
 - Keep server code separate from browser code; do not add SSR, a second framework, or custom RPC.
 - Inspect architecture with the local CLI: npx nara context <feature> --json, npx nara impact <feature> --json, npx nara doctor --json.
+- Official Features remain editable source: npx nara add <feature> records local lineage, and npx nara evolve <feature> --dry-run previews bundled updates.
 - Run npm run check before handing off changes (it includes the architecture check).
 
 The development ports default to Vite 5173 and Hono 5555; set VITE_PORT and PORT to override them.

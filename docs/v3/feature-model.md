@@ -249,6 +249,39 @@ Expose browser-safe contract data instead. Keep persistence and filesystem work 
 
 Do not move role policy, billing rules, or user workflows into `src/shared/` simply because multiple files need them. Assign ownership to the Feature and export a narrow public operation.
 
+## Evolvable official source
+
+`nara add <feature>` installs an official Feature as ordinary source and
+records a local lineage snapshot:
+
+```text
+.nara/lineage/official-features/<feature>/
+├── base/          # exact official bytes
+└── lineage.json   # schema, source kind, and SHA-256 digest
+```
+
+`nara evolve <feature>` uses that snapshot as `BASE`, the installed Feature
+as `LOCAL`, and the current official package bundled with the local CLI as
+`INCOMING`. It never uses Git history as the Feature base and never reads
+lineage as architecture metadata.
+
+The reconciliation plan is deterministic. Upstream-only changes update or
+remove files; local-only files survive; additions and deletions are explicit;
+non-overlapping text edits merge through `git merge-file`; binary files and
+incompatible deletion states conflict. `--dry-run --json` is read-only.
+Conflicts return non-zero without writing conflict markers or partial source.
+
+Before applying a conflict-free plan, Nara validates an isolated candidate
+with the existing source-derived architecture snapshot and diff model. The
+affected set is structural dependency impact. Newly introduced diagnostics
+block the apply; existing diagnostics remain baseline debt. On success,
+lineage advances to pure `INCOMING` bytes, while merged `LOCAL` customization
+stays only in `src/features/<feature>`.
+
+Lineage is fail-closed: a missing snapshot can be bootstrapped only when local
+source is identical to current official source. Divergent legacy source and
+Features without an official package are not evolved.
+
 ## Diagnostics
 
 Run the deterministic architecture check after Feature changes:

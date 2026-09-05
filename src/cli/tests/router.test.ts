@@ -22,6 +22,16 @@ describe('Nara CLI router', () => {
     expect(io.output.join('')).toContain('Nara v3 CLI');
     expect(io.errors).toHaveLength(0);
   });
+  it('dispatches evolve help', () => {
+    const io = createTestIO();
+
+    const result = runCli(['evolve', '--help'], io);
+
+    expect(result.exitCode).toBe(0);
+    expect(io.output.join('')).toContain('nara evolve <feature>');
+    expect(io.output.join('')).toContain('--dry-run');
+    expect(io.errors).toHaveLength(0);
+  });
 
   it('reports unknown commands with a usage error exit code', () => {
     const io = createTestIO();

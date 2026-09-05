@@ -14,6 +14,26 @@ import {
   runLocalNara,
 } from './pack-helpers';
 
+interface EvolutionSummary {
+  status: string;
+  applied: boolean;
+}
+
+function parseEvolutionSummary(output: string): EvolutionSummary {
+  const value: unknown = JSON.parse(output);
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('status' in value) ||
+    typeof value.status !== 'string' ||
+    !('applied' in value) ||
+    typeof value.applied !== 'boolean'
+  ) {
+    throw new Error('Packaged evolve output did not contain a valid status summary.');
+  }
+  return { status: value.status, applied: value.applied };
+}
+
 function findFreePort(): Promise<number> {
   const { promise, resolve, reject } = Promise.withResolvers<number>();
   const server = createServer();
@@ -136,6 +156,48 @@ describe('packaged Nara lifecycle', () => {
       expect(existsSync(path.join(projectDirectory, 'src', 'features', 'audit', 'contract.ts'))).toBe(true);
       const doctorAfterAdd = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctorAfterAdd.stdout).toBe('Architecture looks healthy.\n');
+      // A packaged official source update evolves an installed Feature without losing local code.
+      const auditDirectory = path.join(projectDirectory, 'src', 'features', 'audit');
+      const localCustomization = path.join(auditDirectory, 'local.ts');
+      writeFileSync(localCustomization, 'export const localCustomization = true;\n');
+      const lineageDirectory = path.join(
+        projectDirectory,
+        '.nara',
+        'lineage',
+        'official-features',
+        'audit',
+      );
+      const beforeLineage = readFileSync(path.join(lineageDirectory, 'lineage.json'));
+      const packagedOfficialAudit = path.join(projectDirectory, 'node_modules', '@nara-web', 'cli', 'official-features', 'audit', 'index.ts');
+      const packagedBase = readFileSync(packagedOfficialAudit, 'utf8');
+      writeFileSync(packagedOfficialAudit, `${packagedBase}\nexport const auditVersion = 'packaged-next';\n`);
+      const beforeFeature = readFileSync(path.join(auditDirectory, 'index.ts'));
+
+      const dryRun = await runLocalNara(projectDirectory, ['evolve', 'audit', '--dry-run', '--json']);
+      const dryRunPlan = parseEvolutionSummary(dryRun.stdout);
+      expect(dryRunPlan.status).toBe('dry-run');
+      expect(dryRunPlan.applied).toBe(false);
+      expect(readFileSync(path.join(auditDirectory, 'index.ts'))).toEqual(beforeFeature);
+      expect(readFileSync(path.join(lineageDirectory, 'lineage.json'))).toEqual(beforeLineage);
+
+      const evolved = await runLocalNara(projectDirectory, ['evolve', 'audit', '--json']);
+      const evolutionPlan = parseEvolutionSummary(evolved.stdout);
+      expect(evolutionPlan.status).toBe('applied');
+      expect(evolutionPlan.applied).toBe(true);
+      expect(readFileSync(path.join(auditDirectory, 'index.ts'), 'utf8')).toContain(
+        "auditVersion = 'packaged-next'",
+      );
+      expect(readFileSync(localCustomization, 'utf8')).toContain('localCustomization');
+      expect(readFileSync(path.join(lineageDirectory, 'base', 'index.ts'), 'utf8')).toBe(
+        readFileSync(packagedOfficialAudit, 'utf8'),
+      );
+      expect(existsSync(path.join(lineageDirectory, 'base', 'local.ts'))).toBe(false);
+      expect(readFileSync(path.join(lineageDirectory, 'lineage.json'))).not.toEqual(beforeLineage);
+      const unchanged = await runLocalNara(projectDirectory, ['evolve', 'audit', '--json']);
+      expect(parseEvolutionSummary(unchanged.stdout).status).toBe('up-to-date');
+
+      const doctorAfterEvolution = await runLocalNara(projectDirectory, ['doctor']);
+      expect(doctorAfterEvolution.stdout).toBe('Architecture looks healthy.\n');
 
       // The generated project's own check defends the architecture rules.
       await runCommand(npmCommand, ['run', 'check'], projectDirectory);

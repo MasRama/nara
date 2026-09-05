@@ -11,6 +11,7 @@ import type { BoundaryExportEvidence } from './architecture/discover-boundary-ex
 import type { FeatureImportEvidence } from './architecture/discover-import-evidence';
 import { installOfficialFeature } from './composition/install-feature';
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
+import { formatEvolutionHuman, evolveFeature } from './commands/evolve';
 import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
 import { makeFeature } from './commands/make-feature';
 import { newProject } from './commands/new-project';
@@ -44,7 +45,7 @@ Usage:
   guard --base <ref> [--head <ref>] [--json]
                             Fail when the change introduces new architecture violations
   add <feature>             Install an official open-code feature
-
+  evolve <feature> [options] Reconcile an official Feature update safely
 Options:
   -h, --help                Show this help message
 `;
@@ -115,6 +116,14 @@ const ADD_HELP = `Usage:
   nara add <feature>
 
 Installs an official feature into src/features/<feature> without merging or overwriting local source.
+`;
+
+const EVOLVE_HELP = `Usage:
+  nara evolve <feature> [--dry-run] [--json]
+
+Reconciles an installed official Feature with the current bundled source using
+BASE + LOCAL + INCOMING lineage, validates an isolated architecture candidate,
+and applies only conflict-free evolutions. --dry-run never writes files.
 `;
 
 const defaultIO: CliIO = {
@@ -571,6 +580,7 @@ function renderGuardReport(io: CliIO, args: string[], root: string | undefined):
     } else {
       io.stdout(formatGuardHuman(result));
     }
+
     return result.passed ? 0 : 1;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -578,6 +588,57 @@ function renderGuardReport(io: CliIO, args: string[], root: string | undefined):
     return 1;
   }
 }
+function evolutionExitCode(errorCode: string): number {
+  if (errorCode === 'invalid-name' || errorCode === 'unknown-feature') return 64;
+  if (errorCode === 'filesystem') return 73;
+  return 1;
+}
+
+function parseEvolveArgs(args: string[]):
+  | { ok: true; feature: string; dryRun: boolean; json: boolean }
+  | { ok: false } {
+  let feature: string | undefined;
+  let dryRun = false;
+  let json = false;
+  for (const arg of args) {
+    if (arg === '--dry-run') {
+      if (dryRun) return { ok: false };
+      dryRun = true;
+    } else if (arg === '--json') {
+      if (json) return { ok: false };
+      json = true;
+    } else if (arg.startsWith('-') || feature !== undefined) {
+      return { ok: false };
+    } else {
+      feature = arg;
+    }
+  }
+  if (!feature) return { ok: false };
+  return { ok: true, feature, dryRun, json };
+}
+
+function renderEvolutionReport(io: CliIO, args: string[], root: string | undefined): number {
+  if (args.includes('--help') || args.includes('-h')) {
+    io.stdout(EVOLVE_HELP);
+    return 0;
+  }
+  const parsed = parseEvolveArgs(args);
+  if (!parsed.ok) {
+    io.stderr(EVOLVE_HELP);
+    return 64;
+  }
+
+  const outcome = evolveFeature({ feature: parsed.feature, cwd: root, dryRun: parsed.dryRun });
+  if (!outcome.ok) {
+    if (parsed.json) io.stdout(`${JSON.stringify(outcome.error, null, 2)}\n`);
+    else io.stderr(`${outcome.error.message}\n`);
+    return evolutionExitCode(outcome.error.errorCode);
+  }
+  if (parsed.json) io.stdout(`${JSON.stringify(outcome.plan, null, 2)}\n`);
+  else io.stdout(formatEvolutionHuman(outcome));
+  return outcome.plan.status === 'conflict' || outcome.plan.status === 'architecture-regression' ? 1 : 0;
+}
+
 
 export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOptions = {}): CliResult {
   const [command, ...args] = argv;
@@ -673,6 +734,10 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
     }
     return { exitCode: 0 };
   }
+  if (command === 'evolve') {
+    return { exitCode: renderEvolutionReport(io, args, options.cwd) };
+  }
+
 
   if (command === 'new') {
     const [name, ...extraArgs] = args;

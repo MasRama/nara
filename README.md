@@ -106,6 +106,7 @@ Available commands:
 nara new <name>                 Create a runnable v3 application
 nara make feature <name>        Create the canonical feature skeleton
 nara add <feature>              Install an official open-code feature
+nara evolve <feature>           Safely evolve an installed official Feature
 nara doctor                    Validate architecture
 nara inspect <feature>         Show bounded feature facts
 nara context <feature>|--file <path>  Architecture Context Pack before editing a feature
@@ -272,6 +273,53 @@ so extracting them would require hidden cross-directory patches — exactly
 what open-code composition forbids. They stay reference implementations
 until a capability can be packaged with zero out-of-feature changes.
 
+## Evolvable Open Code
+
+Official Features remain ordinary project source after `nara add`, but they
+also carry a small local lineage record:
+
+```text
+.nara/
+└── lineage/
+    └── official-features/<feature>/
+        ├── base/          # exact official source bytes
+        └── lineage.json   # schema, source kind, SHA-256 base digest
+```
+
+The lineage directory is not an architecture manifest. Architecture facts
+remain derived from `src/` by the existing inspect, context, diff, snapshot,
+and doctor primitives. `.nara/lineage` is only the deterministic historical
+BASE used by `nara evolve`.
+
+```bash
+npx nara evolve audit --dry-run
+npx nara evolve audit --dry-run --json
+npx nara evolve audit
+```
+
+Evolution compares three states:
+
+| State | Meaning |
+|---|---|
+| `BASE` | exact official source recorded by the last add or successful evolve |
+| `LOCAL` | the installed, possibly customized `src/features/<feature>` |
+| `INCOMING` | the current official source bundled with the installed Nara CLI |
+
+Unchanged files, upstream-only updates, local-only changes, additions, and
+deletions are resolved deterministically. Text files use `git merge-file`;
+binary files merge only when one side is unchanged or both sides reached the
+same bytes. Conflicts are reported as a stable path list, never written as
+conflict markers, and never partially applied.
+
+Before a conflict-free apply, Nara materializes an isolated candidate
+Feature, reruns the existing architecture snapshot and diff model, computes
+structural downstream impact, and blocks only newly introduced architecture
+diagnostics. Existing diagnostics are baseline debt and remain tolerated.
+Successful application replaces the Feature and advances `BASE` to pure
+`INCOMING` bytes while preserving local-only code. A missing lineage is
+bootstrapped only when local source is byte-identical to the current official
+source; divergent legacy source fails closed. Application-owned Features
+without an official package are not evolved.
 
 ## Read next
 - [`AGENTS.md`](./AGENTS.md) — coding rules and agent workflow

@@ -264,4 +264,20 @@ createRouter({ routes: [{ path: '/users', name: 'users', component: UsersPage }]
       ],
     });
   });
+  it('ignores project-local Feature lineage when deriving architecture facts', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'health', { 'index.ts': 'export const healthRoutes = 1;\n' });
+    const before = JSON.stringify(captureArchitectureSnapshot(fixture));
+    mkdirSync(path.join(fixture, '.nara/lineage/official-features/health/base'), { recursive: true });
+    writeFileSync(
+      path.join(fixture, '.nara/lineage/official-features/health/base/metadata.ts'),
+      'export const notArchitecture = true;\n',
+    );
+    writeFileSync(
+      path.join(fixture, '.nara/lineage/official-features/health/lineage.json'),
+      JSON.stringify({ schemaVersion: 1, feature: 'health', source: 'official-feature', baseDigest: '0'.repeat(64) }),
+    );
+
+    expect(JSON.stringify(captureArchitectureSnapshot(fixture))).toBe(before);
+  });
 });

@@ -1,6 +1,6 @@
 # Nara v3 CLI
 
-The Nara CLI is a TypeScript command-line tool for creating Features, composing official source packages, and inspecting architecture. Core analysis is deterministic and does not call an LLM.
+The Nara CLI is a TypeScript command-line tool for creating Features, composing official source packages, evolving installed official source, and inspecting architecture. Core analysis is deterministic and does not call an LLM.
 
 The `nara` CLI is distributed on npm as `@nara-web/cli` (not yet published; see the packaging note in [`README.md`](../../README.md)) and the package exposes the `nara` executable. Inside
 a generated project every command below runs from the project's own pinned
@@ -25,7 +25,7 @@ Every generated project exact-pins the version of the Nara CLI that created
 it as `@nara-web/cli` in devDependencies (no range), so architecture-rule
 changes arrive only through an explicit dependency update — never silently
 (see ADR 0011). Its `npm run check` ends with `npm run architecture:doctor`, and
-`nara inspect/context/impact/doctor/add` all run from the project's own
+`nara inspect/context/impact/doctor/add/evolve` all run from the project's own
 install with no global CLI and no network service. Production serving needs
 no Nara runtime: the CLI is development tooling, not request-path
 infrastructure.
@@ -131,6 +131,72 @@ Run the architecture check after installation:
 ```bash
 npx nara doctor
 ```
+
+## `nara evolve <feature> [--dry-run] [--json]`
+
+Reconcile an installed official Feature with the current official source
+bundled in the local Nara CLI:
+
+```bash
+npx nara evolve audit --dry-run
+npx nara evolve audit --dry-run --json
+npx nara evolve audit
+```
+
+`nara add` records the exact official source as `BASE` under
+`.nara/lineage/official-features/<feature>/base/`. Evolution compares that
+snapshot with `LOCAL` (`src/features/<feature>`) and `INCOMING` (the current
+bundled official source). The source remains ordinary project code; lineage is
+not an architecture manifest and is never used by `inspect`, `context`, `diff`,
+snapshots, or `doctor`.
+
+The plan has stable relative paths and file actions:
+
+- unchanged files stay unchanged
+- upstream-only updates and deletions are adopted
+- local-only additions and changes are preserved
+- upstream additions are copied
+- non-overlapping text changes merge with `git merge-file`
+- binary files merge only for one-side changes or identical results
+- incompatible text, binary, or deletion changes are conflicts
+
+Conflicts return non-zero and list paths without writing conflict markers or
+partial files. `--dry-run` never writes Feature source or lineage. A
+conflict-free plan is materialized as an isolated candidate and checked with
+the existing architecture snapshot, diff, affected-set, and diagnostic
+identity primitives. Newly introduced diagnostics block application, while
+existing local diagnostics are tolerated. On success, the Feature is replaced
+transactionally and `BASE` advances to pure `INCOMING` bytes.
+
+Missing lineage is conservative: an identical legacy Feature can bootstrap its
+lineage; divergent local source fails closed because the historical official
+base cannot be proven. A Feature with no official package is application-owned:
+for example, `nara evolve billing` reports that `billing` has no official
+upstream lineage and changes nothing.
+
+JSON success output has this shape:
+
+```json
+{
+  "schemaVersion": 1,
+  "feature": "audit",
+  "status": "dry-run",
+  "lineage": { "baseDigest": "...", "incomingDigest": "..." },
+  "files": [{ "path": "index.ts", "action": "update", "reason": "..." }],
+  "conflicts": [],
+  "canApply": true,
+  "applied": false,
+  "architecture": {
+    "changes": {},
+    "affected": { "scope": "structural dependency impact" },
+    "introducedDiagnostics": []
+  }
+}
+```
+
+Error JSON uses `status: "error"`, a stable `errorCode`, a human-readable
+`message`, and `canApply: false`. No network service or AI provider is
+required.
 
 ## `nara doctor`
 

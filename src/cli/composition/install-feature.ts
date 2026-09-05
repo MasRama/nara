@@ -1,12 +1,23 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { featureNameIsValid } from '../feature-name';
 import { resolveOfficialFeatureDirectory } from '../package-root';
+import {
+  cleanupStagedLineage,
+  copyFeatureFiles,
+  digestFeatureFiles,
+  lineageDirectory,
+  readFeatureFiles,
+  stageFeatureLineage,
+  type StagedLineage,
+} from '../evolution/lineage';
 
 export interface InstalledFeature {
   name: string;
   directory: string;
   files: string[];
+  lineageDirectory: string;
+  baseDigest: string;
 }
 
 export interface FeatureInstallError {
@@ -17,38 +28,6 @@ export interface FeatureInstallError {
 export type InstallFeatureResult =
   | { ok: true; feature: InstalledFeature }
   | { ok: false; error: FeatureInstallError };
-
-function officialFeatureDirectory(name: string): string {
-  return resolveOfficialFeatureDirectory(name);
-}
-
-function packageFiles(directory: string, prefix = ''): string[] {
-  const files: string[] = [];
-  const entries = readdirSync(directory, { withFileTypes: true }).sort((left, right) =>
-    left.name.localeCompare(right.name),
-  );
-  for (const entry of entries) {
-    if (entry.name.startsWith('.')) {
-      continue;
-    }
-    const relativePath = path.join(prefix, entry.name);
-    const sourcePath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...packageFiles(sourcePath, relativePath));
-    } else {
-      files.push(relativePath);
-    }
-  }
-  return files;
-}
-
-function copyPackage(source: string, target: string, files: string[]): void {
-  for (const file of files) {
-    const targetPath = path.join(target, file);
-    mkdirSync(path.dirname(targetPath), { recursive: true });
-    writeFileSync(targetPath, readFileSync(path.join(source, file)), { flag: 'wx' });
-  }
-}
 
 export function installOfficialFeature(name: string, root = process.cwd()): InstallFeatureResult {
   if (!featureNameIsValid(name)) {
@@ -61,7 +40,10 @@ export function installOfficialFeature(name: string, root = process.cwd()): Inst
     };
   }
 
-  const source = officialFeatureDirectory(name);
+  const source = resolveOfficialFeatureDirectory(name);
+  const featuresDirectory = path.resolve(root, 'src', 'features');
+  const target = path.resolve(featuresDirectory, name);
+  const targetLineage = lineageDirectory(root, name);
   try {
     if (!existsSync(source) || !statSync(source).isDirectory()) {
       return {
@@ -73,8 +55,6 @@ export function installOfficialFeature(name: string, root = process.cwd()): Inst
       };
     }
 
-    const featuresDirectory = path.resolve(root, 'src', 'features');
-    const target = path.resolve(featuresDirectory, name);
     if (existsSync(target)) {
       return {
         ok: false,
@@ -84,9 +64,18 @@ export function installOfficialFeature(name: string, root = process.cwd()): Inst
         },
       };
     }
+    if (existsSync(targetLineage)) {
+      return {
+        ok: false,
+        error: {
+          kind: 'filesystem',
+          message: `Lineage already exists without an installed Feature at ${targetLineage}; installation was refused.`,
+        },
+      };
+    }
 
-    const files = packageFiles(source);
-    if (files.length === 0) {
+    const sourceFiles = readFeatureFiles(source, false);
+    if (sourceFiles.size === 0) {
       return {
         ok: false,
         error: {
@@ -95,13 +84,20 @@ export function installOfficialFeature(name: string, root = process.cwd()): Inst
         },
       };
     }
+    const baseDigest = digestFeatureFiles(sourceFiles);
 
     mkdirSync(featuresDirectory, { recursive: true });
-    const temporaryDirectory = mkdtempSync(path.join(featuresDirectory, '.nara-feature-'));
+    const featureStage = mkdtempSync(path.join(featuresDirectory, '.nara-feature-'));
+    let stagedLineage: StagedLineage | undefined;
+    let featureInstalled = false;
+    let lineageInstalled = false;
     try {
-      copyPackage(source, temporaryDirectory, files);
+      copyFeatureFiles(sourceFiles, featureStage);
+      stagedLineage = stageFeatureLineage(root, name, sourceFiles, baseDigest);
+
       if (existsSync(target)) {
-        rmSync(temporaryDirectory, { recursive: true, force: true });
+        rmSync(featureStage, { recursive: true, force: true });
+        cleanupStagedLineage(stagedLineage);
         return {
           ok: false,
           error: {
@@ -110,20 +106,33 @@ export function installOfficialFeature(name: string, root = process.cwd()): Inst
           },
         };
       }
-      renameSync(temporaryDirectory, target);
+      if (existsSync(targetLineage)) {
+        throw new Error(`Lineage already exists at ${targetLineage}.`);
+      }
+
+      renameSync(featureStage, target);
+      featureInstalled = true;
+      renameSync(stagedLineage.directory, targetLineage);
+      lineageInstalled = true;
+      stagedLineage = undefined;
+
+      return {
+        ok: true,
+        feature: {
+          name,
+          directory: target,
+          files: [...sourceFiles.keys()].map((file) => path.join(target, ...file.split('/'))),
+          lineageDirectory: targetLineage,
+          baseDigest,
+        },
+      };
     } catch (error) {
-      rmSync(temporaryDirectory, { recursive: true, force: true });
+      if (featureInstalled) rmSync(target, { recursive: true, force: true });
+      if (lineageInstalled) rmSync(targetLineage, { recursive: true, force: true });
+      rmSync(featureStage, { recursive: true, force: true });
+      cleanupStagedLineage(stagedLineage);
       throw error;
     }
-
-    return {
-      ok: true,
-      feature: {
-        name,
-        directory: target,
-        files: files.map((file) => path.join(target, file)),
-      },
-    };
   } catch (error) {
     return {
       ok: false,

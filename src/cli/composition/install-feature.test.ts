@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { readFeatureLineage } from '../evolution/lineage';
 import { installOfficialFeature } from './install-feature';
 
 const fixtures: string[] = [];
@@ -29,5 +30,10 @@ describe('official feature installation', () => {
     expect(existsSync(path.join(fixture, 'src/features/health/contract.ts'))).toBe(true);
     expect(existsSync(path.join(fixture, 'src/features/health/tests/health.test.ts'))).toBe(true);
     expect(readFileSync(path.join(fixture, 'src/features/health/index.ts'), 'utf8')).toContain('healthRoutes');
+    const lineage = readFeatureLineage(fixture, 'health');
+    expect(lineage?.record.schemaVersion).toBe(1);
+    expect(lineage?.record.source).toBe('official-feature');
+    expect(lineage?.files.get('index.ts')?.toString()).toContain('healthRoutes');
+    expect(lineage?.files.has('tests/health.test.ts')).toBe(true);
   });
 });

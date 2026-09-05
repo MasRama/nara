@@ -9,6 +9,7 @@ This document is the current architecture authority. History lives in [`docs/arc
 - **Compose** — build from explicit business features (`nara make feature`, `nara add`).
 - **Understand** — inspect the architecture deterministically (`nara inspect`, `nara context`, `nara impact`, each with `--json`), including Feature public-symbol consumers, boundary export provenance, explicitly type-only versus value-capable syntax evidence, application consumers, and route mounts, and describe how it is changing (`nara diff --base main`).
 - **Protect** — validate current architecture (`nara doctor`, plus `--json`) and protect architecture change (`nara guard --base origin/main`, plus `--json`): the change ratchet fails only on newly introduced diagnostics.
+- **Evolve** — keep official open-code Features current with deterministic local lineage (`nara evolve`), while validating every candidate against the source-derived architecture model.
 
 ## Locked stack
 
@@ -74,11 +75,13 @@ nara inspect <feature> [--json]
 nara context <feature>|--file <path> [--json]
 nara impact <feature> [--json]
 nara diff --base <ref> [--head <ref>] [--json]
+nara evolve <feature> [--dry-run] [--json]
+                           Reconcile official source without losing local code
 ```
 
 ## Product lifecycle
 
-Five distinct things; do not conflate them:
+Six distinct things; do not conflate them:
 
 1. **Ecosystem/runtime stack** — Hono, Vue, SQLite, TypeScript. Nara never
 2. **Nara's architecture model** — feature ownership, public and browser-safe boundaries, deterministic import evidence, public-symbol consumers, direct public-boundary provenance, and statically provable application integrations (this document).
@@ -93,13 +96,21 @@ Five distinct things; do not conflate them:
    application (health-only, no database, no auth). Each carries the
    creating CLI as an exact-pinned `@nara-web/cli` devDependency, so
    `npm run check` (which ends in `nara doctor`) and
-   `nara add/inspect/context/impact/diff/guard` work reproducibly from
+   `nara add/inspect/context/impact/diff/guard/evolve` work reproducibly from
    the project's own install. Guard is an explicit CI/review command
    there (`npx nara guard --base origin/main`) because a new project has
    no universal baseline ref to assume.
 5. **Official open-code features** — optional installable source
    (`health`, `audit`). `nara add` copies versioned package source into
    `src/features/<name>`; the result is ordinary project code.
+
+6. **Evolvable open code** — `nara add` records exact official source bytes
+   under `.nara/lineage/official-features/<feature>/base`. `nara evolve`
+   compares BASE, LOCAL, and INCOMING deterministically, blocks conflicts and
+   newly introduced architecture diagnostics, and advances lineage only after
+   a successful transactional apply. Lineage is reconciliation state, not
+   architecture metadata; inspect, context, diff, snapshots, and doctor stay
+   source-derived from `src/`.
 
 The repository root is the development/reference application: it proves
 richer capabilities (auth, RBAC, users, assets, SQLite lifecycle) but is

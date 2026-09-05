@@ -27,6 +27,19 @@ The installer does not replace npm, load code dynamically, or keep installed beh
 
 The architecture engine discovers the installed result from `src/features/*`; no architecture manifest is required. The package directory is a distribution source only and is not itself an application feature.
 
+## Local lineage
+
+After a successful `nara add`, the CLI stores the exact official source bytes
+under `.nara/lineage/official-features/<name>/base/` and writes a minimal
+`lineage.json` record containing the source kind and deterministic SHA-256
+digest. This is reconciliation state only; the architecture engine continues
+to discover application Features from `src/features/*`.
+
+`nara evolve <name>` compares that `BASE` with the installed `LOCAL` source
+and the current bundled `INCOMING` package. It applies only deterministic,
+conflict-free three-way results, validates an isolated candidate with the
+architecture engine, and advances the lineage after a successful replacement.
+
 ## Composition dependencies
 
 Packages deliberately carry no dependency metadata. The application

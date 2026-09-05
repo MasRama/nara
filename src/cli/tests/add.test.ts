@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -78,5 +78,37 @@ describe('add command', () => {
 
     expect(result.exitCode).toBe(64);
     expect(io.errors.join('')).toContain('No official feature package named "billing"');
+  });
+
+  it('keeps lineage and local source byte-for-byte stable on duplicate add', () => {
+    const fixture = createFixture();
+    const firstIO = createIO();
+    expect(runCli(['add', 'health'], firstIO, { cwd: fixture }).exitCode).toBe(0);
+    const lineageRecord = path.join(fixture, '.nara/lineage/official-features/health/lineage.json');
+    const sourceFile = path.join(fixture, 'src/features/health/index.ts');
+    const beforeLineage = readFileSync(lineageRecord);
+    const beforeSource = readFileSync(sourceFile);
+    const secondIO = createIO();
+
+    const result = runCli(['add', 'health'], secondIO, { cwd: fixture });
+
+    expect(result.exitCode).toBe(73);
+    expect(secondIO.errors.join('')).toContain('nothing was overwritten');
+    expect(readFileSync(lineageRecord)).toEqual(beforeLineage);
+    expect(readFileSync(sourceFile)).toEqual(beforeSource);
+  });
+
+  it('removes staged Feature source when lineage staging fails', () => {
+    const fixture = createFixture();
+    writeFileSync(path.join(fixture, '.nara'), 'blocked');
+    const io = createIO();
+
+    const result = runCli(['add', 'health'], io, { cwd: fixture });
+
+    expect(result.exitCode).toBe(73);
+    expect(existsSync(path.join(fixture, 'src/features/health'))).toBe(false);
+    expect(existsSync(path.join(fixture, '.nara/lineage/official-features/health'))).toBe(false);
+    const featuresDirectory = path.join(fixture, 'src/features');
+    expect(readdirSync(featuresDirectory)).not.toContain(expect.stringMatching(/^\\.nara-feature-/));
   });
 });

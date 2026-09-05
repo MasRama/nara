@@ -149,6 +149,43 @@ Machine-readable output preserves the same facts in a stable object. Valid and i
 
 `doctor` is absolute correctness: any diagnostic means the architecture is unhealthy. `guard` is the relative ratchet for teams carrying existing debt: it compares a Git baseline against the working tree (or a head ref), passes when no new diagnostic appears — even when baseline violations remain — and fails only on newly introduced violations, reporting resolved ones positively. Application integration changes are informational and do not fail `guard`; enforcement never invents policy beyond the existing structural rules. There is no baseline file and no configuration: the baseline is the Git ref.
 
+## Evolvable Open Code
+
+Open-code composition must remain evolvable after installation. `nara add`
+copies official TypeScript into the project, then records the exact official
+source under `.nara/lineage/official-features/<feature>/base/` with a
+deterministic SHA-256 digest. The source stays ordinary code; the lineage is
+only a local reconciliation base, not a second architecture manifest.
+
+`nara evolve <feature>` compares:
+
+```text
+BASE      last official source recorded by add or evolve
+LOCAL     installed project Feature, including user customization
+INCOMING  current official source bundled with the local Nara CLI
+```
+
+The plan is deterministic: one-side changes are adopted, local-only files are
+preserved, additions and deletions are explicit, text changes use the
+ecosystem's `git merge-file`, and independently changed binary or deletion
+states conflict. `--dry-run --json` exposes the exact relative-path actions
+without writing source or lineage. Conflicts produce a non-zero report and no
+conflict markers.
+
+Every conflict-free candidate is materialized in isolation and checked with
+the existing architecture snapshot, diff, affected-set, and diagnostic
+identity primitives. New diagnostics block application; diagnostics already
+present in the local baseline are tolerated. A successful apply replaces the
+Feature and advances BASE to pure INCOMING bytes while retaining local-only
+source, so a later cycle compares against the immediately previous official
+revision rather than guessing from Git history.
+
+Lineage is conservative by design. A legacy Feature without lineage can adopt
+the current official source only when its local bytes are identical. Divergent
+legacy source fails closed, and a Feature with no official package is
+application-owned rather than evolvable. Inspect, context, diff, snapshots,
+and doctor continue to derive architecture from `src/` only.
+
 ## Interesting architecture on boring technology
 
 Nara's differentiation is the application model and the tooling around it, not a novel runtime.
