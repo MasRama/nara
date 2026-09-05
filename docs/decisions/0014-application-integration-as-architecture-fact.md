@@ -14,10 +14,10 @@ Application composition must remain ordinary Hono and Vue code. A registry, mani
 Model statically provable application composition as first-class `FeatureIntegrationFacts` for every discovered Feature:
 
 - `applicationImports` groups a Feature, canonical application file, public or web boundary, and imported export symbols.
-- `serverRoutes` records static Hono `.route(staticPath, importedPublicFeatureExport)` mounts from `src/app/server.ts`.
-- `webRoutes` records static Vue Router route records whose component is an imported Feature web-boundary export from `src/app/router.ts`, including statically nested child paths and optional names.
+- `serverRoutes` records static Hono `.route(staticPath, importedPublicFeatureExport)` mounts from `src/app/server.ts` only when the imported Hono binding, statically initialized Hono instance, and `.route()` receiver form a provable chain.
+- `webRoutes` records static Vue Router route records whose component is an imported Feature web-boundary export from `src/app/router.ts` only when the `createRouter` binding is imported from `vue-router`, including statically nested child paths and optional names.
 
-Discovery is AST-based and bounded to the two canonical application roots. Missing roots produce empty facts. Dynamic paths, dynamic components, unrelated imports, non-canonical roots, and uncertain composition are omitted rather than guessed. Route discovery records composition evidence; it does not validate runtime route health, enumerate HTTP methods, or interpret authentication metadata.
+Discovery is AST-based and bounded to the two canonical application roots. Missing roots produce empty facts. Nara follows a statically provable chain from framework composition root to Feature boundary before reporting a route integration. Dynamic paths, dynamic components, unrelated imports, non-canonical roots, and uncertain composition are omitted rather than guessed. Route discovery records composition evidence; it does not validate runtime route health, enumerate HTTP methods, or interpret authentication metadata.
 
 Snapshots persist integration facts for every Feature. `nara inspect` and `nara context` expose them in JSON and compact human output; context places relevant application composition roots after the public boundary and contract. `nara diff` reports added and removed application imports, server routes, and web routes. A changed path is represented as a removal plus an addition. Integration changes directly affect the owning Feature and propagate through the existing dependency graph to downstream Features.
 

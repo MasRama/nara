@@ -218,19 +218,41 @@ describe('nara diff', () => {
     writeFeature(repo, 'billing', {
       'index.ts': "import '@/features/users';\nexport const billing = true;\n",
     });
-    writeFile(repo, 'src/app/server.ts', `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`);
+    writeFile(
+      repo,
+      'src/app/server.ts',
+      `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/users', userRoutes);
+`,
+    );
     writeFile(
       repo,
       'src/app/router.ts',
-      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', component: UsersPage }] });\n`,
+      `import { createRouter } from 'vue-router';
+import { UsersPage } from '../features/users/web';
+createRouter({ routes: [{ path: '/users', component: UsersPage }] });
+`,
     );
     const base = commitAll(repo, 'base composition');
 
-    writeFile(repo, 'src/app/server.ts', `import { userRoutes } from '../features/users';\napp.route('/api/members', userRoutes);\n`);
+    writeFile(
+      repo,
+      'src/app/server.ts',
+      `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/members', userRoutes);
+`,
+    );
     writeFile(
       repo,
       'src/app/router.ts',
-      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/people', component: UsersPage }] });\n`,
+      `import { createRouter } from 'vue-router';
+import { UsersPage } from '../features/users/web';
+createRouter({ routes: [{ path: '/people', component: UsersPage }] });
+`,
     );
 
     const dirty = runDiffJson(repo, ['--base', base]);

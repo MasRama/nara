@@ -121,13 +121,21 @@ describe('nara guard', () => {
     writeFile(
       repo,
       'src/app/server.ts',
-      `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+      `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/users', userRoutes);
+`,
     );
     commitAll(repo, 'clean base');
     writeFile(
       repo,
       'src/app/server.ts',
-      `import { userRoutes } from '../features/users';\napp.route('/api/members', userRoutes);\n`,
+      `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/members', userRoutes);
+`,
     );
 
     const machine = runGuardJson(repo, ['--base', 'HEAD']);

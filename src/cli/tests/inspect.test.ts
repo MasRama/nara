@@ -53,11 +53,18 @@ describe('inspect command', () => {
     mkdirSync(path.join(fixture, 'src/app'), { recursive: true });
     writeFileSync(
       path.join(fixture, 'src/app/server.ts'),
-      `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+      `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/users', userRoutes);
+`,
     );
     writeFileSync(
       path.join(fixture, 'src/app/router.ts'),
-      `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', component: UsersPage }] });\n`,
+      `import { createRouter } from 'vue-router';
+import { UsersPage } from '../features/users/web';
+createRouter({ routes: [{ path: '/users', component: UsersPage }] });
+`,
     );
     const io = createIO();
 

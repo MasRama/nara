@@ -50,6 +50,8 @@ interface RootAnalysis {
   bindings: Map<string, FeatureBinding>;
   namespaces: Map<string, NamespaceBinding>;
   values: Map<string, ts.Expression>;
+  honoInstances: Set<string>;
+  vueRouterFactories: Set<string>;
 }
 
 const APPLICATION_ROOTS = {
@@ -168,11 +170,29 @@ function analyzeRoot(
   const sourceFile = ts.createSourceFile(absoluteFile, source, ts.ScriptTarget.Latest, true);
   const bindings = new Map<string, FeatureBinding>();
   const namespaces = new Map<string, NamespaceBinding>();
+  const honoConstructors = new Set<string>();
+  const vueRouterFactories = new Set<string>();
 
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
       continue;
     }
+    const clause = statement.importClause;
+    if (clause && !clause.isTypeOnly && clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+      for (const element of clause.namedBindings.elements) {
+        if (element.isTypeOnly) {
+          continue;
+        }
+        const importedName = importedBindingName(element);
+        if (statement.moduleSpecifier.text === 'hono' && importedName === 'Hono') {
+          honoConstructors.add(element.name.text);
+        }
+        if (statement.moduleSpecifier.text === 'vue-router' && importedName === 'createRouter') {
+          vueRouterFactories.add(element.name.text);
+        }
+      }
+    }
+
     const reference = featureReferenceFromSpecifier(statement.moduleSpecifier.text, absoluteFile, root);
     if (!reference?.boundary || !knownFeatures.has(reference.name)) {
       continue;
@@ -180,7 +200,6 @@ function analyzeRoot(
 
     const appFile = appFilePath(root, absoluteFile);
     const symbols: string[] = [];
-    const clause = statement.importClause;
     if (!clause) {
       addImport({ feature: reference.name, appFile, boundary: reference.boundary, symbols });
       continue;
@@ -224,7 +243,36 @@ function analyzeRoot(
     });
   }
 
-  return { sourceFile, bindings, namespaces, values: collectValues(sourceFile) };
+  const honoInstances = new Set<string>();
+  if (honoConstructors.size > 0) {
+    for (const statement of sourceFile.statements) {
+      if (!ts.isVariableStatement(statement)) {
+        continue;
+      }
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name) || !declaration.initializer) {
+          continue;
+        }
+        const initializer = unwrapExpression(declaration.initializer);
+        if (!ts.isNewExpression(initializer)) {
+          continue;
+        }
+        const constructor = unwrapExpression(initializer.expression);
+        if (ts.isIdentifier(constructor) && honoConstructors.has(constructor.text)) {
+          honoInstances.add(declaration.name.text);
+        }
+      }
+    }
+  }
+
+  return {
+    sourceFile,
+    bindings,
+    namespaces,
+    values: collectValues(sourceFile),
+    honoInstances,
+    vueRouterFactories,
+  };
 }
 
 function importedBinding(
@@ -244,7 +292,6 @@ function importedBinding(
   }
   return undefined;
 }
-
 function addServerRoute(
   facts: FeatureIntegrationFactsByFeature,
   route: ServerRouteIntegration,
@@ -294,15 +341,18 @@ function discoverServerRoutes(
   function visit(node: ts.Node): void {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       if (node.expression.name.text === 'route' && node.arguments.length >= 2) {
-        const mountPath = staticString(node.arguments[0]);
-        const binding = importedBinding(node.arguments[1], analysis);
-        if (mountPath !== undefined && binding?.boundary === 'public') {
-          addServerRoute(facts, {
-            feature: binding.feature,
-            appFile,
-            exportName: binding.exportName,
-            mountPath,
-          });
+        const receiver = unwrapExpression(node.expression.expression);
+        if (ts.isIdentifier(receiver) && analysis.honoInstances.has(receiver.text)) {
+          const mountPath = staticString(node.arguments[0]);
+          const binding = importedBinding(node.arguments[1], analysis);
+          if (mountPath !== undefined && binding?.boundary === 'public') {
+            addServerRoute(facts, {
+              feature: binding.feature,
+              appFile,
+              exportName: binding.exportName,
+              mountPath,
+            });
+          }
         }
       }
     }
@@ -310,7 +360,6 @@ function discoverServerRoutes(
   }
   visit(analysis.sourceFile);
 }
-
 function joinRoutePath(parent: string | undefined, child: string): string {
   if (parent === undefined || child.startsWith('/')) {
     return child;
@@ -334,7 +383,7 @@ function discoverWebRoutes(
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === 'createRouter' &&
+      analysis.vueRouterFactories.has(node.expression.text) &&
       node.arguments.length > 0
     ) {
       const options = unwrapExpression(node.arguments[0]);

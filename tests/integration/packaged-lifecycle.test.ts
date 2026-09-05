@@ -179,11 +179,18 @@ describe('packaged Nara lifecycle', () => {
       mkdirSync(path.join(fixture, 'src/app'), { recursive: true });
       writeFileSync(
         path.join(fixture, 'src/app/server.ts'),
-        `import { userRoutes } from '../features/users';\napp.route('/api/users', userRoutes);\n`,
+        `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/users', userRoutes);
+`,
       );
       writeFileSync(
         path.join(fixture, 'src/app/router.ts'),
-        `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/users', component: UsersPage }] });\n`,
+        `import { createRouter } from 'vue-router';
+import { UsersPage } from '../features/users/web';
+createRouter({ routes: [{ path: '/users', component: UsersPage }] });
+`,
       );
       await runCommand('git', ['init'], fixture);
       await runCommand('git', ['config', 'user.email', 'nara-diff@example.com'], fixture);
@@ -194,11 +201,18 @@ describe('packaged Nara lifecycle', () => {
       writeFileSync(path.join(fixture, 'src/features/billing/index.ts'), 'export const billing = 1;\n');
       writeFileSync(
         path.join(fixture, 'src/app/server.ts'),
-        `import { userRoutes } from '../features/users';\napp.route('/api/members', userRoutes);\n`,
+        `import { Hono } from 'hono';
+import { userRoutes } from '../features/users';
+const app = new Hono();
+app.route('/api/members', userRoutes);
+`,
       );
       writeFileSync(
         path.join(fixture, 'src/app/router.ts'),
-        `import { UsersPage } from '../features/users/web';\ncreateRouter({ routes: [{ path: '/people', component: UsersPage }] });\n`,
+        `import { createRouter } from 'vue-router';
+import { UsersPage } from '../features/users/web';
+createRouter({ routes: [{ path: '/people', component: UsersPage }] });
+`,
       );
 
       const human = await runCommand(installedCli[0], [...installedCli.slice(1), 'diff', '--base', 'HEAD'], fixture);

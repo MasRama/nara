@@ -198,7 +198,7 @@ Describe one discovered Feature without opening all source files:
 nara inspect users
 ```
 
-Human output lists the public exports, dependencies, dependents, server entrypoints, web entrypoints, contracts, tests, and statically provable application integrations (server routes, web routes, and application consumers).
+Human output lists the public exports, dependencies, dependents, server entrypoints, web entrypoints, contracts, tests, and statically provable application integrations (server routes, web routes, and application consumers). Route integrations require the framework composition chain itself to be statically proven from the canonical root; uncertain composition is omitted.
 
 Use machine-readable output when selecting a bounded change surface:
 
@@ -250,8 +250,7 @@ The pack answers: *if I am about to change this Feature, what architectural cont
 - `surfaces`: server, web, and test surfaces
 - `constraints`: the architecture rules in force while editing (public boundary is `index.ts`, cross-Feature imports use the public boundary, internals are private, server code stays out of browser surfaces, canonical shape stays valid)
 - `diagnostics`: current `nara doctor` issues whose offending file is owned by this Feature — unrelated repository diagnostics are excluded
-- `integrations`: canonical application imports grouped by Feature, app file, and boundary, plus static Hono server mounts and Vue Router records; uncertain or dynamic composition is omitted
-- `readingOrder`: the deterministic architecture-first reading sequence — public boundary, contract, relevant application composition roots, server surfaces, web surfaces, tests, then public boundaries of direct dependencies — deduplicated and lexically ordered within each group
+- `integrations`: canonical application imports grouped by Feature, app file, and boundary, plus static Hono server mounts and Vue Router records; route facts require a statically provable framework composition chain, while uncertain or dynamic composition is omitted
 
 Example JSON:
 
@@ -319,7 +318,7 @@ nara diff --base main --json
 
 `--base` is required; `--head` is optional. When `--head` is omitted the base ref is compared against the working tree. When `--head` is supplied both sides are Git refs and the working tree is never modified (no checkout, reset, stash, or clean). The command never mutates user changes; ref state is materialized into an isolated temporary directory via read-only Git plumbing and always cleaned up.
 
-The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public exports and contract exports, added/removed dependency edges (`source Feature -> target Feature` with deterministic import evidence), per-Feature added/removed server/web/test surfaces, added/removed canonical application imports, static Hono server routes, and static Vue web routes, and newly introduced versus resolved doctor diagnostics. A changed route path is represented as a removal plus an addition. The affected set lists directly changed Features plus downstream Features reachable through the dependency graph, labeled `structural dependency impact` — never a semantic behavior prediction.
+The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public exports and contract exports, added/removed dependency edges (`source Feature -> target Feature` with deterministic import evidence), per-Feature added/removed server/web/test surfaces, added/removed canonical application imports, statically proven Hono server routes, and statically proven Vue web routes, and newly introduced versus resolved doctor diagnostics. A changed route path is represented as a removal plus an addition.
 
 A successful comparison returns exit code `0` whether or not the architecture changed. Existing baseline violations do not fail the command; policy enforcement is `nara guard`. No configuration file, architecture manifest, LLM, or AI provider is required.
 

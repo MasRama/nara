@@ -45,7 +45,7 @@ src/features/billing/
 └── tests/
 ```
 
-The Feature's `index.ts` is its public boundary. Application composition mounts the public route export, and other Features consume public operations or types. Internal repositories and services remain implementation details. Nara records the application integration when the canonical composition roots statically prove a Feature import, Hono mount, or Vue Router record.
+The Feature's `index.ts` is its public boundary. Application composition mounts the public route export, and other Features consume public operations or types. Internal repositories and services remain implementation details. Nara records the application integration only when the canonical composition roots statically prove the complete chain from framework composition to a Feature boundary: Hono import → Hono instance → `.route()`, or Vue Router factory import → static route record.
 
 Composition is intentionally ordinary:
 
@@ -71,7 +71,7 @@ Nara's architecture engine derives bounded facts from ordinary conventions and T
 - which public Feature dependencies are visible
 - which Features depend on a target
 - which server, web, contract, and test surfaces belong to one Feature
-- which Feature imports, server route mounts, and web route records are statically provable from `src/app/server.ts` and `src/app/router.ts`
+- which Feature imports, server route mounts, and web route records are statically provable from `src/app/server.ts` and `src/app/router.ts` through their framework composition bindings
 
 The CLI exposes these facts:
 
@@ -98,7 +98,7 @@ nara diff --base main
 nara diff --base main --json
 ```
 
-`git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes (added/removed Features, boundary and contract deltas, dependency edges, surfaces, application integration imports and route changes, and new versus resolved diagnostics) with an affected set labeled structural dependency impact. It is Git-aware by design, needs no manifest or AI provider, and never claims semantic behavior impact or runtime reachability.
+`git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes (added/removed Features, boundary and contract deltas, dependency edges, surfaces, application integration imports and statically proven route changes, and new versus resolved diagnostics) with an affected set labeled structural dependency impact. It is Git-aware by design, needs no manifest or AI provider, and never claims semantic behavior impact or runtime reachability.
 
 The progression is deliberate:
 

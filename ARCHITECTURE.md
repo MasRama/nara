@@ -43,20 +43,20 @@ Rules:
 - `src/features/<feature>/index.ts` is the general/server-facing public boundary. Cross-feature server use imports only from there.
 - `src/features/<feature>/web/index.ts` is the optional browser-safe boundary. App composition (`src/app/`) and legitimate browser-safe feature dependencies import browser surfaces only from there.
 - Internals (`server/*`, `web/pages/*`, `web/components/*`, `web/client`) are private. Deep imports across features are invalid.
-- Application integration is inferred from the canonical composition roots only: `src/app/server.ts` for Hono public-boundary imports and static `.route()` mounts, and `src/app/router.ts` for Vue web-boundary imports and static route records. Dynamic or non-canonical composition is not reported.
+- Application integration is inferred from the canonical composition roots only: `src/app/server.ts` for public-boundary imports and Hono route mounts, and `src/app/router.ts` for web-boundary imports and Vue Router records. Nara follows a statically provable chain from framework composition root to Feature boundary before reporting a route integration; dynamic or non-canonical composition is not reported.
 - Feature dependencies must be acyclic.
 
 Details: [`docs/v3/feature-model.md`](./docs/v3/feature-model.md).
 
 ## Application and shared layers
 
-- `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `App.vue`, `pages/`, `layouts/`. The CLI records deterministic application imports, server mounts, and browser routes from the two canonical roots; it does not add an application graph node or claim runtime reachability.
+- `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `App.vue`, `pages/`, `layouts/`. The CLI records deterministic application imports from the two canonical roots and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
 - `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `errors/`, `logging/`, `security/`. Never a second global services/repositories layer.
 - `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`).
 
 ## HTTP and contracts
 
-- Features expose Hono sub-applications; `src/app/server.ts` mounts them (`/api/auth`, `/api/users`, …) plus `/health` and `/ready`. These static public-boundary imports and mount paths are architecture facts, not runtime health checks.
+- Features expose Hono sub-applications; `src/app/server.ts` mounts them (`/api/auth`, `/api/users`, …) plus `/health` and `/ready`. Public-boundary consumers are application facts, while route mounts require the statically provable Hono import → Hono instance → `.route()` chain; they are not runtime health checks.
 - JSON shape: `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`. English messages. Zod `safeParse` at the route boundary; `src/app/error-handler.ts` maps domain errors.
 - Contracts live in the owning feature's `contract.ts`; browser code consumes them through the feature's `web/` typed client. No global RPC abstraction.
 

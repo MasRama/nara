@@ -79,6 +79,8 @@ createRouter({
       ['UserProfile', 'UsersPage'],
       ['resetUsers', 'userRoutes'],
     ]);
+    expect(facts.serverRoutes).toEqual([]);
+    expect(facts.webRoutes).toEqual([]);
   });
 
   it('detects static Hono mounts and ignores uncertain paths or modules', () => {
@@ -87,12 +89,21 @@ createRouter({
     writeFile(
       fixture,
       'src/app/server.ts',
-      `import { userRoutes as routes } from '../features/users';
+      `import { Hono } from 'hono';
+    import { Hono as HonoApp } from 'hono';
+    import { userRoutes as routes } from '../features/users';
     import { externalRoutes } from './external-routes';
+    const app = new Hono();
+    export const application = new HonoApp();
+    const custom = customRouter();
+    const fake = { route() {} };
     const prefix = '/api/dynamic';
 
     app.route('/api/users', routes);
     application.route('/api/members', routes);
+    custom.route('/api/factory', routes);
+    logger.route('/api/logger', routes);
+    fake.route('/api/fake', routes);
     app.route(prefix, routes);
     app.route('/api/external', externalRoutes);
     `,
@@ -115,6 +126,47 @@ createRouter({
       },
     ]);
   });
+  it('keeps boundary consumers when framework provenance is unknown', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'users');
+    writeFile(
+      fixture,
+      'src/app/server.ts',
+      `import { userRoutes as routes } from '../features/users';
+    const application = customRouter();
+    application.route('/api/users', routes);
+    `,
+    );
+    writeFile(
+      fixture,
+      'src/app/router.ts',
+      `import { UsersPage } from '../features/users/web';
+    function createRouter(options: unknown) {
+      return options;
+    }
+    createRouter({ routes: [{ path: '/users', component: UsersPage }] });
+    `,
+    );
+
+    const facts = discoverFeatureIntegrations(fixture).users;
+
+    expect(facts.applicationImports).toEqual([
+      {
+        feature: 'users',
+        appFile: 'src/app/router.ts',
+        boundary: 'web',
+        symbols: ['UsersPage'],
+      },
+      {
+        feature: 'users',
+        appFile: 'src/app/server.ts',
+        boundary: 'public',
+        symbols: ['userRoutes'],
+      },
+    ]);
+    expect(facts.serverRoutes).toEqual([]);
+    expect(facts.webRoutes).toEqual([]);
+  });
 
   it('detects nested Vue routes and only records static Feature components', () => {
     const fixture = createFixture();
@@ -123,7 +175,8 @@ createRouter({
     writeFile(
       fixture,
       'src/app/router.ts',
-      `import { ProfilePage as Profile, UsersPage } from '../features/users/web';
+      `import { createRouter } from 'vue-router';
+    import { ProfilePage as Profile, UsersPage } from '../features/users/web';
     import BillingPage from './pages/BillingPage.vue';
     import AppPage from './pages/AppPage.vue';
 
@@ -162,6 +215,46 @@ createRouter({
       },
     ]);
     expect(integrations.billing.webRoutes).toEqual([]);
+  });
+
+  it('requires Vue Router factory provenance before scanning routes', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'users');
+    writeFile(
+      fixture,
+      'src/app/router.ts',
+      `import { createRouter as makeRouter } from 'vue-router';
+    import { createRouter as otherCreateRouter } from 'other-router';
+    import { UsersPage as Page } from '../features/users/web';
+
+    function createRouter(options: unknown) {
+      return options;
+    }
+    const computedPath = getPath();
+
+    makeRouter({
+      routes: [
+        { path: '/users', name: 'users', component: Page },
+        { path: computedPath, component: Page },
+        { path: '/dynamic-component', component: resolvePage() },
+      ],
+    });
+    createRouter({ routes: [{ path: '/local', component: Page }] });
+    otherCreateRouter({ routes: [{ path: '/other', component: Page }] });
+    `,
+    );
+
+    const facts = discoverFeatureIntegrations(fixture).users;
+
+    expect(facts.webRoutes).toEqual([
+      {
+        feature: 'users',
+        appFile: 'src/app/router.ts',
+        exportName: 'UsersPage',
+        path: '/users',
+        name: 'users',
+      },
+    ]);
   });
 
   it('returns empty deterministic facts when composition roots are missing', () => {
