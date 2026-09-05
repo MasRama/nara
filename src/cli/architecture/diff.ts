@@ -5,12 +5,25 @@ import type {
   ServerRouteIntegration,
   WebRouteIntegration,
 } from './discover-integrations';
+import {
+  compareBoundaryExportEvidence,
+  directlyReexportedContractSymbol,
+  type BoundaryExportEvidence,
+} from './discover-boundary-exports';
 import type { FeatureBoundary, FeatureImportEvidence } from './discover-import-evidence';
 
 export interface ExportDelta {
   feature: string;
   added: string[];
   removed: string[];
+}
+
+export interface BoundaryExportProvenanceDelta {
+  feature: string;
+  boundary: FeatureBoundary;
+  exportedName: string;
+  added: BoundaryExportEvidence[];
+  removed: BoundaryExportEvidence[];
 }
 
 export type RemovedConsumerTargetState = 'still-imported' | 'removed-in-change';
@@ -59,6 +72,7 @@ export interface ArchitectureChanges {
   features: { added: string[]; removed: string[] };
   publicExports: ExportDelta[];
   webPublicExports: ExportDelta[];
+  boundaryExportProvenance: BoundaryExportProvenanceDelta[];
   contracts: ExportDelta[];
   dependencies: { added: DependencyDelta[]; removed: DependencyDelta[] };
   surfaces: SurfaceDelta[];
@@ -172,21 +186,97 @@ function consumerIdentityKey(evidence: FeatureImportEvidence): string {
     evidence.typeOnly,
   ]);
 }
+function boundaryEvidenceFor(
+  feature: ArchitectureSnapshot['features'][number],
+  boundary: FeatureBoundary,
+): BoundaryExportEvidence[] {
+  return feature.boundaryExports?.[boundary] ?? [];
+}
+
+function boundaryExportProvenanceKey(evidence: BoundaryExportEvidence): string {
+  return JSON.stringify([
+    evidence.kind,
+    evidence.precision,
+    evidence.sourceSpecifier ?? null,
+    evidence.sourceSymbol ?? null,
+    evidence.typeOnly,
+  ]);
+}
+
+function boundaryExportProvenanceDeltas(
+  baseFeature: ArchitectureSnapshot['features'][number],
+  targetFeature: ArchitectureSnapshot['features'][number],
+  boundary: FeatureBoundary,
+): BoundaryExportProvenanceDelta[] {
+  const baseByName = new Map<string, BoundaryExportEvidence[]>();
+  const targetByName = new Map<string, BoundaryExportEvidence[]>();
+  for (const evidence of boundaryEvidenceFor(baseFeature, boundary)) {
+    if (evidence.exportedName === undefined) continue;
+    const entries = baseByName.get(evidence.exportedName) ?? [];
+    entries.push(evidence);
+    baseByName.set(evidence.exportedName, entries);
+  }
+  for (const evidence of boundaryEvidenceFor(targetFeature, boundary)) {
+    if (evidence.exportedName === undefined) continue;
+    const entries = targetByName.get(evidence.exportedName) ?? [];
+    entries.push(evidence);
+    targetByName.set(evidence.exportedName, entries);
+  }
+
+  const deltas: BoundaryExportProvenanceDelta[] = [];
+  for (const exportedName of [...baseByName.keys()].filter((name) => targetByName.has(name)).sort()) {
+    const baseEntries = baseByName.get(exportedName) ?? [];
+    const targetEntries = targetByName.get(exportedName) ?? [];
+    const baseKeys = new Set(baseEntries.map(boundaryExportProvenanceKey));
+    const targetKeys = new Set(targetEntries.map(boundaryExportProvenanceKey));
+    const removed = baseEntries
+      .filter((evidence) => !targetKeys.has(boundaryExportProvenanceKey(evidence)))
+      .sort(compareBoundaryExportEvidence);
+    const added = targetEntries
+      .filter((evidence) => !baseKeys.has(boundaryExportProvenanceKey(evidence)))
+      .sort(compareBoundaryExportEvidence);
+    if (added.length > 0 || removed.length > 0) {
+      deltas.push({ feature: baseFeature.name, boundary, exportedName, added, removed });
+    }
+  }
+  return deltas;
+}
+
+function contractBoundarySymbols(
+  boundaryExports: BoundaryExportEvidence[],
+  contractSymbol: string,
+): string[] {
+  return [
+    ...new Set(
+      boundaryExports
+        .filter(
+          (evidence) =>
+            evidence.exportedName !== undefined &&
+            directlyReexportedContractSymbol(evidence) === contractSymbol,
+        )
+        .map((evidence) => evidence.exportedName as string),
+    ),
+  ].sort();
+}
+
 
 function removedConsumerImpact(
   baseEvidence: FeatureImportEvidence[],
   targetEvidence: FeatureImportEvidence[],
   feature: string,
   boundary: FeatureBoundary,
-  symbol: string,
+  consumerSymbols: string[],
+  impactSymbol: string,
   exportKind: RemovedPublicApiConsumerImpact['exportKind'],
 ): RemovedPublicApiConsumerImpact | undefined {
+  const symbols = new Set(consumerSymbols);
   const baseline = baseEvidence.filter(
     (evidence) =>
       evidence.to === feature &&
       evidence.boundary === boundary &&
       evidence.precision === 'symbol' &&
-      evidence.importedSymbol === symbol,
+      evidence.importedSymbol !== undefined &&
+      symbols.has(evidence.importedSymbol),
   );
   if (baseline.length === 0) {
     return undefined;
@@ -199,7 +289,8 @@ function removedConsumerImpact(
           evidence.to === feature &&
           evidence.boundary === boundary &&
           evidence.precision === 'symbol' &&
-          evidence.importedSymbol === symbol,
+          evidence.importedSymbol !== undefined &&
+          symbols.has(evidence.importedSymbol),
       )
       .map(consumerIdentityKey),
   );
@@ -220,11 +311,37 @@ function removedConsumerImpact(
   return {
     feature,
     boundary,
-    symbol,
+    symbol: impactSymbol,
     exportKind,
     change: 'removed',
     consumers,
   };
+}
+
+function removedContractConsumerImpact(
+  baseEvidence: FeatureImportEvidence[],
+  targetEvidence: FeatureImportEvidence[],
+  boundaryExports: BoundaryExportEvidence[],
+  feature: string,
+  boundary: FeatureBoundary,
+  contractSymbol: string,
+): RemovedPublicApiConsumerImpact | undefined {
+  const publicSymbols = contractBoundarySymbols(
+    boundaryExports.filter((evidence) => evidence.boundary === boundary),
+    contractSymbol,
+  );
+  if (publicSymbols.length === 0) {
+    return undefined;
+  }
+  return removedConsumerImpact(
+    baseEvidence,
+    targetEvidence,
+    feature,
+    boundary,
+    publicSymbols,
+    contractSymbol,
+    'contract',
+  );
 }
 
 function sortRemovedConsumerImpacts(impacts: RemovedPublicApiConsumerImpact[]): void {
@@ -269,6 +386,7 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
 
   const publicExports: ExportDelta[] = [];
   const webPublicExports: ExportDelta[] = [];
+  const boundaryExportProvenance: BoundaryExportProvenanceDelta[] = [];
   const contracts: ExportDelta[] = [];
   const surfaces: SurfaceDelta[] = [];
   for (const name of common) {
@@ -283,6 +401,8 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
     if (webExports.added.length > 0 || webExports.removed.length > 0) {
       webPublicExports.push({ feature: name, ...webExports });
     }
+    boundaryExportProvenance.push(...boundaryExportProvenanceDeltas(left, right, 'public'));
+    boundaryExportProvenance.push(...boundaryExportProvenanceDeltas(left, right, 'web'));
     const contract = addedRemoved(left.contractExports, right.contractExports);
     if (contract.added.length > 0 || contract.removed.length > 0) {
       contracts.push({ feature: name, ...contract });
@@ -378,6 +498,7 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
         targetImportEvidence,
         delta.feature,
         'public',
+        [symbol],
         symbol,
         'public',
       );
@@ -393,6 +514,7 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
         targetImportEvidence,
         delta.feature,
         'web',
+        [symbol],
         symbol,
         'web',
       );
@@ -402,15 +524,16 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
     }
   }
   for (const delta of contracts) {
+    const baseFeature = baseByName.get(delta.feature);
     for (const symbol of delta.removed) {
       for (const boundary of ['public', 'web'] as const) {
-        const impact = removedConsumerImpact(
+        const impact = removedContractConsumerImpact(
           baseImportEvidence,
           targetImportEvidence,
+          baseFeature === undefined ? [] : boundaryEvidenceFor(baseFeature, boundary),
           delta.feature,
           boundary,
           symbol,
-          'contract',
         );
         if (impact) {
           removedPublicApiConsumers.push(impact);
@@ -429,10 +552,17 @@ export function diffSnapshots(base: ArchitectureSnapshot, target: ArchitectureSn
     .filter((d) => !targetDiagnostics.has(diagnosticKey(d)))
     .sort((a, b) => diagnosticKey(a).localeCompare(diagnosticKey(b)));
 
+  boundaryExportProvenance.sort(
+    (left, right) =>
+      left.feature.localeCompare(right.feature) ||
+      left.boundary.localeCompare(right.boundary) ||
+      left.exportedName.localeCompare(right.exportedName),
+  );
   return {
     features: { added, removed },
     publicExports,
     webPublicExports,
+    boundaryExportProvenance,
     contracts,
     dependencies: { added: dependencyAdded, removed: dependencyRemoved },
     surfaces,
@@ -453,6 +583,7 @@ export function computeAffected(
   for (const name of changes.features.removed) directly.add(name);
   for (const delta of changes.publicExports) directly.add(delta.feature);
   for (const delta of changes.webPublicExports) directly.add(delta.feature);
+  for (const delta of changes.boundaryExportProvenance) directly.add(delta.feature);
   for (const delta of changes.contracts) directly.add(delta.feature);
   for (const delta of changes.surfaces) directly.add(delta.feature);
   for (const delta of [

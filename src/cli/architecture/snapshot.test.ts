@@ -46,6 +46,20 @@ describe('architecture snapshot', () => {
     expect(snapshot.features[0]).toMatchObject({
       name: 'billing',
       publicExports: ['billing'],
+      boundaryExports: {
+        public: [
+          {
+            feature: 'billing',
+            boundary: 'public',
+            boundaryFile: 'src/features/billing/index.ts',
+            exportedName: 'billing',
+            kind: 'local',
+            precision: 'symbol',
+            typeOnly: false,
+          },
+        ],
+        web: [],
+      },
       contractExports: ['BillingInput'],
       serverSurfaces: ['server/routes.ts'],
       webSurfaces: ['web/page.ts'],
@@ -90,6 +104,39 @@ app.route('/health', healthRoutes);
     const auth = snapshot.features.find((feature) => feature.name === 'auth');
 
     expect(auth?.webPublicExports).toEqual(['LoginPage']);
+    expect(auth?.boundaryExports).toEqual({
+      public: [
+        {
+          feature: 'auth',
+          boundary: 'public',
+          boundaryFile: 'src/features/auth/index.ts',
+          exportedName: 'requireAuth',
+          kind: 'local',
+          precision: 'symbol',
+          typeOnly: false,
+        },
+        {
+          feature: 'auth',
+          boundary: 'public',
+          boundaryFile: 'src/features/auth/index.ts',
+          exportedName: 'SessionUser',
+          kind: 'local',
+          precision: 'symbol',
+          typeOnly: true,
+        },
+      ],
+      web: [
+        {
+          feature: 'auth',
+          boundary: 'web',
+          boundaryFile: 'src/features/auth/web/index.ts',
+          exportedName: 'LoginPage',
+          kind: 'local',
+          precision: 'symbol',
+          typeOnly: false,
+        },
+      ],
+    });
     expect(snapshot.importEvidence).toHaveLength(3);
     expect(snapshot.importEvidence).toEqual(
       expect.arrayContaining([

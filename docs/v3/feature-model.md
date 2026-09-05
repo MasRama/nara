@@ -106,6 +106,17 @@ The public indexes are intentional interfaces, not convenience barrels for every
 
 Nara derives cross-Feature consumer facts from statically declared imports and re-exports. Symbol-level evidence records the source Feature and file, target boundary, imported symbol, local/export alias, and whether the usage is type-only or runtime. A namespace import, side-effect import, `require`, dynamic import, or `export *` proves only a module dependency; Nara does not infer an exact symbol from those forms. These facts are evidence of declared architecture, not a prediction of runtime reachability or behavior.
 
+### Boundary export provenance
+
+Nara separately records how each symbol is exposed by the two canonical Feature boundaries:
+
+- `src/features/<feature>/index.ts` is the `public` boundary.
+- `src/features/<feature>/web/index.ts`, when present, is the `web` boundary.
+
+`inspect`, `context`, and architecture snapshots expose `boundaryExports` as deterministic evidence. A record identifies the Feature, boundary file, exported name when syntax proves a symbol, export kind (`local`, `named-reexport`, `default`, or `export-all`), precision (`symbol` or `module`), optional source specifier and source symbol, and whether the export syntax is type-only. `publicExports` and `webPublicExports` remain the symbol-name projections of this evidence; an `export *` record never creates a pseudo-symbol.
+
+Discovery is intentionally shallow. Nara parses declarations, local export lists, named re-exports, default exports, and export-all declarations in the canonical boundary file only. It does not recursively resolve another module's exports or use the TypeScript language service. A direct named re-export proves contract provenance only when its normalized relative source is this Feature's `contract` or `contract.ts`; unrelated re-exports, multi-hop chains, and export-all declarations do not prove a contract symbol.
+
 ## Contracts
 
 `contract.ts` owns the data crossing the Feature boundary. Keep runtime validators and their TypeScript types together when external input is involved:

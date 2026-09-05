@@ -5,6 +5,7 @@ import { discoverFeatures } from './discover-features';
 import { inspectFeature } from './inspect';
 import { inspectFeatureImpact } from './impact';
 import type { FeatureIntegrationFacts } from './discover-integrations';
+import type { BoundaryExportEvidenceByBoundary } from './discover-boundary-exports';
 import type { FeatureImportEvidence } from './discover-import-evidence';
 
 export interface ArchitectureContextTarget {
@@ -52,6 +53,7 @@ export interface ArchitectureContextPack {
   target: ArchitectureContextTarget;
   ownership: ArchitectureContextOwnership;
   publicApi: ArchitectureContextPublicApi;
+  boundaryExports: BoundaryExportEvidenceByBoundary;
   relationships: ArchitectureContextRelationships;
   surfaces: ArchitectureContextSurfaces;
   integrations: FeatureIntegrationFacts;
@@ -232,6 +234,10 @@ function assembleContextPack(
         exports: [...feature.publicExports],
         webExports: [...feature.webPublicExports],
         contracts: [...feature.contracts],
+      },
+      boundaryExports: {
+        public: feature.boundaryExports.public.map((evidence) => ({ ...evidence })),
+        web: feature.boundaryExports.web.map((evidence) => ({ ...evidence })),
       },
       relationships: {
         dependencies: [...feature.dependencies],

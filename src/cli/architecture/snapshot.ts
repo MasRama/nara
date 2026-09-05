@@ -2,6 +2,7 @@ import { analyzeArchitecture, type DoctorIssue } from './doctor';
 import { discoverFeatureDependencies } from './discover-dependencies';
 import { discoverFeatureIntegrations, type FeatureIntegrationFacts } from './discover-integrations';
 import { inspectFeature } from './inspect';
+import { boundaryExportNames, boundaryExportsForFeature, type BoundaryExportEvidenceByBoundary } from './discover-boundary-exports';
 import type { FeatureImportEvidence } from './discover-import-evidence';
 /**
  * Deterministic internal architecture snapshot used by `nara diff`.
@@ -25,6 +26,7 @@ export interface SnapshotFeature {
   name: string;
   publicExports: string[];
   webPublicExports: string[];
+  boundaryExports: BoundaryExportEvidenceByBoundary;
   contractExports: string[];
   serverSurfaces: string[];
   webSurfaces: string[];
@@ -53,12 +55,14 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
   const names = discovery.features.map((feature) => feature.name).sort();
 
   const features: SnapshotFeature[] = names.map((name) => {
+    const boundaryExports = boundaryExportsForFeature(discovery.boundaryExports, name);
     const inspected = inspectFeature(name, root);
     if (!inspected.ok) {
       return {
         name,
-        publicExports: [],
-        webPublicExports: [],
+        publicExports: boundaryExportNames(boundaryExports.public),
+        webPublicExports: boundaryExportNames(boundaryExports.web),
+        boundaryExports,
         contractExports: [],
         serverSurfaces: [],
         webSurfaces: [],
@@ -77,8 +81,9 @@ export function captureArchitectureSnapshotWithIssues(root = process.cwd()): {
     };
     return {
       name,
-      publicExports: [...inspected.feature.publicExports].sort(),
-      webPublicExports: [...inspected.feature.webPublicExports].sort(),
+      publicExports: boundaryExportNames(boundaryExports.public),
+      webPublicExports: boundaryExportNames(boundaryExports.web),
+      boundaryExports,
       contractExports: [...inspected.feature.contracts].sort(),
       serverSurfaces: [...inspected.feature.serverEntrypoints].sort(),
       webSurfaces: [...inspected.feature.webEntrypoints].sort(),

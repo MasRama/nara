@@ -140,6 +140,56 @@ describe('nara diff', () => {
     };
     expect(changes.contracts).toEqual([{ feature: 'billing', added: ['NewInput'], removed: ['OldInput'] }]);
   });
+  it('reports public boundary provenance changes in JSON and human output', () => {
+    const repo = initRepo();
+    writeFeature(repo, 'auth', {
+      'index.ts': "export { User } from './contract';\n",
+      'contract.ts': 'export interface User {}\n',
+    });
+    writeFeature(repo, 'users', {
+      'index.ts': "import type { User } from '@/features/auth';\n",
+    });
+    commitAll(repo, 'base');
+    writeFeature(repo, 'auth', {
+      'index.ts': "export { User } from './server/user';\n",
+      'contract.ts': 'export interface User {}\n',
+      'server/user.ts': 'export interface User {}\n',
+    });
+
+    const changed = runDiffJson(repo, ['--base', 'HEAD']);
+    const changes = changed.json.changes as {
+      publicExports: unknown[];
+      boundaryExportProvenance: Array<{
+        feature: string;
+        boundary: string;
+        exportedName: string;
+        added: Array<{ sourceSpecifier?: string; sourceSymbol?: string }>;
+        removed: Array<{ sourceSpecifier?: string; sourceSymbol?: string }>;
+      }>;
+    };
+    expect(changes.publicExports).toEqual([]);
+    expect(changes.boundaryExportProvenance).toEqual([
+      {
+        feature: 'auth',
+        boundary: 'public',
+        exportedName: 'User',
+        removed: [
+          expect.objectContaining({ sourceSpecifier: './contract', sourceSymbol: 'User' }),
+        ],
+        added: [
+          expect.objectContaining({ sourceSpecifier: './server/user', sourceSymbol: 'User' }),
+        ],
+      },
+    ]);
+    expect(changed.json.affected).toMatchObject({ directlyChanged: ['auth'] });
+
+    const human = runDiff(repo, ['--base', 'HEAD']);
+    expect(human.stdout).toContain('Boundary export provenance changes:');
+    expect(human.stdout).toContain('auth [public] User:');
+    expect(human.stdout).toContain('- ./contract::User [value-capable syntax]');
+    expect(human.stdout).toContain('+ ./server/user::User [value-capable syntax]');
+  });
+
 
   it('reports symbol consumers and removed API impact across public and web boundaries', () => {
     const repo = initRepo();

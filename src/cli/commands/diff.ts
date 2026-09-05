@@ -6,6 +6,7 @@ import {
   verifyGitRef,
 } from '../architecture/git-materialize';
 import { captureArchitectureSnapshot, type ArchitectureSnapshot } from '../architecture/snapshot';
+import type { BoundaryExportEvidence } from '../architecture/discover-boundary-exports';
 import type { FeatureImportEvidence } from '../architecture/discover-import-evidence';
 
 export interface DiffBaseIdentity {
@@ -50,6 +51,23 @@ function formatConsumerEvidence(evidence: FeatureImportEvidence): string {
       ? `${evidence.importedSymbol} [${evidence.typeOnly ? 'type' : 'value'}]`
       : '(module import)';
   return `${evidence.from} -> ${evidence.to}${boundary}: ${usage} ${evidence.sourceFile}`;
+}
+function formatBoundaryExportProvenance(evidence: BoundaryExportEvidence): string {
+  const syntax = evidence.typeOnly
+    ? ' [type-only]'
+    : evidence.kind === 'named-reexport'
+      ? ' [value-capable syntax]'
+      : '';
+  if (evidence.kind === 'local') {
+    return `${evidence.exportedName ?? '(unnamed)'} [local${evidence.typeOnly ? ', type-only' : ''}]`;
+  }
+  if (evidence.kind === 'default') {
+    return `default [default export${evidence.typeOnly ? ', type-only' : ''}]`;
+  }
+  if (evidence.kind === 'export-all') {
+    return `export * from ${evidence.sourceSpecifier ?? '(unknown module)'} [module${evidence.typeOnly ? ', type-only' : ''}]`;
+  }
+  return `${evidence.sourceSpecifier ?? '(unknown module)'}::${evidence.sourceSymbol ?? '(unknown symbol)'}${syntax}`;
 }
 
 
@@ -107,6 +125,7 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
     changes.features.removed.length === 0 &&
     changes.publicExports.length === 0 &&
     changes.webPublicExports.length === 0 &&
+    changes.boundaryExportProvenance.length === 0 &&
     changes.contracts.length === 0 &&
     changes.dependencies.added.length === 0 &&
     changes.dependencies.removed.length === 0 &&
@@ -150,6 +169,17 @@ export function formatDiffHuman(result: ArchitectureDiffResult): string {
   }
   section(lines, 'Web public exports', webExportBody);
 
+  const provenanceBody: string[] = [];
+  for (const delta of changes.boundaryExportProvenance) {
+    provenanceBody.push(`  ${delta.feature} [${delta.boundary}] ${delta.exportedName}:`);
+    for (const evidence of delta.removed) {
+      provenanceBody.push(`    - ${formatBoundaryExportProvenance(evidence)}`);
+    }
+    for (const evidence of delta.added) {
+      provenanceBody.push(`    + ${formatBoundaryExportProvenance(evidence)}`);
+    }
+  }
+  section(lines, 'Boundary export provenance changes', provenanceBody);
   const contractBody: string[] = [];
   for (const delta of changes.contracts) {
     contractBody.push(`  ${delta.feature}:`);

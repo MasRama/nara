@@ -7,6 +7,7 @@ import type { FeatureImpact } from './architecture/impact';
 import { inspectFeature } from './architecture/inspect';
 import type { FeatureInspection } from './architecture/inspect';
 import type { FeatureIntegrationFacts } from './architecture/discover-integrations';
+import type { BoundaryExportEvidence } from './architecture/discover-boundary-exports';
 import type { FeatureImportEvidence } from './architecture/discover-import-evidence';
 import { installOfficialFeature } from './composition/install-feature';
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
@@ -167,6 +168,31 @@ function renderFeatureList(io: CliIO, label: string, values: string[]): void {
     io.stdout(`- ${value}\n`);
   }
 }
+function renderBoundaryExportEvidence(io: CliIO, title: string, evidence: BoundaryExportEvidence[]): void {
+  io.stdout(`${title}:\n`);
+  if (evidence.length === 0) {
+    io.stdout('- none\n');
+    return;
+  }
+  io.stdout(`${title}:\n`);
+  for (const current of evidence) {
+    if (current.kind === 'local') {
+      io.stdout(
+        `- ${current.exportedName ?? '(unnamed)'} [local${current.typeOnly ? ', type-only' : ''}]\n`,
+      );
+    } else if (current.kind === 'default') {
+      io.stdout(`- default [default export${current.typeOnly ? ', type-only' : ''}]\n`);
+    } else if (current.kind === 'export-all') {
+      io.stdout(
+        `- export * from ${current.sourceSpecifier ?? '(unknown module)'} [module${current.typeOnly ? ', type-only' : ''}]\n`,
+      );
+    } else {
+      io.stdout(
+        `- ${current.exportedName ?? '(unnamed)'} ← ${current.sourceSpecifier ?? '(unknown module)'}::${current.sourceSymbol ?? '(unknown symbol)'}${current.typeOnly ? ' [type-only]' : ' [value-capable syntax]'}\n`,
+      );
+    }
+  }
+}
 
 function renderFeatureIntegration(io: CliIO, integrations: FeatureIntegrationFacts): void {
   const serverRoutes = integrations.serverRoutes.map((route) => `${route.mountPath} via ${route.exportName}`);
@@ -237,6 +263,8 @@ function renderFeatureInspection(io: CliIO, feature: FeatureInspection): void {
   io.stdout(`Path: ${feature.path}\n\n`);
   renderFeatureList(io, 'Public exports', feature.publicExports);
   renderFeatureList(io, 'Web public exports', feature.webPublicExports);
+  renderBoundaryExportEvidence(io, 'Public boundary provenance', feature.boundaryExports.public);
+  renderBoundaryExportEvidence(io, 'Web boundary provenance', feature.boundaryExports.web);
   renderFeatureList(io, 'Dependencies', feature.dependencies);
   renderFeatureList(io, 'Dependents', feature.dependents);
   renderFeatureList(io, 'Server', feature.serverEntrypoints);
@@ -288,6 +316,8 @@ function renderContextPack(io: CliIO, context: ArchitectureContextPack): void {
   renderFeatureList(io, 'Public API', context.publicApi.exports);
   renderFeatureList(io, 'Web public API', context.publicApi.webExports);
   renderFeatureList(io, 'Contracts', context.publicApi.contracts);
+  renderBoundaryExportEvidence(io, 'Public boundary provenance', context.boundaryExports.public);
+  renderBoundaryExportEvidence(io, 'Web boundary provenance', context.boundaryExports.web);
   renderFeatureList(io, 'Depends on', context.relationships.dependencies);
   renderFeatureList(io, 'Affected dependents', [
     ...context.relationships.directDependents,

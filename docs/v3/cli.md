@@ -198,7 +198,7 @@ Describe one discovered Feature without opening all source files:
 nara inspect users
 ```
 
-Human output lists the public exports, browser-safe public exports, exact public/web API consumers, type-only versus runtime usage, dependencies, dependents, server entrypoints, web entrypoints, contracts, tests, and statically provable application integrations (server routes, web routes, and application consumers). Route integrations require the framework composition chain itself to be statically proven from the canonical root; uncertain composition is omitted.
+Human output lists the public exports, browser-safe public exports, boundary export provenance, exact public/web API consumers, type-only versus runtime usage, dependencies, dependents, server entrypoints, web entrypoints, contracts, tests, and statically provable application integrations (server routes, web routes, and application consumers). Route integrations require the framework composition chain itself to be statically proven from the canonical root; uncertain composition is omitted.
 
 Use machine-readable output when selecting a bounded change surface:
 
@@ -214,6 +214,20 @@ The result contains these fields:
   "path": "src/features/users",
   "publicExports": ["userRoutes"],
   "webPublicExports": ["UsersPage"],
+  "boundaryExports": {
+    "public": [
+      {
+        "feature": "users",
+        "boundary": "public",
+        "boundaryFile": "src/features/users/index.ts",
+        "exportedName": "userRoutes",
+        "kind": "local",
+        "precision": "symbol",
+        "typeOnly": false
+      }
+    ],
+    "web": []
+  },
   "dependencies": ["auth"],
   "dependents": [],
   "serverEntrypoints": ["server/routes.ts"],
@@ -243,7 +257,7 @@ The result contains these fields:
 }
 ```
 
-`consumerEvidence` is limited to symbol-level imports and re-exports through the public or web boundary. Module-level forms remain visible through dependency facts and diff consumer changes, but Nara does not invent an exact symbol for them.
+`consumerEvidence` is limited to symbol-level imports and re-exports through the public or web boundary. `boundaryExports` records the shallow, canonical-boundary export syntax that proves where a public symbol comes from; direct named re-exports to the Feature's `contract.ts` are the only contract provenance used for removed-contract consumer impact. Module-level forms remain visible through dependency facts and diff consumer changes, but Nara does not invent an exact symbol for them.
 
 Unknown Features return a readable error and exit non-zero. Available Feature names are included when any exist.
 
@@ -264,7 +278,7 @@ The pack answers: *if I am about to change this Feature, what architectural cont
 - `target`: selected Feature, how it was selected (`feature` | `file`), and the normalized source file when file-selected
 - `ownership`: Feature directory, public boundary, and every owned source file (sorted)
 - `publicApi`: public exports from `index.ts`, browser-safe exports from `web/index.ts`, and contract exports from `contract.ts` (via `inspect`)
-- `consumers`: symbol-level public/web consumer evidence with source Feature, source file, boundary, imported symbol, aliases, and type-only versus runtime provenance; module-level evidence is intentionally not promoted to an exact symbol claim
+- `boundaryExports`: shallow export evidence for the canonical public and web boundaries, including local declarations, named aliases, default exports, and module-precision export-all records
 - `relationships`: dependencies, direct dependents, and transitive dependents (via the dependency graph and `impact` primitives) — what this Feature relies on and what could be structurally affected
 - `surfaces`: server, web, and test surfaces
 - `constraints`: the architecture rules in force while editing (public boundary is `index.ts`, cross-Feature imports use the public boundary, internals are private, server code stays out of browser surfaces, canonical shape stays valid)
@@ -368,6 +382,8 @@ nara diff --base main --json
 `--base` is required; `--head` is optional. When `--head` is omitted the base ref is compared against the working tree. When `--head` is supplied both sides are Git refs and the working tree is never modified (no checkout, reset, stash, or clean). The command never mutates user changes; ref state is materialized into an isolated temporary directory via read-only Git plumbing and always cleaned up.
 
 The diff reports architecture changes, not line changes: added/removed Features, per-Feature added/removed public and web-boundary exports and contract exports, added/removed dependency edges with deterministic module and symbol import evidence, per-Feature added/removed server/web/test surfaces, added/removed canonical application imports, statically proven Hono server routes, statically proven Vue web routes, and newly introduced versus resolved doctor diagnostics. `consumerEvidence` reports exact import/re-export changes with source, boundary, aliases, and type-only versus runtime provenance. `removedPublicApiConsumers` connects removed public/web/contract symbols to baseline consumers and labels whether each consumer remains declared or was removed in the same change; it does not predict breakage. A changed route path is represented as a removal plus an addition.
+
+`boundaryExportProvenance` reports same-name changes in a canonical public or web boundary's source evidence without inventing a public export-name change. Each delta lists removed and added evidence. A removed contract export is connected to consumers only through a direct named boundary re-export from that Feature's `contract` or `contract.ts`; aliases are matched by the boundary export name, while export-all and unrelated re-exports remain conservative.
 
 A successful comparison returns exit code `0` whether or not the architecture changed. Existing baseline violations do not fail the command; policy enforcement is `nara guard`. No configuration file, architecture manifest, LLM, or AI provider is required.
 

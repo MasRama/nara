@@ -87,6 +87,7 @@ describe('context command', () => {
     expect(outcome.stdout).toContain('Work in: src/features/users');
     expect(outcome.stdout).toContain('Public boundary: src/features/users/index.ts');
     expect(outcome.stdout).toContain('Public API:\n- login');
+    expect(outcome.stdout).toContain('Public boundary provenance:\n- login [local]');
     expect(outcome.stdout).toContain('Contracts:\n- UserProfile');
     expect(outcome.stdout).toContain('Depends on:\n- auth');
     expect(outcome.stdout).toContain('Affected dependents:\n- billing\n- reports');
@@ -117,6 +118,20 @@ describe('context command', () => {
       'src/features/users/server/routes.ts',
     );
     expect(payload['publicApi']).toMatchObject({ exports: ['login'], contracts: ['UserProfile'] });
+    expect(payload['boundaryExports']).toEqual({
+      public: [
+        {
+          feature: 'users',
+          boundary: 'public',
+          boundaryFile: 'src/features/users/index.ts',
+          exportedName: 'login',
+          kind: 'local',
+          precision: 'symbol',
+          typeOnly: false,
+        },
+      ],
+      web: [],
+    });
     expect(payload['relationships']).toEqual({
       dependencies: ['auth'],
       directDependents: ['billing'],

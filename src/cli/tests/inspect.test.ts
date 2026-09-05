@@ -74,6 +74,7 @@ createRouter({ routes: [{ path: '/users', component: UsersPage }] });
     expect(result.exitCode).toBe(0);
     expect(output).toContain('Feature: users');
     expect(output).toContain('Path: src/features/users');
+    expect(output).toContain('Public boundary provenance:\n- login [local]');
     expect(output).toContain('Dependencies:\n- auth');
     expect(output).toContain('Dependents:\n- none');
     expect(output).toContain('Server:\n- server/routes.ts');
@@ -105,6 +106,20 @@ createRouter({ routes: [{ path: '/users', component: UsersPage }] });
       path: 'src/features/users',
       publicExports: ['profile'],
       webPublicExports: [],
+      boundaryExports: {
+        public: [
+          {
+            feature: 'users',
+            boundary: 'public',
+            boundaryFile: 'src/features/users/index.ts',
+            exportedName: 'profile',
+            kind: 'local',
+            precision: 'symbol',
+            typeOnly: false,
+          },
+        ],
+        web: [],
+      },
       contracts: ['UserProfile'],
       consumerEvidence: [],
       integrations: {

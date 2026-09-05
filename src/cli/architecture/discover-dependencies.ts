@@ -1,6 +1,6 @@
 import { discoverFeatures, type FeatureDiscovery } from './discover-features';
+import { discoverBoundaryExportEvidence, type BoundaryExportEvidence } from './discover-boundary-exports';
 import { discoverFeatureImportEvidence, type FeatureImportEvidence } from './discover-import-evidence';
-
 
 export interface FeatureDependency {
   from: string;
@@ -13,6 +13,7 @@ export interface FeatureDependency {
 export interface DependencyDiscovery extends FeatureDiscovery {
   dependencies: FeatureDependency[];
   importEvidence: FeatureImportEvidence[];
+  boundaryExports: BoundaryExportEvidence[];
 }
 
 export type { FeatureBoundary, FeatureReference } from './discover-import-evidence';
@@ -22,6 +23,7 @@ export { featureReferenceFromSpecifier } from './discover-import-evidence';
 export function discoverFeatureDependencies(root = process.cwd()): DependencyDiscovery {
   const discovery = discoverFeatures(root);
   const importEvidence = discoverFeatureImportEvidence(root);
+  const boundaryExports = discoverBoundaryExportEvidence(root);
   const edges = new Map<string, FeatureDependency>();
 
   for (const evidence of importEvidence) {
@@ -51,5 +53,5 @@ export function discoverFeatureDependencies(root = process.cwd()): DependencyDis
     dependency.sourceFiles.sort();
   }
 
-  return { ...discovery, dependencies, importEvidence };
+  return { ...discovery, dependencies, importEvidence, boundaryExports };
 }

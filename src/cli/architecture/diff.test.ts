@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { computeAffected, diffSnapshots } from './diff';
 import { captureArchitectureSnapshot, type ArchitectureSnapshot } from './snapshot';
+import type { BoundaryExportEvidence } from './discover-boundary-exports';
 import type { FeatureImportEvidence } from './discover-import-evidence';
 
 function importEvidence(overrides: Partial<FeatureImportEvidence> = {}): FeatureImportEvidence {
@@ -19,6 +20,20 @@ function importEvidence(overrides: Partial<FeatureImportEvidence> = {}): Feature
     importedSymbol: 'requireAuth',
     localName: 'requireAuth',
     typeOnly: false,
+    ...overrides,
+  };
+}
+function boundaryExport(overrides: Partial<BoundaryExportEvidence> = {}): BoundaryExportEvidence {
+  return {
+    feature: 'auth',
+    boundary: 'public',
+    boundaryFile: 'src/features/auth/index.ts',
+    exportedName: 'SessionUser',
+    kind: 'named-reexport',
+    precision: 'symbol',
+    sourceSpecifier: './contract',
+    sourceSymbol: 'SessionUser',
+    typeOnly: true,
     ...overrides,
   };
 }
@@ -56,6 +71,7 @@ function featureSnapshot(
     publicExports: string[];
     webPublicExports: string[];
     contractExports: string[];
+    boundaryExports: ArchitectureSnapshot['features'][number]['boundaryExports'];
     serverSurfaces: string[];
     webSurfaces: string[];
     testSurfaces: string[];
@@ -66,6 +82,7 @@ function featureSnapshot(
     name,
     publicExports: [],
     webPublicExports: [],
+    boundaryExports: { public: [], web: [] },
     contractExports: [],
     serverSurfaces: [],
     webSurfaces: [],
@@ -99,6 +116,7 @@ describe('architecture diff', () => {
       webRoutes: { added: [], removed: [] },
     });
     expect(changes.webPublicExports).toEqual([]);
+    expect(changes.boundaryExportProvenance).toEqual([]);
     expect(changes.consumerEvidence).toEqual({
       added: [],
       removed: [],
@@ -213,6 +231,10 @@ describe('architecture diff', () => {
           publicExports: ['requireAuth'],
           webPublicExports: ['LoginPage'],
           contractExports: ['SessionUser'],
+          boundaryExports: {
+            public: [boundaryExport()],
+            web: [],
+          },
         }),
         featureSnapshot('users'),
       ],
@@ -278,6 +300,174 @@ describe('architecture diff', () => {
     });
     expect(consumerRemoved.removedPublicApiConsumers.flatMap((impact) => impact.consumers.map((consumer) => consumer.targetState)))
       .toEqual(['removed-in-change', 'removed-in-change', 'removed-in-change']);
+  });
+
+  it('connects removed contract exports through direct public and web aliases', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'auth', {
+      'index.ts': "export type { SessionUser as CurrentUser } from './contract';\n",
+      'web/index.ts': "export type { SessionUser as BrowserUser } from '../contract';\n",
+      'contract.ts': 'export interface SessionUser { id: string };\n',
+    });
+    writeFeature(fixture, 'users', {
+      'index.ts': "import type { CurrentUser } from '@/features/auth';\n",
+      'web/client.ts': "import type { BrowserUser } from '@/features/auth/web';\n",
+    });
+    const base = captureArchitectureSnapshot(fixture);
+    writeFeature(fixture, 'auth', {
+      'index.ts': "export type { SessionUser as CurrentUser } from './contract';\n",
+      'web/index.ts': "export type { SessionUser as BrowserUser } from '../contract';\n",
+      'contract.ts': 'export interface Replacement { id: string };\n',
+    });
+    const target = captureArchitectureSnapshot(fixture);
+
+    const changes = diffSnapshots(base, target);
+    expect(changes.publicExports).toEqual([]);
+    expect(changes.webPublicExports).toEqual([]);
+    expect(changes.removedPublicApiConsumers).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          feature: 'auth',
+          boundary: 'public',
+          symbol: 'SessionUser',
+          exportKind: 'contract',
+          consumers: [
+            expect.objectContaining({
+              importedSymbol: 'CurrentUser',
+              targetState: 'still-imported',
+            }),
+          ],
+        }),
+        expect.objectContaining({
+          feature: 'auth',
+          boundary: 'web',
+          symbol: 'SessionUser',
+          exportKind: 'contract',
+          consumers: [
+            expect.objectContaining({
+              importedSymbol: 'BrowserUser',
+              targetState: 'still-imported',
+            }),
+          ],
+        }),
+      ]),
+    );
+    expect(changes.removedPublicApiConsumers).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          exportKind: 'contract',
+          consumers: [expect.objectContaining({ importedSymbol: 'SessionUser' })],
+        }),
+      ]),
+    );
+  });
+
+  it('rejects same-name local boundary exports as contract provenance', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'provider', {
+      'index.ts': "export const Status = 'ready';\n",
+      'contract.ts': 'export interface Status {}\n',
+    });
+    writeFeature(fixture, 'consumer', {
+      'index.ts': "import { Status } from '@/features/provider';\n",
+    });
+    const base = captureArchitectureSnapshot(fixture);
+    writeFeature(fixture, 'provider', {
+      'index.ts': "export const Status = 'ready';\n",
+      'contract.ts': 'export interface Replacement {}\n',
+    });
+    const target = captureArchitectureSnapshot(fixture);
+
+    const changes = diffSnapshots(base, target);
+    expect(changes.contracts).toEqual([
+      { feature: 'provider', added: ['Replacement'], removed: ['Status'] },
+    ]);
+    expect(changes.removedPublicApiConsumers).toEqual([]);
+  });
+
+  it('does not infer contract provenance through unrelated re-exports or export-all', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'provider', {
+      'index.ts': "export { SessionUser as CurrentUser } from './other';\nexport * from './contract';\n",
+      'contract.ts': 'export interface SessionUser {}\n',
+      'other.ts': 'export interface SessionUser {}\n',
+    });
+    writeFeature(fixture, 'consumer', {
+      'index.ts': `import type { CurrentUser, SessionUser } from '@/features/provider';
+`,
+    });
+    const base = captureArchitectureSnapshot(fixture);
+    writeFeature(fixture, 'provider', {
+      'index.ts': "export { SessionUser as CurrentUser } from './other';\nexport * from './contract';\n",
+      'contract.ts': 'export interface Replacement {}\n',
+      'other.ts': 'export interface SessionUser {}\n',
+    });
+    const target = captureArchitectureSnapshot(fixture);
+
+    const changes = diffSnapshots(base, target);
+    expect(changes.contracts).toEqual([
+      { feature: 'provider', added: ['Replacement'], removed: ['SessionUser'] },
+    ]);
+    expect(changes.removedPublicApiConsumers).toEqual([]);
+  });
+
+  it('reports same-name boundary provenance changes without export-name deltas', () => {
+    const fixture = createFixture();
+    writeFeature(fixture, 'auth', {
+      'index.ts': "export { User } from './contract';\n",
+      'web/index.ts': "export { User as BrowserUser } from '../contract';\n",
+      'contract.ts': 'export interface User {}\n',
+      'server/user.ts': 'export interface User {}\nexport interface AccountUser {}\n',
+    });
+    const base = captureArchitectureSnapshot(fixture);
+    writeFeature(fixture, 'auth', {
+      'index.ts': "export { User } from './server/user';\n",
+      'web/index.ts': "export { AccountUser as BrowserUser } from '../server/user';\n",
+      'contract.ts': 'export interface User {}\n',
+      'server/user.ts': 'export interface User {}\nexport interface AccountUser {}\n',
+    });
+    const target = captureArchitectureSnapshot(fixture);
+
+    const changes = diffSnapshots(base, target);
+    expect(changes.publicExports).toEqual([]);
+    expect(changes.webPublicExports).toEqual([]);
+    expect(changes.boundaryExportProvenance).toEqual([
+      {
+        feature: 'auth',
+        boundary: 'public',
+        exportedName: 'User',
+        removed: [
+          expect.objectContaining({
+            sourceSpecifier: './contract',
+            sourceSymbol: 'User',
+          }),
+        ],
+        added: [
+          expect.objectContaining({
+            sourceSpecifier: './server/user',
+            sourceSymbol: 'User',
+          }),
+        ],
+      },
+      {
+        feature: 'auth',
+        boundary: 'web',
+        exportedName: 'BrowserUser',
+        removed: [
+          expect.objectContaining({
+            sourceSpecifier: '../contract',
+            sourceSymbol: 'User',
+          }),
+        ],
+        added: [
+          expect.objectContaining({
+            sourceSpecifier: '../server/user',
+            sourceSymbol: 'AccountUser',
+          }),
+        ],
+      },
+    ]);
+    expect(computeAffected(changes, target).directlyChanged).toEqual(['auth']);
   });
 
   it('does not claim symbol impact for module-level namespace evidence', () => {

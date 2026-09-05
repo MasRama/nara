@@ -16,6 +16,20 @@ export type {
   FeatureImportKind,
   FeatureReference,
 } from './discover-import-evidence';
+export {
+  boundaryExportNames,
+  boundaryExportsForFeature,
+  compareBoundaryExportEvidence,
+  directlyReexportedContractSymbol,
+  discoverBoundaryExportEvidence,
+  discoverExportedNames,
+} from './discover-boundary-exports';
+export type {
+  BoundaryExportEvidence,
+  BoundaryExportEvidenceByBoundary,
+  BoundaryExportKind,
+  BoundaryExportPrecision,
+} from './discover-boundary-exports';
 export { discoverFeatureIntegrations } from './discover-integrations';
 export type {
   ApplicationFeatureImport,
@@ -46,6 +60,7 @@ export type {
   DependencyDelta,
   DiagnosticDelta,
   ExportDelta,
+  BoundaryExportProvenanceDelta,
   IntegrationChanges,
   IntegrationDelta,
   RemovedConsumerEvidence,
