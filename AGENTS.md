@@ -48,7 +48,7 @@ Deterministic facts first — no LLM needed, no full-repo scan:
 
 ```bash
 node build/src/cli/index.js doctor --json
-node build/src/cli/index.js context <feature> --json   # boundary, deps, surfaces
+node build/src/cli/index.js context <feature> --json   # context pack: ownership, API, constraints, reading order
 node build/src/cli/index.js inspect <feature> --json
 node build/src/cli/index.js impact <feature> --json    # dependents before contract changes
 ```

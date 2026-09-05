@@ -105,7 +105,7 @@ nara make feature <name>        Create the canonical feature skeleton
 nara add <feature>              Install an official open-code feature
 nara doctor                    Validate architecture
 nara inspect <feature>         Show bounded feature facts
-nara context <feature>         Show coding context without source dumps
+nara context <feature>|--file <path>  Architecture Context Pack before editing a feature
 nara impact <feature>          Show feature-graph dependents
 nara diff --base main          Show how the architecture is changing
 nara guard --base origin/main  Fail when the change introduces new violations

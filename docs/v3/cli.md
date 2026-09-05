@@ -224,41 +224,54 @@ The result contains these fields:
 
 Unknown Features return a readable error and exit non-zero. Available Feature names are included when any exist.
 
-## `nara context <feature>`
+## `nara context <feature>` / `nara context --file <path>`
 
-Produce the bounded context needed to work on a Feature:
+A deterministic Architecture Context Pack for humans and coding agents before they modify a Feature:
 
 ```bash
 nara context users
 nara context users --json
+nara context --file src/features/users/server/routes.ts
 ```
 
-Context includes:
+`--file` accepts repository-relative paths, absolute paths inside the repository, and normalized separators. It resolves the owning Feature from discovered architecture — no fuzzy name matching. Paths outside the repository, directories, and files not owned by a Feature fail with a clear error. File targeting returns identical architectural facts to feature targeting; only `target.selectedBy` and `target.sourceFile` differ.
 
-- the Feature work directory
-- its public boundary
-- public Feature dependencies
-- dependents
-- contract exports
-- server, web, and test surfaces
+The pack answers: *if I am about to change this Feature, what architectural context do I need before touching the code?* It is derived from the existing architecture model — no LLM, no embeddings, no source-code dump:
+
+- `target`: selected Feature, how it was selected (`feature` | `file`), and the normalized source file when file-selected
+- `ownership`: Feature directory, public boundary, and every owned source file (sorted)
+- `publicApi`: public exports from `index.ts` and contract exports from `contract.ts` (via `inspect`)
+- `relationships`: dependencies, direct dependents, and transitive dependents (via the dependency graph and `impact` primitives) — what this Feature relies on and what could be structurally affected
+- `surfaces`: server, web, and test surfaces
+- `constraints`: the architecture rules in force while editing (public boundary is `index.ts`, cross-Feature imports use the public boundary, internals are private, server code stays out of browser surfaces, canonical shape stays valid)
+- `diagnostics`: current `nara doctor` issues whose offending file is owned by this Feature — unrelated repository diagnostics are excluded
+- `readingOrder`: the deterministic architecture-first reading sequence — public boundary, contract, server surfaces, web surfaces, tests, then public boundaries of direct dependencies — deduplicated and lexically ordered within each group
 
 Example JSON:
 
 ```json
 {
-  "name": "users",
-  "workDirectory": "src/features/users",
-  "publicBoundary": "src/features/users/index.ts",
-  "publicDependencies": ["auth -> @/features/auth"],
-  "dependents": [],
-  "contracts": ["..."],
-  "serverSurfaces": ["server/routes.ts"],
-  "webSurfaces": [],
-  "testSurfaces": ["tests/routes.test.ts"]
+  "schemaVersion": 1,
+  "target": { "feature": "users", "selectedBy": "feature" },
+  "ownership": {
+    "directory": "src/features/users",
+    "publicBoundary": "src/features/users/index.ts",
+    "ownedFiles": ["src/features/users/contract.ts", "src/features/users/index.ts"]
+  },
+  "publicApi": { "exports": ["usersRoutes"], "contracts": ["User"] },
+  "relationships": { "dependencies": ["auth"], "directDependents": [], "transitiveDependents": [] },
+  "surfaces": { "server": ["src/features/users/server/routes.ts"], "web": [], "tests": [] },
+  "constraints": [{ "code": "PUBLIC_BOUNDARY_IS_INDEX", "description": "..." }],
+  "diagnostics": [],
+  "readingOrder": [
+    { "path": "src/features/users/index.ts", "reason": "Public boundary of the users Feature." }
+  ]
 }
 ```
 
-This is a repository fact report, not generated implementation advice. It intentionally does not dump source files.
+Human output is compact: it shows the same facts but omits the full owned-file set (available in JSON). All arrays have deterministic ordering and JSON output never contains `undefined`.
+
+`context` reuses their primitives but never collapses them.
 
 ## `nara impact <feature>`
 

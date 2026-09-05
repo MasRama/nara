@@ -35,7 +35,18 @@ export type {
 } from './diff';
 export { inspectFeature } from './inspect';
 export type { FeatureInspection, InspectFeatureResult } from './inspect';
-export { buildFeatureContext } from './context';
-export type { FeatureContext, FeatureContextResult } from './context';
+export { ARCHITECTURE_CONSTRAINTS, buildFeatureContext, buildFeatureContextForFile, resolveOwningFeature } from './context';
+export type {
+  ArchitectureConstraint,
+  ArchitectureContextOwnership,
+  ArchitectureContextPack,
+  ArchitectureContextPublicApi,
+  ArchitectureContextRelationships,
+  ArchitectureContextSurfaces,
+  ArchitectureContextTarget,
+  ArchitectureReadingEntry,
+  FeatureContextResult,
+  OwningFeatureResult,
+} from './context';
 export { inspectFeatureImpact } from './impact';
 export type { FeatureImpact, FeatureImpactResult } from './impact';

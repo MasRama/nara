@@ -1,7 +1,7 @@
 import { analyzeArchitecture } from './architecture/doctor';
 import path from 'node:path';
-import { buildFeatureContext } from './architecture/context';
-import type { FeatureContext } from './architecture/context';
+import { buildFeatureContext, buildFeatureContextForFile } from './architecture/context';
+import type { ArchitectureContextPack, FeatureContextResult } from './architecture/context';
 import { inspectFeatureImpact } from './architecture/impact';
 import type { FeatureImpact } from './architecture/impact';
 import { inspectFeature } from './architecture/inspect';
@@ -34,7 +34,7 @@ Usage:
   make feature <name>       Create a feature using the canonical structure
   doctor [--json]           Validate feature architecture
   inspect <feature> [--json] Describe one feature
-  context <feature> [--json] Produce bounded coding context
+  context <feature> [--json] Prepare an Architecture Context Pack before editing a feature
   impact <feature> [--json] Show known downstream feature impact
   diff --base <ref> [--head <ref>] [--json]
                             Show deterministic Feature-architecture changes
@@ -72,8 +72,11 @@ Describes one feature's public interface, dependencies, entrypoints, contracts, 
 
 const CONTEXT_HELP = `Usage:
   nara context <feature> [--json]
+  nara context --file <path> [--json]
 
-Produces bounded coding context without dumping source files.
+Builds a deterministic Architecture Context Pack for humans and coding agents
+before they modify a Feature: ownership, public API, relationships, surfaces,
+constraints, Feature-local diagnostics, and a reading order. Never dumps source.
 `;
 
 const IMPACT_HELP = `Usage:
@@ -200,42 +203,80 @@ function renderInspectReport(io: CliIO, name: string, root: string | undefined, 
     return 73;
   }
 }
-
-function renderFeatureContext(io: CliIO, context: FeatureContext): void {
-  io.stdout(`Feature context: ${context.name}\n`);
-  io.stdout(`Work in: ${context.workDirectory}\n`);
-  io.stdout(`Public boundary: ${context.publicBoundary}\n\n`);
-  renderFeatureList(io, 'Public dependencies', context.publicDependencies);
-  renderFeatureList(io, 'Dependents', context.dependents);
-  renderFeatureList(io, 'Contracts', context.contracts);
-  renderFeatureList(io, 'Server surfaces', context.serverSurfaces);
-  renderFeatureList(io, 'Web surfaces', context.webSurfaces);
-  renderFeatureList(io, 'Test surfaces', context.testSurfaces);
+function renderContextPack(io: CliIO, context: ArchitectureContextPack): void {
+  io.stdout(`Feature context: ${context.target.feature}\n`);
+  io.stdout(`Selected by: ${context.target.selectedBy}\n`);
+  if (context.target.selectedBy === 'file' && context.target.sourceFile) {
+    io.stdout(`Source file: ${context.target.sourceFile}\n`);
+  }
+  io.stdout(`Work in: ${context.ownership.directory}\n`);
+  io.stdout(`Public boundary: ${context.ownership.publicBoundary}\n\n`);
+  renderFeatureList(io, 'Public API', context.publicApi.exports);
+  renderFeatureList(io, 'Contracts', context.publicApi.contracts);
+  renderFeatureList(io, 'Depends on', context.relationships.dependencies);
+  renderFeatureList(io, 'Affected dependents', [
+    ...context.relationships.directDependents,
+    ...context.relationships.transitiveDependents,
+  ]);
+  renderFeatureList(
+    io,
+    'Architecture constraints',
+    context.constraints.map((constraint) => constraint.description),
+  );
+  if (context.diagnostics.length === 0) {
+    renderFeatureList(io, 'Current architecture issues', []);
+  } else {
+    renderFeatureList(
+      io,
+      'Current architecture issues',
+      context.diagnostics.map((issue) => `[${issue.code}] ${issue.file}: ${issue.message}`),
+    );
+  }
+  io.stdout('Read first:\n');
+  if (context.readingOrder.length === 0) {
+    io.stdout('- none\n');
+    return;
+  }
+  context.readingOrder.forEach((entry, index) => {
+    io.stdout(`${index + 1}. ${entry.path} — ${entry.reason}\n`);
+  });
 }
 
-function renderContextReport(io: CliIO, name: string, root: string | undefined, json = false): number {
-  try {
-    const result = buildFeatureContext(name, root);
-    if (!result.ok) {
-      if (json) {
-        io.stdout(`${JSON.stringify({ error: result.message }, null, 2)}\n`);
-      } else {
-        io.stderr(`${result.message}\n`);
-      }
-      return 1;
-    }
+function emitContextResult(io: CliIO, result: FeatureContextResult, json: boolean): number {
+  if (!result.ok) {
     if (json) {
-      io.stdout(`${JSON.stringify(result.context, null, 2)}\n`);
+      io.stdout(`${JSON.stringify({ error: result.message }, null, 2)}\n`);
     } else {
-      renderFeatureContext(io, result.context);
+      io.stderr(`${result.message}\n`);
     }
-    return 0;
+    return 1;
+  }
+  if (json) {
+    io.stdout(`${JSON.stringify(result.context, null, 2)}\n`);
+  } else {
+    renderContextPack(io, result.context);
+  }
+  return 0;
+}
+
+function renderContextReport(io: CliIO, args: string[], root: string | undefined): number {
+  const json = args.includes('--json');
+  const positional = args.filter((arg) => arg !== '--json');
+  try {
+    if (positional.length === 2 && positional[0] === '--file' && positional[1].length > 0) {
+      return emitContextResult(io, buildFeatureContextForFile(positional[1], root), json);
+    }
+    if (positional.length === 1 && positional[0].length > 0 && positional[0] !== '--file') {
+      return emitContextResult(io, buildFeatureContext(positional[0], root), json);
+    }
+    io.stderr(CONTEXT_HELP);
+    return 64;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (json) {
       io.stdout(`${JSON.stringify({ error: message }, null, 2)}\n`);
     } else {
-      io.stderr(`Could not build context for "${name}": ${message}\n`);
+      io.stderr(`Could not build context: ${message}\n`);
     }
     return 73;
   }
@@ -441,16 +482,16 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
   }
 
   if (command === 'context') {
-    const [name, format, ...extraArgs] = args;
-    if (name === '--help' || name === '-h') {
-      io.stdout(CONTEXT_HELP);
-      return { exitCode: 0 };
-    }
-    if (!name || name === '--json' || (format && format !== '--json') || extraArgs.length > 0) {
+    if (args.includes('--help') || args.includes('-h')) {
+      const positional = args.filter((arg) => arg !== '--json' && arg !== '--help' && arg !== '-h');
+      if (positional.length === 0) {
+        io.stdout(CONTEXT_HELP);
+        return { exitCode: 0 };
+      }
       io.stderr(CONTEXT_HELP);
       return { exitCode: 64 };
     }
-    return { exitCode: renderContextReport(io, name, options.cwd, format === '--json') };
+    return { exitCode: renderContextReport(io, args, options.cwd) };
   }
 
   if (command === 'impact') {

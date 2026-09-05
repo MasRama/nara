@@ -69,7 +69,7 @@ nara doctor [--json]       Validate architecture
 nara guard --base <ref> [--head <ref>] [--json]
                            Fail when the change introduces new violations
 nara inspect <feature> [--json]
-nara context <feature> [--json]
+nara context <feature>|--file <path> [--json]
 nara impact <feature> [--json]
 nara diff --base <ref> [--head <ref>] [--json]
 ```

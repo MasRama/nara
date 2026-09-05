@@ -126,7 +126,7 @@ describe('packaged Nara lifecycle', () => {
       const inspect = await runLocalNara(projectDirectory, ['inspect', 'health', '--json']);
       expect(JSON.parse(inspect.stdout).name).toBe('health');
       const context = await runLocalNara(projectDirectory, ['context', 'health', '--json']);
-      expect(JSON.parse(context.stdout).name).toBe('health');
+      expect(JSON.parse(context.stdout).target).toMatchObject({ feature: 'health', selectedBy: 'feature' });
       const impact = await runLocalNara(projectDirectory, ['impact', 'health', '--json']);
       expect(JSON.parse(impact.stdout).name).toBe('health');
 
