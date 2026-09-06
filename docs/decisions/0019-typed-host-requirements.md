@@ -142,3 +142,17 @@ Negative:
 - **Excluding browser files from the generated server tsconfig** —
   impossible without also excluding the router that imports them. The DOM
   library addition reflects the real program shape.
+
+## Follow-up (ADR 0020)
+
+The initial Users proof left two contradictions that ADR 0020 resolves
+without rewriting the decision above: account identity storage stayed
+under Users migrations while Auth wrote its rows directly, and the
+official package carried hidden prerequisites (reference-only shared
+imports, undeclared npm packages) that only surfaced as downstream
+type or module failures. ADR 0020 moves identity ownership to Auth,
+extends the host with account-directory behavior, drops the
+provider-coupled foreign key, and introduces explicit distribution
+requirements with transactional `package.json` composition. The
+`UsersServerHost` / `UsersWebHost` seam shape from this ADR is unchanged
+apart from the demand-driven identity/authorization split.

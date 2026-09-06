@@ -201,14 +201,13 @@ application binding:
   Auth → satisfies UsersServerHost   (application-owned adaptation)
 ```
 
-Rules:
-
 - Requirements are ordinary TypeScript interfaces and factory parameters (for example, `createUserRoutes(host: UsersServerHost)`). No container, no service locator, no decorators, no global registry, no Nara-specific runtime.
-- Requirements represent the Feature's actual needs in its own vocabulary, not the provider's implementation. The application binding adapts between the two (Users asks `canManageUsers(actorId, action)`; the Auth-backed binding answers with `isAdmin`/`hasPermission`).
-- Requirements stay demand-driven and narrow: one cohesive interface per side (server/web) when the needs genuinely differ, never a speculative universal service bag or a generic `execute()`/`services` catch-all.
+- Requirements represent the Feature's actual needs in its own vocabulary, not the provider's implementation. The application binding adapts between the two (Users asks `canManageUsers(actorId, action)` and `findAccountById`; the Auth-backed binding answers with `isAdmin`/`hasPermission` and its account directory).
+- Requirements stay demand-driven and narrow: a small number of cohesive interfaces when responsibilities genuinely separate (for Users, `UsersIdentityHost` for account-directory behavior and `UsersAuthorizationHost` for roles and permissions), never a speculative universal service bag or a generic `execute()`/`services` catch-all.
 - The provider relationship belongs to application composition (`src/app/bindings/`), never to Feature-owned source. `inspect`/`context` therefore show no Feature dependency while the binding reading order shows the composition.
 - Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
-- Business-neutral utilities (logging, database primitives) stay direct `src/shared/` imports. Host requirements are for application/business integration seams, not for every utility.
+- Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
+- Persistence ownership is single-writer per table: a Feature that needs another Feature's rows reaches them exclusively through a typed host requirement, never through direct SQL. The `users` table is Auth-owned; Users owns its workflow and its `assets` table with a provider-neutral owner reference.
 
 ## Shared code
 
@@ -225,6 +224,22 @@ src/shared/
 Feature-owned schema changes live under `src/features/<feature>/server/migrations/`; reference seeds live under `server/seeds/`. The shared database layer discovers those directories but does not own application tables or business data.
 
 Put a concept in a Feature when it has a natural business owner. Do not use `shared/` as a second global services, repositories, validators, or models layer. Shared code may support Features; it must not absorb their business decisions.
+
+### Guaranteed application substrate
+
+Every generated app carries a small guaranteed substrate, so installable
+Features can rely on it without copying reference-app files:
+
+- the Hono/Vue/Vue Router/TypeScript stack and canonical `src/app` roots,
+- the Feature structure itself (`src/features/<feature>/`),
+- `src/shared/database/` (SQLite persistence engine) and
+- `src/shared/config/` (environment and constants it reads).
+
+Only these `src/shared/` modules are guaranteed. Everything else under
+`src/shared/` (logging, security validation, error taxonomy, app tuning
+constants) is reference-only: official Features must own such behavior
+themselves or receive it through a typed host requirement. `nara add`
+never copies `src/shared/` during installation.
 
 ## Tests
 

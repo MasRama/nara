@@ -171,6 +171,48 @@ project baseline are tolerated. Later `nara evolve` advances Feature-owned
 source while leaving application bindings untouched. See
 [`feature-format.md`](./feature-format.md) and ADR 0018.
 
+### Explicit prerequisites
+
+An official Feature may declare distribution-time requirements in
+`official-features/<feature>/.nara/requirements.json` (never installed,
+never architecture truth):
+
+```json
+{
+  "schemaVersion": 1,
+  "providers": ["auth"],
+  "packages": { "sharp": "^0.35.3", "zod": "^4.4.3" }
+}
+```
+
+`providers` names the Features the bundled bindings are written against;
+`packages` names the npm packages Feature source needs beyond the
+platform core (`hono`, `vue`, `vue-router`, `@hono/node-server`). Before
+any mutation, `nara add` validates the metadata against the distributable
+source in both directions (imported-but-undeclared and
+declared-but-unimported both fail), verifies each provider exists and
+exports the symbols the assembly consumes, and plans `package.json`
+dependency edits. There is no dependency resolver and providers are
+never auto-installed:
+
+```bash
+npx nara add users
+# Installed feature "users":
+# - src/features/users/...
+# ~ src/app/server.ts
+# + package.json dependency: sharp@^0.35.3
+# + package.json dependency: zod@^4.4.3
+# Dependencies added to package.json. Run npm install.
+```
+
+Missing packages are appended to `dependencies`; identical declarations
+are kept byte-identical; a conflicting declaration fails before mutation
+with the expected and declared versions. The transaction covers Feature
+source, lineage, bindings, canonical-root edits, and `package.json`
+together: any failure restores all of them with no stage files left
+behind. Nara never edits the lockfile and never runs `npm install`
+itself.
+
 Run the architecture check after installation:
 
 ```bash
@@ -207,6 +249,14 @@ The plan has stable relative paths and file actions:
 - binary files merge only for one-side changes or identical results
 - incompatible text, binary, or deletion changes are conflicts
 
+Evolution reconciles Feature-owned source only. When the incoming package
+declares requirements the application no longer satisfies (a provider the
+installed bindings use is gone, or a required package is missing or
+conflicted in `package.json`), the plan carries a `requirementsNotice`
+listing each gap and applies the source anyway; bindings and
+`package.json` are left for an explicit follow-up and never silently
+migrated.
+
 Conflicts return non-zero and list paths without writing conflict markers or
 partial files. `--dry-run` never writes Feature source or lineage. A
 conflict-free plan is materialized as an isolated candidate and checked with
@@ -240,6 +290,10 @@ JSON success output has this shape:
   }
 }
 ```
+
+Plans whose incoming requirements the application does not satisfy
+additionally carry `requirementsNotice: string[]` (omitted when empty);
+the human report renders it as a `Requirements notice:` section.
 
 Error JSON uses `status: "error"`, a stable `errorCode`, a human-readable
 `message`, and `canApply: false`. No network service or AI provider is

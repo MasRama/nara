@@ -16,18 +16,41 @@ src/shared/database/
 └── seeder.ts       # discover and run reference seeds
 
 src/features/auth/server/
-├── migrations/     # sessions, roles, permissions, RBAC joins
+├── migrations/     # users, sessions, roles, permissions, RBAC joins
 └── seeds/          # permissions, roles, role-permission references
 
 src/features/users/server/
-└── migrations/     # users and assets
+└── migrations/     # assets (with a provider-neutral owner reference)
 ```
 
-The current baseline migrations create `users`, `sessions`, `roles`, `permissions`, `role_permissions`, `user_roles`, and `assets`. Schema ownership follows the business Feature: `users` owns users/assets and `auth` owns sessions/RBAC. `src/shared/database` owns none of those tables.
+One Feature owns each table; no table has two writers from different
+Features:
+
+- `auth` owns account identity data: `users` (identity, credentials,
+  login identifiers, avatar), `sessions`, `roles`, `permissions`,
+  `role_permissions`, and `user_roles`. Its account directory
+  (`findAccountById`, `listAccounts`, `createAccount`, `updateAccount`,
+  `deleteAccounts`) is the only writer of account rows.
+- `users` owns the `assets` table (avatar/profile asset metadata). The
+  `assets.user_id` column is an opaque owner reference with no foreign
+  key into Auth-owned storage, so the Users package installs and runs
+  without depending on one provider's account table. Deleting an account
+  does not rewrite asset rows; assets are addressed by URL.
+
+Capabilities that need account behavior but do not own it (such as user
+management) reach accounts exclusively through a typed host requirement
+adapted in application-owned bindings — never through direct SQL on
+another Feature's tables.
+
+The current baseline migrations create `users`, `sessions`, `roles`,
+`permissions`, `role_permissions`, `user_roles`, and `assets`, plus the
+forward migration that drops the original `assets.user_id` foreign key.
+Schema ownership follows the business Feature above.
+`src/shared/database` owns none of those tables.
 
 SQLite `STRICT` tables were evaluated but are not used for this baseline. Keeping the existing non-STRICT table shape avoids an unnecessary table-reconstruction compatibility break; the previous-v3 compatibility check rejects a `STRICT` schema as non-equivalent, so it requires an explicit corrective migration. A future Feature may adopt `STRICT` for a new table when its data contract warrants it.
 
-`nara new` intentionally creates a minimal health-only application with no database-consuming Feature, so it does not ship dead database scripts or dependencies. An installed or locally created Feature can carry `server/migrations/` and `server/seeds/`; discovery needs no registry or hand-edited manifest. `nara add` copies those source directories with the rest of the Feature.
+`nara new` creates a health-only application with no database-consuming Feature, but it still ships the guaranteed persistence substrate (`src/shared/database/` engine and `src/shared/config/` environment) with no tables, seeds, or scripts. The engine is platform: installable Features with migrations need it present, and copying reference-app database files during installation would recreate starterkit patching. Startup applies pending migrations; on an empty schema that is a no-op.
 
 ## Connection settings
 

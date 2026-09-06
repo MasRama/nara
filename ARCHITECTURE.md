@@ -53,8 +53,8 @@ Details: [`docs/v3/feature-model.md`](./docs/v3/feature-model.md).
 ## Application and shared layers
 
 - `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `bindings/` (application-owned Feature assembly bindings: ordinary Hono/Vue Router code activated explicitly from the canonical roots), `App.vue`, `pages/`, `layouts/`. The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
-- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `errors/`, `logging/`, `security/`. Never a second global services/repositories layer.
-- `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`).
+- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `errors/`, `logging/`, `security/`. Never a second global services/repositories layer. Every generated app guarantees a small substrate — the stack, the canonical roots, the Feature structure, plus `src/shared/database/` and `src/shared/config/` — so installable Features can rely on the persistence engine without copying reference-app files; nothing else under `src/shared/` is guaranteed.
+- `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`, `users`, each optionally with assembly templates and a distribution-only `.nara/requirements.json` describing provider and npm prerequisites).
 
 ## HTTP and contracts
 
