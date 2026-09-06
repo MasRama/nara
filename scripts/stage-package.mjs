@@ -8,6 +8,20 @@ const buildCliDir = path.join(projectRoot, 'build', 'src', 'cli');
 const officialSource = path.join(projectRoot, 'official-features');
 const distDir = path.join(packageDir, 'dist');
 const officialDest = path.join(packageDir, 'official-features');
+const substrateDest = path.join(packageDir, 'substrate');
+
+// Guaranteed application substrate: source modules every generated app
+// carries, mirrored under app-relative paths (substrate/src/shared/...).
+// Kept explicit and small; see resolveSubstrateDirectory.
+const SUBSTRATE_FILES = [
+  'src/shared/database/index.ts',
+  'src/shared/database/sqlite.ts',
+  'src/shared/database/migrator.ts',
+  'src/shared/database/seeder.ts',
+  'src/shared/config/index.ts',
+  'src/shared/config/constants.ts',
+  'src/shared/config/env.ts',
+];
 
 function fail(message) {
   console.error(`stage:package: ${message}`);
@@ -23,9 +37,14 @@ if (!existsSync(path.join(buildCliDir, 'index.js'))) {
 if (!existsSync(officialSource)) {
   fail(`missing ${officialSource}`);
 }
+for (const relative of SUBSTRATE_FILES) {
+  if (!existsSync(path.join(projectRoot, relative))) {
+    fail(`missing substrate source ${relative}`);
+  }
+}
 
 // Clean previous staged artifacts (generated only; never the package source).
-for (const directory of [distDir, officialDest]) {
+for (const directory of [distDir, officialDest, substrateDest]) {
   rmSync(directory, { recursive: true, force: true });
 }
 
@@ -39,12 +58,9 @@ chmodSync(path.join(distDir, 'index.js'), 0o755);
 mkdirSync(officialDest, { recursive: true });
 cpSync(officialSource, officialDest, { recursive: true });
 
-// License travels with the published artifact; README is package source.
-copyFileSync(path.join(projectRoot, 'LICENSE'), path.join(packageDir, 'LICENSE'));
-if (!existsSync(path.join(packageDir, 'README.md'))) {
-  fail(`missing ${path.join(packageDir, 'README.md')}`);
+mkdirSync(substrateDest, { recursive: true });
+for (const relative of SUBSTRATE_FILES) {
+  const destination = path.join(substrateDest, ...relative.split('/'));
+  mkdirSync(path.dirname(destination), { recursive: true });
+  copyFileSync(path.join(projectRoot, relative), destination);
 }
-
-console.log(`staged ${packageDir}`);
-console.log(`  dist <- ${buildCliDir}`);
-console.log(`  official-features <- ${officialSource}`);

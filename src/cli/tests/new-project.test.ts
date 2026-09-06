@@ -65,12 +65,16 @@ describe('new project', () => {
     });
     expect(Object.keys(packageJson.dependencies).sort()).toEqual([
       '@hono/node-server',
+      'better-sqlite3',
+      'dotenv',
       'hono',
       'vue',
       'vue-router',
+      'zod',
     ]);
     expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
       '@nara-web/cli',
+      '@types/better-sqlite3',
       '@types/node',
       '@vitejs/plugin-vue',
       'jsdom',
@@ -82,7 +86,13 @@ describe('new project', () => {
     ]);
     const rootManifest = JSON.parse(
       readFileSync(path.join(__dirname, '..', '..', '..', 'package.json'), 'utf8'),
-    ) as { version: string };
+    ) as { version: string; dependencies: Record<string, string>; devDependencies: Record<string, string> };
+    for (const name of ['better-sqlite3', 'dotenv', 'zod']) {
+      expect(packageJson.dependencies[name]).toBe(rootManifest.dependencies[name]);
+    }
+    expect(packageJson.devDependencies['@types/better-sqlite3']).toBe(
+      rootManifest.devDependencies['@types/better-sqlite3'],
+    );
     expect(packageJson.devDependencies['@nara-web/cli']).toBe(rootManifest.version);
     expect(packageJson.devDependencies['@nara-web/cli']).not.toMatch(/^[ ^~]/);
 
@@ -102,6 +112,13 @@ describe('new project', () => {
       'src/features/health/tests/health.test.ts',
       'tests/health.test.ts',
       'src/server.ts',
+      'src/shared/config/constants.ts',
+      'src/shared/config/env.ts',
+      'src/shared/config/index.ts',
+      'src/shared/database/index.ts',
+      'src/shared/database/migrator.ts',
+      'src/shared/database/seeder.ts',
+      'src/shared/database/sqlite.ts',
       'src/vue.d.ts',
       'tsconfig.frontend.json',
       'tsconfig.json',
@@ -109,9 +126,10 @@ describe('new project', () => {
       'vite.config.mjs',
       'vitest.config.mjs',
     ];
-    for (const file of expectedFiles) {
-      expect(existsSync(path.join(projectDirectory, file))).toBe(true);
-    }
+    expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("hostname: '127.0.0.1'");
+    expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("from './shared/database'");
+    expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain('migrate()');
+    expect(readFileSync(path.join(projectDirectory, '.gitignore'), 'utf8')).toContain('database/');
     expect(readFileSync(path.join(projectDirectory, 'resources/app.ts'), 'utf8')).toContain(
       "createApp(App).use(router).mount('#app');",
     );

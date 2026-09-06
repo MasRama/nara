@@ -1,11 +1,42 @@
-import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { installOfficialFeature } from '../composition/install-feature';
 import { featureNameIsValid } from '../feature-name';
-import { readNaraCliVersion } from '../package-root';
+import { readNaraCliVersion, resolveSubstrateDirectory } from '../package-root';
 
 function creatingCliVersion(): string {
   return readNaraCliVersion();
+}
+
+/**
+ * Guaranteed application substrate: source modules every generated app
+ * carries verbatim, so installable Features can rely on them without
+ * copying reference-app files. Deliberately small: the SQLite persistence
+ * engine (Features own their SQL; the engine is platform) and the
+ * environment/config it reads. Everything else stays feature-owned or
+ * host-provided.
+ */
+const SUBSTRATE_FILES = [
+  'src/shared/database/index.ts',
+  'src/shared/database/sqlite.ts',
+  'src/shared/database/migrator.ts',
+  'src/shared/database/seeder.ts',
+  'src/shared/config/index.ts',
+  'src/shared/config/constants.ts',
+  'src/shared/config/env.ts',
+] as const;
+
+function substrateFiles(): Record<string, string> {
+  const base = resolveSubstrateDirectory();
+  const files: Record<string, string> = {};
+  for (const relative of SUBSTRATE_FILES) {
+    const absolute = path.join(base, ...relative.split('/'));
+    if (!existsSync(absolute)) {
+      throw new Error(`Guaranteed substrate file is missing at ${absolute}; cannot scaffold a new project.`);
+    }
+    files[relative] = readFileSync(absolute, 'utf8');
+  }
+  return files;
 }
 
 
@@ -23,9 +54,9 @@ export interface ProjectGenerationError {
 export type NewProjectResult =
   | { ok: true; project: CreatedProject }
   | { ok: false; error: ProjectGenerationError };
-
 function projectFiles(name: string, cliVersion: string): Record<string, string> {
   return {
+    ...substrateFiles(),
     'package.json': `${JSON.stringify(
       {
         name,
@@ -46,12 +77,16 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
         },
         dependencies: {
           '@hono/node-server': '^2.1.1',
+          'better-sqlite3': '^12.4.1',
+          dotenv: '^16.4.5',
           hono: '^4.13.5',
           'vue': '^3.5.42',
           'vue-router': '^5.3.1',
+          zod: '^4.4.3',
         },
         devDependencies: {
           '@nara-web/cli': cliVersion,
+          '@types/better-sqlite3': '^7.6.13',
           '@types/node': '^22.20.1',
           '@vitejs/plugin-vue': '^6.0.8',
           jsdom: '^30.0.1',
@@ -186,7 +221,7 @@ export default defineConfig({
   },
 });
 `,
-    '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\n',
+    '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\ndatabase/\n',
     'scripts/dev.ts': `import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -455,6 +490,7 @@ app.get('*', async (context, next) => {
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
 import { app } from './app/server';
+import { migrate } from './shared/database';
 
 const port = Number(process.env.PORT ?? 5555);
 const vitePort = Number(process.env.VITE_PORT ?? 5173);
@@ -466,6 +502,12 @@ if (isProduction && !process.env.APP_URL?.trim()) {
 }
 if (isProduction && !existsSync(join(process.cwd(), 'build', 'client', 'index.html'))) {
   throw new Error('Production frontend build is missing. Run npm run build before npm start.');
+}
+try {
+  migrate();
+} catch (error) {
+  process.stderr.write('Database migration failed: ' + (error instanceof Error ? error.message : String(error)) + '\\n');
+  process.exit(1);
 }
 serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
   const startupMessage = isProduction
