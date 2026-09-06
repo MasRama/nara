@@ -267,6 +267,7 @@ export function planTransition(options: PlanTransitionOptions): PlanTransitionOu
       incoming,
       candidate: reconciliation.candidate,
       conflicts: reconciliation.conflicts,
+      officialDirectory,
     });
 
     const injected = { ...(options.injected ?? {}) };

@@ -262,6 +262,12 @@ export function readCurrentTransition(root: string, feature: string): Transition
  * Aggregate a scoped transition outcome. Precedence is BLOCKED, then
  * UNVERIFIED, then VERIFIED. Only VERIFIED candidates are eligible for
  * Nara-managed acceptance.
+ *
+ * BLOCKED requires concrete negative evidence (a failing check): a
+ * reconciliation conflict, an unsatisfied host contract, a failing test,
+ * an incompatible prerequisite, a checksum mismatch, a failing rehearsal,
+ * or a new architecture regression. An open obligation with only missing
+ * or incomplete evidence yields UNVERIFIED, never BLOCKED.
  */
 export function aggregateOutcome(
   obligations: TransitionObligation[],
@@ -274,9 +280,8 @@ export function aggregateOutcome(
   for (const item of evidence) {
     for (const limitation of item.limitations ?? []) limitations.add(limitation);
   }
-  const blockingOpen = obligations.some((obligation) => obligation.blocking && obligation.status === 'open');
   const evidenceFailed = evidence.some((item) => item.status === 'fail');
-  if (blockingOpen || evidenceFailed) {
+  if (evidenceFailed) {
     return { outcome: 'BLOCKED', limitations: [...limitations].sort() };
   }
   const unverifiedObligation = obligations.some(

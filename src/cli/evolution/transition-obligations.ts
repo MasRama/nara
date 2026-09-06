@@ -12,6 +12,7 @@ export interface ObligationContext {
   incoming: ReadonlyMap<string, Buffer>;
   candidate: ReadonlyMap<string, Buffer>;
   conflicts: string[];
+  officialDirectory?: string;
 }
 
 function sortedPaths(files: ReadonlyMap<string, Buffer>): string[] {
@@ -426,7 +427,7 @@ export function deriveTransitionObligations(context: ObligationContext): Transit
   }
 
   try {
-    const officialDirectory = path.join(context.root, 'official-features', context.feature);
+    const officialDirectory = context.officialDirectory ?? path.join(context.root, 'official-features', context.feature);
     const requirements = readFeatureRequirements(existsSync(officialDirectory) ? officialDirectory : context.root);
     if (requirements.ok && requirements.requirements?.packages) {
       for (const [name, range] of Object.entries(requirements.requirements.packages).sort(([a], [b]) =>

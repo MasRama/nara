@@ -8,6 +8,7 @@ import { captureArchitectureSnapshotWithIssues, toPosix } from '../architecture/
 import { writeFeatureMap } from './reconcile';
 import type { TransitionEvidence, TransitionObligation } from './transition';
 import { rehearseFreshMigration, rehearseHistoryMigration, stageCandidateFeatureRoots } from './transition-migrations';
+import { discoverMigrations } from '../../shared/database/migrator';
 import { readTransitionChecks } from './transition';
 
 export interface EvidenceContext {
@@ -230,7 +231,11 @@ export function evaluateTransitionEvidence(context: EvidenceContext): Transition
   const directory = staged.directory;
   const featuresRoot = staged.featuresRoot;
   try {
-    const fresh = rehearseFreshMigration([featuresRoot]);
+    const stagedMigrationCount = discoverMigrations({ featureRoots: [featuresRoot] }).length;
+    const fresh =
+      stagedMigrationCount === 0
+        ? { status: 'pass' as const, detail: 'No migrations in the candidate migration set.', limitations: undefined as string[] | undefined }
+        : rehearseFreshMigration([featuresRoot]);
     evidence.push({
       id: 'evidence:migration-fresh',
       kind: 'migration-fresh',
@@ -241,7 +246,15 @@ export function evaluateTransitionEvidence(context: EvidenceContext): Transition
     });
     const checks = readTransitionChecks(context.root, context.feature);
     const fixturePath = context.historyFixturePath ?? (checks?.historyFixture ? path.resolve(context.root, checks.historyFixture) : undefined);
-    if (context.injected?.['migration-history']) {
+    if (stagedMigrationCount === 0 && !context.injected?.['migration-history']) {
+      evidence.push({
+        id: 'evidence:migration-history',
+        kind: 'migration-history',
+        status: 'pass' as const,
+        detail: 'No migrations in the candidate migration set; no history adoption to establish.',
+        candidateDigest: digest,
+      });
+    } else if (context.injected?.['migration-history']) {
       const injected = context.injected['migration-history'];
       evidence.push({
         id: 'evidence:migration-history',
