@@ -11,7 +11,9 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import ts from 'typescript';
 import { analyzeArchitecture, type DoctorIssue } from '../architecture/doctor';
+import { discoverExportedNames } from '../architecture/discover-boundary-exports';
 import { discoverFeatureIntegrations } from '../architecture/discover-integrations';
 import { diagnosticKey } from '../architecture/diff';
 import {
@@ -51,7 +53,14 @@ export interface InstalledFeature {
 
 export interface FeatureInstallError {
   message: string;
-  kind: 'invalid-name' | 'unknown-feature' | 'duplicate' | 'invalid-assembly' | 'composition' | 'filesystem';
+  kind:
+  | 'invalid-name'
+  | 'unknown-feature'
+  | 'duplicate'
+  | 'invalid-assembly'
+  | 'prerequisite'
+  | 'composition'
+  | 'filesystem';
 }
 
 export type InstallFeatureResult =
@@ -91,6 +100,103 @@ function readTextFile(file: string, feature: string, role: string): { ok: true; 
       ok: false,
       message: `Cannot compose "${feature}": ${role} at ${file} is missing or unreadable; nothing was installed.`,
     };
+  }
+}
+
+interface TemplateProviderNeed {
+  provider: string;
+  boundaryFile: string;
+  symbols: string[];
+  existenceOnly: boolean;
+  templateRole: string;
+}
+
+/**
+ * Parse one assembly template for imports that name another Feature's public
+ * boundary. Templates live in `src/app/bindings/`, so only destination-
+ * relative `../../features/<provider>` (or `/web`) specifiers count; every
+ * other specifier is ordinary application code, not a provider requirement.
+ */
+function templateProviderNeeds(source: string, feature: string, templateRole: string): TemplateProviderNeed[] {
+  const sourceFile = ts.createSourceFile('assembly-template.ts', source, ts.ScriptTarget.Latest, true);
+  const needs: TemplateProviderNeed[] = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const match = /^\.\.\/\.\.\/features\/([^/]+?)((?:\/web)?)(?:\/index(?:\.ts)?)?$/.exec(
+      statement.moduleSpecifier.text,
+    );
+    if (!match || match[1] === feature) continue;
+    const provider = match[1];
+    const boundaryFile = match[2] === '/web' ? `src/features/${provider}/web/index.ts` : `src/features/${provider}/index.ts`;
+    const clause = statement.importClause;
+    if (!clause || (!clause.name && !clause.namedBindings)) {
+      needs.push({ provider, boundaryFile, symbols: [], existenceOnly: true, templateRole });
+      continue;
+    }
+    if (clause.name) {
+      needs.push({ provider, boundaryFile, symbols: [], existenceOnly: true, templateRole });
+    }
+    if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+      needs.push({ provider, boundaryFile, symbols: [], existenceOnly: true, templateRole });
+      continue;
+    }
+    if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
+      const symbols = clause.namedBindings.elements.map((element) => element.propertyName?.text ?? element.name.text);
+      if (symbols.length > 0) {
+        needs.push({ provider, boundaryFile, symbols, existenceOnly: false, templateRole });
+      }
+    }
+  }
+  return needs;
+}
+
+/**
+ * Fail closed when an assembly template statically requires provider
+ * Features the target application does not supply. There is no Feature
+ * dependency resolver: the application must provide the prerequisite first.
+ * Runs before any mutation and before candidate validation.
+ */
+function checkAssemblyPrerequisites(root: string, feature: string, templates: AssemblyTemplates): string | undefined {
+  const needs: TemplateProviderNeed[] = [
+    ...(templates.server === undefined ? [] : templateProviderNeeds(templates.server, feature, 'server')),
+    ...(templates.web === undefined ? [] : templateProviderNeeds(templates.web, feature, 'web')),
+  ];
+  for (const need of needs) {
+    const boundaryPath = path.resolve(root, need.boundaryFile);
+    let exported: string[];
+    try {
+      exported = discoverExportedNames(boundaryPath);
+    } catch {
+      return (
+        `Cannot add "${feature}": the ${need.templateRole} assembly needs the "${need.provider}" feature, ` +
+        `but ${need.boundaryFile} does not exist in this application. Provide "${need.provider}" first; nothing was installed.`
+      );
+    }
+    if (need.existenceOnly) continue;
+    const missing = need.symbols.filter((symbol) => !exported.includes(symbol));
+    if (missing.length > 0) {
+      return (
+        `Cannot add "${feature}": the ${need.templateRole} assembly needs ${missing.map((symbol) => `"${symbol}"`).join(', ')} ` +
+        `from the "${need.provider}" feature, but ${need.boundaryFile} does not export them. Provide a compatible "${need.provider}" first; nothing was installed.`
+      );
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Replace a canonical composition root through a stage file. The stage file
+ * is always removed when staging or the rename fails, so a failed
+ * composition never leaves temporary canonical-root artifacts behind.
+ */
+export function writeFileAtomically(destination: string, content: string): void {
+  const stageFile = `${destination}.nara-add-stage`;
+  writeFileSync(stageFile, content);
+  try {
+    renameSync(stageFile, destination);
+  } catch (error) {
+    rmSync(stageFile, { force: true });
+    throw error;
   }
 }
 
@@ -308,9 +414,7 @@ function applyAssemblyTransaction(
         continue;
       }
       rootBackups.set(composition.file, composition.before);
-      const stageFile = `${composition.file}.nara-add-stage`;
-      writeFileSync(stageFile, composition.after);
-      renameSync(stageFile, composition.file);
+      writeFileAtomically(composition.file, composition.after);
       writtenRoots.push(composition.file);
     }
     return {
@@ -331,6 +435,9 @@ function applyAssemblyTransaction(
       } catch {
         // Best-effort restore; the original error below carries the failure.
       }
+    }
+    for (const composition of [plan.serverRoot, plan.webRoot]) {
+      if (composition) rmSync(`${composition.file}.nara-add-stage`, { force: true });
     }
     for (const binding of writtenBindings) {
       rmSync(binding, { force: true });
@@ -463,6 +570,10 @@ export function installOfficialFeature(
     const planned = planAssembly(root, name, templates);
     if (!planned.ok) {
       return { ok: false, error: planned.error };
+    }
+    const missingPrerequisite = checkAssemblyPrerequisites(root, name, templates);
+    if (missingPrerequisite !== undefined) {
+      return { ok: false, error: { kind: 'prerequisite', message: missingPrerequisite } };
     }
     const blocked = validateAssemblyCandidate(root, name, sourceFiles, planned.plan);
     if (blocked !== undefined) {

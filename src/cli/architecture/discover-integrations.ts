@@ -363,6 +363,48 @@ function importedBinding(
   }
   return undefined;
 }
+
+/**
+ * Resolve a `.route()` mount target through one conservative hop: either a
+ * directly imported Feature public export, or a local value produced by
+ * calling an imported Feature public factory (for example,
+ * `const userRoutes = createUserRoutes(host)`). The factory itself must be
+ * a value-capable public-boundary import; anything else stays unproven.
+ */
+function factoryBinding(
+  expression: ts.Expression,
+  scanned: ScannedFeatureImports,
+  values: Map<string, ts.Expression>,
+): FeatureBinding | undefined {
+  const direct = importedBinding(expression, scanned);
+  if (direct) return direct;
+  const unwrapped = unwrapExpression(expression);
+  let call: ts.CallExpression | undefined;
+  if (ts.isCallExpression(unwrapped)) {
+    call = unwrapped;
+  } else if (ts.isIdentifier(unwrapped)) {
+    const initializer = values.get(unwrapped.text);
+    if (!initializer) return undefined;
+    const resolved = unwrapExpression(initializer);
+    if (!ts.isCallExpression(resolved)) return undefined;
+    call = resolved;
+  } else {
+    return undefined;
+  }
+  const callee = unwrapExpression(call.expression);
+  if (ts.isIdentifier(callee)) {
+    const factory = scanned.bindings.get(callee.text);
+    if (factory?.boundary === 'public') return factory;
+    return undefined;
+  }
+  if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression)) {
+    const namespace = scanned.namespaces.get(callee.expression.text);
+    if (!namespace || namespace.boundary !== 'public') return undefined;
+    return { ...namespace, exportName: callee.name.text };
+  }
+  return undefined;
+}
+
 function addServerRoute(
   facts: FeatureIntegrationFactsByFeature,
   route: ServerRouteIntegration,
@@ -648,6 +690,7 @@ function discoverServerAssemblyRoutes(
       continue;
     }
     const scanned = scanFeatureImports(bindingSource, bindingFile, root, knownFeatures, addImport);
+    const bindingValues = collectValues(bindingSource);
     const composed = defaultComposeFunction(bindingSource);
     if (!composed) {
       continue;
@@ -663,7 +706,7 @@ function discoverServerAssemblyRoutes(
         const receiver = unwrapExpression(node.expression.expression);
         if (ts.isIdentifier(receiver) && receiver.text === param) {
           const mountPath = staticString(node.arguments[0]);
-          const binding = importedBinding(node.arguments[1], scanned);
+          const binding = factoryBinding(node.arguments[1], scanned, bindingValues);
           if (mountPath !== undefined && binding?.boundary === 'public') {
             addServerRoute(facts, {
               feature: binding.feature,

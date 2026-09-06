@@ -72,8 +72,10 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
       {
         compilerOptions: {
           target: 'es2022',
-          lib: ['es2022'],
-          skipLibCheck: true,
+          // The server program includes browser files: src/app/router.ts
+          // composes Feature web bindings, so DOM globals used by browser
+          // helpers (CSRF cookie access) must resolve here as well.
+          lib: ['es2022', 'dom', 'dom.iterable'],
           outDir: './build',
           rootDir: './src',
           module: 'commonjs',
