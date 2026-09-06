@@ -136,6 +136,10 @@ describe('packaged Nara lifecycle', () => {
       expect(generated.devDependencies.nara).toBeUndefined();
       expect(generated.scripts['architecture:doctor']).toBe('nara doctor');
       expect(generated.scripts.check).toContain('architecture:doctor');
+      expect(existsSync(path.join(projectDirectory, 'src', 'app', 'bindings', 'health.server.ts'))).toBe(true);
+      expect(readFileSync(path.join(projectDirectory, 'src', 'app', 'server.ts'), 'utf8')).toContain(
+        'composeHealthServer(app);',
+      );
 
       // Pre-publish stand-in for the registry: same tarball bytes via file:.
       pointNaraAtTarball(projectDirectory, tarball);
@@ -146,6 +150,12 @@ describe('packaged Nara lifecycle', () => {
       expect(doctor.stdout).toBe('Architecture looks healthy.\n');
       const inspect = await runLocalNara(projectDirectory, ['inspect', 'health', '--json']);
       expect(JSON.parse(inspect.stdout).name).toBe('health');
+      expect(
+        (JSON.parse(inspect.stdout) as { integrations: { serverRoutes: { mountPath: string }[] } }).integrations
+          .serverRoutes,
+      ).toEqual([
+        { feature: 'health', appFile: 'src/app/server.ts', exportName: 'healthRoutes', mountPath: '/health' },
+      ]);
       const context = await runLocalNara(projectDirectory, ['context', 'health', '--json']);
       expect(JSON.parse(context.stdout).target).toMatchObject({ feature: 'health', selectedBy: 'feature' });
       const impact = await runLocalNara(projectDirectory, ['impact', 'health', '--json']);
@@ -283,6 +293,84 @@ describe('packaged Nara lifecycle', () => {
       expect(featureFilesEqual(evolvedLineage.files, incomingHealth)).toBe(true);
       expect(evolvedLineage.record.baseDigest).toBe(digestFeatureFiles(incomingHealth));
       expect(evolvedLineage.files.has('local.ts')).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('installed nara add composes server and web assemblies from distribution templates', { timeout: 300_000 }, async () => {
+    const tarball = await ensurePackedNara();
+    const root = mkdtempSync(path.join(os.tmpdir(), 'nara-pack-assembly-'));
+    try {
+      const prefix = path.join(root, 'prefix');
+      await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
+      const installedRoot = path.join(prefix, 'node_modules', '@nara-web', 'cli');
+      const installedCli =
+        process.platform === 'win32'
+          ? ['node', path.join(installedRoot, 'dist', 'index.js')]
+          : [path.join(prefix, 'node_modules', '.bin', 'nara')];
+
+      // Isolated fixture Feature: proves both composition surfaces without
+      // adding a fake Feature to the production catalog.
+      const galleryDirectory = path.join(installedRoot, 'official-features', 'gallery');
+      mkdirSync(path.join(galleryDirectory, 'web'), { recursive: true });
+      mkdirSync(path.join(galleryDirectory, '.nara', 'assembly'), { recursive: true });
+      writeFileSync(
+        path.join(galleryDirectory, 'index.ts'),
+        `import { Hono } from 'hono';\n\nexport const galleryRoutes = new Hono().get('/', (context) => context.text('gallery'));\n`,
+      );
+      writeFileSync(
+        path.join(galleryDirectory, 'web', 'index.ts'),
+        `export const GalleryPage = { template: '<div>gallery</div>' };\n`,
+      );
+      writeFileSync(
+        path.join(galleryDirectory, '.nara', 'assembly', 'server.ts'),
+        `import type { Hono } from 'hono';\nimport { galleryRoutes } from '../../features/gallery';\n\nexport default function composeGalleryServer(app: Hono): void {\n  app.route('/gallery', galleryRoutes);\n}\n`,
+      );
+      writeFileSync(
+        path.join(galleryDirectory, '.nara', 'assembly', 'web.ts'),
+        `import type { RouteRecordRaw } from 'vue-router';\nimport { GalleryPage } from '../../features/gallery/web';\n\nexport default [\n  {\n    path: '/gallery',\n    name: 'gallery',\n    component: GalleryPage,\n  },\n] satisfies RouteRecordRaw[];\n`,
+      );
+
+      const fixture = path.join(root, 'fixture');
+      mkdirSync(path.join(fixture, 'src', 'app'), { recursive: true });
+      writeFileSync(
+        path.join(fixture, 'src', 'app', 'server.ts'),
+        `import { Hono } from 'hono';\n\nexport const app = new Hono();\n`,
+      );
+      writeFileSync(
+        path.join(fixture, 'src', 'app', 'router.ts'),
+        `import { createRouter, createWebHistory } from 'vue-router';\nimport HomePage from './pages/HomePage.vue';\n\nexport default createRouter({\n  history: createWebHistory(),\n  routes: [\n    {\n      path: '/',\n      name: 'home',\n      component: HomePage,\n    },\n    {\n      path: '/:pathMatch(.*)*',\n      name: 'not-found',\n      component: HomePage,\n    },\n  ],\n});\n`,
+      );
+
+      const add = await runCommand(installedCli[0], [...installedCli.slice(1), 'add', 'gallery'], fixture);
+      expect(add.stdout).toContain('src/features/gallery/index.ts');
+      expect(add.stdout).toContain('src/app/bindings/gallery.server.ts');
+      expect(add.stdout).toContain('src/app/bindings/gallery.web.ts');
+      expect(existsSync(path.join(fixture, 'src', 'features', 'gallery', 'index.ts'))).toBe(true);
+      expect(existsSync(path.join(fixture, 'src', 'app', 'bindings', 'gallery.server.ts'))).toBe(true);
+      expect(existsSync(path.join(fixture, 'src', 'app', 'bindings', 'gallery.web.ts'))).toBe(true);
+      expect(readFileSync(path.join(fixture, 'src', 'app', 'server.ts'), 'utf8')).toContain(
+        'composeGalleryServer(app);',
+      );
+      expect(readFileSync(path.join(fixture, 'src', 'app', 'router.ts'), 'utf8')).toContain('...galleryWebRoutes,');
+
+      const doctor = await runCommand(installedCli[0], [...installedCli.slice(1), 'doctor'], fixture);
+      expect(doctor.stdout).toBe('Architecture looks healthy.\n');
+      const inspect = await runCommand(installedCli[0], [...installedCli.slice(1), 'inspect', 'gallery', '--json'], fixture);
+      const feature = JSON.parse(inspect.stdout) as {
+        integrations: {
+          applicationImports: { appFile: string }[];
+          serverRoutes: { mountPath: string }[];
+          webRoutes: { path: string }[];
+        };
+      };
+      expect(feature.integrations.serverRoutes.map((route) => route.mountPath)).toEqual(['/gallery']);
+      expect(feature.integrations.webRoutes.map((route) => route.path)).toEqual(['/gallery']);
+      expect(feature.integrations.applicationImports.map((fact) => fact.appFile).sort()).toEqual([
+        'src/app/bindings/gallery.server.ts',
+        'src/app/bindings/gallery.web.ts',
+      ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
