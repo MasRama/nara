@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, cpSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { digestFeatureFiles, featureFilesEqual, readFeatureFiles, readFeatureLineage } from '../../src/cli/evolution/lineage';
@@ -97,6 +97,54 @@ async function stopServer(child: ChildProcess): Promise<void> {
   }
   await Promise.race([once(child, 'exit'), new Promise((resolve) => setTimeout(resolve, 10_000))]);
   if (child.exitCode === null) child.kill('SIGKILL');
+}
+
+/**
+ * Provide the documented Auth prerequisite in a generated app. Copies the
+ * reference Auth feature (minus its tests) plus exactly the non-substrate
+ * shared modules Auth source imports, computed to a fixpoint from the
+ * sources themselves. The database/config substrate is never copied: every
+ * generated app already carries it.
+ */
+function copyAuthProvider(projectDirectory: string): void {
+  const repository = repoRoot();
+  const withoutTests = (source: string): boolean => !source.split(path.sep).includes('tests');
+  cpSync(
+    path.join(repository, 'src', 'features', 'auth'),
+    path.join(projectDirectory, 'src', 'features', 'auth'),
+    { recursive: true, filter: withoutTests },
+  );
+  const SUBSTRATE_MODULES = new Set(['database', 'config']);
+  const copied = new Set<string>();
+  const roots = [path.join(projectDirectory, 'src', 'features', 'auth')];
+  for (let round = 0; round < 4 && roots.length > 0; round += 1) {
+    const current = roots.splice(0);
+    const needed = new Set<string>();
+    const visit = (directory: string): void => {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
+        const full = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          visit(full);
+          continue;
+        }
+        if (!entry.isFile() || (!full.endsWith('.ts') && !full.endsWith('.vue'))) continue;
+        const content = readFileSync(full, 'utf8');
+        for (const match of content.matchAll(/shared\/([a-z-]+)/g)) {
+          if (!SUBSTRATE_MODULES.has(match[1]) && !copied.has(match[1])) needed.add(match[1]);
+        }
+      }
+    };
+    for (const directory of current) visit(directory);
+    for (const module of needed) {
+      cpSync(
+        path.join(repository, 'src', 'shared', module),
+        path.join(projectDirectory, 'src', 'shared', module),
+        { recursive: true, filter: withoutTests },
+      );
+      copied.add(module);
+      roots.push(path.join(projectDirectory, 'src', 'shared', module));
+    }
+  }
 }
 
 describe('packaged Nara lifecycle', () => {
@@ -553,43 +601,36 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
       await runCommand(installedCli[0], [...installedCli.slice(1), 'new', 'users-app'], workspace);
       const projectDirectory = path.join(workspace, 'users-app');
 
-      // Supported fixture strategy: the Auth prerequisite is ordinary project
-      // source, not an installable official Feature. Business-neutral shared
-      // infrastructure travels with it; test-only files stay behind.
-      const repository = repoRoot();
-      const withoutTests = (source: string): boolean => !source.split(path.sep).includes('tests');
-      cpSync(path.join(repository, 'src', 'features', 'auth'), path.join(projectDirectory, 'src', 'features', 'auth'), {
-        recursive: true,
-        filter: withoutTests,
-      });
-      for (const module of ['config', 'database', 'errors', 'logging', 'security']) {
-        cpSync(path.join(repository, 'src', 'shared', module), path.join(projectDirectory, 'src', 'shared', module), {
-          recursive: true,
-          filter: withoutTests,
-        });
-      }
-      interface FixtureManifest {
-        dependencies: Record<string, string>;
-        devDependencies: Record<string, string>;
-      }
-      const rootManifest: FixtureManifest = JSON.parse(readFileSync(path.join(repository, 'package.json'), 'utf8'));
-      const projectManifestPath = path.join(projectDirectory, 'package.json');
-      const projectManifest: FixtureManifest = JSON.parse(readFileSync(projectManifestPath, 'utf8'));
-      for (const name of ['better-sqlite3', 'dotenv', 'pino', 'pino-pretty', 'pino-roll', 'sharp', 'zod']) {
-        projectManifest.dependencies[name] = rootManifest.dependencies[name];
-      }
-      const betterSqliteTypes = rootManifest.devDependencies['@types/better-sqlite3'];
-      if (betterSqliteTypes) projectManifest.devDependencies['@types/better-sqlite3'] = betterSqliteTypes;
-      writeFileSync(projectManifestPath, `${JSON.stringify(projectManifest, null, 2)}\n`);
+      // Supported provider fixture: the documented Auth prerequisite is
+      // ordinary project source, plus exactly the non-substrate shared
+      // modules it imports (computed from its own source, never hand-picked
+      // and never the database/config substrate every app already has).
+      // Users-specific composition stays entirely inside `nara add users`.
+      copyAuthProvider(projectDirectory);
 
       pointNaraAtTarball(projectDirectory, tarball);
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
+
+      const manifestBefore = JSON.parse(readFileSync(path.join(projectDirectory, 'package.json'), 'utf8')) as {
+        dependencies: Record<string, string>;
+      };
+      expect(manifestBefore.dependencies.zod).toBeUndefined();
+      expect(manifestBefore.dependencies.sharp).toBeUndefined();
 
       const add = await runLocalNara(projectDirectory, ['add', 'users']);
       expect(add.stdout).toContain('src/app/bindings/users.server.ts');
       expect(add.stdout).toContain('src/app/bindings/users.web.ts');
       expect(add.stdout).toContain('src/features/users/server/host.ts');
+      expect(add.stdout).toContain('+ package.json dependency: sharp@^0.35.3');
+      expect(add.stdout).toContain('+ package.json dependency: zod@^4.4.3');
+      expect(add.stdout).toContain('Dependencies added to package.json. Run npm install.');
       expect(existsSync(path.join(projectDirectory, 'src', 'features', 'users', 'web', 'host.ts'))).toBe(true);
+
+      const manifestAfter = JSON.parse(readFileSync(path.join(projectDirectory, 'package.json'), 'utf8')) as {
+        dependencies: Record<string, string>;
+      };
+      expect(manifestAfter.dependencies.zod).toBe('^4.4.3');
+      expect(manifestAfter.dependencies.sharp).toBe('^0.35.3');
 
       const doctor = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctor.stdout).toBe('Architecture looks healthy.\n');
