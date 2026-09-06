@@ -56,15 +56,20 @@ export default createRouter({
 });
 `;
 
-const AUTH_BOUNDARY = `export const findAllRoles = (): Array<{ id: string; slug: string }> => [];
+const AUTH_BOUNDARY = `export const createAccount = (): unknown => ({});
+export const deleteAccounts = (): number => 0;
+export const findAccountById = (): undefined => undefined;
+export const findAllRoles = (): Array<{ id: string; slug: string }> => [];
 export const getCurrentUser = (): undefined => undefined;
 export const getUserRoles = (): Array<{ slug: string }> => [];
 export const getUsersWithRole = (): Array<{ id: string }> => [];
 export const hashPassword = (password: string): string => password;
 export const hasPermission = (): boolean => false;
 export const isAdmin = (): boolean => false;
+export const listAccounts = (): { data: unknown[]; total: number } => ({ data: [], total: 0 });
 export const SESSION_COOKIE_NAME = 'auth_id';
 export const syncUserRoles = (): void => {};
+export const updateAccount = (): undefined => undefined;
 `;
 const AUTH_WEB_BOUNDARY = `export const createAccessClient = (): unknown => ({});
 export const createAuthClient = (): unknown => ({});
@@ -73,10 +78,18 @@ export const ensureCsrfToken = async (): Promise<void> => {};
 export const useAuthSession = (): unknown => ({});
 `;
 
-function projectShell(fixture: string, options: { auth?: string; authWeb?: string } = {}): void {
+const FIXTURE_PACKAGE_JSON = `{
+  "name": "fixture",
+  "version": "0.0.0",
+  "dependencies": {}
+}
+`;
+
+function projectShell(fixture: string, options: { auth?: string; authWeb?: string; packageJson?: string } = {}): void {
   writeFiles(fixture, {
     'src/app/server.ts': MINIMAL_SERVER_ROOT,
     'src/app/router.ts': MINIMAL_ROUTER_ROOT,
+    'package.json': options.packageJson ?? FIXTURE_PACKAGE_JSON,
     'src/features/auth/index.ts': options.auth ?? AUTH_BOUNDARY,
     'src/features/auth/web/index.ts': options.authWeb ?? AUTH_WEB_BOUNDARY,
   });
@@ -121,8 +134,14 @@ describe('users feature assembly', () => {
     expect(existsSync(path.join(fixture, 'src/features/users/server/host.ts'))).toBe(true);
     expect(existsSync(path.join(fixture, 'src/features/users/web/host.ts'))).toBe(true);
     expect(existsSync(path.join(fixture, 'src/features/users/web/pages/UsersPage.vue'))).toBe(true);
-    expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202609030001_create_users.sql'))).toBe(
+    expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202609030007_create_assets.sql'))).toBe(
       true,
+    );
+    expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202609030008_assets_owner_reference.sql'))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202609030001_create_users.sql'))).toBe(
+      false,
     );
     const serverBinding = path.join(fixture, 'src/app/bindings/users.server.ts');
     const webBinding = path.join(fixture, 'src/app/bindings/users.web.ts');
@@ -184,8 +203,8 @@ describe('users feature assembly', () => {
     const migrations = discoverMigrations({ root: fixture });
     const usersMigrations = migrations.filter((migration) => migration.path.includes(`${path.sep}users${path.sep}`));
     expect(usersMigrations.map((migration) => migration.name).sort()).toEqual([
-      '202609030001_create_users.sql',
       '202609030007_create_assets.sql',
+      '202609030008_assets_owner_reference.sql',
     ]);
   });
 
@@ -194,6 +213,7 @@ describe('users feature assembly', () => {
     writeFiles(fixture, {
       'src/app/server.ts': MINIMAL_SERVER_ROOT,
       'src/app/router.ts': MINIMAL_ROUTER_ROOT,
+      'package.json': FIXTURE_PACKAGE_JSON,
     });
     const serverBefore = readFileSync(path.join(fixture, 'src/app/server.ts'), 'utf8');
 

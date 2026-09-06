@@ -49,6 +49,18 @@ function isAuthSpecifier(specifier: string): boolean {
   );
 }
 
+function isReferenceOnlySharedSpecifier(specifier: string): boolean {
+  return specifier.includes('shared/logging') || specifier.includes('shared/security');
+}
+
+function accountTableReferences(source: string): string[] {
+  const found: string[] = [];
+  const pattern = /\b(?:FROM|INTO|UPDATE|JOIN)\s+users\b/i;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source)) !== null) found.push(match[0]);
+  return found;
+}
+
 describe('official users host requirements', () => {
   it('ships feature-owned source with no direct Auth import', () => {
     const offenders: string[] = [];
@@ -75,6 +87,24 @@ describe('official users host requirements', () => {
 
   it('ships users-owned migrations with the feature', () => {
     const migrations = readdirSync(path.join(featureDirectory, 'server', 'migrations')).sort();
-    expect(migrations).toEqual(['202609030001_create_users.sql', '202609030007_create_assets.sql']);
+    expect(migrations).toEqual(['202609030007_create_assets.sql', '202609030008_assets_owner_reference.sql']);
+  });
+
+  it('ships source with no reference-only shared import', () => {
+    const offenders: string[] = [];
+    for (const file of collectSourceFiles(featureDirectory)) {
+      const found = importSpecifiers(readFileSync(file, 'utf8')).filter(isReferenceOnlySharedSpecifier);
+      if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('never queries Auth-owned account rows with SQL', () => {
+    const offenders: string[] = [];
+    for (const file of collectSourceFiles(featureDirectory)) {
+      const found = accountTableReferences(readFileSync(file, 'utf8'));
+      if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
+    }
+    expect(offenders).toEqual([]);
   });
 });

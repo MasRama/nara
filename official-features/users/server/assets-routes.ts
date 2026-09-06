@@ -5,10 +5,18 @@ import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import sharp from 'sharp';
-import { UPLOAD } from '../../../shared/config';
-import { Logger } from '../../../shared/logging';
-import { createUserAsset, setUserAvatar } from './assets';
+import { createUserAsset } from './assets';
 import type { UsersServerHost } from './host';
+
+/**
+ * Users-owned avatar upload policy. These limits mirror the upload
+ * contract the Feature validates and reports; they live here (not in
+ * shared config) because the Users Feature must install without
+ * reference-only shared modules.
+ */
+const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
+const AVATAR_DIR = 'avatars';
+const AVATAR_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
 const IMAGE_MAGIC_BYTES: Record<string, number[]> = {
   'image/jpeg': [0xff, 0xd8, 0xff],
@@ -41,7 +49,7 @@ function uploadedFile(value: unknown): File | undefined {
 }
 
 function avatarDirectory(): string {
-  return resolve(process.cwd(), 'storage', UPLOAD.AVATAR_DIR);
+  return resolve(process.cwd(), 'storage', AVATAR_DIR);
 }
 
 function unauthorized(context: Context): Response {
@@ -74,18 +82,16 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
   const uploaded = body.file;
   const file = uploadedFile(uploaded);
   if (!file) return invalidFile(context, 'Avatar file is required', 'FILE_REQUIRED');
-  if (file.size > UPLOAD.MAX_FILE_SIZE) {
+  if (file.size > AVATAR_MAX_FILE_SIZE) {
     return invalidFile(context, 'File too large (max 5MB)', 'FILE_TOO_LARGE', 413);
   }
-  if (!UPLOAD.ALLOWED_MIME_TYPES.some((mimeType) => mimeType === file.type)) {
-    Logger.logSecurity('Invalid avatar MIME type', { mimeType: file.type, userId: sessionUser.id });
+  if (!AVATAR_ALLOWED_MIME_TYPES.some((mimeType) => mimeType === file.type)) {
     return invalidFile(context, 'Invalid file type', 'INVALID_FILE_TYPE');
   }
 
   try {
     const source = Buffer.from(await file.arrayBuffer());
     if (!hasMagicBytes(source, file.type)) {
-      Logger.logSecurity('Invalid avatar magic bytes', { mimeType: file.type, userId: sessionUser.id });
       return invalidFile(context, 'Invalid file', 'INVALID_FILE_TYPE');
     }
 
@@ -94,7 +100,6 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
       .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
       .toBuffer();
     if (!hasMagicBytes(processed, 'image/webp')) {
-      Logger.logSecurity('Image processor produced invalid output', { userId: sessionUser.id });
       return invalidFile(context, 'Image processing failed', 'INVALID_OUTPUT');
     }
 
@@ -113,10 +118,9 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
       userId: sessionUser.id,
     });
     await removePreviousAvatar(sessionUser.avatar);
-    setUserAvatar(sessionUser.id, url);
+    await host.updateAccount(sessionUser.id, { avatar: url });
     return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } });
   } catch (error) {
-    Logger.error('Avatar upload failed', error instanceof Error ? error : new Error(String(error)));
     return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' }, 400);
   }
 };
@@ -124,7 +128,6 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
 const serveAvatarHandler = async (context: Context) => {
   const filename = context.req.param('filename');
   if (!filename || basename(filename) !== filename || !/^[a-f0-9-]+\.webp$/i.test(filename)) {
-    Logger.logSecurity('Avatar path traversal blocked', { filename: filename ?? '' });
     return context.body('Access denied', 403);
   }
   const directory = avatarDirectory();
@@ -133,7 +136,6 @@ const serveAvatarHandler = async (context: Context) => {
     const resolvedTarget = await realpath(target);
     const resolvedDirectory = await realpath(directory);
     if (!resolvedTarget.startsWith(`${resolvedDirectory}/`)) {
-      Logger.logSecurity('Avatar symlink escape blocked', { filename });
       return context.body('Access denied', 403);
     }
     const content = await readFile(resolvedTarget);
@@ -151,7 +153,9 @@ const serveAvatarHandler = async (context: Context) => {
 /**
  * Avatar HTTP behavior constructed from the same host requirements as the
  * user routes. The application binding builds both groups from one host
- * value; this module never imports another Feature.
+ * value; this module never imports another Feature. The account avatar URL
+ * is written through the identity host because account rows are
+ * provider-owned; only the `assets` rows are written here.
  */
 export function createAssetRoutes(host: UsersServerHost) {
   return new Hono().post('/avatar', uploadAvatarHandlerFor(host)).get('/avatar/:filename', serveAvatarHandler);

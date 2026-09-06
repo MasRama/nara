@@ -25,5 +25,14 @@ export type {
   UsersResponseSuccess,
 } from './contract';
 export { createAssetRoutes } from './server/assets-routes';
-export type { UsersActor, UsersManageAction, UsersRoleRef, UsersServerHost } from './server/host';
+export type {
+  UsersAccountCreateInput,
+  UsersAccountUpdateInput,
+  UsersActor,
+  UsersAuthorizationHost,
+  UsersIdentityHost,
+  UsersManageAction,
+  UsersRoleRef,
+  UsersServerHost,
+} from './server/host';
 export { createUserRoutes } from './server/routes';

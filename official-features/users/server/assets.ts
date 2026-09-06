@@ -27,7 +27,3 @@ export function findUserAssets(userId: string): UserAsset[] {
     .prepare('SELECT * FROM assets WHERE user_id = ? ORDER BY created_at DESC')
     .all(userId) as UserAsset[];
 }
-
-export function setUserAvatar(userId: string, avatarUrl: string): void {
-  getDatabase().prepare('UPDATE users SET avatar = ?, updated_at = ? WHERE id = ?').run(avatarUrl, Date.now(), userId);
-}

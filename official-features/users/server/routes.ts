@@ -11,16 +11,7 @@ import {
   type ManagedUser,
   type UserProfile,
 } from '../contract';
-import { Logger } from '../../../shared/logging';
 import type { UsersServerHost } from './host';
-import {
-  createManagedUser,
-  deleteUsers,
-  findUserProfileById,
-  listUsers,
-  updateManagedUser,
-  updateUserProfile,
-} from './repository';
 
 function validationErrors(error: z.ZodError): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
@@ -58,8 +49,9 @@ function adminRoleId(host: UsersServerHost): string | undefined {
 
 /**
  * Users HTTP behavior constructed from explicit host requirements. The
- * application binding supplies identity/authorization operations; this
- * module never imports another Feature.
+ * application binding supplies identity and authorization operations;
+ * this module never imports another Feature and never touches
+ * Auth-owned account rows with SQL.
  */
 export function createUserRoutes(host: UsersServerHost) {
   function userWithRoles(user: UserProfile | undefined): ManagedUser | undefined {
@@ -75,7 +67,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const sessionUser = currentActor(context);
     if (!sessionUser) return unauthorized(context);
 
-    const user = findUserProfileById(sessionUser.id);
+    const user = host.findAccountById(sessionUser.id);
     if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
     return context.json({ success: true as const, message: 'OK', data: { user } });
   };
@@ -98,9 +90,8 @@ export function createUserRoutes(host: UsersServerHost) {
     }
 
     try {
-      const user = updateUserProfile(sessionUser.id, parsed.data);
+      const user = host.updateAccount(sessionUser.id, parsed.data);
       if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
-      Logger.logAuth('profile_updated', { userId: user.id });
       return context.json({ success: true as const, message: 'Profile updated', data: { user } });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -118,7 +109,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const page = Number.parseInt(context.req.query('page') ?? '1', 10);
     const limit = Number.parseInt(context.req.query('limit') ?? '10', 10);
     const search = context.req.query('search') ?? '';
-    const result = listUsers(Number.isNaN(page) ? 1 : page, Number.isNaN(limit) ? 10 : limit, search);
+    const result = host.listAccounts(Number.isNaN(page) ? 1 : page, Number.isNaN(limit) ? 10 : limit, search);
     return context.json({
       success: true as const,
       message: 'OK',
@@ -151,11 +142,11 @@ export function createUserRoutes(host: UsersServerHost) {
     if (parsed.data.roles !== undefined && !host.canAssignRoles(sessionUser.id)) return forbidden(context);
 
     try {
-      const user = createManagedUser({
+      const user = host.createAccount({
         id: randomUUID(),
         name: parsed.data.name,
         email: parsed.data.email,
-        password: host.hashPassword(parsed.data.password),
+        passwordHash: host.hashPassword(parsed.data.password),
       });
       if (host.canAssignRoles(sessionUser.id) && parsed.data.roles) {
         const roleIds = host
@@ -169,7 +160,6 @@ export function createUserRoutes(host: UsersServerHost) {
       if (isUniqueConstraintError(error)) {
         return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 400);
       }
-      Logger.error('Failed to create user', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   };
@@ -217,9 +207,9 @@ export function createUserRoutes(host: UsersServerHost) {
     }
 
     try {
-      const user = updateManagedUser(userId, {
+      const user = host.updateAccount(userId, {
         ...profile,
-        ...(password ? { password: host.hashPassword(password) } : {}),
+        ...(password ? { passwordHash: host.hashPassword(password) } : {}),
       });
       if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
 
@@ -231,7 +221,6 @@ export function createUserRoutes(host: UsersServerHost) {
       if (isUniqueConstraintError(error)) {
         return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 400);
       }
-      Logger.error('Failed to update user', error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   };
@@ -265,8 +254,7 @@ export function createUserRoutes(host: UsersServerHost) {
       }
     }
 
-    const deleted = deleteUsers(parsed.data.ids);
-    Logger.warn('Users deleted', { adminId: sessionUser.id, deletedIds: parsed.data.ids, count: deleted });
+    const deleted = host.deleteAccounts(parsed.data.ids);
     return context.json({ success: true as const, message: 'Users deleted', data: { deleted } });
   };
 

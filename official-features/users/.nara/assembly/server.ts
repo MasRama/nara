@@ -1,5 +1,8 @@
 import type { Hono } from 'hono';
 import {
+  createAccount,
+  deleteAccounts,
+  findAccountById,
   findAllRoles,
   getCurrentUser,
   getUserRoles,
@@ -7,23 +10,25 @@ import {
   hashPassword,
   hasPermission,
   isAdmin,
+  listAccounts,
   SESSION_COOKIE_NAME,
   syncUserRoles,
+  updateAccount,
 } from '../../features/auth';
 import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../../features/users';
-
 /**
  * Application-owned Users server binding.
  *
  * Users declares typed host requirements; this file supplies them by
- * adapting the Auth Feature. The adaptation policy lives here, not in the
- * Feature: Users asks `canManageUsers(actorId, action)` and
- * `canAssignRoles(actorId)` while Auth provides `isAdmin`/`hasPermission`,
- * so this binding translates between the two vocabularies.
+ * adapting the Auth Feature, which owns account identity data. The
+ * adaptation policy lives here, not in the Feature: Users asks
+ * `canManageUsers(actorId, action)` and `findAccountById`/`listAccounts`/
+ * `createAccount`/`updateAccount`/`deleteAccounts` while Auth provides
+ * `isAdmin`/`hasPermission` and its account directory, so this binding
+ * translates between the two vocabularies.
  *
- * This file belongs to the application permanently. Feature evolution never
- * touches it: local customization (swapping the provider, tightening
- * policy) belongs here.
+ * Feature evolution never touches this file. Local customization belongs
+ * here (for example, swapping the provider or tightening policy).
  */
 export const usersServerHost: UsersServerHost = {
   sessionCookieName: SESSION_COOKIE_NAME,
@@ -34,6 +39,16 @@ export const usersServerHost: UsersServerHost = {
   },
 
   hashPassword: (password) => hashPassword(password),
+
+  findAccountById: (userId) => findAccountById(userId),
+
+  listAccounts: (page, limit, search) => listAccounts(page, limit, search),
+
+  createAccount: (input) => createAccount(input),
+
+  updateAccount: (userId, patch) => updateAccount(userId, patch),
+
+  deleteAccounts: (userIds) => deleteAccounts(userIds),
 
   canManageUsers: (actorId, action) => isAdmin(actorId) || hasPermission(actorId, `users.${action}`),
 
