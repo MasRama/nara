@@ -110,22 +110,37 @@ interface MigrationProcess {
 }
 
 function startMigrationProcess(databaseFile: string, holdLock: boolean): MigrationProcess {
+  // The lock holder releases only after it observes the contender actually
+  // attempting (filesystem sentinel), never after a fixed delay: contender
+  // boot time under parallel-suite load is unbounded, so a fixed hold
+  // window races with slow boots and flakes the serialization assertion.
   const script = holdLock
     ? `
+const fs = require('node:fs');
 const { getDatabase, migrate } = require('./src/shared/database');
 const database = getDatabase();
 database.exec('BEGIN IMMEDIATE');
 process.stdout.write('LOCK_ACQUIRED\\n');
-setTimeout(() => {
-  database.exec('COMMIT');
-  const startedAt = Date.now();
-  const result = migrate();
-  process.stdout.write('MIGRATION_RESULT:' + JSON.stringify(result) + '\\n');
-  process.stdout.write('MIGRATION_DURATION_MS:' + (Date.now() - startedAt) + '\\n');
-}, 4000);
+const sentinel = process.env.NARA_MIGRATION_SENTINEL;
+const deadline = Date.now() + 20000;
+while (!fs.existsSync(sentinel)) {
+  if (Date.now() > deadline) {
+    process.stderr.write('SENTINEL_TIMEOUT\\n');
+    process.exit(1);
+  }
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+}
+Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000);
+database.exec('COMMIT');
+const startedAt = Date.now();
+const result = migrate();
+process.stdout.write('MIGRATION_RESULT:' + JSON.stringify(result) + '\\n');
+process.stdout.write('MIGRATION_DURATION_MS:' + (Date.now() - startedAt) + '\\n');
 `
     : `
+const fs = require('node:fs');
 const { migrate } = require('./src/shared/database');
+fs.writeFileSync(process.env.NARA_MIGRATION_SENTINEL, 'attempting');
 process.stdout.write('MIGRATION_ATTEMPTING\\n');
 const startedAt = Date.now();
 const result = migrate();
@@ -149,6 +164,7 @@ process.stdout.write('MIGRATION_DURATION_MS:' + (Date.now() - startedAt) + '\\n'
         NODE_ENV: 'development',
         APP_URL: 'http://127.0.0.1:5555',
         DB_FILE: databaseFile,
+        NARA_MIGRATION_SENTINEL: `${databaseFile}.attempting`,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     },
@@ -380,7 +396,7 @@ describe('canonical SQLite migration lifecycle', () => {
     }
   });
 
-  it('runs pending migrations before HTTP listen and aborts on migration failure', { timeout: 30_000 }, async () => {
+  it('runs pending migrations before HTTP listen and aborts on migration failure', { timeout: 60_000 }, async () => {
     const root = temporaryRoot();
     const databaseFile = path.join(root, 'database.sqlite3');
     const port = await freePort();
@@ -402,12 +418,14 @@ describe('canonical SQLite migration lifecycle', () => {
     failingDatabase.exec('CREATE TABLE users (id TEXT PRIMARY KEY);');
     failingDatabase.close();
     const failingChild = startApplication(failingDatabaseFile, await freePort());
-    const exitCode = await waitForExit(failingChild);
+    // Full-app ts-node boot under parallel-suite load can exceed the
+    // default exit wait; the property under test is the abort itself
+    // (non-zero exit naming the cause), not boot speed.
+    const exitCode = await waitForExit(failingChild, 25_000);
     expect(exitCode).not.toBe(0);
     expect((failingChild as ChildProcess & { output?: () => string }).output?.()).toMatch(/not equivalent|failed/);
   });
-
-  it('serializes two migration processes against one persistent database', { timeout: 30_000 }, async () => {
+  it('serializes two migration processes against one persistent database', { timeout: 60_000 }, async () => {
     const root = temporaryRoot();
     const databaseFile = path.join(root, 'concurrent.sqlite3');
     const first = startMigrationProcess(databaseFile, true);
@@ -605,6 +623,122 @@ describe('canonical SQLite migration lifecycle', () => {
 
       expect(() => migrate({ database, root: process.cwd() })).toThrow(/not equivalent/);
       expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 0 });
+    } finally {
+      database.close();
+    }
+  });
+  it('accepts the users migration at its new auth location without rerunning it', () => {
+    const migrationSql = (feature: string, name: string): string =>
+      readFileSync(path.resolve(`src/features/${feature}/server/migrations/${name}`), 'utf8');
+    const baseline: Array<[string, string]> = [
+      ['auth', '202609030001_create_users.sql'],
+      ['auth', '202609030002_create_sessions.sql'],
+      ['auth', '202609030003_create_roles.sql'],
+      ['auth', '202609030004_create_permissions.sql'],
+      ['auth', '202609030005_create_role_permissions.sql'],
+      ['auth', '202609030006_create_user_roles.sql'],
+      ['users', '202609030007_create_assets.sql'],
+    ];
+    const database = openMemoryDatabase();
+    try {
+      // An already-applied database recorded 202609030001 while the file
+      // lived under Users ownership. The release moves the identical
+      // bytes (same id, filename, checksum) to Auth ownership; the
+      // ledger keys on id/name/checksum, never on the owning directory.
+      const before = temporaryRoot();
+      for (const [, name] of baseline) {
+        // Old layout: identity tables lived under Users ownership.
+        const source = baseline.find(([, candidate]) => candidate === name)!;
+        writeMigration(before, 'users', name, migrationSql(source[0], name));
+      }
+      const first = migrate({ database, root: before });
+      expect(first.applied).toHaveLength(7);
+      expect(first.skipped).toEqual([]);
+      database
+        .prepare('INSERT INTO users (id, name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run('owner-move-user', 'Owner Move', 'owner-move@example.com', 'hash', 1, 1);
+
+      const after = temporaryRoot();
+      for (const [owner, name] of baseline) {
+        writeMigration(after, owner, name, migrationSql(owner, name));
+      }
+      const second = migrate({ database, root: after });
+      expect(second.applied).toEqual([]);
+      expect(second.skipped).toHaveLength(7);
+      expect(database.prepare('SELECT email FROM users WHERE id = ?').get('owner-move-user')).toEqual({
+        email: 'owner-move@example.com',
+      });
+      expect(
+        (database.prepare('SELECT checksum FROM _nara_migrations WHERE id = ?').get('202609030001') as { checksum: string })
+          .checksum,
+      ).toMatch(/^[a-f0-9]{64}$/);
+    } finally {
+      database.close();
+    }
+  });
+  it('preserves asset data and required indexes through the owner-reference migration', () => {
+    const database = openMemoryDatabase();
+    try {
+      database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030001_create_users.sql'), 'utf8'));
+      database.exec(readFileSync(path.resolve('src/features/users/server/migrations/202609030007_create_assets.sql'), 'utf8'));
+      database
+        .prepare('INSERT INTO users (id, name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
+        .run('asset-owner', 'Asset Owner', 'asset-owner@example.com', 'hash', 1, 1);
+      database
+        .prepare(
+          'INSERT INTO assets (id, name, type, url, mime_type, size, s3_key, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        )
+        .run('asset-1', 'avatar.png', 'avatar', 'https://cdn.example/avatar.png', 'image/png', 42, 's3-key-1', 'asset-owner', 2, 3);
+
+      // Only the forward owner-reference migration is pending: the ledger
+      // bootstrap accepts 0001..0007 at their current locations by
+      // id/name/shape, then 0008 rebuilds assets without a foreign key.
+      const root = temporaryRoot();
+      for (const [feature, name] of [
+        ['auth', '202609030001_create_users.sql'],
+        ['auth', '202609030002_create_sessions.sql'],
+        ['auth', '202609030003_create_roles.sql'],
+        ['auth', '202609030004_create_permissions.sql'],
+        ['auth', '202609030005_create_role_permissions.sql'],
+        ['auth', '202609030006_create_user_roles.sql'],
+        ['users', '202609030007_create_assets.sql'],
+      ] as const) {
+        const source =
+          feature === 'auth'
+            ? path.resolve(`src/features/auth/server/migrations/${name}`)
+            : path.resolve(`src/features/users/server/migrations/${name}`);
+        writeMigration(root, feature, name, readFileSync(source, 'utf8'));
+      }
+      database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030002_create_sessions.sql'), 'utf8'));
+      database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030003_create_roles.sql'), 'utf8'));
+      database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030004_create_permissions.sql'), 'utf8'));
+      database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030005_create_role_permissions.sql'), 'utf8'));
+      database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030006_create_user_roles.sql'), 'utf8'));
+      writeMigration(
+        root,
+        'users',
+        '202609030008_assets_owner_reference.sql',
+        readFileSync(path.resolve('src/features/users/server/migrations/202609030008_assets_owner_reference.sql'), 'utf8'),
+      );
+
+      const result = migrate({ database, root });
+      expect(result.applied).toEqual(['202609030008_assets_owner_reference.sql']);
+      expect(result.skipped).toHaveLength(7);
+      expect(database.prepare('SELECT id, user_id, size FROM assets WHERE id = ?').get('asset-1')).toEqual({
+        id: 'asset-1',
+        user_id: 'asset-owner',
+        size: 42,
+      });
+      expect(database.prepare('SELECT email FROM users WHERE id = ?').get('asset-owner')).toEqual({
+        email: 'asset-owner@example.com',
+      });
+      const indexes = (
+        database.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'assets'").all() as Array<{
+          name: string;
+        }>
+      ).map((row) => row.name);
+      expect(indexes).toEqual(expect.arrayContaining(['idx_assets_user_id', 'idx_assets_s3_key']));
+      expect(database.pragma('foreign_key_list(assets)')).toEqual([]);
     } finally {
       database.close();
     }

@@ -6,6 +6,8 @@ const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 const packageDir = path.join(projectRoot, 'packages', 'nara');
 const buildCliDir = path.join(projectRoot, 'build', 'src', 'cli');
 const officialSource = path.join(projectRoot, 'official-features');
+const licenseSource = path.join(projectRoot, 'LICENSE');
+const licenseDest = path.join(packageDir, 'LICENSE');
 const distDir = path.join(packageDir, 'dist');
 const officialDest = path.join(packageDir, 'official-features');
 const substrateDest = path.join(packageDir, 'substrate');
@@ -37,6 +39,9 @@ if (!existsSync(path.join(buildCliDir, 'index.js'))) {
 if (!existsSync(officialSource)) {
   fail(`missing ${officialSource}`);
 }
+if (!existsSync(licenseSource)) {
+  fail(`missing ${licenseSource}`);
+}
 for (const relative of SUBSTRATE_FILES) {
   if (!existsSync(path.join(projectRoot, relative))) {
     fail(`missing substrate source ${relative}`);
@@ -47,6 +52,7 @@ for (const relative of SUBSTRATE_FILES) {
 for (const directory of [distDir, officialDest, substrateDest]) {
   rmSync(directory, { recursive: true, force: true });
 }
+rmSync(licenseDest, { force: true });
 
 // Copy only CLI build output and official-feature source. Root runtime and
 // build artifacts (build/client, build/server.js, database/, storage/,
@@ -64,3 +70,5 @@ for (const relative of SUBSTRATE_FILES) {
   mkdirSync(path.dirname(destination), { recursive: true });
   copyFileSync(path.join(projectRoot, relative), destination);
 }
+copyFileSync(licenseSource, licenseDest);
+console.log('stage:package: staged dist, official-features, substrate, LICENSE');

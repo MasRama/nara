@@ -13,7 +13,7 @@ src/features/<feature>/   contract.ts · index.ts · server/ · web/ (optional) 
 src/app/                  server.ts · router.ts · App.vue · pages/ · layouts/
 src/shared/               config/ · database/ · errors/ · logging/ · security/
 resources/app.ts          thin Vite entry mounting the app shell
-official-features/        installable open-code features (health, audit)
+official-features/        installable open-code features (health, audit, users)
 ```
 
 - `src/features/<feature>/index.ts` is the general/server-facing public boundary. Cross-feature server use imports only from there.

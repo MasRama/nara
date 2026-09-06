@@ -185,6 +185,9 @@ describe('packaged Nara lifecycle', () => {
       expect(generated.scripts['architecture:doctor']).toBe('nara doctor');
       expect(generated.scripts.check).toContain('architecture:doctor');
       expect(existsSync(path.join(projectDirectory, 'src', 'app', 'bindings', 'health.server.ts'))).toBe(true);
+      expect(
+        existsSync(path.join(projectDirectory, '.nara', 'lineage', 'official-features', 'health', 'lineage.json')),
+      ).toBe(true);
       expect(readFileSync(path.join(projectDirectory, 'src', 'app', 'server.ts'), 'utf8')).toContain(
         'composeHealthServer(app);',
       );
@@ -684,7 +687,16 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
 
       const binding = path.join(projectDirectory, 'src', 'app', 'bindings', 'users.server.ts');
       writeFileSync(binding, `${readFileSync(binding, 'utf8')}// Local policy: deny role assignment on Fridays.\n`);
-      const customized = readFileSync(binding, 'utf8');
+      const customizedServerBinding = readFileSync(binding, 'utf8');
+      // Evolution must preserve everything the application owns: both
+      // bindings, the composed manifest, and the provider choice.
+      const webBinding = path.join(projectDirectory, 'src', 'app', 'bindings', 'users.web.ts');
+      const customizedWebBinding = readFileSync(webBinding, 'utf8');
+      const manifestPath = path.join(projectDirectory, 'package.json');
+      const composedManifest = readFileSync(manifestPath, 'utf8');
+      const providerBoundary = path.join(projectDirectory, 'src', 'features', 'auth', 'index.ts');
+      const providerChoice = readFileSync(providerBoundary, 'utf8');
+      expect(readFeatureLineage(projectDirectory, 'users')).toBeDefined();
       const packagedUsersIndex = path.join(
         projectDirectory,
         'node_modules',
@@ -700,7 +712,10 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
       expect(readFileSync(path.join(projectDirectory, 'src', 'features', 'users', 'index.ts'), 'utf8')).toContain(
         "usersVersion = 'packaged-next'",
       );
-      expect(readFileSync(binding, 'utf8')).toEqual(customized);
+      expect(readFileSync(binding, 'utf8')).toEqual(customizedServerBinding);
+      expect(readFileSync(webBinding, 'utf8')).toEqual(customizedWebBinding);
+      expect(readFileSync(manifestPath, 'utf8')).toEqual(composedManifest);
+      expect(readFileSync(providerBoundary, 'utf8')).toEqual(providerChoice);
 
       const doctorAfterEvolution = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctorAfterEvolution.stdout).toBe('Architecture looks healthy.\n');

@@ -21,9 +21,9 @@ Empty directories and placeholder files are not part of the format. A package co
 
 ## Installation
 
-`nara add <name>` resolves an official package, checks the destination before writing, and copies its files to `src/features/<name>/`. `nara new` uses the same source-copy transaction for the default `health` Feature. Neither command merges into an existing same-name directory. A collision is an error and leaves the existing source unchanged.
+`nara add <name>` resolves an official package, checks the destination before writing, and installs its files to `src/features/<name>/` plus explicit application-owned bindings (`src/app/bindings/`) with composition calls in the canonical roots and transactional `package.json` prerequisite composition. `nara new` uses the same source-copy transaction for the default `health` Feature. Neither command merges into an existing same-name directory. A collision is an error and leaves the existing source unchanged.
 
-The installer does not replace npm, load code dynamically, or keep installed behavior in the Nara package. The resulting files belong to the application and use its existing TypeScript dependencies. Package dependency changes, if ever required, remain ordinary `package.json` changes.
+The installer does not replace npm, load code dynamically, keep installed behavior in the Nara package, edit `package-lock.json`, run `npm install`, or auto-install provider Features. The resulting files belong to the application and use its existing TypeScript dependencies. Package dependency changes remain ordinary `package.json` changes the application installs itself.
 
 The architecture engine discovers the installed result from `src/features/*`; no architecture manifest is required. The package directory is a distribution source only and is not itself an application feature.
 
@@ -123,23 +123,27 @@ architecture engine, and advances the lineage after a successful replacement.
 
 ## Composition dependencies
 
-Packages deliberately carry no dependency metadata. The application
+Packages carry no architecture dependency metadata. The application
 dependency graph stays inferred from TypeScript imports (`nara doctor`,
 `nara impact`), so there is exactly one source of architectural truth and
-no npm-within-Nara.
+no npm-within-Nara. A package may still ship distribution-only
+requirements (`.nara/requirements.json`: provider and npm prerequisites)
+that `nara add` validates and composes explicitly; that metadata is
+installer help, never architecture truth.
 
-When one capability requires another (for example, a hypothetical `users`
-package requiring `auth`), the rule is: document the prerequisite in the
-package and fail the dependent behavior with a precise message — or bundle
+When one capability requires another (for example, the `users` package
+requiring an `auth`-compatible provider), the rule is: declare the typed
+host requirement, validate the provider surface against application
+source, and fail with a precise message when it is absent — or bundle
 the tightly coupled capabilities as one package. Automatic dependency
 installation and manifest resolution are non-goals.
 
-This is why the catalog stays small: the reference application's `auth`
-and `users` features depend on shared infrastructure, feature-owned
-migrations, and application-level composition, and are therefore not
-packaged. A capability joins `official-features/` only when `nara add`
-produces explicit, deterministic, application-owned composition with zero
-hidden application-level changes: every file outside the new Feature
-directory is visible, ownership is clear, existing source is never silently
+This is why the catalog stays small: a capability joins
+`official-features/` only when `nara add` produces explicit,
+deterministic, application-owned composition with zero hidden
+application-level changes: every file outside the new Feature directory
+is visible, ownership is clear, existing source is never silently
 replaced, and the architecture engine verifies the resulting integration
-before anything is applied.
+before anything is applied. Auth remains a reference implementation
+rather than a package: it is one valid Users provider, not a capability
+that itself needs packaging.

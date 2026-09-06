@@ -1,8 +1,13 @@
 # Nara
 
-Architecture-aware TypeScript application kit.
+Nara is an architecture-aware TypeScript application kit built around composable, evolvable open code.
 
-Build by feature, not by layer.
+Build by feature, not by layer. Own the source. Compose explicitly.
+Understand architecture. Evolve without losing customization. Protect change.
+
+```text
+Compose → Own → Understand → Evolve → Protect
+```
 
 Nara keeps each business capability together and makes public boundaries, statically provable public API consumers, and canonical application integrations machine-checkable. The underlying stack stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
 
@@ -54,7 +59,7 @@ Nara capabilities (auth, RBAC, users, assets, SQLite lifecycle). It is not
 the starting point for new products — `nara new` is. Additional capabilities
 reach generated projects as explicit open-code features via `nara add`, not
 by cloning the reference app.
-Packaging note: Nara is distributed on npm as `@nara-web/cli`. The package exposes the `nara` executable, so generated projects continue using commands such as `nara doctor`, `nara diff`, and `nara guard`. The publishable package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/` plus `official-features/` source). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
+Packaging note: Nara is distributed on npm as `@nara-web/cli`. The package exposes the `nara` executable, so generated projects continue using commands such as `nara doctor`, `nara diff`, and `nara guard`. The publishable package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/`, `official-features/` source, `substrate/`, `LICENSE`, and `README.md`). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
 
 The development topology uses two local ports: Vite serves the browser on `VITE_PORT` (default `5173`) and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono on `PORT` (default `5555`).
 
@@ -181,7 +186,8 @@ src/
 
 official-features/
 ├── audit/               Installable audit feature
-└── health/              Installable health feature
+├── health/              Installable health feature
+└── users/               Installable users assembly (requires a compatible provider)
 
 resources/                Vue 3/Vite/TypeScript frontend shell
  tests/
@@ -259,22 +265,28 @@ Development HTML is served by Vite and is not covered by Hono security headers; 
 
 ## Official feature packages
 
-Official features are open TypeScript source installed into `src/features/<name>` without merging or overwriting local code:
+Official features are composable open TypeScript source. Installation is
+transactional and explicit: Feature-owned source lands in
+`src/features/<name>`, application-owned bindings land in
+`src/app/bindings/` with composition calls in the canonical roots, npm
+prerequisites compose into `package.json` for the application to install,
+and lineage records the exact official source under `.nara/lineage`.
+Existing source is never merged into or silently overwritten:
 
 ```bash
 npx nara add health
 npx nara add audit
+npx nara add users            # requires a compatible provider (e.g. Auth)
 ```
 
 The installation result is inspectable source, not a hidden runtime plugin. Run `npx nara doctor` after adding a feature.
 
-The catalog is intentionally small. The reference application's `auth` and
-`users` capabilities are not official packages: they depend on shared
-infrastructure (`shared/config`, `shared/database`, `shared/security`),
-feature-owned migrations, and application-level route/session composition,
-so extracting them would require hidden cross-directory patches — exactly
-what open-code composition forbids. They stay reference implementations
-until a capability can be packaged with zero out-of-feature changes.
+The catalog is intentionally small (`health`, `audit`, `users`). Users is
+the substantial proof of typed host requirements: it declares the account
+surface it needs, and the application binding satisfies it with Auth or
+another compatible provider — no DI container, no direct Users → Auth
+implementation dependency. Auth itself stays a reference implementation in
+this repository, not an installable package.
 
 ## Evolvable Open Code
 
@@ -321,14 +333,15 @@ Feature, reruns the existing architecture snapshot and diff model, computes
 structural downstream impact, and blocks only newly introduced architecture
 diagnostics. Existing diagnostics are baseline debt and remain tolerated.
 Successful application replaces the Feature and advances `BASE` to pure
-`INCOMING` bytes while preserving local-only code. A missing lineage is
+`INCOMING` bytes while preserving local-only code. Application-owned
+bindings, `package.json` composition, and the provider choice are never
+modified by evolution. A missing lineage is
 bootstrapped only when local source is byte-identical to the current official
 source; divergent legacy source fails closed. Application-owned Features
 without an official package are not evolved.
 
 ## Read next
-- [`AGENTS.md`](./AGENTS.md) — coding rules and agent workflow
-- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — architecture authority
+- [`docs/v3/release-notes-3.2.0.md`](./docs/v3/release-notes-3.2.0.md) — v3.2 Composable & Evolvable Open Code
 - [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
 - [`docs/v3/release-checklist.md`](./docs/v3/release-checklist.md) — pre-RC gates and validation semantics
 - [`docs/v3/feature-model.md`](./docs/v3/feature-model.md) — feature ownership and boundaries

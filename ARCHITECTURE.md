@@ -93,7 +93,8 @@ Six distinct things; do not conflate them:
    acquired from the registry once published; it has not been published
    yet.
 4. **Generated applications** — `nara new` output: the minimal canonical
-   application (health-only, no database, no auth). The default Health Feature
+   application (health-only: no database-consuming Feature, no auth; the
+   persistence substrate ships with no tables). The default Health Feature
    is copied from the same official open-code source used by `nara add`, and
    its `.nara/lineage/official-features/health` BASE is established before
    the generated project becomes visible. Each project carries the creating
@@ -103,9 +104,9 @@ Six distinct things; do not conflate them:
    the project's own install. Guard is an explicit CI/review command
    there (`npx nara guard --base origin/main`) because a new project has
    no universal baseline ref to assume.
-5. **Official open-code features** — installable source (`health`, `audit`).
-   `nara new` and `nara add` copy official package source into
-   `src/features/<name>`; the result is ordinary project code. A package
+5. **Official open-code features** — installable source (`health`, `audit`, `users`).
+   `nara new` and `nara add` install official package source into
+   `src/features/<name>` plus explicit application-owned bindings; the result is ordinary project code. A package
    may also ship assembly templates (`.nara/assembly/`) that install
    application-owned bindings plus explicit canonical-root composition;
    installation proves the resulting integration before applying and
