@@ -1,21 +1,18 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { createAccessClient } from '../../../auth/web';
-import type { RoleData } from '../../../auth/web';
-import { useAuthSession } from '../../../auth/web';
 import { createUserInputSchema, updateUserInputSchema } from '../../contract';
 import type { ManagedUser, UpdateUserInput } from '../../contract';
 import { createUsersClient } from '../client';
+import type { UsersWebHost, UsersWebRole } from '../host';
 
 type FieldErrors = Record<string, string[]>;
 
-const authSession = useAuthSession();
-const usersClient = createUsersClient();
-const accessClient = createAccessClient();
+const props = defineProps<{ host: UsersWebHost }>();
 
+const usersClient = createUsersClient({ csrf: props.host.csrf });
 const users = ref<ManagedUser[]>([]);
-const roles = ref<RoleData[]>([]);
+const roles = ref<UsersWebRole[]>([]);
 const search = ref('');
 const total = ref(0);
 const page = ref(1);
@@ -40,10 +37,10 @@ const isSubmitting = ref(false);
 const pendingDelete = ref<ManagedUser | null>(null);
 const isDeleting = ref(false);
 
-const canCreate = computed(() => authSession.can('users.create'));
-const canEdit = computed(() => authSession.can('users.edit'));
-const canDelete = computed(() => authSession.can('users.delete'));
-const canAssignRoles = computed(() => authSession.hasRole('admin'));
+const canCreate = computed(() => props.host.can('users.create'));
+const canEdit = computed(() => props.host.can('users.edit'));
+const canDelete = computed(() => props.host.can('users.delete'));
+const canAssignRoles = computed(() => props.host.isAdmin());
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
 
 function mapIssues(issues: Array<{ path: PropertyKey[]; message: string }>): FieldErrors {
@@ -93,12 +90,7 @@ async function loadRoles(): Promise<void> {
   if (!canAssignRoles.value) return;
 
   try {
-    const response = await accessClient.listRoles();
-    if (response.success && response.data) {
-      roles.value = response.data.roles;
-    } else if (!response.success && response.code !== 'FORBIDDEN') {
-      actionError.value = response.message;
-    }
+    roles.value = await props.host.listRoles();
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : 'Unable to load roles';
   }

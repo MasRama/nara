@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { changePasswordInputSchema, createAuthClient, useAuthSession } from '../../../auth/web';
-import type { ChangePasswordInput } from '../../../auth/web';
+import { z } from 'zod';
 import { profileInputSchema } from '../../contract';
 import type { UserProfile } from '../../contract';
 import { createUsersClient } from '../client';
+import type { UsersWebHost } from '../host';
 
 type FieldErrors = Record<string, string[]>;
 
-const authSession = useAuthSession();
-const authClient = createAuthClient();
-const usersClient = createUsersClient();
+const passwordChangeInputSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string().min(1, 'New password is required'),
+});
+
+const props = defineProps<{ host: UsersWebHost }>();
+
+const usersClient = createUsersClient({ csrf: props.host.csrf });
 const router = useRouter();
 
 const profile = ref<UserProfile | null>(null);
@@ -35,7 +40,7 @@ const avatarNotice = ref('');
 const profileErrors = ref<FieldErrors>({});
 const passwordErrors = ref<FieldErrors>({});
 
-const displayName = computed(() => profile.value?.name || authSession.user.value?.name || 'Your account');
+const displayName = computed(() => profile.value?.name || props.host.currentSessionUser()?.name || 'Your account');
 const initials = computed(() => {
   const value = displayName.value.trim();
   return value
@@ -45,7 +50,7 @@ const initials = computed(() => {
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('') || 'NA';
 });
-const avatarUrl = computed(() => profile.value?.avatar || authSession.user.value?.avatar || '');
+const avatarUrl = computed(() => profile.value?.avatar || props.host.currentSessionUser()?.avatar || '');
 
 function errorsFromIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): FieldErrors {
   const errors: FieldErrors = {};
@@ -61,7 +66,7 @@ function setSessionUser(user: UserProfile): void {
   profile.value = user;
   name.value = user.name;
   email.value = user.email;
-  authSession.setAuthenticated(user);
+  props.host.syncSessionUser({ id: user.id, name: user.name, email: user.email, avatar: user.avatar });
 }
 
 async function loadProfile(): Promise<void> {
@@ -77,7 +82,7 @@ async function loadProfile(): Promise<void> {
     if (response.code === 'UNAUTHORIZED') {
       let authenticated = false;
       try {
-        authenticated = await authSession.refresh();
+        authenticated = await props.host.refreshSession();
       } catch {
         authenticated = false;
       }
@@ -129,25 +134,27 @@ async function changePassword(): Promise<void> {
   passwordNotice.value = '';
   passwordErrors.value = {};
 
-  const input: ChangePasswordInput = {
-    current_password: currentPassword.value,
-    new_password: newPassword.value,
-  };
-  const parsed = changePasswordInputSchema.safeParse(input);
+  const parsed = passwordChangeInputSchema.safeParse({
+    currentPassword: currentPassword.value,
+    newPassword: newPassword.value,
+  });
   if (!parsed.success) {
     passwordErrors.value = errorsFromIssues(parsed.error.issues);
     passwordError.value = 'Please correct the highlighted password fields.';
     return;
   }
   if (newPassword.value !== confirmPassword.value) {
-    passwordErrors.value = { confirm_password: ['Passwords do not match'] };
+    passwordErrors.value = { confirmPassword: ['Passwords do not match'] };
     passwordError.value = 'Please correct the highlighted password fields.';
     return;
   }
 
   passwordSaving.value = true;
   try {
-    const response = await authClient.changePassword(parsed.data);
+    const response = await props.host.changePassword({
+      currentPassword: parsed.data.currentPassword,
+      newPassword: parsed.data.newPassword,
+    });
     if (!response.success) {
       passwordErrors.value = response.errors ?? {};
       passwordError.value = response.message;
@@ -193,7 +200,7 @@ async function handleAvatarChange(event: Event): Promise<void> {
       return;
     }
 
-    const currentUser = profile.value ?? authSession.user.value;
+    const currentUser = profile.value ?? props.host.currentSessionUser();
     if (currentUser) {
       setSessionUser({ ...currentUser, avatar: response.data.url });
     }
@@ -296,18 +303,18 @@ onMounted(() => {
             <form class="mt-6 grid gap-5 sm:grid-cols-3" data-testid="password-form" @submit.prevent="changePassword">
               <div class="sm:col-span-3">
                 <label for="current_password" class="mb-2 block text-sm font-medium">Current password</label>
-                <input id="current_password" v-model="currentPassword" name="current_password" type="password" autocomplete="current-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.current_password)" />
-                <p v-if="passwordErrors.current_password" class="mt-1 text-sm text-destructive">{{ passwordErrors.current_password[0] }}</p>
+                <input id="current_password" v-model="currentPassword" name="current_password" type="password" autocomplete="current-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.currentPassword)" />
+                <p v-if="passwordErrors.currentPassword" class="mt-1 text-sm text-destructive">{{ passwordErrors.currentPassword[0] }}</p>
               </div>
               <div>
                 <label for="new_password" class="mb-2 block text-sm font-medium">New password</label>
-                <input id="new_password" v-model="newPassword" name="new_password" type="password" autocomplete="new-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.new_password)" />
-                <p v-if="passwordErrors.new_password" class="mt-1 text-sm text-destructive">{{ passwordErrors.new_password[0] }}</p>
+                <input id="new_password" v-model="newPassword" name="new_password" type="password" autocomplete="new-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.newPassword)" />
+                <p v-if="passwordErrors.newPassword" class="mt-1 text-sm text-destructive">{{ passwordErrors.newPassword[0] }}</p>
               </div>
               <div>
                 <label for="confirm_password" class="mb-2 block text-sm font-medium">Confirm new password</label>
-                <input id="confirm_password" v-model="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.confirm_password)" />
-                <p v-if="passwordErrors.confirm_password" class="mt-1 text-sm text-destructive">{{ passwordErrors.confirm_password[0] }}</p>
+                <input id="confirm_password" v-model="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.confirmPassword)" />
+                <p v-if="passwordErrors.confirmPassword" class="mt-1 text-sm text-destructive">{{ passwordErrors.confirmPassword[0] }}</p>
               </div>
               <div class="flex flex-col gap-3 sm:col-span-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>

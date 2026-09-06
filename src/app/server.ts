@@ -16,7 +16,7 @@ import { handleError } from './error-handler';
 import { requestId, requestLifecycleLog } from './observability';
 import { authRoutes, accessRoutes, cleanupExpiredSessions, resetLoginThrottle } from '../features/auth';
 import { getDatabase, migrate } from '../shared/database';
-import { userRoutes, assetRoutes } from '../features/users';
+import composeUsersServer from './bindings/users.server';
 import { healthRoutes } from '../../official-features/health';
 
 const frontendBuildDirectory = resolve(process.cwd(), 'build', 'client');
@@ -160,8 +160,7 @@ if (staticHandler) {
 
 app.route('/api/auth', authRoutes);
 app.route('/api/roles', accessRoutes);
-app.route('/api/assets', assetRoutes);
-app.route('/api/users', userRoutes);
+composeUsersServer(app);
 
 app.get('*', async (context, next) => {
   const requested = requestPath(context);

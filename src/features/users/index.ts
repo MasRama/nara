@@ -24,5 +24,6 @@ export type {
   UsersResponse,
   UsersResponseSuccess,
 } from './contract';
-export { assetRoutes } from './server/assets-routes';
-export { userRoutes } from './server/routes';
+export { createAssetRoutes } from './server/assets-routes';
+export type { UsersActor, UsersManageAction, UsersRoleRef, UsersServerHost } from './server/host';
+export { createUserRoutes } from './server/routes';

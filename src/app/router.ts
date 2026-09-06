@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { LoginPage, RegisterPage, RolesPage, useAuthSession } from '../features/auth/web';
-import { ProfilePage, UsersPage } from '../features/users/web';
+import usersWebRoutes from './bindings/users.web';
 import DashboardPage from './pages/DashboardPage.vue';
 import HomePage from './pages/HomePage.vue';
 import NotFoundPage from './pages/NotFoundPage.vue';
@@ -32,16 +32,17 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/profile',
-      name: 'profile',
-      component: ProfilePage,
+      path: '/dashboard',
+      name: 'dashboard',
+      component: DashboardPage,
       meta: { requiresAuth: true },
     },
+    ...usersWebRoutes,
     {
-      path: '/users',
-      name: 'users',
-      component: UsersPage,
-      meta: { requiresAuth: true, requiresPermission: 'users.view' },
+      path: '/roles',
+      name: 'roles',
+      component: RolesPage,
+      meta: { requiresAuth: true, requiresPermission: 'roles.view' },
     },
     {
       path: '/roles',

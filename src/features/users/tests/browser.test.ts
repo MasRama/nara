@@ -11,7 +11,7 @@ import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { useAuthSession } from '../../auth/web';
+import { usersWebHost } from '../../../app/bindings/users.web';
 import { createUsersClient } from '../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
@@ -76,6 +76,13 @@ function adoptCookieString(cookieString: string): void {
 function setJar(cookieString: string): void {
   cookieJar = new Map();
   adoptCookieString(cookieString);
+}
+
+async function signOut(): Promise<void> {
+  setJar('');
+  document.cookie = 'auth_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  await usersWebHost.refreshSession();
 }
 
 function storeResponseCookies(response: Response): void {
@@ -225,7 +232,7 @@ function ensureTestRole(slug: string, permissionSlugs: string[]): string {
 async function startAuthenticatedAdmin(email = `${randomUUID()}@example.com`): Promise<void> {
   adoptCookieString(await registerDirect(email, 'Browser Administrator'));
   assignRole(userIdForEmail(email), 'admin');
-  await useAuthSession().refresh();
+  await usersWebHost.refreshSession();
 }
 
 async function startAuthenticatedManager(email = `${randomUUID()}@example.com`): Promise<void> {
@@ -237,12 +244,12 @@ async function startAuthenticatedManager(email = `${randomUUID()}@example.com`):
   getDatabase()
     .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
     .run(randomUUID(), userId, roleId, Date.now());
-  await useAuthSession().refresh();
+  await usersWebHost.refreshSession();
 }
 
 async function startAuthenticatedUser(email = `${randomUUID()}@example.com`): Promise<void> {
   adoptCookieString(await registerDirect(email));
-  await useAuthSession().refresh();
+  await usersWebHost.refreshSession();
 }
 
 async function settle(): Promise<void> {
@@ -326,7 +333,7 @@ beforeEach(async () => {
   seed();
   installApiFetch();
 
-  await useAuthSession().logout();
+  await signOut();
   await router.push('/');
   await router.isReady();
 });
@@ -334,7 +341,7 @@ beforeEach(async () => {
 afterEach(async () => {
   application?.unmount();
   application = undefined;
-  await useAuthSession().logout();
+  await signOut();
   await router.push('/');
   container.remove();
   vi.unstubAllGlobals();
@@ -385,7 +392,7 @@ describe('users browser surfaces', () => {
     await settle();
 
     expect(container.textContent).toContain('Profile changes saved.');
-    expect(useAuthSession().user.value).toMatchObject({ name: 'Updated User', email: updatedEmail });
+    expect(usersWebHost.currentSessionUser()).toMatchObject({ name: 'Updated User', email: updatedEmail });
     expect(fetchRequests).toContainEqual({ method: 'PATCH', path: '/api/users/me' });
 
     const response = await serverApp.request('/api/users/me', { headers: { Cookie: cookieHeader()! } });
@@ -431,7 +438,7 @@ describe('users browser surfaces', () => {
     await settle();
 
     expect(container.querySelector('[role="status"]')?.textContent).toContain('Password updated');
-    expect(useAuthSession().isAuthenticated.value).toBe(true);
+    expect(usersWebHost.currentSessionUser()).not.toBeNull();
     expect(fetchRequests).toContainEqual({ method: 'POST', path: '/api/auth/change-password' });
   });
 
@@ -478,7 +485,7 @@ describe('users browser surfaces', () => {
     await navigation;
 
     expect(router.currentRoute.value.name).toBe('login');
-    expect(useAuthSession().status.value).toBe('unauthenticated');
+    expect(usersWebHost.currentSessionUser()).toBeNull();
     await router.push('/profile');
     await router.isReady();
     expect(router.currentRoute.value.name).toBe('login');
@@ -491,8 +498,16 @@ describe('users administration browser surfaces', () => {
     await startAuthenticatedAdmin();
     await mountAt('/dashboard');
     await settle();
-    expect(useAuthSession().user.value?.roles).toContain('admin');
-    expect(useAuthSession().user.value?.permissions).toEqual(expect.arrayContaining(['users.view', 'roles.view']));
+    const sessionResponse = await serverApp.request('/api/auth/me', { headers: { Cookie: cookieHeader()! } });
+    await expect(sessionResponse.json()).resolves.toMatchObject({
+      success: true,
+      data: {
+        user: {
+          roles: expect.arrayContaining(['admin']),
+          permissions: expect.arrayContaining(['users.view', 'roles.view']),
+        },
+      },
+    });
 
     expect(container.querySelector('a[href="/users"]')?.textContent).toContain('Users');
     expect(container.querySelector('a[href="/roles"]')?.textContent).toContain('Roles');
@@ -629,7 +644,7 @@ describe('users administration browser surfaces', () => {
     submitForm('[data-testid="user-form"]');
     await settle();
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Cannot remove admin role from yourself');
-    expect(useAuthSession().isAuthenticated.value).toBe(true);
+    expect(usersWebHost.currentSessionUser()).not.toBeNull();
 
     const selfAfter = getDatabase()
       .prepare('SELECT id, name, email, password FROM users WHERE id = ?')
@@ -655,7 +670,7 @@ describe('users administration browser surfaces', () => {
     await click(`[data-testid="edit-user-${targetId}"]`);
     expect(container.querySelector('[data-role-slug]')).toBeNull();
 
-    const response = await createUsersClient().updateUser(targetId, { roles: ['user'] });
+    const response = await createUsersClient({ csrf: usersWebHost.csrf }).updateUser(targetId, { roles: ['user'] });
     expect(response).toMatchObject({
       success: false,
       code: 'FORBIDDEN',
@@ -686,7 +701,7 @@ describe('users administration browser surfaces', () => {
     await click('[data-testid="confirm-delete"]');
     await settle();
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Cannot delete your own account');
-    expect(useAuthSession().isAuthenticated.value).toBe(true);
+    expect(usersWebHost.currentSessionUser()).not.toBeNull();
   });
 
   it('surfaces last-admin protection through the users browser client', async () => {
@@ -708,8 +723,8 @@ describe('users administration browser surfaces', () => {
     assignRole(adminId, 'admin');
 
     setJar(managerCookie);
-    await useAuthSession().refresh();
-    const response = await createUsersClient().deleteUsers({ ids: [adminId] });
+    await usersWebHost.refreshSession();
+    const response = await createUsersClient({ csrf: usersWebHost.csrf }).deleteUsers({ ids: [adminId] });
 
     expect(response).toMatchObject({
       success: false,

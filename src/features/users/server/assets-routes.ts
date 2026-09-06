@@ -5,10 +5,10 @@ import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import sharp from 'sharp';
-import { getCurrentUser, SESSION_COOKIE_NAME } from '../../auth';
 import { UPLOAD } from '../../../shared/config';
 import { Logger } from '../../../shared/logging';
 import { createUserAsset, setUserAvatar } from './assets';
+import type { UsersServerHost } from './host';
 
 const IMAGE_MAGIC_BYTES: Record<string, number[]> = {
   'image/jpeg': [0xff, 0xd8, 0xff],
@@ -61,8 +61,8 @@ async function removePreviousAvatar(avatarUrl: string | null | undefined): Promi
   await unlink(target).catch(() => undefined);
 }
 
-const uploadAvatarHandler = async (context: Context) => {
-  const sessionUser = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
+const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Context) => {
+  const sessionUser = host.resolveActor(getCookie(context, host.sessionCookieName));
   if (!sessionUser) return unauthorized(context);
 
   let body: Record<string, string | File | (string | File)[]>;
@@ -148,6 +148,11 @@ const serveAvatarHandler = async (context: Context) => {
   }
 };
 
-export const assetRoutes = new Hono()
-  .post('/avatar', uploadAvatarHandler)
-  .get('/avatar/:filename', serveAvatarHandler);
+/**
+ * Avatar HTTP behavior constructed from the same host requirements as the
+ * user routes. The application binding builds both groups from one host
+ * value; this module never imports another Feature.
+ */
+export function createAssetRoutes(host: UsersServerHost) {
+  return new Hono().post('/avatar', uploadAvatarHandlerFor(host)).get('/avatar/:filename', serveAvatarHandler);
+}

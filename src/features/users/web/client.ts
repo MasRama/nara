@@ -1,4 +1,3 @@
-import { hc } from 'hono/client';
 import type {
   AvatarUploadResponse,
   CreateUserInput,
@@ -10,16 +9,16 @@ import type {
   UserProfileResponse,
   UsersResponse,
 } from '../contract';
-import type { userRoutes } from '..';
-import { csrfHeaders, ensureCsrfToken } from '../../auth/web';
+import type { UsersWebCsrf } from './host';
+
 async function readResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
 }
 
-async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
+async function jsonRequest<T>(url: string, init: RequestInit, csrf?: UsersWebCsrf): Promise<T> {
   const method = (init.method ?? 'GET').toUpperCase();
   if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-    await ensureCsrfToken();
+    await csrf?.ensureToken();
   }
   return readResponse<T>(
     await fetch(url, {
@@ -27,7 +26,7 @@ async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...csrfHeaders(init.headers),
+        ...(csrf ? csrf.headers(init.headers) : init.headers),
       },
     }),
   );
@@ -47,51 +46,61 @@ export interface UsersClient {
   uploadAvatar(file: File): Promise<AvatarUploadResponse>;
 }
 
-export function createUsersClient(
-  baseUrl = '/api/users',
-  assetsBaseUrl = '/api/assets',
-): UsersClient {
-  const client = hc<typeof userRoutes>(baseUrl, { init: { credentials: 'include' } });
+export interface UsersClientOptions {
+  baseUrl?: string;
+  assetsBaseUrl?: string;
+  /**
+   * CSRF provider for state-changing requests. Supplied by the caller —
+   * usually the page's `UsersWebHost` from the application binding. Without
+   * it, mutations reach the server without a CSRF token and fail closed
+   * there instead of masking the missing provider.
+   */
+  csrf?: UsersWebCsrf;
+}
+
+export function createUsersClient(options: UsersClientOptions = {}): UsersClient {
+  const { baseUrl = '/api/users', assetsBaseUrl = '/api/assets', csrf } = options;
 
   return {
-    me: async () => readResponse<UserProfileResponse>(await client.me.$get()),
+    me: async () =>
+      jsonRequest<UserProfileResponse>(endpoint(baseUrl, '/me'), { method: 'GET' }, csrf),
     updateProfile: async (input) =>
-      jsonRequest<UserProfileResponse>(`${baseUrl.replace(/\/$/, '')}/me`, {
+      jsonRequest<UserProfileResponse>(endpoint(baseUrl, '/me'), {
         method: 'PATCH',
         body: JSON.stringify(input),
-      }),
+      }, csrf),
     listUsers: async ({ page = 1, limit = 10, search = '' } = {}) => {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
         search,
       });
-      return jsonRequest<UsersResponse>(`${baseUrl.replace(/\/$/, '')}?${params.toString()}`, { method: 'GET' });
+      return jsonRequest<UsersResponse>(`${baseUrl.replace(/\/$/, '')}?${params.toString()}`, { method: 'GET' }, csrf);
     },
     createUser: async (input) =>
       jsonRequest<ManagedUserResponse>(baseUrl.replace(/\/$/, ''), {
         method: 'POST',
         body: JSON.stringify(input),
-      }),
+      }, csrf),
     updateUser: async (id, input) =>
       jsonRequest<ManagedUserResponse>(`${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(id)}`, {
         method: 'PUT',
         body: JSON.stringify(input),
-      }),
+      }, csrf),
     deleteUsers: async (input) =>
       jsonRequest<DeleteUsersResponse>(baseUrl.replace(/\/$/, ''), {
         method: 'DELETE',
         body: JSON.stringify(input),
-      }),
+      }, csrf),
     uploadAvatar: async (file) => {
       const form = new FormData();
       form.set('file', file);
-      await ensureCsrfToken();
+      await csrf?.ensureToken();
       return readResponse<AvatarUploadResponse>(
         await fetch(endpoint(assetsBaseUrl, '/avatar'), {
           method: 'POST',
           credentials: 'include',
-          headers: csrfHeaders(),
+          headers: csrf ? csrf.headers() : {},
           body: form,
         }),
       );
