@@ -5,9 +5,54 @@ description: Writing or modifying tests for a feature, Hono route, repository, V
 
 # Testing Patterns
 
+Choose the narrowest meaningful proof for the change. Test at the
+boundary where the capability's claim actually exists:
+
+```text
+CLI packaging bug
+→ packed artifact test
+
+production runtime claim
+→ real process/integration test
+
+Feature contract
+→ Feature/public route test
+
+architecture rule
+→ architecture fixture
+```
+
+Coverage by claim:
+
+```text
+unit / Feature behavior
+→ the Feature's own functions and contracts
+
+route behavior
+→ HTTP boundary via app.request()
+
+repository behavior
+→ public repository functions against in-memory SQLite
+
+Vue behavior
+→ mounted components in jsdom, asserting visible output
+
+CLI behavior
+→ public command functions or process boundary
+
+architecture fixture
+→ real fixture directories asserting the defended boundary rule
+
+integration/process behavior
+→ real processes for startup, serving, and project-creation claims
+
+packed-artifact behavior
+→ staged package output for distribution claims
+```
+
 ## Test layout
 
-Keep tests near the Feature or subsystem they exercise:
+Keep tests near the subsystem they exercise:
 
 ```text
 src/features/<feature>/tests/   # Feature contracts, repositories, routes, clients
@@ -17,7 +62,9 @@ official-features/<feature>/tests/
 tests/v3/                         # cross-cutting frontend, CLI, config, health
 ```
 
-Use one focused test file per behavior or source module. Add a test when a changed contract or boundary would otherwise be uncovered; do not test incidental implementation details.
+Use one focused test file per behavior or source module. Add a test when
+a changed contract or boundary would otherwise be uncovered; do not test
+incidental implementation details.
 
 ## Running tests
 
@@ -29,13 +76,18 @@ npx vitest run tests/v3/frontend.test.ts
 npx vitest run tests/v3/
 ```
 
-Before delivery, run the repository check:
+Then widen only as the change demands:
 
 ```bash
 npm run check
 ```
 
-The check covers the server typecheck (`lint`), the Vue typecheck (`check:frontend`), the Vitest suite, and `nara doctor` (`architecture:doctor`). Finish with `npm run build` when the change affects production serving.
+`npm run check` covers the server typecheck (`lint`), the Vue typecheck
+(`check:frontend`), the Vitest suite, and `nara doctor`
+(`architecture:doctor`). Add `npm run build` when the change affects
+production serving or the build itself, and `npm run validate:release`
+only when package, distribution, or release behavior is affected — an
+ordinary Feature change does not need the release suite during iteration.
 
 ## Hono route tests
 
@@ -68,17 +120,28 @@ describe('auth route', () => {
 });
 ```
 
-Cover unauthenticated (`401`), unauthorized (`403`), malformed input (`422`), not-found (`404`), conflict, success, and unexpected-error behavior where the route supports them. Assert the public status, response discriminant, stable code, and observable data.
+Cover unauthenticated (`401`), unauthorized (`403`), malformed input
+(`422`), not-found (`404`), conflict, success, and unexpected-error
+behavior where the route supports them. Assert the public status,
+response discriminant, stable code, and observable data.
 
 ## Repository tests
 
-Repository tests may use the configured in-memory SQLite database. Assert SQL behavior through the public repository function and reset or isolate database state deliberately. Do not mock away the database when the contract is SQL behavior; use a mock only when testing a caller's boundary in isolation.
+Repository tests may use the configured in-memory SQLite database. Assert
+SQL behavior through the public repository function and reset or isolate
+database state deliberately. Do not mock away the database when the
+contract is SQL behavior; use a mock only when testing a caller's
+boundary in isolation.
 
-Test parameter binding, empty collections, pagination boundaries, uniqueness constraints, foreign-key behavior, and transaction rollback when those cases are relevant to the changed repository.
+Test parameter binding, empty collections, pagination boundaries,
+uniqueness constraints, foreign-key behavior, and transaction rollback
+when those cases are relevant to the changed repository.
 
 ## Vue tests
 
-Mount Vue components with `createApp` in the configured `jsdom` environment. Reset DOM, local storage, browser API stubs, and document classes in `beforeEach`/`afterEach`.
+Mount Vue components with `createApp` in the configured `jsdom`
+environment. Reset DOM, local storage, browser API stubs, and document
+classes in `beforeEach`/`afterEach`.
 
 ```typescript
 import { createApp, nextTick } from 'vue';
@@ -99,11 +162,18 @@ it('renders the shell and reacts to a user action', async () => {
 });
 ```
 
-Test user-visible output and transitions: loading/disabled state, validation errors, theme persistence, keyboard or click behavior, and cleanup of listeners. Do not assert private Vue internals.
+Test user-visible output and transitions: loading/disabled state,
+validation errors, theme persistence, keyboard or click behavior, and
+cleanup of listeners. Do not assert private Vue internals.
 
 ## CLI and architecture tests
 
-CLI tests should invoke the command through its public function or process boundary and assert exit status, stdout/stderr, and filesystem effects. Architecture tests should use real fixture directories and assert the boundary rule they defend.
+CLI tests invoke the command through its public function or process
+boundary and assert exit status, stdout/stderr, and filesystem effects.
+Architecture tests use real fixture directories and assert the boundary
+rule they defend. Packed-artifact tests exercise the staged package
+output; process tests boot the real server or scaffold a real project —
+use each only for the claim it proves.
 
 ## Do / Don't
 

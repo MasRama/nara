@@ -29,7 +29,7 @@ official-features/        installable open-code features (health, audit, users)
 - Server is authoritative: enforce auth/permissions in Hono routes, never only in Vue. Permission slugs are `<resource>.<action>`; `admin` bypasses where the route requires it.
 - Responses use `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`, English messages, Zod `safeParse` at the route boundary (401 auth, 403 permission, 404 absent, 409 conflict, 422 validation).
 - SQL lives in the owning feature's repository via `better-sqlite3` prepared statements; multi-write replacements use transactions. No ORM, no string-interpolated values.
-- Locked stack: do not replace Hono, add a frontend framework (React/Svelte/Nuxt/SSR), add a native HTTP engine (Ultimate Express/uWebSockets.js), or wrap Hono/Vue behind a custom Nara abstraction. New dependency genuinely required → update `package.json`, `.agents/skills/nara-dependencies/SKILL.md`, and add an ADR.
+- Locked stack: do not replace Hono, add a frontend framework (React/Svelte/Nuxt/SSR), add a native HTTP engine (Ultimate Express/uWebSockets.js), or wrap Hono/Vue behind a custom Nara abstraction. New dependency genuinely required → prefer the existing stack or standard library, update the actual package manifest (`package.json`), and add an ADR only when the dependency represents a material architectural decision.
 - No overengineering: no speculative abstractions, plugin systems, caches, DI containers, RPC/ORM/validation frameworks, or duplicated architecture metadata. Keep changes scoped; no mass-formatting, no unrelated refactors, no secrets, no force-push.
 
 ## Where work belongs
@@ -57,16 +57,14 @@ node build/src/cli/index.js impact <feature> --json    # dependents before contr
 
 ## Skills
 
-Procedural deep dives in [`.agents/skills/`](./.agents/skills/) (one directory per skill, `SKILL.md` inside). Load every skill relevant to the task:
+Procedural deep dives in [`.agents/skills/`](./.agents/skills/) (one directory per skill, `SKILL.md` inside). Load only the smallest set of procedural skills directly relevant to the current task:
 
 - `nara-feature-development` — feature skeleton, boundaries, composition
 - `nara-api-contracts` — Hono shapes, errors, Zod
-- `nara-auth-rbac` — sessions, permissions, guards
+- `nara-auth-rbac` — Auth provider, sessions, authorization composition
 - `nara-database` — repositories, transactions, lifecycle
 - `nara-frontend` — Vue pages, router, typed clients
-- `nara-dependencies` — allowed/banned table, adding a package
 - `nara-testing` — layout, route/repo/Vue/CLI tests
-- `nara-pitfalls` — read before writing code
 
 `AGENTS.md` and `ARCHITECTURE.md` win on conflict.
 

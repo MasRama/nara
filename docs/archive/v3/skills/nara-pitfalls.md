@@ -1,3 +1,12 @@
+# Archived: nara-pitfalls
+
+> **Archived 2026-09-07 — historical reference only.** This was an active
+> contributor skill under `.agents/skills/nara-pitfalls/` until the agent
+> guidance simplification (six active skills). Its contents duplicated
+> architecture/policy guidance owned by `AGENTS.md` / `ARCHITECTURE.md` and
+> the remaining procedural skills. Kept here for history; do not use as
+> implementation instructions.
+
 ---
 name: nara-pitfalls
 description: Before writing code — read this to avoid common Nara v3 mistakes

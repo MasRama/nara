@@ -6,6 +6,17 @@ const projectRoot = process.cwd();
 const agentsDir = path.join(projectRoot, '.agents', 'skills');
 const archivedSkillsDir = path.join(projectRoot, 'docs', 'archive', 'v3', 'skills');
 
+const ACTIVE_SKILLS = [
+  'nara-feature-development',
+  'nara-api-contracts',
+  'nara-auth-rbac',
+  'nara-database',
+  'nara-frontend',
+  'nara-testing',
+];
+
+const ARCHIVED_SKILLS = ['nara-pitfalls', 'nara-dependencies'];
+
 function skillFiles(): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(agentsDir)) {
@@ -29,6 +40,16 @@ function readActiveSkillDocuments(): { file: string; content: string }[] {
     {
       file: path.join(projectRoot, 'ARCHITECTURE.md'),
       content: readFileSync(path.join(projectRoot, 'ARCHITECTURE.md'), 'utf-8'),
+    },
+  ];
+}
+
+function readActiveGuidanceDocuments(): { file: string; content: string }[] {
+  return [
+    ...readActiveSkillDocuments(),
+    {
+      file: path.join(projectRoot, '.agents', 'skills', 'README.md'),
+      content: readFileSync(path.join(projectRoot, '.agents', 'skills', 'README.md'), 'utf-8'),
     },
   ];
 }
@@ -83,13 +104,8 @@ describe('agent guidance stays current', () => {
     ];
     for (const file of skillFiles()) {
       const content = readFileSync(file, 'utf-8');
-      // The dependency policy names banned packages in its banned column; that
-      // explicit unsupported-stack statement is legitimate, not a usage recipe.
-      const lines = content
-        .split('\n')
-        .filter((line) => !(file.endsWith('nara-dependencies/SKILL.md') && line.startsWith('|')));
       for (const pattern of removedPatterns) {
-        expect(lines.join('\n'), `${file} teaches removed pattern ${pattern}`).not.toContain(pattern);
+        expect(content, `${file} teaches removed pattern ${pattern}`).not.toContain(pattern);
       }
     }
   });
@@ -142,6 +158,77 @@ describe('agent guidance stays current', () => {
     const frontend = readFileSync(path.join(agentsDir, 'nara-frontend', 'SKILL.md'), 'utf-8');
     expect(frontend).toContain('vue-router');
     expect(frontend).toContain('src/app/router.ts');
-    expect(frontend).not.toMatch(/unless a later specification adds a router/);
+  });
+});
+
+/** Agent guidance keeps a small procedural surface: authority in AGENTS.md/ARCHITECTURE.md, procedures in six skills. */
+describe('agent guidance stays minimal', () => {
+  it('exposes exactly the six intended active skills', () => {
+    const active = readdirSync(agentsDir).filter((entry) => entry.startsWith('nara-')).sort();
+    expect(active).toEqual([...ACTIVE_SKILLS].sort());
+    for (const skill of ACTIVE_SKILLS) {
+      expect(statSync(path.join(agentsDir, skill, 'SKILL.md')).isFile(), `${skill} needs a SKILL.md`).toBe(true);
+    }
+  });
+
+  it('keeps archived skills out of the active path but preserved in history', () => {
+    for (const archived of ARCHIVED_SKILLS) {
+      expect(
+        existsSync(path.join(agentsDir, archived)),
+        `${archived} must not remain in the active retrieval path`,
+      ).toBe(false);
+      expect(
+        existsSync(path.join(archivedSkillsDir, `${archived}.md`)),
+        `${archived} history must be preserved in the skills archive`,
+      ).toBe(true);
+    }
+  });
+
+  it('references only active skills from AGENTS.md', () => {
+    const agents = readFileSync(path.join(projectRoot, 'AGENTS.md'), 'utf-8');
+    for (const skill of ACTIVE_SKILLS) {
+      expect(agents, `AGENTS.md must reference active skill ${skill}`).toContain(skill);
+    }
+    for (const archived of ARCHIVED_SKILLS) {
+      expect(agents, `AGENTS.md must not reference archived skill ${archived}`).not.toContain(archived);
+    }
+  });
+
+  it('references only active skills from the skill index', () => {
+    const index = readFileSync(path.join(agentsDir, 'README.md'), 'utf-8');
+    for (const skill of ACTIVE_SKILLS) {
+      expect(index, `skill index must reference active skill ${skill}`).toContain(skill);
+    }
+    for (const archived of ARCHIVED_SKILLS) {
+      expect(index, `skill index must not reference archived skill ${archived}`).not.toContain(archived);
+    }
+    expect(index).toMatch(/smallest set of procedural skills/);
+  });
+
+  it('requires neither the dependency nor the pitfalls skill anywhere in active guidance', () => {
+    for (const { file, content } of readActiveGuidanceDocuments()) {
+      for (const archived of ARCHIVED_SKILLS) {
+        expect(content, `${file} must not require archived skill ${archived}`).not.toContain(archived);
+      }
+    }
+    for (const file of skillFiles()) {
+      const content = readFileSync(file, 'utf-8');
+      expect(content, `${file} must not retain a static banned-dependency table`).not.toMatch(/\| Banned \|/);
+    }
+  });
+
+  it('teaches reusable Features to use host requirements instead of direct Auth coupling', () => {
+    const auth = readFileSync(path.join(agentsDir, 'nara-auth-rbac', 'SKILL.md'), 'utf-8');
+    expect(auth).toMatch(/host requirement/);
+    expect(auth).toMatch(/binding/);
+    expect(auth).toContain('UsersServerHost');
+    expect(auth).toContain('src/app/bindings/users.server.ts');
+    expect(auth).toMatch(/must NOT directly depend on Auth/);
+    expect(auth).toMatch(/no DI container/i);
+  });
+
+  it('does not advertise contributor-only skills as a generated-app capability', () => {
+    const homepage = readFileSync(path.join(projectRoot, 'src', 'app', 'pages', 'HomePage.vue'), 'utf-8');
+    expect(homepage).not.toMatch(/loads skill:/);
   });
 });

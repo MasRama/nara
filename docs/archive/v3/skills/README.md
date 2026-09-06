@@ -8,3 +8,15 @@
 - `pentest-pattern.md` — v2 OWASP mapping against old paths (`app/handlers`, `routes/web.ts`, Svelte). Current security model: `SECURITY.md`.
 
 The v2 capability inventory and porting guidance live in `docs/v3/v2-inventory.md` and `docs/v3/migration-v2-v3.md`.
+
+## Archived v3 guidance
+
+> **Historical reference only.** Removed from `.agents/skills/` during the
+> guidance simplification that reduced the active set to six procedural
+> skills (`nara-feature-development`, `nara-api-contracts`,
+> `nara-auth-rbac`, `nara-database`, `nara-frontend`, `nara-testing`).
+> Authority lives in `AGENTS.md` / `ARCHITECTURE.md`; these files are not
+> task guidance.
+
+- `nara-pitfalls.md` — former "common mistakes" skill; contents duplicated policy owned by `AGENTS.md` / `ARCHITECTURE.md`.
+- `nara-dependencies.md` — former dependency skill; the static Allowed/Banned table is intentionally not retained elsewhere (truth is source-derived from `package.json`).
