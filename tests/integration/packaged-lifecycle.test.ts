@@ -642,6 +642,9 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
       expect(add.stdout).toContain('Dependencies added to package.json. Run npm install.');
       expect(existsSync(path.join(projectDirectory, 'src', 'features', 'users', 'web', 'host.ts'))).toBe(true);
 
+      const manifestAfter = JSON.parse(readFileSync(path.join(projectDirectory, 'package.json'), 'utf8')) as {
+        dependencies: Record<string, string>;
+      };
       expect(manifestAfter.dependencies.zod).toBe('^4.4.3');
       expect(manifestAfter.dependencies.sharp).toBe('^0.35.3');
 
