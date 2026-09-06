@@ -355,7 +355,6 @@ export default createRouter({
 import { join, resolve } from 'node:path';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
-import { healthRoutes } from '../features/health';
 
 const frontendRoot = resolve(process.cwd(), 'build', 'client');
 const frontendIndex = join(frontendRoot, 'index.html');
@@ -402,7 +401,6 @@ const staticHandler = frontendAvailable ? serveStatic({ root: frontendRoot }) : 
 const spaHandler = frontendAvailable ? serveStatic({ root: frontendRoot, path: 'index.html' }) : undefined;
 
 export const app = new Hono();
-app.route('/health', healthRoutes);
 
 if (staticHandler) {
   app.use('*', async (context, next) => {
@@ -530,15 +528,15 @@ export function newProject(name: string, root = process.cwd()): NewProjectResult
       renameSync(temporaryDirectory, directory);
 
       const generatedFiles = Object.keys(files).map((file) => path.join(directory, file));
-      const installedHealthFiles = healthInstallation.feature.files.map((file) =>
-        path.join(directory, path.relative(temporaryDirectory, file)),
-      );
+      const rebase = (file: string): string => path.join(directory, path.relative(temporaryDirectory, file));
+      const installedHealthFiles = healthInstallation.feature.files.map(rebase);
+      const installedBindingFiles = healthInstallation.feature.bindings.map(rebase);
       return {
         ok: true,
         project: {
           name,
           directory,
-          files: [...generatedFiles, ...installedHealthFiles],
+          files: [...generatedFiles, ...installedHealthFiles, ...installedBindingFiles],
         },
       };
     } catch (error) {

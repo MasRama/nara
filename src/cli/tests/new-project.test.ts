@@ -7,6 +7,8 @@ import { digestFeatureFiles, featureFilesEqual, readFeatureFiles, readFeatureLin
 import { resolveOfficialFeatureDirectory } from '../package-root';
 import { runCli, type CliIO } from '../router';
 import { discoverFeatureIntegrations } from '../architecture/discover-integrations';
+import { inspectFeature } from '../architecture/inspect';
+import { buildFeatureContext } from '../architecture/context';
 const fixtures: string[] = [];
 
 afterEach(() => {
@@ -131,7 +133,7 @@ describe('new project', () => {
         applicationImports: [
           {
             feature: 'health',
-            appFile: 'src/app/server.ts',
+            appFile: 'src/app/bindings/health.server.ts',
             boundary: 'public',
             symbols: ['healthRoutes'],
           },
@@ -147,6 +149,11 @@ describe('new project', () => {
         webRoutes: [],
       },
     });
+    expect(existsSync(path.join(projectDirectory, 'src/app/bindings/health.server.ts'))).toBe(true);
+    const generatedServer = readFileSync(path.join(projectDirectory, 'src/app/server.ts'), 'utf8');
+    expect(generatedServer).toContain(`import composeHealthServer from './bindings/health.server';`);
+    expect(generatedServer).toContain('composeHealthServer(app);');
+    expect(generatedServer).not.toContain(`from '../features/health'`);
   });
 
   it('copies the official Health source and establishes lineage on creation', () => {
@@ -172,6 +179,39 @@ describe('new project', () => {
     const evolveResult = runCli(['evolve', 'health', '--json'], evolveIO, { cwd: projectDirectory });
     expect(evolveResult.exitCode).toBe(0);
     expect(JSON.parse(evolveIO.output.join('')).status).toBe('up-to-date');
+  });
+
+  it('explains the health assembly chain through inspect and context', () => {
+    const fixture = createFixture();
+
+    const result = runCli(['new', 'example'], createIO(), { cwd: fixture });
+
+    expect(result.exitCode).toBe(0);
+    const projectDirectory = path.join(fixture, 'example');
+    const inspected = inspectFeature('health', projectDirectory);
+    expect(inspected.ok).toBe(true);
+    if (!inspected.ok) return;
+    expect(inspected.feature.integrations.serverRoutes).toEqual([
+      { feature: 'health', appFile: 'src/app/server.ts', exportName: 'healthRoutes', mountPath: '/health' },
+    ]);
+    expect(inspected.feature.integrations.applicationImports).toEqual([
+      {
+        feature: 'health',
+        appFile: 'src/app/bindings/health.server.ts',
+        boundary: 'public',
+        symbols: ['healthRoutes'],
+      },
+    ]);
+    const context = buildFeatureContext('health', projectDirectory);
+    expect(context.ok).toBe(true);
+    if (!context.ok) return;
+    const readingOrder = context.context.readingOrder.map((entry) => entry.path);
+    expect(readingOrder).toContain('src/features/health/index.ts');
+    expect(readingOrder).toContain('src/app/bindings/health.server.ts');
+    expect(readingOrder).toContain('src/app/server.ts');
+    expect(readingOrder.indexOf('src/app/bindings/health.server.ts')).toBeGreaterThan(
+      readingOrder.indexOf('src/features/health/index.ts'),
+    );
   });
 
   it('rejects unsafe project names', () => {
