@@ -397,6 +397,7 @@ export function deriveTransitionObligations(context: ObligationContext): Transit
       });
     }
     for (const { provider, symbols } of importedProviderFeatures(bindingFile)) {
+      if (provider === context.feature) continue;
       const exports = providerExports(context.root, provider);
       if (exports === undefined) {
         obligations.push({

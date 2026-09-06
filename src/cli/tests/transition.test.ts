@@ -48,7 +48,7 @@ function installHealthWithLocalChange(): string {
 
 function parseReceipt(io: { output: string[] }): TransitionReceipt {
   const receipt = JSON.parse(io.output.join('')) as TransitionReceipt;
-  expect(receipt.schemaVersion).toBe(2);
+  expect(receipt.schemaVersion).toBe(3);
   return receipt;
 }
 

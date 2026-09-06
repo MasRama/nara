@@ -69,12 +69,14 @@ function execEvidence(
         limitations: [`${kind} evidence is unavailable without the required toolchain.`],
       };
     }
-    const output = typeof (error as { stdout?: unknown })?.stdout === 'object' ? '' : String((error as { stdout?: unknown })?.stdout ?? '');
+    const stdout = String((error as { stdout?: unknown })?.stdout ?? '');
+    const stderr = String((error as { stderr?: unknown })?.stderr ?? '');
+    const output = `${stdout}\n${stderr}`.trim().slice(0, 2000);
     return {
       id: `evidence:${kind}`,
       kind,
       status: 'fail',
-      detail: `${kind} failed in the staged candidate. ${output}`.trim(),
+      detail: output === '' ? `${kind} failed in the staged candidate.` : `${kind} failed in the staged candidate:\n${output}`,
       candidateDigest,
     };
   }

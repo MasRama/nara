@@ -555,7 +555,7 @@ describe('users application-verified transition', () => {
     if (!second.ok) return;
     expect(JSON.stringify(readCurrentTransition(root, 'users'))).toBe(firstJson);
     expect(second.receipt.transitionId).toBe(
-      transitionIdentity('users', second.receipt.baseDigest, second.receipt.localStartDigest, second.receipt.incomingDigest),
+      transitionIdentity('users', second.receipt.baseDigest, second.receipt.localStartDigest, second.receipt.incomingTransitionDigest),
     );
     writeText(
       path.join(root, 'src', 'app', 'bindings', 'users.server.ts'),
@@ -594,5 +594,122 @@ describe('users application-verified transition', () => {
     expect(outcome.receipt.outcome).toBe('BLOCKED');
     expect(outcome.receipt.obligations.map((obligation) => obligation.id)).toContain('package:sharp-missing');
     expect(readFileSync(path.join(root, 'package.json'), 'utf8')).toBe(packageBefore);
+  });
+
+  it('rejects acceptance after provider source changes without touching users', () => {
+    const { root, officialDirectory } = setupFixture();
+    const fixtureDb = path.join(track(mkdtempSync(path.join(os.tmpdir(), 'nara-transition-db-'))), 'history.sqlite3');
+    buildHistoryFixture(fixtureDb);
+    writeText(path.join(root, 'src', 'app', 'bindings', 'users.server.ts'), ADAPTED_BINDING);
+    const outcome = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.receipt.outcome).toBe('VERIFIED');
+    const authIndex = path.join(root, 'src', 'features', 'auth', 'index.ts');
+    writeText(authIndex, `${readFileSync(authIndex, 'utf8')}\n// provider behavior rotation\n`);
+    const refused = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.error.errorCode).toBe('stale-candidate');
+  });
+
+  it('rejects acceptance after shared application source changes', () => {
+    const { root, officialDirectory } = setupFixture();
+    const fixtureDb = path.join(track(mkdtempSync(path.join(os.tmpdir(), 'nara-transition-db-'))), 'history.sqlite3');
+    buildHistoryFixture(fixtureDb);
+    const sharedModule = path.join(root, 'src', 'shared', 'policy.ts');
+    writeText(sharedModule, 'export function sharedPolicy(): string {\n  return "v1";\n}\n');
+    writeText(path.join(root, 'src', 'app', 'bindings', 'users.server.ts'), ADAPTED_BINDING);
+    const outcome = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.receipt.outcome).toBe('VERIFIED');
+    expect(outcome.receipt.appInputs.map((input) => input.path)).toContain('src/shared/policy.ts');
+    writeText(sharedModule, 'export function sharedPolicy(): string {\n  return "v2";\n}\n');
+    const refused = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.error.errorCode).toBe('stale-candidate');
+  });
+
+  it('rejects acceptance after incoming requirements change with identical source', () => {
+    const { root, officialDirectory } = setupFixture();
+    const fixtureDb = path.join(track(mkdtempSync(path.join(os.tmpdir(), 'nara-transition-db-'))), 'history.sqlite3');
+    buildHistoryFixture(fixtureDb);
+    writeText(path.join(root, 'src', 'app', 'bindings', 'users.server.ts'), ADAPTED_BINDING);
+    const outcome = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.receipt.outcome).toBe('VERIFIED');
+    writeText(
+      path.join(officialDirectory, '.nara', 'requirements.json'),
+      `${JSON.stringify({ schemaVersion: 1, providers: ['auth'], packages: { zod: '^4.4.3' } }, null, 2)}\n`,
+    );
+    const refused = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.error.errorCode).toBe('stale-candidate');
+  });
+
+  it('binds verified history evidence to the exact fixture and rejects drift', () => {
+    const { root, officialDirectory } = setupFixture();
+    const fixtureDb = path.join(track(mkdtempSync(path.join(os.tmpdir(), 'nara-transition-db-'))), 'history.sqlite3');
+    buildHistoryFixture(fixtureDb);
+    writeText(path.join(root, 'src', 'app', 'bindings', 'users.server.ts'), ADAPTED_BINDING);
+    const outcome = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.receipt.outcome).toBe('VERIFIED');
+    expect(outcome.receipt.historyFixtures).toHaveLength(1);
+    expect(outcome.receipt.historyFixtures[0]?.path).toBe(fixtureDb);
+    expect(typeof outcome.receipt.historyFixtures[0]?.digest).toBe('string');
+    expect(outcome.receipt.historyFixtures[0]?.historyIds).toContain('000001');
+    const historyEvidence = outcome.receipt.evidence.find((item) => item.kind === 'migration-history');
+    expect(historyEvidence?.fixture?.digest).toBe(outcome.receipt.historyFixtures[0]?.digest);
+
+    const accepted = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+    expect(accepted.ok).toBe(true);
+
+    const drifted = new Database(fixtureDb);
+    try {
+      drifted.prepare("INSERT INTO users (id, name, email, avatar) VALUES ('late-1', 'Late', 'late@example.com', NULL)").run();
+    } finally {
+      drifted.close();
+    }
+    const second = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    const changed = second.receipt.historyFixtures[0]?.digest !== outcome.receipt.historyFixtures[0]?.digest;
+    expect(changed).toBe(true);
+  });
+
+  it('rejects old history evidence when the fixture goes missing', () => {
+    const { root, officialDirectory } = setupFixture();
+    const fixtureDir = track(mkdtempSync(path.join(os.tmpdir(), 'nara-transition-db-')));
+    const fixtureDb = path.join(fixtureDir, 'history.sqlite3');
+    buildHistoryFixture(fixtureDb);
+    writeText(path.join(root, 'src', 'app', 'bindings', 'users.server.ts'), ADAPTED_BINDING);
+    const outcome = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.receipt.outcome).toBe('VERIFIED');
+    rmSync(fixtureDb, { force: true });
+    const refused = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.error.errorCode).toBe('stale-candidate');
+  });
+
+  it('fails clearly on previous receipt schemas instead of accepting them', () => {
+    const { root, officialDirectory } = setupFixture();
+    writeText(
+      path.join(root, '.nara', 'transitions', 'users', 'current.json'),
+      JSON.stringify({ schemaVersion: 2, feature: 'users' }),
+    );
+    const refused = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.error.errorCode).toBe('no-transition');
+    expect(refused.error.message).toContain('schemaVersion 3');
   });
 });
