@@ -324,11 +324,21 @@ records the accepted transition. Only VERIFIED transitions are eligible;
 there is no force-verified path.
 
 The receipt carries the transition identity, BASE / LOCAL-start /
-INCOMING / candidate digests, the application-state fingerprint,
-obligations (source, boundary, host, binding, provider, package,
-integration, migration, behavioral), per-revision evidence, the scoped
-outcome, limitations, staleness, and acceptance state. VERIFIED means
-verified against the named evidence and scope, not universally safe.
+INCOMING / candidate digests, the incoming transition-input digest
+(Feature source plus the requirements manifest that drives
+package/provider obligations; assembly templates are install-time only
+and are not transition inputs), the application-state fingerprint
+(bindings, composition, provider Feature source, shared modules,
+selected tests, application migrations, manifests, compiler/build
+configuration), history-fixture identities (path, digest, represented
+history), obligations (source, boundary, host, binding, provider,
+package, integration, migration, behavioral), per-revision evidence,
+the scoped outcome, limitations, staleness, and acceptance state.
+Candidate identity is reconciled Feature source plus material
+application inputs plus material incoming distribution inputs plus
+evidence configuration plus history-fixture identities; any drift
+rejects managed acceptance as stale. VERIFIED means verified against
+the named evidence and scope, not universally safe.
 Application-owned evidence selection lives in
 `.nara/transitions/<feature>.checks.json` (owned by the application,
 never modified by evolution) and only nominates relevant tests and the
