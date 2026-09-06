@@ -6,7 +6,7 @@ Nara stays useful after project creation: compose capabilities from explicit fea
 
 This document is the current architecture authority. History lives in [`docs/archive/v3/](./docs/archive/v3/)` and [`docs/decisions/`](./docs/decisions/).
 
-- **Compose** — build from explicit business features (`nara make feature`, `nara add`).
+- **Compose** — build from explicit business features (`nara make feature`, `nara add`), including Feature assemblies with application-owned bindings.
 - **Understand** — inspect the architecture deterministically (`nara inspect`, `nara context`, `nara impact`, each with `--json`), including Feature public-symbol consumers, boundary export provenance, explicitly type-only versus value-capable syntax evidence, application consumers, and route mounts, and describe how it is changing (`nara diff --base main`).
 - **Protect** — validate current architecture (`nara doctor`, plus `--json`) and protect architecture change (`nara guard --base origin/main`, plus `--json`): the change ratchet fails only on newly introduced diagnostics.
 - **Evolve** — keep official open-code Features current with deterministic local lineage (`nara evolve`), while validating every candidate against the source-derived architecture model.
@@ -45,14 +45,14 @@ Rules:
 - `src/features/<feature>/web/index.ts` is the optional browser-safe boundary. App composition (`src/app/`) and legitimate browser-safe feature dependencies import browser surfaces only from there.
 - Internals (`server/*`, `web/pages/*`, `web/components/*`, `web/client`) are private. Deep imports across features are invalid.
 - Nara records deterministic import evidence for named/default imports and re-exports, including the source file, boundary, imported symbol, local/export alias, and explicitly type-only versus value-capable syntax. It separately records the canonical public and browser-safe boundary exports, including direct local declarations and named re-export provenance. A direct named re-export to the owning Feature's `contract.ts` proves contract provenance; export-all and other module-level forms remain module-precision evidence and never become an exact symbol claim.
-- Application integration is inferred from the canonical composition roots only: `src/app/server.ts` for public-boundary imports and Hono route mounts, and `src/app/router.ts` for web-boundary imports and Vue Router records. Nara follows a statically provable chain from framework composition root to Feature boundary before reporting a route integration; dynamic or non-canonical composition is not reported.
+- Application integration is inferred from the canonical composition roots only: `src/app/server.ts` for public-boundary imports and Hono route mounts, and `src/app/router.ts` for web-boundary imports and Vue Router records. Nara follows a statically provable chain from framework composition root to Feature boundary before reporting a route integration; dynamic or non-canonical composition is not reported. Official Features may additionally ship assembly templates that install application-owned bindings under `src/app/bindings/`; a binding counts as an integration only when its canonical root explicitly consumes it (server binding called with the proven Hono instance, web binding spread into the proven route array), and orphan bindings are never reported.
 - Feature dependencies must be acyclic.
 
 Details: [`docs/v3/feature-model.md`](./docs/v3/feature-model.md).
 
 ## Application and shared layers
 
-- `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `App.vue`, `pages/`, `layouts/`. The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
+- `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `bindings/` (application-owned Feature assembly bindings: ordinary Hono/Vue Router code activated explicitly from the canonical roots), `App.vue`, `pages/`, `layouts/`. The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
 - `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `errors/`, `logging/`, `security/`. Never a second global services/repositories layer.
 - `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`).
 
@@ -105,7 +105,11 @@ Six distinct things; do not conflate them:
    no universal baseline ref to assume.
 5. **Official open-code features** — installable source (`health`, `audit`).
    `nara new` and `nara add` copy official package source into
-   `src/features/<name>`; the result is ordinary project code.
+   `src/features/<name>`; the result is ordinary project code. A package
+   may also ship assembly templates (`.nara/assembly/`) that install
+   application-owned bindings plus explicit canonical-root composition;
+   installation proves the resulting integration before applying and
+   `nara evolve` never touches bindings.
 
 6. **Evolvable open code** — `nara new` and `nara add` establish exact official
    source bytes under `.nara/lineage/official-features/<feature>/base`.

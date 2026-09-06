@@ -27,8 +27,11 @@ changes arrive only through an explicit dependency update — never silently
 (see ADR 0011). Its `npm run check` ends with `npm run architecture:doctor`.
 The Health Feature created by `nara new` comes from the same official
 open-code source used by `nara add`, and its lineage is established before the
-generated project is made visible. A fresh `nara evolve health --json` therefore
-reports `up-to-date`.
+generated project is made visible. Health is composed through the same
+Feature-assembly primitive as `nara add`: the project ships an
+application-owned `src/app/bindings/health.server.ts` that mounts
+`healthRoutes` at `/health`, explicitly invoked from `src/app/server.ts`.
+A fresh `nara evolve health --json` therefore reports `up-to-date`.
 
 `nara inspect/context/impact/doctor/add/evolve` all run from the project's own
 install with no global CLI and no network service. Production serving needs
@@ -69,6 +72,8 @@ ledger/
 ├── src/
 │   ├── app/
 │   │   ├── App.vue
+│   │   ├── bindings/
+│   │   │   └── health.server.ts
 │   │   ├── pages/
 │   │   │   ├── HomePage.vue
 │   │   │   └── NotFoundPage.vue
@@ -90,7 +95,7 @@ ledger/
 └── vitest.config.mjs
 ```
 
-`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home and browser not-found pages; `src/app/server.ts` explicitly mounts the Health Feature's Hono route at `/health` and owns production static/SPA delivery, and `src/server.ts` serves it through `@hono/node-server`. The Feature test proves `healthRoutes` itself; `tests/health.test.ts` proves the application mount. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. `nara new` copies the same official Health source used by `nara add` and establishes its `.nara` lineage before the project directory is renamed into place. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home and browser not-found pages; `src/app/server.ts` explicitly invokes the application-owned `src/app/bindings/health.server.ts` binding (which mounts the Health Feature's Hono route at `/health`) and owns production static/SPA delivery, and `src/server.ts` serves it through `@hono/node-server`. The Feature test proves `healthRoutes` itself; `tests/health.test.ts` proves the application mount. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. `nara new` copies the same official Health source used by `nara add` and establishes its `.nara` lineage before the project directory is renamed into place. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
 
 
 ## Database lifecycle
@@ -140,6 +145,31 @@ Packages resolve from the installed `@nara-web/cli` package's `official-features
 source (shipped inside the published artifact), never from the network at
 install time. The package is copied as inspectable TypeScript source.
 Installation refuses unknown package names and existing targets. It stages the copy before renaming it into place, so a failed copy does not leave a partial Feature directory.
+
+Official Features do not need zero application-level changes. They need zero
+hidden application-level changes. A Feature with assembly templates (for
+example `health`) additionally installs application-owned bindings under
+`src/app/bindings/` and explicit composition calls in the canonical roots:
+
+```bash
+npx nara add health
+# Installed feature "health":
+# - src/app/bindings/health.server.ts
+# - src/features/health/contract.ts
+# - src/features/health/index.ts
+# - src/features/health/tests/health.test.ts
+# ~ src/app/server.ts
+```
+
+`-` lines are created files; `~` lines are explicit canonical-root edits
+(one added import, one added composition call). Installation is one
+fail-closed transaction: binding collisions fail before mutation, the
+candidate must prove its assembly facts (`inspect`/`context` show the
+binding import and the route) with no newly introduced `doctor`
+diagnostic, and only then is anything applied. Existing diagnostics in the
+project baseline are tolerated. Later `nara evolve` advances Feature-owned
+source while leaving application bindings untouched. See
+[`feature-format.md`](./feature-format.md) and ADR 0018.
 
 Run the architecture check after installation:
 

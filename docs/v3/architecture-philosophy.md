@@ -12,7 +12,7 @@ The organizing rule is:
 
 Nara makes the architecture interesting and the technology boring. A business capability should be findable in one place, its relationships should be inspectable, and its boundaries should be enforceable without a custom runtime or an AI provider.
 
-## Compose → Understand → Protect
+## Compose → Own → Understand → Evolve → Protect
 
 A starter kit is useful once when it copies boilerplate. Nara should remain useful through the application's lifecycle:
 
@@ -21,14 +21,22 @@ create
   ↓
 compose
   ↓
+own
+  ↓
 understand
+  ↓
+evolve
   ↓
 protect
   ↓
 grow
 ```
 
-The three product pillars are the loop after creation.
+Composable Open Code strengthens `compose` and `own`; Evolvable Open Code
+strengthens `evolve`; architecture intelligence continues to support
+`understand` and `protect`.
+
+These stages are the loop after creation.
 
 ## Compose
 
@@ -58,6 +66,8 @@ app.route('/api/users', userRoutes);
 ```
 
 `nara make feature` creates a minimal boundary. `nara add` installs inspectable official source. Neither command creates a hidden runtime registry or merges code into local internals.
+
+Official Features do not need zero application-level changes. They need zero hidden application-level changes. A Feature may ship assembly templates that install application-owned bindings (`src/app/bindings/`) plus explicit composition calls in the canonical roots — every file visible, deterministic, and verified by the architecture engine before anything is applied. The Feature owns its implementation and its upstream relationship; the application owns where that behavior is mounted.
 
 Composition means assigning ownership, not collecting files. If a capability has a natural owner, it belongs in that Feature. If code is genuinely business-neutral infrastructure, it may live in `src/shared/`.
 

@@ -27,6 +27,86 @@ The installer does not replace npm, load code dynamically, or keep installed beh
 
 The architecture engine discovers the installed result from `src/features/*`; no architecture manifest is required. The package directory is a distribution source only and is not itself an application feature.
 
+## Composable Open Code
+
+Feature-owned implementation and application-owned integration are separate
+forms of ownership:
+
+```text
+Feature source        → evolvable upstream relationship
+Application binding   → local application decision
+```
+
+> Official Features do not need zero application-level changes. They need
+> zero hidden application-level changes.
+
+An official package may ship optional distribution-only assembly templates:
+
+```text
+<feature-package>/
+├── index.ts
+├── ...
+└── .nara/
+    └── assembly/
+        ├── server.ts
+        └── web.ts
+```
+
+A server template is ordinary TypeScript that mounts the Feature's public
+boundary export on the Hono instance it receives:
+
+```ts
+import type { Hono } from 'hono';
+import { healthRoutes } from '../../features/health';
+
+export default function composeHealthServer(app: Hono): void {
+  app.route('/health', healthRoutes);
+}
+```
+
+A web template is ordinary TypeScript that default-exports Vue Router
+records referencing the Feature's web boundary:
+
+```ts
+import type { RouteRecordRaw } from 'vue-router';
+import { GalleryPage } from '../../features/gallery/web';
+
+export default [
+  {
+    path: '/gallery',
+    name: 'gallery',
+    component: GalleryPage,
+  },
+] satisfies RouteRecordRaw[];
+```
+
+Template import specifiers are written destination-relative: the installed
+binding lives at `src/app/bindings/<feature>.server.ts` (or `.web.ts`), so
+`../../features/<feature>` reaches the Feature boundary from there.
+Installation copies the template bytes verbatim into the application-owned
+binding and explicitly consumes the binding from the canonical root
+(`src/app/server.ts` invokes the server binding with the proven Hono
+instance; `src/app/router.ts` spreads the web binding into the proven
+`createRouter({ routes })` array). Installation may therefore create
+explicit application-owned binding source and explicit composition calls,
+but Nara never hides those relationships behind a runtime registry.
+
+Assembly templates are an installation recipe, not architecture truth.
+Hidden-file exclusion keeps them out of Feature source and lineage `BASE`;
+the architecture engine never treats `official-features/*/.nara` as
+application architecture. After installation, Nara understands the
+application solely from `src/features` and `src/app`, and a binding file
+that is not explicitly consumed by its canonical root is reported as
+inactive — never as an integration.
+
+`nara add` prepares Feature source, lineage, binding files, and canonical
+app-root edits as one fail-closed transaction: collisions fail before
+mutation, the candidate must prove its assembly facts through the
+architecture engine with no newly introduced diagnostic, and only then is
+anything applied. Existing source is never silently replaced, and later
+`nara evolve` advances Feature-owned source while leaving application
+bindings byte-identical.
+
 ## Local lineage
 
 After a successful `nara new` or `nara add`, the CLI stores the exact
@@ -58,5 +138,8 @@ This is why the catalog stays small: the reference application's `auth`
 and `users` features depend on shared infrastructure, feature-owned
 migrations, and application-level composition, and are therefore not
 packaged. A capability joins `official-features/` only when `nara add`
-produces source that passes `doctor` with zero changes outside the new
-feature directory.
+produces explicit, deterministic, application-owned composition with zero
+hidden application-level changes: every file outside the new Feature
+directory is visible, ownership is clear, existing source is never silently
+replaced, and the architecture engine verifies the resulting integration
+before anything is applied.

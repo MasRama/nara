@@ -41,6 +41,7 @@ AI agents that understand WHY a convention exists make better decisions:
 | [0015](./0015-public-api-consumers-as-architecture-facts.md) | Public API consumers as architecture facts | Accepted |
 | [0016](./0016-public-boundary-export-provenance.md) | Public boundary export provenance | Accepted |
 | [0017](./0017-evolvable-open-code-lineage.md) | Evolvable open-code lineage | Accepted |
+| [0018](./0018-composable-open-code-assemblies.md) | Composable open code via Feature assemblies | Accepted |
 
 ## Format
 
