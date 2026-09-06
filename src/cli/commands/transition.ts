@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,6 +10,7 @@ import {
   fingerprintApplicationState,
   isReceiptStale,
   readCurrentTransition,
+  digestIncomingTransition,
   transitionIdentity,
   writeTransitionReceipt,
   type TransitionReceipt,
@@ -217,6 +219,7 @@ export function planTransition(options: PlanTransitionOptions): PlanTransitionOu
     const incoming = readFeatureFiles(officialDirectory, false);
     const incomingDigest = digestFeatureFiles(incoming);
     const localStartDigest = digestFeatureFiles(local);
+    const incomingTransitionDigest = digestIncomingTransition(officialDirectory, incoming);
     let lineage: ReturnType<typeof readFeatureLineage>;
     try {
       lineage = readFeatureLineage(root, feature);
@@ -232,17 +235,19 @@ export function planTransition(options: PlanTransitionOptions): PlanTransitionOu
     if (lineage.record.baseDigest === incomingDigest && featureFilesEqual(local, incoming)) {
       const fingerprint = fingerprintApplicationState(root, feature);
       const candidateDigest = candidateDigestFor(incoming, fingerprint.digest);
-      const transitionId = transitionIdentity(feature, lineage.record.baseDigest, localStartDigest, incomingDigest);
+      const transitionId = transitionIdentity(feature, lineage.record.baseDigest, localStartDigest, incomingTransitionDigest);
       const receipt: TransitionReceipt = {
-        schemaVersion: 2,
+        schemaVersion: 3,
         feature,
         transitionId,
         baseDigest: lineage.record.baseDigest,
         localStartDigest,
         incomingDigest,
+        incomingTransitionDigest,
         candidateDigest,
         appFingerprint: fingerprint.digest,
         appInputs: fingerprint.inputs,
+        historyFixtures: [],
         obligations: [],
         evidence: [],
         outcome: 'VERIFIED',
@@ -257,7 +262,7 @@ export function planTransition(options: PlanTransitionOptions): PlanTransitionOu
     const reconciliation = reconcileFeatureFiles(lineage.files, local, incoming);
     const fingerprint = fingerprintApplicationState(root, feature);
     const candidateDigest = candidateDigestFor(reconciliation.candidate, fingerprint.digest);
-    const transitionId = transitionIdentity(feature, lineage.record.baseDigest, localStartDigest, incomingDigest);
+    const transitionId = transitionIdentity(feature, lineage.record.baseDigest, localStartDigest, incomingTransitionDigest);
 
     const rawObligations = deriveTransitionObligations({
       root,
@@ -288,16 +293,21 @@ export function planTransition(options: PlanTransitionOptions): PlanTransitionOu
     });
     const obligations = resolveObligationStatuses(rawObligations, evidence);
     const { outcome, limitations } = aggregateOutcome(obligations, evidence);
+    const historyFixtures = evidence
+      .filter((item) => item.kind === 'migration-history' && item.fixture !== undefined)
+      .map((item) => (item.fixture as { path: string; digest: string; historyIds: string[] }));
     const receipt: TransitionReceipt = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       feature,
       transitionId,
       baseDigest: lineage.record.baseDigest,
       localStartDigest,
       incomingDigest,
+      incomingTransitionDigest,
       candidateDigest,
       appFingerprint: fingerprint.digest,
       appInputs: fingerprint.inputs,
+      historyFixtures,
       obligations,
       evidence,
       outcome,
@@ -343,14 +353,34 @@ export function acceptTransition(options: { feature: string; cwd?: string; offic
     const local = readFeatureFiles(localDirectory);
     const incoming = readFeatureFiles(officialDirectory, false);
     const incomingDigest = digestFeatureFiles(incoming);
-    if (incomingDigest !== receipt.incomingDigest || lineage.record.baseDigest !== receipt.baseDigest) {
-      return commandError(feature, 'stale-candidate', `Stored transition ${receipt.transitionId} no longer matches BASE/INCOMING. Re-evaluate before accepting.`);
+    const incomingTransitionDigest = digestIncomingTransition(officialDirectory, incoming);
+    const localStartDigest = digestFeatureFiles(local);
+    if (lineage.record.baseDigest !== receipt.baseDigest) {
+      return commandError(feature, 'stale-candidate', `Stored transition ${receipt.transitionId} no longer matches BASE ${receipt.baseDigest.slice(0, 12)}. Re-evaluate before accepting.`);
+    }
+    if (incomingDigest !== receipt.incomingDigest) {
+      return commandError(feature, 'stale-candidate', `Incoming Feature source changed after verification. Re-evaluate before accepting.`);
+    }
+    if (incomingTransitionDigest !== receipt.incomingTransitionDigest) {
+      return commandError(feature, 'stale-candidate', `Incoming distribution inputs changed after verification. Re-evaluate before accepting.`);
+    }
+    if (localStartDigest !== receipt.localStartDigest) {
+      return commandError(feature, 'stale-candidate', `Local Feature state changed after verification. Re-evaluate before accepting.`);
     }
     const reconciliation = reconcileFeatureFiles(lineage.files, local, incoming);
     const fingerprint = fingerprintApplicationState(root, feature);
     const currentCandidateDigest = candidateDigestFor(reconciliation.candidate, fingerprint.digest);
     if (currentCandidateDigest !== receipt.candidateDigest || isReceiptStale(receipt, currentCandidateDigest)) {
       return commandError(feature, 'stale-candidate', `Application state changed after verification (expected candidate ${receipt.candidateDigest.slice(0, 12)}, current ${currentCandidateDigest.slice(0, 12)}). Re-evaluate before accepting.`);
+    }
+    for (const recorded of receipt.historyFixtures) {
+      if (!existsSync(recorded.path)) {
+        return commandError(feature, 'stale-candidate', `Required history fixture ${recorded.path} is unavailable. Re-evaluate with a representative existing-history input before accepting.`);
+      }
+      const current = createHash('sha256').update(readFileSync(recorded.path)).digest('hex');
+      if (current !== recorded.digest) {
+        return commandError(feature, 'stale-candidate', `Required history fixture ${recorded.path} changed after verification. Re-evaluate before accepting.`);
+      }
     }
     if (receipt.outcome !== 'VERIFIED') {
       return commandError(feature, 'not-verified', `Transition ${receipt.transitionId} is ${receipt.outcome}, not VERIFIED. Nara-managed acceptance requires a VERIFIED exact candidate.`);
@@ -382,6 +412,7 @@ export function formatTransitionHuman(receipt: TransitionReceipt): string {
   const lines: string[] = [`Feature transition: ${receipt.feature}`, ''];
   lines.push(`Transition: ${receipt.transitionId}`);
   lines.push(`Candidate: ${receipt.candidateDigest.slice(0, 12)}`);
+  lines.push(`Incoming transition inputs: ${receipt.incomingTransitionDigest.slice(0, 12)}`);
   lines.push(`Outcome: ${receipt.outcome}`);
   lines.push('');
   const open = receipt.obligations.filter((obligation) => obligation.status === 'open');
