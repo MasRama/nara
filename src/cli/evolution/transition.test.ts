@@ -712,4 +712,28 @@ describe('users application-verified transition', () => {
     expect(refused.error.errorCode).toBe('no-transition');
     expect(refused.error.message).toContain('schemaVersion 3');
   });
+
+  it('reports honest incomplete evidence when the SQLite runtime is unavailable', () => {
+    const previous = process.env.NARA_TRANSITION_NO_SQLITE;
+    process.env.NARA_TRANSITION_NO_SQLITE = '1';
+    try {
+      const { root, officialDirectory } = setupFixture();
+      const fixtureDb = path.join(track(mkdtempSync(path.join(os.tmpdir(), 'nara-transition-db-'))), 'history.sqlite3');
+      buildHistoryFixture(fixtureDb);
+      writeText(path.join(root, 'src', 'app', 'bindings', 'users.server.ts'), ADAPTED_BINDING);
+      const outcome = planPass(root, officialDirectory, { historyFixturePath: fixtureDb });
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      expect(outcome.receipt.outcome).toBe('UNVERIFIED');
+      expect(outcome.receipt.evidence.find((item) => item.kind === 'migration-fresh')?.status).toBe('unsupported');
+      expect(outcome.receipt.evidence.find((item) => item.kind === 'migration-history')?.status).toBe('unsupported');
+      const refused = acceptTransition({ feature: 'users', cwd: root, officialDirectory });
+      expect(refused.ok).toBe(false);
+      if (refused.ok) return;
+      expect(refused.error.errorCode).toBe('not-verified');
+    } finally {
+      if (previous === undefined) delete process.env.NARA_TRANSITION_NO_SQLITE;
+      else process.env.NARA_TRANSITION_NO_SQLITE = previous;
+    }
+  });
 });

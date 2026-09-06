@@ -7,8 +7,8 @@ import type { DoctorIssue } from '../architecture/doctor';
 import { captureArchitectureSnapshotWithIssues, toPosix } from '../architecture/snapshot';
 import { writeFeatureMap } from './reconcile';
 import type { TransitionEvidence, TransitionObligation } from './transition';
-import { rehearseFreshMigration, rehearseHistoryMigration, stageCandidateFeatureRoots } from './transition-migrations';
-import { discoverMigrations } from '../../shared/database/migrator';
+import { rehearseFreshMigration, rehearseHistoryMigration } from './transition-migrations';
+import { discoverMigrationsInFeaturesDir, stageCandidateFeatureRoots } from './transition-migration-files';
 import { readTransitionChecks } from './transition';
 
 export interface EvidenceContext {
@@ -233,11 +233,11 @@ export function evaluateTransitionEvidence(context: EvidenceContext): Transition
   const directory = staged.directory;
   const featuresRoot = staged.featuresRoot;
   try {
-    const stagedMigrationCount = discoverMigrations({ featureRoots: [featuresRoot] }).length;
+    const stagedMigrationCount = discoverMigrationsInFeaturesDir(featuresRoot).length;
     const fresh =
       stagedMigrationCount === 0
         ? { status: 'pass' as const, detail: 'No migrations in the candidate migration set.', limitations: undefined as string[] | undefined }
-        : rehearseFreshMigration([featuresRoot]);
+        : rehearseFreshMigration([featuresRoot], { appRoot: context.root });
     evidence.push({
       id: 'evidence:migration-fresh',
       kind: 'migration-fresh',
@@ -269,7 +269,7 @@ export function evaluateTransitionEvidence(context: EvidenceContext): Transition
           : {}),
       });
     } else {
-      const history = rehearseHistoryMigration([featuresRoot], fixturePath ? { fixturePath } : {});
+      const history = rehearseHistoryMigration([featuresRoot], fixturePath ? { fixturePath } : {}, { appRoot: context.root });
       evidence.push({
         id: 'evidence:migration-history',
         kind: 'migration-history',
