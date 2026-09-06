@@ -606,7 +606,23 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
       // modules it imports (computed from its own source, never hand-picked
       // and never the database/config substrate every app already has).
       // Users-specific composition stays entirely inside `nara add users`.
+      // The provider's own runtime closure (pino family, for its logging)
+      // travels with the fixture the same way; Users needs none of it.
       copyAuthProvider(projectDirectory);
+      {
+        const repository = repoRoot();
+        const rootManifest = JSON.parse(readFileSync(path.join(repository, 'package.json'), 'utf8')) as {
+          dependencies: Record<string, string>;
+        };
+        const projectManifestPath = path.join(projectDirectory, 'package.json');
+        const projectManifest = JSON.parse(readFileSync(projectManifestPath, 'utf8')) as {
+          dependencies: Record<string, string>;
+        };
+        for (const name of ['pino', 'pino-pretty', 'pino-roll']) {
+          projectManifest.dependencies[name] = rootManifest.dependencies[name];
+        }
+        writeFileSync(projectManifestPath, `${JSON.stringify(projectManifest, null, 2)}\n`);
+      }
 
       pointNaraAtTarball(projectDirectory, tarball);
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
@@ -626,11 +642,10 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
       expect(add.stdout).toContain('Dependencies added to package.json. Run npm install.');
       expect(existsSync(path.join(projectDirectory, 'src', 'features', 'users', 'web', 'host.ts'))).toBe(true);
 
-      const manifestAfter = JSON.parse(readFileSync(path.join(projectDirectory, 'package.json'), 'utf8')) as {
-        dependencies: Record<string, string>;
-      };
       expect(manifestAfter.dependencies.zod).toBe('^4.4.3');
       expect(manifestAfter.dependencies.sharp).toBe('^0.35.3');
+
+      await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
       interface UsersInspection {
         dependencies: string[];
         integrations: {
