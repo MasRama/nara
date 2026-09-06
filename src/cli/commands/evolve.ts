@@ -513,13 +513,15 @@ export function formatEvolutionHuman(outcome: EvolveFeatureOutcome): string {
   } else if (plan.status === 'architecture-regression') {
     lines.push('Cannot apply: evolution introduces new architecture diagnostics.', '');
   } else if (plan.status === 'dry-run') {
-    lines.push('Safe to apply.', '');
+    lines.push('Reconciliation and architecture checks passed for this candidate.', '');
+    lines.push('Application adoption verification (bindings, packages, migrations, behavior) was not evaluated.', '');
   } else if (plan.status === 'bootstrapped') {
     lines.push('Lineage bootstrapped.', '');
   } else if (plan.status === 'ready') {
-    lines.push('Safe to apply.', '');
+    lines.push('Reconciliation and architecture checks passed for this candidate.', '');
+    lines.push('Application adoption verification (bindings, packages, migrations, behavior) was not evaluated.', '');
   } else if (plan.status === 'applied') {
-    lines.push('Evolution applied safely.', '');
+    lines.push('Evolution applied.', '');
   }
   return `${lines.join('\n')}\n`;
 }

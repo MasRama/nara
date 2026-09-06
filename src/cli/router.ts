@@ -14,6 +14,7 @@ import { installOfficialFeature, type FeatureInstallError } from './composition/
 type FeatureInstallErrorKind = FeatureInstallError['kind'];
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
 import { formatEvolutionHuman, evolveFeature } from './commands/evolve';
+import { acceptTransition, formatTransitionHuman, planTransition } from './commands/transition';
 import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
 import { makeFeature } from './commands/make-feature';
 import { newProject } from './commands/new-project';
@@ -122,10 +123,25 @@ Installs an official feature into src/features/<feature> without merging or over
 
 const EVOLVE_HELP = `Usage:
   nara evolve <feature> [--dry-run] [--json]
+  nara evolve <feature> --transition [--history <fixture>] [--json]
+  nara evolve <feature> --verify [--history <fixture>] [--json]
+  nara evolve <feature> --accept [--json]
 
 Reconciles an installed official Feature with the current bundled source using
 BASE + LOCAL + INCOMING lineage, validates an isolated architecture candidate,
 and applies only conflict-free evolutions. --dry-run never writes files.
+
+Application-verified evolution:
+  --transition / --verify plans or re-evaluates a Feature Transition for the
+  exact candidate revision: reconciled source, obligations, scoped evidence,
+  and a VERIFIED / BLOCKED / UNVERIFIED outcome persisted under
+  .nara/transitions/<feature>/current.json. Developer edits to
+  application-owned bindings, packages, tests, or migrations change the
+  candidate revision and invalidate prior evidence. --history points at a
+  representative existing-history SQLite fixture; without it, existing-history
+  adoption is UNVERIFIED. --accept applies the exact VERIFIED candidate and
+  advances lineage BASE to pure INCOMING bytes. Only VERIFIED transitions are
+  eligible for acceptance; there is no force-verified path.
 `;
 
 const defaultIO: CliIO = {
@@ -597,26 +613,40 @@ function evolutionExitCode(errorCode: string): number {
 }
 
 function parseEvolveArgs(args: string[]):
-  | { ok: true; feature: string; dryRun: boolean; json: boolean }
+  | { ok: true; feature: string; dryRun: boolean; json: boolean; mode: 'legacy' | 'transition' | 'accept'; history?: string }
   | { ok: false } {
   let feature: string | undefined;
   let dryRun = false;
   let json = false;
-  for (const arg of args) {
+  let mode: 'legacy' | 'transition' | 'accept' = 'legacy';
+  let history: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index] ?? '';
     if (arg === '--dry-run') {
-      if (dryRun) return { ok: false };
+      if (dryRun || mode !== 'legacy') return { ok: false };
       dryRun = true;
     } else if (arg === '--json') {
       if (json) return { ok: false };
       json = true;
+    } else if (arg === '--transition' || arg === '--verify') {
+      if (mode !== 'legacy' || dryRun) return { ok: false };
+      mode = 'transition';
+    } else if (arg === '--accept') {
+      if (mode !== 'legacy' || dryRun) return { ok: false };
+      mode = 'accept';
+    } else if (arg === '--history') {
+      const value = args[index + 1];
+      if (mode === 'accept' || value === undefined || value.startsWith('-')) return { ok: false };
+      history = value;
+      index += 1;
     } else if (arg.startsWith('-') || feature !== undefined) {
       return { ok: false };
     } else {
       feature = arg;
     }
   }
-  if (!feature) return { ok: false };
-  return { ok: true, feature, dryRun, json };
+  if (feature === undefined) return { ok: false };
+  return { ok: true, feature, dryRun, json, mode, ...(history === undefined ? {} : { history }) };
 }
 
 function renderEvolutionReport(io: CliIO, args: string[], root: string | undefined): number {
@@ -629,7 +659,12 @@ function renderEvolutionReport(io: CliIO, args: string[], root: string | undefin
     io.stderr(EVOLVE_HELP);
     return 64;
   }
-
+  if (parsed.mode === 'transition') {
+    return renderTransitionReport(io, args, root);
+  }
+  if (parsed.mode === 'accept') {
+    return renderTransitionAcceptReport(io, args, root);
+  }
   const outcome = evolveFeature({ feature: parsed.feature, cwd: root, dryRun: parsed.dryRun });
   if (!outcome.ok) {
     if (parsed.json) io.stdout(`${JSON.stringify(outcome.error, null, 2)}\n`);
@@ -639,6 +674,44 @@ function renderEvolutionReport(io: CliIO, args: string[], root: string | undefin
   if (parsed.json) io.stdout(`${JSON.stringify(outcome.plan, null, 2)}\n`);
   else io.stdout(formatEvolutionHuman(outcome));
   return outcome.plan.status === 'conflict' || outcome.plan.status === 'architecture-regression' ? 1 : 0;
+}
+
+function renderTransitionReport(io: CliIO, args: string[], root: string | undefined): number {
+  const parsed = parseEvolveArgs(args);
+  if (!parsed.ok || parsed.mode !== 'transition') {
+    io.stderr(EVOLVE_HELP);
+    return 64;
+  }
+  const outcome = planTransition({
+    feature: parsed.feature,
+    cwd: root,
+    ...(parsed.history === undefined ? {} : { historyFixturePath: parsed.history }),
+  });
+  if (!outcome.ok) {
+    if (parsed.json) io.stdout(`${JSON.stringify(outcome.error, null, 2)}\n`);
+    else io.stderr(`${outcome.error.message}\n`);
+    return evolutionExitCode(outcome.error.errorCode);
+  }
+  if (parsed.json) io.stdout(`${JSON.stringify(outcome.receipt, null, 2)}\n`);
+  else io.stdout(formatTransitionHuman(outcome.receipt));
+  return outcome.receipt.outcome === 'VERIFIED' ? 0 : 1;
+}
+
+function renderTransitionAcceptReport(io: CliIO, args: string[], root: string | undefined): number {
+  const parsed = parseEvolveArgs(args);
+  if (!parsed.ok || parsed.mode !== 'accept') {
+    io.stderr(EVOLVE_HELP);
+    return 64;
+  }
+  const outcome = acceptTransition({ feature: parsed.feature, cwd: root });
+  if (!outcome.ok) {
+    if (parsed.json) io.stdout(`${JSON.stringify(outcome.error, null, 2)}\n`);
+    else io.stderr(`${outcome.error.message}\n`);
+    return evolutionExitCode(outcome.error.errorCode);
+  }
+  if (parsed.json) io.stdout(`${JSON.stringify(outcome.receipt, null, 2)}\n`);
+  else io.stdout(formatTransitionHuman(outcome.receipt));
+  return 0;
 }
 
 
