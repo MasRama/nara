@@ -17,6 +17,12 @@ function createFixture(): string {
   return fixture;
 }
 
+function writeMinimalServerRoot(fixture: string): void {
+  const directory = path.join(fixture, 'src', 'app');
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(path.join(directory, 'server.ts'), `import { Hono } from 'hono';\n\nexport const app = new Hono();\n`);
+}
+
 function createIO(): CliIO & { output: string[]; errors: string[] } {
   const output: string[] = [];
   const errors: string[] = [];
@@ -31,8 +37,8 @@ function createIO(): CliIO & { output: string[]; errors: string[] } {
 describe('add command', () => {
   it('installs open feature source and leaves a healthy architecture', () => {
     const fixture = createFixture();
+    writeMinimalServerRoot(fixture);
     const io = createIO();
-
     const result = runCli(['add', 'health'], io, { cwd: fixture });
     const doctorIO = createIO();
     const doctorResult = runCli(['doctor'], doctorIO, { cwd: fixture });
@@ -82,6 +88,7 @@ describe('add command', () => {
 
   it('keeps lineage and local source byte-for-byte stable on duplicate add', () => {
     const fixture = createFixture();
+    writeMinimalServerRoot(fixture);
     const firstIO = createIO();
     expect(runCli(['add', 'health'], firstIO, { cwd: fixture }).exitCode).toBe(0);
     const lineageRecord = path.join(fixture, '.nara/lineage/official-features/health/lineage.json');
@@ -100,6 +107,7 @@ describe('add command', () => {
 
   it('removes staged Feature source when lineage staging fails', () => {
     const fixture = createFixture();
+    writeMinimalServerRoot(fixture);
     writeFileSync(path.join(fixture, '.nara'), 'blocked');
     const io = createIO();
 

@@ -9,7 +9,9 @@ import type { FeatureInspection } from './architecture/inspect';
 import type { FeatureIntegrationFacts } from './architecture/discover-integrations';
 import type { BoundaryExportEvidence } from './architecture/discover-boundary-exports';
 import type { FeatureImportEvidence } from './architecture/discover-import-evidence';
-import { installOfficialFeature } from './composition/install-feature';
+import { installOfficialFeature, type FeatureInstallError } from './composition/install-feature';
+
+type FeatureInstallErrorKind = FeatureInstallError['kind'];
 import { formatDiffHuman, runArchitectureDiff } from './commands/diff';
 import { formatEvolutionHuman, evolveFeature } from './commands/evolve';
 import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
@@ -131,7 +133,7 @@ const defaultIO: CliIO = {
   stderr: (message) => process.stderr.write(message),
 };
 
-function generationExitCode(kind: 'invalid-name' | 'unknown-feature' | 'duplicate' | 'filesystem'): number {
+function generationExitCode(kind: FeatureInstallErrorKind): number {
   return kind === 'invalid-name' || kind === 'unknown-feature' ? 64 : 73;
 }
 
@@ -729,8 +731,11 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
 
     const root = options.cwd ?? process.cwd();
     io.stdout(`Installed feature "${name}":\n`);
-    for (const file of result.feature.files) {
+    for (const file of [...result.feature.files, ...result.feature.bindings].sort()) {
       io.stdout(`- ${path.relative(root, file)}\n`);
+    }
+    for (const file of [...result.feature.composedRoots].sort()) {
+      io.stdout(`~ ${path.relative(root, file)}\n`);
     }
     return { exitCode: 0 };
   }

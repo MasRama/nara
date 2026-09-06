@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -31,6 +31,11 @@ function createIO(): CliIO & { output: string[]; errors: string[] } {
 }
 
 function installHealth(fixture: string): void {
+  mkdirSync(path.join(fixture, 'src', 'app'), { recursive: true });
+  writeFileSync(
+    path.join(fixture, 'src', 'app', 'server.ts'),
+    `import { Hono } from 'hono';\n\nexport const app = new Hono();\n`,
+  );
   const result = installOfficialFeature('health', fixture);
   expect(result.ok).toBe(true);
 }

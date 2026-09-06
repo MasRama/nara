@@ -211,6 +211,17 @@ function assembleContextPack(
     push('src/app/router.ts', `Application web-route composition for the ${name} Feature.`);
   }
 
+  for (const fact of feature.integrations.applicationImports) {
+    if (!fact.appFile.startsWith('src/app/bindings/')) {
+      continue;
+    }
+    if (fact.appFile.endsWith('.server.ts')) {
+      push(fact.appFile, `Application-owned server binding composing the ${name} Feature.`);
+    } else if (fact.appFile.endsWith('.web.ts')) {
+      push(fact.appFile, `Application-owned web binding composing the ${name} Feature.`);
+    }
+  }
+
   for (const entry of server) {
     push(entry, `Server surface of the ${name} Feature.`);
   }

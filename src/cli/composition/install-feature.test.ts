@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -22,6 +22,11 @@ function createFixture(): string {
 describe('official feature installation', () => {
   it('installs the open health feature source into a clean project', () => {
     const fixture = createFixture();
+    mkdirSync(path.join(fixture, 'src', 'app'), { recursive: true });
+    writeFileSync(
+      path.join(fixture, 'src', 'app', 'server.ts'),
+      `import { Hono } from 'hono';\n\nexport const app = new Hono();\n`,
+    );
 
     const result = installOfficialFeature('health', fixture);
 
@@ -30,6 +35,8 @@ describe('official feature installation', () => {
     expect(existsSync(path.join(fixture, 'src/features/health/contract.ts'))).toBe(true);
     expect(existsSync(path.join(fixture, 'src/features/health/tests/health.test.ts'))).toBe(true);
     expect(readFileSync(path.join(fixture, 'src/features/health/index.ts'), 'utf8')).toContain('healthRoutes');
+    expect(existsSync(path.join(fixture, 'src/app/bindings/health.server.ts'))).toBe(true);
+    expect(readFileSync(path.join(fixture, 'src/app/server.ts'), 'utf8')).toContain('composeHealthServer(app);');
     const lineage = readFeatureLineage(fixture, 'health');
     expect(lineage?.record.schemaVersion).toBe(1);
     expect(lineage?.record.source).toBe('official-feature');
