@@ -42,6 +42,7 @@ AI agents that understand WHY a convention exists make better decisions:
 | [0016](./0016-public-boundary-export-provenance.md) | Public boundary export provenance | Accepted |
 | [0017](./0017-evolvable-open-code-lineage.md) | Evolvable open-code lineage | Accepted |
 | [0018](./0018-composable-open-code-assemblies.md) | Composable open code via Feature assemblies | Accepted |
+| [0019](./0019-typed-host-requirements.md) | Typed host requirements for Feature assemblies | Accepted |
 
 ## Format
 

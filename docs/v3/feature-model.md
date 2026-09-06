@@ -73,8 +73,9 @@ Export the smallest interface that another capability needs:
 
 ```ts
 // src/features/users/index.ts
-export { userRoutes } from './server/routes';
+export { createUserRoutes } from './server/routes';
 export type { UserProfile } from './contract';
+export type { UsersServerHost } from './server/host';
 ```
 
 General or server-facing consumers use the boundary:
@@ -135,7 +136,7 @@ Server routes validate requests with the schema. Web code can reuse contract typ
 
 ## Server and web relationship
 
-Server code belongs under `server/`. It may use databases, filesystem APIs, server-only dependencies, and private implementation details within its own Feature. The Feature exposes route sub-applications or safe general functions through `index.ts`.
+Server code belongs under `server/`. It may use databases, filesystem APIs, server-only dependencies, and private implementation details within its own Feature. The Feature exposes route sub-applications or safe general functions through `index.ts`. A substantial Feature whose behavior needs application-owned capabilities exposes factories built from explicit host requirements (for example, `createUserRoutes(host)`) instead of singletons wired to another Feature; the application binding owns the final mount paths.
 
 Web code belongs under `web/` when the capability has a browser surface. It may import:
 
@@ -175,9 +176,39 @@ Dependencies follow ownership and direction:
 
 Dependency discovery retains every static cross-Feature module reference as deterministic evidence. It aggregates those references into the existing Feature graph, while preserving the richer symbol-level facts separately. This keeps graph compatibility for module-level imports without overstating which exported symbol a namespace or dynamic module consumer uses.
 
-For example, the users Feature may depend on the auth Feature's browser-safe public interface for a client-side session surface. It does not import `auth/web/pages/*`, `auth/web/client`, `auth/server/repository.ts`, or `auth/server/service.ts`.
+For example, the users Feature does not import the auth Feature at all — not even its public boundaries. It does not import `auth/web/pages/*`, `auth/web/client`, `auth/server/repository.ts`, or `auth/server/service.ts`, and it does not import the auth public indexes either.
 
 Feature dependencies should be acyclic. If `billing → users`, then `users → billing` is not a second harmless convenience; it is a cycle that obscures ownership and loading order. Move genuinely shared behavior to a lower-level capability or remove one edge.
+
+## Feature dependencies vs host requirements
+
+Feature dependencies are code dependencies inside Feature-owned source: a static import from one Feature to another Feature's public boundary. They describe what a Feature is built from.
+
+Host requirements are application composition seams: typed contracts a Feature declares for behavior it needs but does not own, supplied by application-owned bindings as plain TypeScript values. They describe what a Feature must be given to run.
+
+A Feature needing an authenticated actor does not necessarily mean:
+
+```text
+users → auth
+```
+
+It can mean:
+
+```text
+users → UsersServerHost          (Feature-owned requirement contract)
+
+application binding:
+  Auth → satisfies UsersServerHost   (application-owned adaptation)
+```
+
+Rules:
+
+- Requirements are ordinary TypeScript interfaces and factory parameters (for example, `createUserRoutes(host: UsersServerHost)`). No container, no service locator, no decorators, no global registry, no Nara-specific runtime.
+- Requirements represent the Feature's actual needs in its own vocabulary, not the provider's implementation. The application binding adapts between the two (Users asks `canManageUsers(actorId, action)`; the Auth-backed binding answers with `isAdmin`/`hasPermission`).
+- Requirements stay demand-driven and narrow: one cohesive interface per side (server/web) when the needs genuinely differ, never a speculative universal service bag or a generic `execute()`/`services` catch-all.
+- The provider relationship belongs to application composition (`src/app/bindings/`), never to Feature-owned source. `inspect`/`context` therefore show no Feature dependency while the binding reading order shows the composition.
+- Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
+- Business-neutral utilities (logging, database primitives) stay direct `src/shared/` imports. Host requirements are for application/business integration seams, not for every utility.
 
 ## Shared code
 
