@@ -299,6 +299,41 @@ Error JSON uses `status: "error"`, a stable `errorCode`, a human-readable
 `message`, and `canApply: false`. No network service or AI provider is
 required.
 
+## `nara evolve <feature> --transition | --verify | --accept`
+
+Plan, re-evaluate, and accept a **Feature Transition**: an
+application-specific adoption proposal for the exact reconciled candidate.
+Reconciliation produces a candidate for evaluation, not a conclusion that
+the application can safely adopt it.
+
+```bash
+npx nara evolve users --transition --json
+npx nara evolve users --verify --history ./fixtures/history.sqlite3
+npx nara evolve users --accept
+```
+
+`--transition` and `--verify` evaluate the current candidate revision and
+persist a receipt to `.nara/transitions/<feature>/current.json` (plus an
+immutable history copy per candidate digest). Re-running after editing
+application-owned bindings, packages, tests, or migrations re-evaluates
+the new revision and invalidates prior evidence. `--history` points at a
+representative existing-history SQLite fixture; without one,
+existing-history adoption is UNVERIFIED. `--accept` applies the exact
+VERIFIED candidate, advances lineage BASE to pure INCOMING bytes, and
+records the accepted transition. Only VERIFIED transitions are eligible;
+there is no force-verified path.
+
+The receipt carries the transition identity, BASE / LOCAL-start /
+INCOMING / candidate digests, the application-state fingerprint,
+obligations (source, boundary, host, binding, provider, package,
+integration, migration, behavioral), per-revision evidence, the scoped
+outcome, limitations, staleness, and acceptance state. VERIFIED means
+verified against the named evidence and scope, not universally safe.
+Application-owned evidence selection lives in
+`.nara/transitions/<feature>.checks.json` (owned by the application,
+never modified by evolution) and only nominates relevant tests and the
+history fixture. See ADR 0021.
+
 ## `nara doctor`
 
 Validate repository architecture from `src/features/*`:

@@ -7,9 +7,11 @@ Nara stays useful after project creation: compose capabilities from explicit fea
 This document is the current architecture authority. History lives in [`docs/archive/v3/](./docs/archive/v3/)` and [`docs/decisions/`](./docs/decisions/).
 
 - **Compose** — build from explicit business features (`nara make feature`, `nara add`), including Feature assemblies with application-owned bindings.
+- **Own** — application-owned code stays application-owned: bindings, provider choice, authorization policy, manifests, tests, and data change only with application consent, while Nara keeps reasoning across those boundaries.
 - **Understand** — inspect the architecture deterministically (`nara inspect`, `nara context`, `nara impact`, each with `--json`), including Feature public-symbol consumers, boundary export provenance, explicitly type-only versus value-capable syntax evidence, application consumers, and route mounts, and describe how it is changing (`nara diff --base main`).
-- **Protect** — validate current architecture (`nara doctor`, plus `--json`) and protect architecture change (`nara guard --base origin/main`, plus `--json`): the change ratchet fails only on newly introduced diagnostics.
 - **Evolve** — keep official open-code Features current with deterministic local lineage (`nara evolve`), while validating every candidate against the source-derived architecture model.
+- **Verify** — adopt upstream changes through explicit Feature Transitions (`nara evolve --transition` / `--verify` / `--accept`): candidate application, obligations, scoped evidence, VERIFIED / BLOCKED / UNVERIFIED outcomes, and exact-candidate acceptance before lineage advances.
+- **Protect** — validate current architecture (`nara doctor`, plus `--json`) and protect architecture change (`nara guard --base origin/main`, plus `--json`): the change ratchet fails only on newly introduced diagnostics.
 
 ## Locked stack
 
@@ -73,10 +75,12 @@ nara guard --base <ref> [--head <ref>] [--json]
                            Fail when the change introduces new violations
 nara inspect <feature> [--json]
 nara context <feature>|--file <path> [--json]
-nara impact <feature> [--json]
-nara diff --base <ref> [--head <ref>] [--json]
 nara evolve <feature> [--dry-run] [--json]
                            Reconcile official source without losing local code
+nara evolve <feature> --transition|--verify [--history <fixture>] [--json]
+                           Plan or re-evaluate the application-specific transition
+nara evolve <feature> --accept [--json]
+                           Apply the exact VERIFIED candidate and advance lineage
 ```
 
 ## Product lifecycle
@@ -118,7 +122,12 @@ Six distinct things; do not conflate them:
    conflicts and newly introduced architecture diagnostics, and advances
    lineage only after a successful transactional apply. Lineage is
    reconciliation state, not architecture metadata; inspect, context, diff,
-   snapshots, and doctor stay source-derived from `src/`.
+   snapshots, and doctor stay source-derived from `src/`. Managed adoption
+   of upstream changes goes through explicit Feature Transitions
+   (`nara evolve --transition` / `--verify` / `--accept`), which bind the
+   exact candidate to obligations, scoped evidence, VERIFIED / BLOCKED /
+   UNVERIFIED outcomes, and explicit acceptance; lineage BASE then advances
+   to pure INCOMING bytes while application-owned bindings stay untouched.
 
 The repository root is the development/reference application: it proves
 richer capabilities (auth, RBAC, users, assets, SQLite lifecycle) but is
