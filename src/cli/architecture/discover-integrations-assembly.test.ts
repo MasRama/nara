@@ -404,4 +404,131 @@ export default [
       },
     ]);
   });
+
+  describe('factory-built assembly routes', () => {
+    const FACTORY_INDEX = `import { Hono } from 'hono';
+
+export const billingRoutes = new Hono().get('/', (context) => context.text('billing'));
+
+export function createBillingRoutes(host: unknown) {
+  void host;
+  return billingRoutes;
+}
+`;
+
+    function factoryShell(root: string): void {
+      writeFiles(root, {
+        'src/features/billing/index.ts': FACTORY_INDEX,
+        'src/features/billing/web/index.ts': BILLING_WEB_INDEX,
+      });
+    }
+
+    it('proves local values produced by a public-boundary factory', () => {
+      const root = createFixture();
+      factoryShell(root);
+      writeFiles(root, {
+        'src/app/server.ts': `${HONO_SERVER}
+import composeBillingServer from './bindings/billing.server';
+
+composeBillingServer(app);
+`,
+        'src/app/bindings/billing.server.ts': `import type { Hono } from 'hono';
+import { createBillingRoutes } from '../../features/billing';
+
+const host = {};
+const billingRoutes = createBillingRoutes(host);
+
+export default function composeBillingServer(app: Hono): void {
+  app.route('/billing', billingRoutes);
+}
+`,
+      });
+
+      const facts = discoverFeatureIntegrations(root).billing;
+
+      expect(facts.serverRoutes).toEqual([
+        { feature: 'billing', appFile: 'src/app/server.ts', exportName: 'createBillingRoutes', mountPath: '/billing' },
+      ]);
+    });
+
+    it('proves an inline factory call with a static mount path', () => {
+      const root = createFixture();
+      factoryShell(root);
+      writeFiles(root, {
+        'src/app/server.ts': `${HONO_SERVER}
+import composeBillingServer from './bindings/billing.server';
+
+composeBillingServer(app);
+`,
+        'src/app/bindings/billing.server.ts': `import type { Hono } from 'hono';
+import { createBillingRoutes } from '../../features/billing';
+
+export default function composeBillingServer(app: Hono): void {
+  app.route('/billing', createBillingRoutes({}));
+}
+`,
+      });
+
+      const facts = discoverFeatureIntegrations(root).billing;
+
+      expect(facts.serverRoutes).toEqual([
+        { feature: 'billing', appFile: 'src/app/server.ts', exportName: 'createBillingRoutes', mountPath: '/billing' },
+      ]);
+    });
+
+    it('ignores a local function with the factory call shape', () => {
+      const root = createFixture();
+      factoryShell(root);
+      writeFiles(root, {
+        'src/app/server.ts': `${HONO_SERVER}
+import composeBillingServer from './bindings/billing.server';
+
+composeBillingServer(app);
+`,
+        'src/app/bindings/billing.server.ts': `import type { Hono } from 'hono';
+import { billingRoutes } from '../../features/billing';
+
+function createBillingRoutes(host: unknown) {
+  void host;
+  return billingRoutes;
+}
+
+const routes = createBillingRoutes({});
+
+export default function composeBillingServer(app: Hono): void {
+  app.route('/billing', routes);
+}
+`,
+      });
+
+      const facts = discoverFeatureIntegrations(root).billing;
+
+      expect(facts.serverRoutes).toEqual([]);
+    });
+
+    it('ignores a factory mount with a dynamic path', () => {
+      const root = createFixture();
+      factoryShell(root);
+      writeFiles(root, {
+        'src/app/server.ts': `${HONO_SERVER}
+import composeBillingServer from './bindings/billing.server';
+
+composeBillingServer(app);
+`,
+        'src/app/bindings/billing.server.ts': `import type { Hono } from 'hono';
+import { createBillingRoutes } from '../../features/billing';
+
+const prefix = '/billing';
+
+export default function composeBillingServer(app: Hono): void {
+  app.route(prefix, createBillingRoutes({}));
+}
+`,
+      });
+
+      const facts = discoverFeatureIntegrations(root).billing;
+
+      expect(facts.serverRoutes).toEqual([]);
+    });
+  });
 });

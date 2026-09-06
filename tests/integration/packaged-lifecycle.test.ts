@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:net';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, cpSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { digestFeatureFiles, featureFilesEqual, readFeatureFiles, readFeatureLineage } from '../../src/cli/evolution/lineage';
@@ -11,10 +11,10 @@ import {
   npmCommand,
   pointNaraAtTarball,
   publishablePackageDir,
+  repoRoot,
   runCommand,
   runLocalNara,
 } from './pack-helpers';
-
 interface EvolutionSummary {
   status: string;
   applied: boolean;
@@ -527,6 +527,124 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
       await expect(
         runCommand(installedCli[0], [...installedCli.slice(1), 'guard', '--base', baseCommit, '--head', headCommit], fixture),
       ).rejects.toThrow('CROSS_FEATURE_INTERNAL_IMPORT');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('installed nara add composes the users assembly from an auth-backed binding', { timeout: 600_000 }, async () => {
+    const tarball = await ensurePackedNara();
+    const root = mkdtempSync(path.join(os.tmpdir(), 'nara-pack-users-'));
+    try {
+      const prefix = path.join(root, 'prefix');
+      await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
+      const installedRoot = path.join(prefix, 'node_modules', '@nara-web', 'cli');
+      expect(existsSync(path.join(installedRoot, 'official-features', 'users', 'index.ts'))).toBe(true);
+      expect(existsSync(path.join(installedRoot, 'official-features', 'users', '.nara', 'assembly', 'server.ts'))).toBe(
+        true,
+      );
+      const installedCli =
+        process.platform === 'win32'
+          ? ['node', path.join(installedRoot, 'dist', 'index.js')]
+          : [path.join(prefix, 'node_modules', '.bin', 'nara')];
+
+      const workspace = path.join(root, 'workspace');
+      mkdirSync(workspace, { recursive: true });
+      await runCommand(installedCli[0], [...installedCli.slice(1), 'new', 'users-app'], workspace);
+      const projectDirectory = path.join(workspace, 'users-app');
+
+      // Supported fixture strategy: the Auth prerequisite is ordinary project
+      // source, not an installable official Feature. Business-neutral shared
+      // infrastructure travels with it; test-only files stay behind.
+      const repository = repoRoot();
+      const withoutTests = (source: string): boolean => !source.split(path.sep).includes('tests');
+      cpSync(path.join(repository, 'src', 'features', 'auth'), path.join(projectDirectory, 'src', 'features', 'auth'), {
+        recursive: true,
+        filter: withoutTests,
+      });
+      for (const module of ['config', 'database', 'errors', 'logging', 'security']) {
+        cpSync(path.join(repository, 'src', 'shared', module), path.join(projectDirectory, 'src', 'shared', module), {
+          recursive: true,
+          filter: withoutTests,
+        });
+      }
+      const rootManifest = JSON.parse(readFileSync(path.join(repository, 'package.json'), 'utf8')) as {
+        dependencies: Record<string, string>;
+      };
+      const projectManifestPath = path.join(projectDirectory, 'package.json');
+      const projectManifest = JSON.parse(readFileSync(projectManifestPath, 'utf8')) as {
+        dependencies: Record<string, string>;
+      };
+      for (const name of ['better-sqlite3', 'dotenv', 'pino', 'pino-pretty', 'pino-roll', 'sharp', 'zod']) {
+        projectManifest.dependencies[name] = rootManifest.dependencies[name];
+      }
+      writeFileSync(projectManifestPath, `${JSON.stringify(projectManifest, null, 2)}\n`);
+
+      pointNaraAtTarball(projectDirectory, tarball);
+      await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
+
+      const add = await runLocalNara(projectDirectory, ['add', 'users']);
+      expect(add.stdout).toContain('src/app/bindings/users.server.ts');
+      expect(add.stdout).toContain('src/app/bindings/users.web.ts');
+      expect(add.stdout).toContain('src/features/users/server/host.ts');
+      expect(existsSync(path.join(projectDirectory, 'src', 'features', 'users', 'web', 'host.ts'))).toBe(true);
+
+      const doctor = await runLocalNara(projectDirectory, ['doctor']);
+      expect(doctor.stdout).toBe('Architecture looks healthy.\n');
+      const inspection = JSON.parse(
+        (await runLocalNara(projectDirectory, ['inspect', 'users', '--json'])).stdout,
+      ) as {
+        dependencies: string[];
+        integrations: {
+          serverRoutes: Array<{ mountPath: string; exportName: string }>;
+          webRoutes: Array<{ path: string; exportName: string }>;
+        };
+      };
+      expect(inspection.dependencies).toEqual([]);
+      expect(inspection.integrations.serverRoutes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ mountPath: '/api/users', exportName: 'createUserRoutes' }),
+          expect.objectContaining({ mountPath: '/api/assets', exportName: 'createAssetRoutes' }),
+        ]),
+      );
+      expect(inspection.integrations.webRoutes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/users', exportName: 'UsersPage' }),
+          expect.objectContaining({ path: '/profile', exportName: 'ProfilePage' }),
+        ]),
+      );
+      const context = JSON.parse(
+        (await runLocalNara(projectDirectory, ['context', 'users', '--json'])).stdout,
+      ) as { readingOrder: Array<{ path: string }> };
+      expect(context.readingOrder.map((entry) => entry.path)).toEqual(
+        expect.arrayContaining(['src/app/bindings/users.server.ts', 'src/app/bindings/users.web.ts']),
+      );
+
+      await runCommand(npmCommand, ['run', 'check'], projectDirectory);
+      await runCommand(npmCommand, ['run', 'build'], projectDirectory);
+
+      const binding = path.join(projectDirectory, 'src', 'app', 'bindings', 'users.server.ts');
+      writeFileSync(binding, `${readFileSync(binding, 'utf8')}// Local policy: deny role assignment on Fridays.\n`);
+      const customized = readFileSync(binding, 'utf8');
+      const packagedUsersIndex = path.join(
+        projectDirectory,
+        'node_modules',
+        '@nara-web',
+        'cli',
+        'official-features',
+        'users',
+        'index.ts',
+      );
+      writeFileSync(packagedUsersIndex, `${readFileSync(packagedUsersIndex, 'utf8')}\nexport const usersVersion = 'packaged-next';\n`);
+      const evolved = await runLocalNara(projectDirectory, ['evolve', 'users', '--json']);
+      expect(parseEvolutionSummary(evolved.stdout)).toEqual({ status: 'applied', applied: true });
+      expect(readFileSync(path.join(projectDirectory, 'src', 'features', 'users', 'index.ts'), 'utf8')).toContain(
+        "usersVersion = 'packaged-next'",
+      );
+      expect(readFileSync(binding, 'utf8')).toEqual(customized);
+
+      const doctorAfterEvolution = await runLocalNara(projectDirectory, ['doctor']);
+      expect(doctorAfterEvolution.stdout).toBe('Architecture looks healthy.\n');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
