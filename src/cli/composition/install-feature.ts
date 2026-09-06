@@ -11,9 +11,7 @@ import {
 } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import ts from 'typescript';
 import { analyzeArchitecture, type DoctorIssue } from '../architecture/doctor';
-import { discoverExportedNames } from '../architecture/discover-boundary-exports';
 import { discoverFeatureIntegrations } from '../architecture/discover-integrations';
 import { diagnosticKey } from '../architecture/diff';
 import {
@@ -32,6 +30,11 @@ import {
 import { featureNameIsValid } from '../feature-name';
 import { resolveOfficialFeatureDirectory } from '../package-root';
 import {
+  checkAssemblyPrerequisites,
+  readFeatureRequirements,
+  validateRequirementsAgainstSource,
+} from './requirements';
+import {
   cleanupStagedLineage,
   copyFeatureFiles,
   digestFeatureFiles,
@@ -49,6 +52,8 @@ export interface InstalledFeature {
   baseDigest: string;
   bindings: string[];
   composedRoots: string[];
+  /** npm dependencies added to package.json by this installation. */
+  packageDependencies: Array<{ name: string; version: string }>;
 }
 
 export interface FeatureInstallError {
@@ -59,6 +64,8 @@ export interface FeatureInstallError {
   | 'duplicate'
   | 'invalid-assembly'
   | 'prerequisite'
+  | 'requirements'
+  | 'package-conflict'
   | 'composition'
   | 'filesystem';
 }
@@ -90,6 +97,7 @@ interface AssemblyPlan {
   webBinding?: { destination: string; appFile: string; content: string };
   serverRoot?: { file: string; before: string; after: string };
   webRoot?: { file: string; before: string; after: string };
+  packageJson?: PackageJsonPlan;
 }
 
 function readTextFile(file: string, feature: string, role: string): { ok: true; content: string } | { ok: false; message: string } {
@@ -103,85 +111,102 @@ function readTextFile(file: string, feature: string, role: string): { ok: true; 
   }
 }
 
-interface TemplateProviderNeed {
-  provider: string;
-  boundaryFile: string;
-  symbols: string[];
-  existenceOnly: boolean;
-  templateRole: string;
+
+export interface PackageJsonPlan {
+  path: string;
+  before: string;
+  after: string;
+  added: Array<{ name: string; version: string }>;
 }
 
 /**
- * Parse one assembly template for imports that name another Feature's public
- * boundary. Templates live in `src/app/bindings/`, so only destination-
- * relative `../../features/<provider>` (or `/web`) specifiers count; every
- * other specifier is ordinary application code, not a provider requirement.
+ * Plan deterministic package.json dependency edits for declared
+ * requirements. Missing packages are appended in declared order; identical
+ * declarations are kept untouched. Any conflicting declaration fails
+ * before mutation — compatibility across arbitrary ranges is never
+ * guessed. Only `dependencies` participates; the lockfile and the actual
+ * install stay with the user's package manager.
  */
-function templateProviderNeeds(source: string, feature: string, templateRole: string): TemplateProviderNeed[] {
-  const sourceFile = ts.createSourceFile('assembly-template.ts', source, ts.ScriptTarget.Latest, true);
-  const needs: TemplateProviderNeed[] = [];
-  for (const statement of sourceFile.statements) {
-    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue;
-    const match = /^\.\.\/\.\.\/features\/([^/]+?)((?:\/web)?)(?:\/index(?:\.ts)?)?$/.exec(
-      statement.moduleSpecifier.text,
-    );
-    if (!match || match[1] === feature) continue;
-    const provider = match[1];
-    const boundaryFile = match[2] === '/web' ? `src/features/${provider}/web/index.ts` : `src/features/${provider}/index.ts`;
-    const clause = statement.importClause;
-    if (!clause || (!clause.name && !clause.namedBindings)) {
-      needs.push({ provider, boundaryFile, symbols: [], existenceOnly: true, templateRole });
+export function planPackageJson(
+  root: string,
+  feature: string,
+  packages: Record<string, string>,
+): { ok: true; plan: PackageJsonPlan | undefined } | { ok: false; error: FeatureInstallError } {
+  const names = Object.keys(packages);
+  if (names.length === 0) return { ok: true, plan: undefined };
+  const manifestPath = path.resolve(root, 'package.json');
+  let before: string;
+  try {
+    before = readFileSync(manifestPath, 'utf8');
+  } catch {
+    return {
+      ok: false,
+      error: {
+        kind: 'composition',
+        message:
+          `Cannot add "${feature}": it requires npm ${names.length === 1 ? 'package' : 'packages'} ` +
+          `${names.map((name) => `"${name}"`).join(', ')}, but ${path.relative(root, manifestPath)} does not exist; nothing was installed.`,
+      },
+    };
+  }
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(before);
+  } catch (error) {
+    return {
+      ok: false,
+      error: {
+        kind: 'composition',
+        message: `Cannot add "${feature}": ${path.relative(root, manifestPath)} is not valid JSON; nothing was installed.`,
+      },
+    };
+  }
+  if (typeof manifest !== 'object' || manifest === null || Array.isArray(manifest)) {
+    return {
+      ok: false,
+      error: {
+        kind: 'composition',
+        message: `Cannot add "${feature}": ${path.relative(root, manifestPath)} does not hold a JSON object; nothing was installed.`,
+      },
+    };
+  }
+  const record = manifest as Record<string, unknown>;
+  if (record.dependencies === undefined) {
+    record.dependencies = {};
+  }
+  if (typeof record.dependencies !== 'object' || record.dependencies === null || Array.isArray(record.dependencies)) {
+    return {
+      ok: false,
+      error: {
+        kind: 'composition',
+        message: `Cannot add "${feature}": ${path.relative(root, manifestPath)} holds a non-object "dependencies" entry; nothing was installed.`,
+      },
+    };
+  }
+  const dependencies = record.dependencies as Record<string, unknown>;
+  const added: Array<{ name: string; version: string }> = [];
+  for (const name of names) {
+    const wanted = packages[name];
+    const existing = dependencies[name];
+    if (existing === undefined) {
+      dependencies[name] = wanted;
+      added.push({ name, version: wanted });
       continue;
     }
-    if (clause.name) {
-      needs.push({ provider, boundaryFile, symbols: [], existenceOnly: true, templateRole });
-    }
-    if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
-      needs.push({ provider, boundaryFile, symbols: [], existenceOnly: true, templateRole });
-      continue;
-    }
-    if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-      const symbols = clause.namedBindings.elements.map((element) => element.propertyName?.text ?? element.name.text);
-      if (symbols.length > 0) {
-        needs.push({ provider, boundaryFile, symbols, existenceOnly: false, templateRole });
-      }
+    if (existing !== wanted) {
+      return {
+        ok: false,
+        error: {
+          kind: 'package-conflict',
+          message:
+            `Cannot add "${feature}": ${path.relative(root, manifestPath)} already declares "${name}" as ` +
+            `"${String(existing)}", which conflicts with the required "${wanted}". Resolve the version manually; nothing was installed.`,
+        },
+      };
     }
   }
-  return needs;
-}
-
-/**
- * Fail closed when an assembly template statically requires provider
- * Features the target application does not supply. There is no Feature
- * dependency resolver: the application must provide the prerequisite first.
- * Runs before any mutation and before candidate validation.
- */
-function checkAssemblyPrerequisites(root: string, feature: string, templates: AssemblyTemplates): string | undefined {
-  const needs: TemplateProviderNeed[] = [
-    ...(templates.server === undefined ? [] : templateProviderNeeds(templates.server, feature, 'server')),
-    ...(templates.web === undefined ? [] : templateProviderNeeds(templates.web, feature, 'web')),
-  ];
-  for (const need of needs) {
-    const boundaryPath = path.resolve(root, need.boundaryFile);
-    let exported: string[];
-    try {
-      exported = discoverExportedNames(boundaryPath);
-    } catch {
-      return (
-        `Cannot add "${feature}": the ${need.templateRole} assembly needs the "${need.provider}" feature, ` +
-        `but ${need.boundaryFile} does not exist in this application. Provide "${need.provider}" first; nothing was installed.`
-      );
-    }
-    if (need.existenceOnly) continue;
-    const missing = need.symbols.filter((symbol) => !exported.includes(symbol));
-    if (missing.length > 0) {
-      return (
-        `Cannot add "${feature}": the ${need.templateRole} assembly needs ${missing.map((symbol) => `"${symbol}"`).join(', ')} ` +
-        `from the "${need.provider}" feature, but ${need.boundaryFile} does not export them. Provide a compatible "${need.provider}" first; nothing was installed.`
-      );
-    }
-  }
-  return undefined;
+  if (added.length === 0) return { ok: true, plan: undefined };
+  return { ok: true, plan: { path: manifestPath, before, after: `${JSON.stringify(manifest, null, 2)}\n`, added } };
 }
 
 /**
@@ -417,6 +442,9 @@ function applyAssemblyTransaction(
       writeFileAtomically(composition.file, composition.after);
       writtenRoots.push(composition.file);
     }
+    if (plan.packageJson) {
+      writeFileAtomically(plan.packageJson.path, plan.packageJson.after);
+    }
     return {
       feature: {
         name: feature,
@@ -426,9 +454,18 @@ function applyAssemblyTransaction(
         baseDigest,
         bindings: [...writtenBindings].sort(),
         composedRoots: [...writtenRoots].sort(),
+        packageDependencies: plan.packageJson ? [...plan.packageJson.added] : [],
       },
     };
   } catch (error) {
+    if (plan.packageJson) {
+      try {
+        writeFileSync(plan.packageJson.path, plan.packageJson.before);
+      } catch {
+        // Best-effort restore; the original error below carries the failure.
+      }
+      rmSync(`${plan.packageJson.path}.nara-add-stage`, { force: true });
+    }
     for (const [file, before] of rootBackups) {
       try {
         writeFileSync(file, before);
@@ -515,6 +552,18 @@ export function installOfficialFeature(
     }
     const baseDigest = digestFeatureFiles(sourceFiles);
     const templates = readAssemblyTemplates(source);
+    const requirementsRead = readFeatureRequirements(source);
+    if (!requirementsRead.ok) {
+      return { ok: false, error: { kind: 'requirements', message: `${requirementsRead.error}; nothing was installed.` } };
+    }
+    const requirements = requirementsRead.requirements;
+    if (requirements !== undefined) {
+      const stale = validateRequirementsAgainstSource(requirements, sourceFiles, templates);
+      if (stale !== undefined) {
+        return { ok: false, error: { kind: 'requirements', message: `${stale}` } };
+      }
+    }
+    const declaredProviders = requirements?.providers;
     if (templates.server === undefined && templates.web === undefined) {
       mkdirSync(featuresDirectory, { recursive: true });
       const featureStage = mkdtempSync(path.join(featuresDirectory, '.nara-feature-'));
@@ -546,6 +595,18 @@ export function installOfficialFeature(
         lineageInstalled = true;
         stagedLineage = undefined;
 
+        const packaged = requirements ? planPackageJson(root, name, requirements.packages) : { ok: true as const, plan: undefined };
+        if (!packaged.ok) {
+          rmSync(target, { recursive: true, force: true });
+          featureInstalled = false;
+          rmSync(targetLineage, { recursive: true, force: true });
+          lineageInstalled = false;
+          return { ok: false, error: packaged.error };
+        }
+        if (packaged.plan) {
+          writeFileAtomically(packaged.plan.path, packaged.plan.after);
+        }
+
         return {
           ok: true,
           feature: {
@@ -556,6 +617,7 @@ export function installOfficialFeature(
             baseDigest,
             bindings: [],
             composedRoots: [],
+            packageDependencies: packaged.plan ? [...packaged.plan.added] : [],
           },
         };
       } catch (error) {
@@ -571,9 +633,16 @@ export function installOfficialFeature(
     if (!planned.ok) {
       return { ok: false, error: planned.error };
     }
-    const missingPrerequisite = checkAssemblyPrerequisites(root, name, templates);
+    const missingPrerequisite = checkAssemblyPrerequisites(root, name, templates, declaredProviders);
     if (missingPrerequisite !== undefined) {
       return { ok: false, error: { kind: 'prerequisite', message: missingPrerequisite } };
+    }
+    const packaged = requirements ? planPackageJson(root, name, requirements.packages) : { ok: true as const, plan: undefined };
+    if (!packaged.ok) {
+      return { ok: false, error: packaged.error };
+    }
+    if (packaged.plan) {
+      planned.plan.packageJson = packaged.plan;
     }
     const blocked = validateAssemblyCandidate(root, name, sourceFiles, planned.plan);
     if (blocked !== undefined) {

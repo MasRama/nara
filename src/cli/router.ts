@@ -737,6 +737,12 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
     for (const file of [...result.feature.composedRoots].sort()) {
       io.stdout(`~ ${path.relative(root, file)}\n`);
     }
+    for (const dependency of result.feature.packageDependencies) {
+      io.stdout(`+ package.json dependency: ${dependency.name}@${dependency.version}\n`);
+    }
+    if (result.feature.packageDependencies.length > 0) {
+      io.stdout('Dependencies added to package.json. Run npm install.\n');
+    }
     return { exitCode: 0 };
   }
   if (command === 'evolve') {

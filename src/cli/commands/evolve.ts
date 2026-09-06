@@ -6,6 +6,7 @@ import type { DoctorIssue } from '../architecture/doctor';
 import { captureArchitectureSnapshotWithIssues, toPosix } from '../architecture/snapshot';
 import { featureNameIsValid } from '../feature-name';
 import { resolveOfficialFeatureDirectory } from '../package-root';
+import { checkInstalledRequirements } from '../composition/requirements';
 import {
   cleanupStagedLineage,
   digestFeatureFiles,
@@ -58,6 +59,7 @@ export interface FeatureEvolutionPlan {
   canApply: boolean;
   applied: boolean;
   architecture?: FeatureEvolutionArchitecture;
+  requirementsNotice?: string[];
 }
 
 export type FeatureEvolutionErrorCode =
@@ -242,7 +244,6 @@ function bootstrapLineage(
     throw error;
   }
 }
-
 function buildPlan(
   feature: string,
   status: FeatureEvolutionStatus,
@@ -253,6 +254,7 @@ function buildPlan(
   canApply: boolean,
   applied: boolean,
   architecture?: FeatureEvolutionArchitecture,
+  requirementsNotice?: string[],
 ): FeatureEvolutionPlan {
   return {
     schemaVersion: 1,
@@ -264,6 +266,7 @@ function buildPlan(
     canApply,
     applied,
     architecture,
+    ...(requirementsNotice !== undefined && requirementsNotice.length > 0 ? { requirementsNotice } : {}),
   };
 }
 
@@ -291,10 +294,10 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
     if (!existsSync(localDirectory) || !statSync(localDirectory).isDirectory()) {
       return evolutionError(feature, 'missing-local', `Feature "${feature}" is not installed at ${localDirectory}.`);
     }
-
     const local = readFeatureFiles(localDirectory);
     const incoming = readFeatureFiles(officialDirectory, false);
     const incomingDigest = digestFeatureFiles(incoming);
+    const requirementsNotice = checkInstalledRequirements(root, feature, officialDirectory);
     let lineage: FeatureLineageSnapshot | undefined;
     try {
       lineage = readFeatureLineage(root, feature);
@@ -333,6 +336,8 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
           [],
           true,
           applied,
+          undefined,
+          requirementsNotice,
         ),
       };
     }
@@ -342,7 +347,7 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
     if (baseDigest === incomingDigest) {
       return {
         ok: true,
-        plan: buildPlan(feature, 'up-to-date', baseDigest, incomingDigest, reconciliation.files, [], false, false),
+        plan: buildPlan(feature, 'up-to-date', baseDigest, incomingDigest, reconciliation.files, [], false, false, undefined, requirementsNotice),
       };
     }
     if (reconciliation.conflicts.length > 0) {
@@ -357,6 +362,8 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
           reconciliation.conflicts,
           false,
           false,
+          undefined,
+          requirementsNotice,
         ),
       };
     }
@@ -378,6 +385,7 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
           false,
           false,
           architecture,
+          requirementsNotice,
         ),
       };
     }
@@ -392,6 +400,7 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
       true,
       false,
       architecture,
+      requirementsNotice,
     );
     if (options.dryRun === true) {
       rmSync(validation.candidateRoot, { recursive: true, force: true });
@@ -489,6 +498,14 @@ export function formatEvolutionHuman(outcome: EvolveFeatureOutcome): string {
       }
       lines.push('');
     }
+  }
+
+  if (plan.requirementsNotice && plan.requirementsNotice.length > 0) {
+    lines.push('Requirements notice:');
+    for (const notice of plan.requirementsNotice) {
+      lines.push(`  ! ${notice}`);
+    }
+    lines.push('');
   }
 
   if (plan.status === 'conflict') {
