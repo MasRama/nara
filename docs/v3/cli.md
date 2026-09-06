@@ -24,7 +24,12 @@ NODE_ENV=production APP_URL=http://localhost:5555 npm start
 Every generated project exact-pins the version of the Nara CLI that created
 it as `@nara-web/cli` in devDependencies (no range), so architecture-rule
 changes arrive only through an explicit dependency update — never silently
-(see ADR 0011). Its `npm run check` ends with `npm run architecture:doctor`, and
+(see ADR 0011). Its `npm run check` ends with `npm run architecture:doctor`.
+The Health Feature created by `nara new` comes from the same official
+open-code source used by `nara add`, and its lineage is established before the
+generated project is made visible. A fresh `nara evolve health --json` therefore
+reports `up-to-date`.
+
 `nara inspect/context/impact/doctor/add/evolve` all run from the project's own
 install with no global CLI and no network service. Production serving needs
 no Nara runtime: the CLI is development tooling, not request-path
@@ -47,6 +52,12 @@ The generated project is intentionally small:
 ```text
 ledger/
 ├── .gitignore
+├── .nara/
+│   └── lineage/
+│       └── official-features/
+│           └── health/
+│               ├── base/
+│               └── lineage.json
 ├── AGENTS.md
 ├── package.json
 ├── resources/
@@ -65,18 +76,22 @@ ledger/
 │   │   └── server.ts
 │   ├── features/
 │   │   └── health/
+│   │       ├── contract.ts
 │   │       ├── index.ts
 │   │       └── tests/
 │   │           └── health.test.ts
 │   ├── server.ts
 │   └── vue.d.ts
+├── tests/
+│   └── health.test.ts
 ├── tsconfig.frontend.json
 ├── tsconfig.json
 ├── vite.config.mjs
 └── vitest.config.mjs
 ```
 
-`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home and browser not-found pages; `src/app/server.ts` composes the health Feature's Hono route and production static/SPA delivery, and `src/server.ts` serves it through `@hono/node-server`. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home and browser not-found pages; `src/app/server.ts` explicitly mounts the Health Feature's Hono route at `/health` and owns production static/SPA delivery, and `src/server.ts` serves it through `@hono/node-server`. The Feature test proves `healthRoutes` itself; `tests/health.test.ts` proves the application mount. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. `nara new` copies the same official Health source used by `nara add` and establishes its `.nara` lineage before the project directory is renamed into place. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
+
 
 ## Database lifecycle
 
@@ -143,7 +158,9 @@ npx nara evolve audit --dry-run --json
 npx nara evolve audit
 ```
 
-`nara add` records the exact official source as `BASE` under
+`nara new` establishes the initial Health `BASE` from the same exact official
+source it installs into `src/features/health`. `nara add` records the exact
+official source as `BASE` under
 `.nara/lineage/official-features/<feature>/base/`. Evolution compares that
 snapshot with `LOCAL` (`src/features/<feature>`) and `INCOMING` (the current
 bundled official source). The source remains ordinary project code; lineage is

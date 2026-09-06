@@ -90,6 +90,18 @@ describe('Feature source reconciliation', () => {
     expect(result.conflicts).toEqual(['index.ts']);
     expect(result.candidate.get('index.ts')?.toString()).toBe('one\nlocal\nthree\n');
   });
+  it('reports multiple overlapping text regions as one file conflict without throwing', () => {
+    const result = reconcileFeatureFiles(
+      files({ 'index.ts': 'one\nbase-a\ntwo\nbase-b\nthree\n' }),
+      files({ 'index.ts': 'one\nlocal-a\ntwo\nlocal-b\nthree\n' }),
+      files({ 'index.ts': 'one\nincoming-a\ntwo\nincoming-b\nthree\n' }),
+    );
+
+    expect(action(result, 'index.ts')).toBe('conflict');
+    expect(result.conflicts).toEqual(['index.ts']);
+    expect(result.candidate.get('index.ts')?.toString()).toBe('one\nlocal-a\ntwo\nlocal-b\nthree\n');
+  });
+
 
   it('conflicts when local changes meet an upstream deletion', () => {
     const result = reconcileFeatureFiles(files({ 'index.ts': 'base\n' }), files({ 'index.ts': 'local\n' }), files());

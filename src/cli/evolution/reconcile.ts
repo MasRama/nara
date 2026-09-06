@@ -58,7 +58,16 @@ function mergeTextFiles(local: Buffer, base: Buffer, incoming: Buffer): { conten
       };
     } catch (error) {
       const failure = error as { status?: number; stdout?: Buffer | string; stderr?: Buffer | string };
-      if (failure.status === 1) return { conflict: true };
+      // git merge-file returns the number of conflict regions (1..127), not
+      // merely a boolean conflict indicator.
+      if (
+        typeof failure.status === 'number' &&
+        Number.isInteger(failure.status) &&
+        failure.status >= 1 &&
+        failure.status <= 127
+      ) {
+        return { conflict: true };
+      }
       const details = failure.stderr === undefined ? '' : `: ${String(failure.stderr).trim()}`;
       throw new Error(`git merge-file failed${details}`);
     }

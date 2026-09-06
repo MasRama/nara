@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { installOfficialFeature } from '../composition/install-feature';
 import { featureNameIsValid } from '../feature-name';
 import { readNaraCliVersion } from '../package-root';
 
@@ -253,7 +254,7 @@ This is a minimal Nara v3 application.
 - Feature-specific browser code belongs under that Feature's web/ directory, including Feature-owned pages.
 - Keep server code separate from browser code; do not add SSR, a second framework, or custom RPC.
 - Inspect architecture with the local CLI: npx nara context <feature> --json, npx nara impact <feature> --json, npx nara doctor --json.
-- Official Features remain editable source: npx nara add <feature> records local lineage, and npx nara evolve <feature> --dry-run previews bundled updates.
+- The default Health Feature comes from the bundled official open-code source and already has lineage established; npx nara add <feature> records lineage for later official Features, and npx nara evolve <feature> --dry-run previews bundled updates.
 - Run npm run check before handing off changes (it includes the architecture check).
 
 The development ports default to Vite 5173 and Hono 5555; set VITE_PORT and PORT to override them.
@@ -452,17 +453,11 @@ serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
   process.stdout.write(startupMessage + '\\n');
 });
 `,
-    'src/features/health/index.ts': `import { Hono } from 'hono';
+    'tests/health.test.ts': `import { describe, expect, it } from 'vitest';
+import { app } from '../src/app/server';
 
-export const healthRoutes = new Hono().get('/', (context) =>
-  context.json({ status: 'ok' as const }),
-);
-`,
-    'src/features/health/tests/health.test.ts': `import { describe, expect, it } from 'vitest';
-import { app } from '../../../app/server';
-
-describe('health feature', () => {
-  it('reports a healthy application', async () => {
+describe('application health composition', () => {
+  it('mounts the Health Feature at /health', async () => {
     const response = await app.request('/health');
 
     expect(response.status).toBe(200);
@@ -527,20 +522,29 @@ export function newProject(name: string, root = process.cwd()): NewProjectResult
         }
         writeFileSync(filePath, content, { encoding: 'utf8', flag: 'wx' });
       }
+
+      const healthInstallation = installOfficialFeature('health', temporaryDirectory);
+      if (!healthInstallation.ok) {
+        throw new Error(healthInstallation.error.message);
+      }
       renameSync(temporaryDirectory, directory);
+
+      const generatedFiles = Object.keys(files).map((file) => path.join(directory, file));
+      const installedHealthFiles = healthInstallation.feature.files.map((file) =>
+        path.join(directory, path.relative(temporaryDirectory, file)),
+      );
+      return {
+        ok: true,
+        project: {
+          name,
+          directory,
+          files: [...generatedFiles, ...installedHealthFiles],
+        },
+      };
     } catch (error) {
       rmSync(temporaryDirectory, { recursive: true, force: true });
       throw error;
     }
-
-    return {
-      ok: true,
-      project: {
-        name,
-        directory,
-        files: Object.keys(files).map((file) => path.join(directory, file)),
-      },
-    };
   } catch (error) {
     return {
       ok: false,

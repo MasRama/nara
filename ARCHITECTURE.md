@@ -93,24 +93,27 @@ Six distinct things; do not conflate them:
    acquired from the registry once published; it has not been published
    yet.
 4. **Generated applications** — `nara new` output: the minimal canonical
-   application (health-only, no database, no auth). Each carries the
-   creating CLI as an exact-pinned `@nara-web/cli` devDependency, so
-   `npm run check` (which ends in `nara doctor`) and
+   application (health-only, no database, no auth). The default Health Feature
+   is copied from the same official open-code source used by `nara add`, and
+   its `.nara/lineage/official-features/health` BASE is established before
+   the generated project becomes visible. Each project carries the creating
+   CLI as an exact-pinned `@nara-web/cli` devDependency, so `npm run check`
+   (which ends in `nara doctor`) and
    `nara add/inspect/context/impact/diff/guard/evolve` work reproducibly from
    the project's own install. Guard is an explicit CI/review command
    there (`npx nara guard --base origin/main`) because a new project has
    no universal baseline ref to assume.
-5. **Official open-code features** — optional installable source
-   (`health`, `audit`). `nara add` copies versioned package source into
+5. **Official open-code features** — installable source (`health`, `audit`).
+   `nara new` and `nara add` copy official package source into
    `src/features/<name>`; the result is ordinary project code.
 
-6. **Evolvable open code** — `nara add` records exact official source bytes
-   under `.nara/lineage/official-features/<feature>/base`. `nara evolve`
-   compares BASE, LOCAL, and INCOMING deterministically, blocks conflicts and
-   newly introduced architecture diagnostics, and advances lineage only after
-   a successful transactional apply. Lineage is reconciliation state, not
-   architecture metadata; inspect, context, diff, snapshots, and doctor stay
-   source-derived from `src/`.
+6. **Evolvable open code** — `nara new` and `nara add` establish exact official
+   source bytes under `.nara/lineage/official-features/<feature>/base`.
+   `nara evolve` compares BASE, LOCAL, and INCOMING deterministically, blocks
+   conflicts and newly introduced architecture diagnostics, and advances
+   lineage only after a successful transactional apply. Lineage is
+   reconciliation state, not architecture metadata; inspect, context, diff,
+   snapshots, and doctor stay source-derived from `src/`.
 
 The repository root is the development/reference application: it proves
 richer capabilities (auth, RBAC, users, assets, SQLite lifecycle) but is

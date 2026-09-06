@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { digestFeatureFiles, featureFilesEqual, readFeatureFiles, readFeatureLineage } from '../../src/cli/evolution/lineage';
 import { describe, expect, it } from 'vitest';
 import {
   ensurePackedNara,
@@ -213,6 +214,75 @@ describe('packaged Nara lifecycle', () => {
       } finally {
         await stopServer(server);
       }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('installed nara new evolves the generated Health Feature from lineage', { timeout: 300_000 }, async () => {
+    const tarball = await ensurePackedNara();
+    const root = mkdtempSync(path.join(os.tmpdir(), 'nara-pack-new-health-'));
+    try {
+      const prefix = path.join(root, 'prefix');
+      await runCommand(npmCommand, ['install', '--prefix', prefix, tarball], root);
+      const installedRoot = path.join(prefix, 'node_modules', '@nara-web', 'cli');
+      const installedCli =
+        process.platform === 'win32'
+          ? ['node', path.join(installedRoot, 'dist', 'index.js')]
+          : [path.join(prefix, 'node_modules', '.bin', 'nara')];
+
+      const workspace = path.join(root, 'workspace');
+      mkdirSync(workspace, { recursive: true });
+      await runCommand(installedCli[0], [...installedCli.slice(1), 'new', 'app'], workspace);
+
+      const projectDirectory = path.join(workspace, 'app');
+      const packagedHealthDirectory = path.join(installedRoot, 'official-features', 'health');
+      const generatedHealthDirectory = path.join(projectDirectory, 'src', 'features', 'health');
+      const officialHealth = readFeatureFiles(packagedHealthDirectory, false);
+      expect(featureFilesEqual(readFeatureFiles(generatedHealthDirectory), officialHealth)).toBe(true);
+
+      const initialLineage = readFeatureLineage(projectDirectory, 'health');
+      expect(initialLineage).toBeDefined();
+      if (!initialLineage) return;
+      expect(featureFilesEqual(initialLineage.files, officialHealth)).toBe(true);
+      expect(initialLineage.record.baseDigest).toBe(digestFeatureFiles(officialHealth));
+
+      pointNaraAtTarball(projectDirectory, tarball);
+      await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
+      const localPackagedHealthDirectory = path.join(
+        projectDirectory,
+        'node_modules',
+        '@nara-web',
+        'cli',
+        'official-features',
+        'health',
+      );
+
+      const fresh = await runLocalNara(projectDirectory, ['evolve', 'health', '--json']);
+      expect(parseEvolutionSummary(fresh.stdout)).toEqual({ status: 'up-to-date', applied: false });
+
+      const localCustomization = path.join(generatedHealthDirectory, 'local.ts');
+      writeFileSync(localCustomization, 'export const localCustomization = true;\n');
+      const incomingIndex = path.join(localPackagedHealthDirectory, 'index.ts');
+      writeFileSync(
+        incomingIndex,
+        `${readFileSync(incomingIndex, 'utf8')}\nexport const healthVersion = 'packaged-next';\n`,
+      );
+      const incomingHealth = readFeatureFiles(localPackagedHealthDirectory, false);
+
+      const evolved = await runLocalNara(projectDirectory, ['evolve', 'health', '--json']);
+      expect(parseEvolutionSummary(evolved.stdout)).toEqual({ status: 'applied', applied: true });
+      expect(readFileSync(path.join(generatedHealthDirectory, 'index.ts'), 'utf8')).toContain(
+        "healthVersion = 'packaged-next'",
+      );
+      expect(readFileSync(localCustomization, 'utf8')).toContain('localCustomization');
+
+      const evolvedLineage = readFeatureLineage(projectDirectory, 'health');
+      expect(evolvedLineage).toBeDefined();
+      if (!evolvedLineage) return;
+      expect(featureFilesEqual(evolvedLineage.files, incomingHealth)).toBe(true);
+      expect(evolvedLineage.record.baseDigest).toBe(digestFeatureFiles(incomingHealth));
+      expect(evolvedLineage.files.has('local.ts')).toBe(false);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

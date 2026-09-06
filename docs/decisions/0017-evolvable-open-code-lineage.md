@@ -10,6 +10,11 @@ ordinary TypeScript into an application so developers can inspect, customize,
 and own the result. A later official release must not force a choice between
 losing those customizations and abandoning upstream fixes.
 
+The default Health Feature created by `nara new` is the first official Feature
+in every generated application. It must come from the same
+`official-features/health` source and begin with the same lineage process as
+`nara add`, rather than from a second template implementation.
+
 The repository already has deterministic architecture facts, but it must not
 turn update history into a second architecture manifest. Evolution needs a
 historical official base for three-way reconciliation while inspect, context,
@@ -17,8 +22,8 @@ diff, snapshots, and doctor continue to derive architecture from `src/`.
 
 ## Decision
 
-`nara add <feature>` records a minimal local lineage under:
-
+Both `nara new` (for the default Health Feature) and `nara add <feature>` record
+a minimal local lineage under:
 ```text
 .nara/lineage/official-features/<feature>/
 ├── base/          exact official source bytes

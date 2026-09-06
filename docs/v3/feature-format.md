@@ -21,7 +21,7 @@ Empty directories and placeholder files are not part of the format. A package co
 
 ## Installation
 
-`nara add <name>` resolves an official package, checks the destination before writing, and copies its files to `src/features/<name>/`. It never merges into an existing same-name directory. A collision is an error and leaves the existing source unchanged.
+`nara add <name>` resolves an official package, checks the destination before writing, and copies its files to `src/features/<name>/`. `nara new` uses the same source-copy transaction for the default `health` Feature. Neither command merges into an existing same-name directory. A collision is an error and leaves the existing source unchanged.
 
 The installer does not replace npm, load code dynamically, or keep installed behavior in the Nara package. The resulting files belong to the application and use its existing TypeScript dependencies. Package dependency changes, if ever required, remain ordinary `package.json` changes.
 
@@ -29,8 +29,9 @@ The architecture engine discovers the installed result from `src/features/*`; no
 
 ## Local lineage
 
-After a successful `nara add`, the CLI stores the exact official source bytes
-under `.nara/lineage/official-features/<name>/base/` and writes a minimal
+After a successful `nara new` or `nara add`, the CLI stores the exact
+official source bytes under
+`.nara/lineage/official-features/<name>/base/` and writes a minimal
 `lineage.json` record containing the source kind and deterministic SHA-256
 digest. This is reconciliation state only; the architecture engine continues
 to discover application Features from `src/features/*`.

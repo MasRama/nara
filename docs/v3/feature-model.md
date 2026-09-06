@@ -251,8 +251,11 @@ Do not move role policy, billing rules, or user workflows into `src/shared/` sim
 
 ## Evolvable official source
 
-`nara add <feature>` installs an official Feature as ordinary source and
-records a local lineage snapshot:
+`nara new` creates the default Health Feature from the official
+`official-features/health` source and establishes its local lineage before the
+generated project becomes visible. `nara add <feature>` installs later official
+Features as ordinary source and records the same kind of local lineage
+snapshot:
 
 ```text
 .nara/lineage/official-features/<feature>/

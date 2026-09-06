@@ -3,9 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { newProject } from '../commands/new-project';
+import { digestFeatureFiles, featureFilesEqual, readFeatureFiles, readFeatureLineage } from '../evolution/lineage';
+import { resolveOfficialFeatureDirectory } from '../package-root';
 import { runCli, type CliIO } from '../router';
 import { discoverFeatureIntegrations } from '../architecture/discover-integrations';
-
 const fixtures: string[] = [];
 
 afterEach(() => {
@@ -94,8 +95,10 @@ describe('new project', () => {
       'src/app/pages/NotFoundPage.vue',
       'src/app/router.ts',
       'src/app/server.ts',
+      'src/features/health/contract.ts',
       'src/features/health/index.ts',
       'src/features/health/tests/health.test.ts',
+      'tests/health.test.ts',
       'src/server.ts',
       'src/vue.d.ts',
       'tsconfig.frontend.json',
@@ -144,6 +147,31 @@ describe('new project', () => {
         webRoutes: [],
       },
     });
+  });
+
+  it('copies the official Health source and establishes lineage on creation', () => {
+    const fixture = createFixture();
+    const io = createIO();
+
+    const result = runCli(['new', 'example'], io, { cwd: fixture });
+
+    expect(result.exitCode).toBe(0);
+    expect(io.errors).toEqual([]);
+    const projectDirectory = path.join(fixture, 'example');
+    const official = readFeatureFiles(resolveOfficialFeatureDirectory('health'), false);
+    const generated = readFeatureFiles(path.join(projectDirectory, 'src', 'features', 'health'));
+    expect(featureFilesEqual(generated, official)).toBe(true);
+
+    const lineage = readFeatureLineage(projectDirectory, 'health');
+    expect(lineage).toBeDefined();
+    if (!lineage) return;
+    expect(featureFilesEqual(lineage.files, official)).toBe(true);
+    expect(lineage.record.baseDigest).toBe(digestFeatureFiles(official));
+
+    const evolveIO = createIO();
+    const evolveResult = runCli(['evolve', 'health', '--json'], evolveIO, { cwd: projectDirectory });
+    expect(evolveResult.exitCode).toBe(0);
+    expect(JSON.parse(evolveIO.output.join('')).status).toBe('up-to-date');
   });
 
   it('rejects unsafe project names', () => {

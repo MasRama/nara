@@ -151,10 +151,11 @@ Machine-readable output preserves the same facts in a stable object. Valid and i
 
 ## Evolvable Open Code
 
-Open-code composition must remain evolvable after installation. `nara add`
-copies official TypeScript into the project, then records the exact official
-source under `.nara/lineage/official-features/<feature>/base/` with a
-deterministic SHA-256 digest. The source stays ordinary code; the lineage is
+Open-code composition must remain evolvable from project creation onward.
+`nara new` copies the default Health Feature from the same official open-code
+source used by `nara add` and records its exact source as lineage `BASE` before
+the generated project becomes visible. `nara add` applies the same lineage
+process to later official Features. The source stays ordinary code; lineage is
 only a local reconciliation base, not a second architecture manifest.
 
 `nara evolve <feature>` compares:

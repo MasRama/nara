@@ -17,7 +17,10 @@ npm run dev
 
 This is the canonical lifecycle: `nara new` creates a minimal runnable
 application that carries its own pinned Nara tooling as a devDependency,
-so architecture checks travel with the project:
+so architecture checks travel with the project. Its default Health Feature is
+copied from the same official open-code source used by `nara add`, with
+lineage already established before the generated project is visible:
+
 
 ```bash
 npm run check                  # typechecks, tests, and nara doctor
@@ -275,8 +278,10 @@ until a capability can be packaged with zero out-of-feature changes.
 
 ## Evolvable Open Code
 
-Official Features remain ordinary project source after `nara add`, but they
-also carry a small local lineage record:
+Official Features remain ordinary project source after `nara new` or
+`nara add`, but they also carry a small local lineage record. The Health
+Feature created by `nara new` starts from the same official open-code source
+that later `nara evolve health` treats as `INCOMING`.
 
 ```text
 .nara/
