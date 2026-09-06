@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { computeAffected, diffSnapshots, diagnosticKey } from '../architecture/diff';
@@ -83,7 +83,7 @@ function execEvidence(
 function stageFullCandidate(root: string, feature: string, candidate: ReadonlyMap<string, Buffer>): string {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'nara-transition-app-'));
   try {
-    const entries: string[] = ['src', 'package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig.frontend.json', 'vite.config.mjs', 'migrations', 'tests', 'resources', 'public'];
+    const entries: string[] = ['src', 'package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig.frontend.json', 'vite.config.mjs', 'vite.config.ts', 'index.html', 'migrations', 'tests', 'resources', 'public'];
     for (const entry of entries) {
       const source = path.join(root, entry);
       if (!existsSync(source)) continue;
@@ -96,7 +96,7 @@ function stageFullCandidate(root: string, feature: string, candidate: ReadonlyMa
     const candidateModules = path.join(directory, 'node_modules');
     if (existsSync(nodeModules) && !existsSync(candidateModules)) {
       try {
-        cpSync(nodeModules, candidateModules, { recursive: true });
+        symlinkSync(nodeModules, candidateModules, 'junction');
       } catch {
         /* fall through: exec evidence will report missing */
       }
@@ -278,6 +278,9 @@ export function evaluateTransitionEvidence(context: EvidenceContext): Transition
             : history.detail,
         candidateDigest: digest,
         ...(history.limitations ? { limitations: history.limitations } : {}),
+        ...(fixturePath !== undefined && history.fixtureDigest !== undefined
+          ? { fixture: { path: fixturePath, digest: history.fixtureDigest, historyIds: history.historyIds ?? [] } }
+          : {}),
       });
     }
   } finally {

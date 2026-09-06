@@ -31,6 +31,12 @@ export interface TransitionObligation {
 
 export type EvidenceStatus = 'pass' | 'fail' | 'missing' | 'stale' | 'unsupported';
 
+export interface HistoryFixtureIdentity {
+  path: string;
+  digest: string;
+  historyIds: string[];
+}
+
 export interface TransitionEvidence {
   id: string;
   kind: string;
@@ -38,6 +44,7 @@ export interface TransitionEvidence {
   detail: string;
   candidateDigest: string;
   limitations?: string[];
+  fixture?: HistoryFixtureIdentity;
 }
 
 export interface TransitionAcceptance {
@@ -52,15 +59,17 @@ export interface AppFingerprintInput {
 }
 
 export interface TransitionReceipt {
-  schemaVersion: 2;
+  schemaVersion: 3;
   feature: string;
   transitionId: string;
   baseDigest: string;
   localStartDigest: string;
   incomingDigest: string;
+  incomingTransitionDigest: string;
   candidateDigest: string;
   appFingerprint: string;
   appInputs: AppFingerprintInput[];
+  historyFixtures: HistoryFixtureIdentity[];
   obligations: TransitionObligation[];
   evidence: TransitionEvidence[];
   outcome: TransitionOutcome;
@@ -78,19 +87,55 @@ export function hashBytes(bytes: Buffer): string {
   return sha256Hex(bytes);
 }
 
-/** Deterministic transition identity: feature + BASE + LOCAL-start + INCOMING. */
+/**
+ * Deterministic transition identity: feature + BASE + LOCAL-start +
+ * INCOMING transition inputs (source plus material distribution inputs).
+ */
 export function transitionIdentity(
   feature: string,
   baseDigest: string,
   localStartDigest: string,
-  incomingDigest: string,
+  incomingTransitionDigest: string,
 ): string {
-  return sha256Hex(`${feature}\n${baseDigest}\n${localStartDigest}\n${incomingDigest}`).slice(0, 16);
+  return sha256Hex(`${feature}\n${baseDigest}\n${localStartDigest}\n${incomingTransitionDigest}`).slice(0, 16);
 }
 
 /** Candidate revision identity: candidate feature bytes + application fingerprint. */
 export function candidateDigestFor(candidate: ReadonlyMap<string, Buffer>, appFingerprint: string): string {
   return sha256Hex(`${digestFeatureFiles(candidate)}\n${appFingerprint}`);
+}
+
+/**
+ * Material incoming distribution inputs consumed during transition
+ * evaluation. Lineage BASE stays pure official Feature source, but the
+ * transition identity must also move when distribution inputs that drive
+ * obligations change — currently the requirements manifest that feeds
+ * package/provider obligations. Assembly templates are install-time only:
+ * installation proves the resulting integration and evolution never
+ * touches bindings, so templates do not participate in transition
+ * reasoning and are deliberately excluded here instead of fingerprinting
+ * unused data.
+ */
+export const INCOMING_TRANSITION_DISTRIBUTION_FILES = ['.nara/requirements.json'] as const;
+
+export function readIncomingTransitionInputs(
+  officialDirectory: string,
+  incoming: ReadonlyMap<string, Buffer>,
+): Map<string, Buffer> {
+  const combined = new Map<string, Buffer>();
+  for (const [relativePath, bytes] of [...incoming.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    combined.set(`source/${relativePath}`, bytes);
+  }
+  for (const distributionFile of INCOMING_TRANSITION_DISTRIBUTION_FILES) {
+    const absolute = path.join(officialDirectory, ...distributionFile.split('/'));
+    if (!existsSync(absolute) || !statSync(absolute).isFile()) continue;
+    combined.set(`distribution/${distributionFile}`, readFileSync(absolute));
+  }
+  return combined;
+}
+
+export function digestIncomingTransition(officialDirectory: string, incoming: ReadonlyMap<string, Buffer>): string {
+  return digestFeatureFiles(readIncomingTransitionInputs(officialDirectory, incoming));
 }
 
 function digestFileBytes(filePath: string): string {
@@ -115,43 +160,58 @@ function collectFiles(root: string, directory: string, out: string[]): void {
   }
 }
 
-function shouldFingerprint(relative: string): boolean {
-  if (relative.startsWith('src/app/')) return true;
-  if (relative === 'package.json' || relative === 'package-lock.json') return true;
-  if (relative === 'tsconfig.json' || relative === 'tsconfig.frontend.json' || relative === 'vite.config.mjs') return true;
-  if (relative.startsWith('src/features/') && relative.includes('/server/migrations/') && relative.endsWith('.sql'))
-    return true;
+function shouldFingerprint(relative: string, feature: string): boolean {
+  if (relative.startsWith(`src/features/${feature}/`)) return false;
+  if (relative.startsWith('src/')) return true;
+  if (relative.startsWith('tests/')) return true;
   if (relative === 'migrations' || relative.startsWith('migrations/')) return true;
-  if (relative.startsWith('tests/') && (relative.endsWith('.test.ts') || relative.endsWith('.test.mjs'))) return true;
-  if (relative.startsWith('src/app/') && relative.endsWith('.test.ts')) return true;
+  if (relative.startsWith('resources/')) return true;
+  if (
+    relative === 'package.json' ||
+    relative === 'package-lock.json' ||
+    relative === 'tsconfig.json' ||
+    relative === 'tsconfig.frontend.json' ||
+    relative === 'vite.config.mjs' ||
+    relative === 'vite.config.ts' ||
+    relative === 'index.html'
+  ) {
+    return true;
+  }
   return false;
 }
 
 /**
- * Fingerprint application-owned state relevant to a transition candidate.
- * The transitioning feature's own source is excluded here; it is covered by
- * the candidate feature digest. Everything else that can invalidate
- * executable evidence is included conservatively.
+ * Fingerprint every material application-owned source input used by the
+ * evaluated candidate: application bindings and composition, all provider
+ * Feature source (bindings consume providers directly, so any provider
+ * change can move behavior), shared application modules, selected test
+ * source, the application migration set, manifests, and compiler/build
+ * configuration. The transitioning feature's own source is excluded here;
+ * it is covered by the candidate feature digest. Control state
+ * (`.nara/` receipts and lineage, databases, build output, dependencies)
+ * is excluded: lineage identity is tracked separately and history inputs
+ * are bound through their own fixture identities.
  */
 export function fingerprintApplicationState(
   root: string,
   feature: string,
 ): { digest: string; inputs: AppFingerprintInput[] } {
   const absoluteFiles: string[] = [];
-  collectFiles(root, path.join(root, 'src', 'app'), absoluteFiles);
-  for (const extra of ['package.json', 'package-lock.json', 'tsconfig.json', 'tsconfig.frontend.json', 'vite.config.mjs']) {
+  for (const tree of ['src', 'tests', 'migrations', 'resources']) {
+    collectFiles(root, path.join(root, ...tree.split('/')), absoluteFiles);
+  }
+  for (const extra of [
+    'package.json',
+    'package-lock.json',
+    'tsconfig.json',
+    'tsconfig.frontend.json',
+    'vite.config.mjs',
+    'vite.config.ts',
+    'index.html',
+  ]) {
     const absolute = path.join(root, extra);
     if (existsSync(absolute) && statSync(absolute).isFile()) absoluteFiles.push(absolute);
   }
-  collectFiles(root, path.join(root, 'migrations'), absoluteFiles);
-  const featureRoot = path.join(root, 'src', 'features');
-  if (existsSync(featureRoot) && statSync(featureRoot).isDirectory()) {
-    for (const entry of readdirSync(featureRoot).sort()) {
-      if (entry === feature) continue;
-      collectFiles(root, path.join(featureRoot, entry, 'server', 'migrations'), absoluteFiles);
-    }
-  }
-  collectFiles(root, path.join(root, 'tests'), absoluteFiles);
   const transitionChecks = transitionChecksPath(root, feature);
   if (existsSync(transitionChecks)) absoluteFiles.push(transitionChecks);
 
@@ -161,8 +221,7 @@ export function fingerprintApplicationState(
     const relative = posixRelative(root, absolute);
     if (seen.has(relative)) continue;
     seen.add(relative);
-    if (relative.startsWith('src/features/') && relative.includes(`/features/${feature}/`)) continue;
-    if (!shouldFingerprint(relative)) continue;
+    if (!shouldFingerprint(relative, feature)) continue;
     try {
       inputs.push({ path: relative, digest: digestFileBytes(absolute) });
     } catch {
@@ -173,7 +232,6 @@ export function fingerprintApplicationState(
   const digest = sha256Hex(inputs.map((input) => `${input.path}\n${input.digest}`).join('\n'));
   return { digest, inputs };
 }
-
 export function transitionDirectory(root: string, feature: string): string {
   return path.resolve(root, '.nara', 'transitions', feature);
 }
@@ -216,7 +274,9 @@ function sortReceipt(receipt: TransitionReceipt): TransitionReceipt {
     left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
   return {
     ...receipt,
-    appInputs: [...receipt.appInputs].sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0)),
+    historyFixtures: [...(receipt.historyFixtures ?? [])].sort((left, right) =>
+      left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+    ),
     obligations: [...receipt.obligations]
       .sort(byId)
       .map((obligation) => ({ ...obligation, surface: [...obligation.surface].sort() })),
@@ -252,8 +312,10 @@ export function readCurrentTransition(root: string, feature: string): Transition
   const file = transitionCurrentPath(root, feature);
   if (!existsSync(file)) return undefined;
   const parsed = JSON.parse(readFileSync(file, 'utf8')) as TransitionReceipt;
-  if (typeof parsed !== 'object' || parsed === null || parsed.schemaVersion !== 2) {
-    throw new Error(`Invalid transition receipt at ${file}.`);
+  if (typeof parsed !== 'object' || parsed === null || parsed.schemaVersion !== 3) {
+    throw new Error(
+      `Invalid transition receipt at ${file}: expected schemaVersion 3 with incoming distribution and history-fixture identity. Re-run the transition evaluation to issue a current receipt.`,
+    );
   }
   return parsed;
 }
