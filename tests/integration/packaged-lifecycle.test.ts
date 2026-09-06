@@ -568,16 +568,18 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
           filter: withoutTests,
         });
       }
-      const rootManifest = JSON.parse(readFileSync(path.join(repository, 'package.json'), 'utf8')) as {
+      interface FixtureManifest {
         dependencies: Record<string, string>;
-      };
+        devDependencies: Record<string, string>;
+      }
+      const rootManifest: FixtureManifest = JSON.parse(readFileSync(path.join(repository, 'package.json'), 'utf8'));
       const projectManifestPath = path.join(projectDirectory, 'package.json');
-      const projectManifest = JSON.parse(readFileSync(projectManifestPath, 'utf8')) as {
-        dependencies: Record<string, string>;
-      };
+      const projectManifest: FixtureManifest = JSON.parse(readFileSync(projectManifestPath, 'utf8'));
       for (const name of ['better-sqlite3', 'dotenv', 'pino', 'pino-pretty', 'pino-roll', 'sharp', 'zod']) {
         projectManifest.dependencies[name] = rootManifest.dependencies[name];
       }
+      const betterSqliteTypes = rootManifest.devDependencies['@types/better-sqlite3'];
+      if (betterSqliteTypes) projectManifest.devDependencies['@types/better-sqlite3'] = betterSqliteTypes;
       writeFileSync(projectManifestPath, `${JSON.stringify(projectManifest, null, 2)}\n`);
 
       pointNaraAtTarball(projectDirectory, tarball);
@@ -591,15 +593,16 @@ createRouter({ routes: [{ path: '/people', component: UsersPage }] });
 
       const doctor = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctor.stdout).toBe('Architecture looks healthy.\n');
-      const inspection = JSON.parse(
-        (await runLocalNara(projectDirectory, ['inspect', 'users', '--json'])).stdout,
-      ) as {
+      interface UsersInspection {
         dependencies: string[];
         integrations: {
           serverRoutes: Array<{ mountPath: string; exportName: string }>;
           webRoutes: Array<{ path: string; exportName: string }>;
         };
-      };
+      }
+      const inspection: UsersInspection = JSON.parse(
+        (await runLocalNara(projectDirectory, ['inspect', 'users', '--json'])).stdout,
+      );
       expect(inspection.dependencies).toEqual([]);
       expect(inspection.integrations.serverRoutes).toEqual(
         expect.arrayContaining([

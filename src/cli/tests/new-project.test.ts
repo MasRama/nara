@@ -56,7 +56,7 @@ describe('new project', () => {
       'dev:server': 'tsx watch src/server.ts',
       build: 'vite build && tsc',
       start: 'node build/server.js',
-      typecheck: 'tsc --noEmit',
+      typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.tests.json',
       lint: 'npm run typecheck',
       'typecheck:frontend': 'vue-tsc --noEmit -p tsconfig.frontend.json',
       test: 'vitest run',
@@ -105,6 +105,7 @@ describe('new project', () => {
       'src/vue.d.ts',
       'tsconfig.frontend.json',
       'tsconfig.json',
+      'tsconfig.tests.json',
       'vite.config.mjs',
       'vitest.config.mjs',
     ];
@@ -128,6 +129,12 @@ describe('new project', () => {
     expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("hostname: '127.0.0.1'");
     expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain('resolveBin');
     expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain("node_modules', '.bin'");
+    const testsTsconfig = JSON.parse(readFileSync(path.join(projectDirectory, 'tsconfig.tests.json'), 'utf8')) as {
+      extends?: string;
+      include?: string[];
+    };
+    expect(testsTsconfig.extends).toBe('./tsconfig.json');
+    expect(testsTsconfig.include).toEqual(['src/**/*.test.ts', 'tests/**/*.test.ts']);
     expect(discoverFeatureIntegrations(projectDirectory)).toEqual({
       health: {
         applicationImports: [

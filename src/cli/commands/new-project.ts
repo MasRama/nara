@@ -37,7 +37,7 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
           'dev:server': 'tsx watch src/server.ts',
           build: 'vite build && tsc',
           start: 'node build/server.js',
-          typecheck: 'tsc --noEmit',
+          typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.tests.json',
           lint: 'npm run typecheck',
           'typecheck:frontend': 'vue-tsc --noEmit -p tsconfig.frontend.json',
           test: 'vitest run',
@@ -87,6 +87,27 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
           esModuleInterop: true,
         },
         include: ['src/**/*.ts'],
+        exclude: ['**/*.test.ts'],
+      },
+      null,
+      2,
+    )}\n`,
+    'tsconfig.tests.json': `${JSON.stringify(
+      {
+        // Tests resolve modern export-only types (vitest, vite) that the
+        // CommonJS server program cannot read, so they typecheck as a
+        // separate no-emit program with bundler resolution.
+        extends: './tsconfig.json',
+        compilerOptions: {
+          module: 'esnext',
+          moduleResolution: 'bundler',
+          noEmit: true,
+          rootDir: '.',
+          lib: ['es2022', 'dom', 'dom.iterable'],
+          types: ['node'],
+        },
+        include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+        exclude: ['node_modules', 'build'],
       },
       null,
       2,
