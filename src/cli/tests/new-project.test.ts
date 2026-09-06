@@ -126,6 +126,9 @@ describe('new project', () => {
       'vite.config.mjs',
       'vitest.config.mjs',
     ];
+    for (const file of expectedFiles) {
+      expect(existsSync(path.join(projectDirectory, file))).toBe(true);
+    }
     expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("hostname: '127.0.0.1'");
     expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("from './shared/database'");
     expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain('migrate()');
