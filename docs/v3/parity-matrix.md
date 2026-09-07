@@ -28,7 +28,7 @@ by regression tests · **N/A** = not applicable to v3.
 | Missing API → backend 404 (never SPA HTML) | REIMPLEMENTED | `tests/integration/production-serving.test.ts`, `src/app/observability.test.ts` |
 | Health/readiness | REIMPLEMENTED | `official-features/health/tests/health.test.ts`, `tests/v3/health.test.ts` |
 | Production SPA + static delivery + caching | REIMPLEMENTED | `tests/integration/production-serving.test.ts` |
-| Vite dev topology + `/api` proxy | REIMPLEMENTED | `tests/v3/vite-topology.test.ts` (+ behavior suites above) |
+| Vite dev single-listener topology + Hono mounting | REIMPLEMENTED | `tests/v3/vite-topology.test.ts` (+ behavior suites above) |
 
 ## Configuration
 
@@ -77,7 +77,8 @@ project obsolete-stack assertion in `src/cli/tests/new-project.test.ts`.
 ## Division of responsibility (browser)
 
 - Real Vite topology smoke (`tests/v3/vite-topology.test.ts`): Vite serves
-  `/` + `/login`, `/health` and `/api/*` proxy to Hono.
+  `/` + `/login`, while Hono handles `/health` and `/api/*` on the same Vite
+  listener and origin.
 - Behavior-level Vue integration (`tests/v3/frontend.test.ts`, Feature
   `browser.test.ts` suites): navigation, forms, guards, transitions.
 - Production topology (`tests/integration/production-serving.test.ts`):

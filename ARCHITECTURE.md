@@ -90,12 +90,12 @@ Six distinct things; do not conflate them:
 1. **Ecosystem/runtime stack** — Hono, Vue, SQLite, TypeScript. Nara never
 2. **Nara's architecture model** — feature ownership, public and browser-safe boundaries, deterministic import evidence, public-symbol consumers, direct public-boundary provenance, and statically provable application integrations (this document).
 3. **Nara CLI/tooling** — `nara` is a development-time architecture
-   companion, not a production runtime abstraction. It ships as the
-   publishable npm package `@nara-web/cli` at `packages/nara` (`bin`
+   companion, not a production runtime abstraction. Its publishable npm
+   package is `@nara-web/cli` at `packages/nara` (`bin`
    exposes the `nara` executable from the staged CLI, `files` includes
-   only the staged `dist/` and `official-features/` source) and will be
-   acquired from the registry once published; it has not been published
-   yet.
+   only the staged `dist/` and `official-features/` source). The source release
+   may be tagged independently; the npm package has not yet had its first
+   registry publication and will be acquired from the registry once published.
 4. **Generated applications** — `nara new` output: the minimal canonical
    application (health-only: no database-consuming Feature, no auth; the
    persistence substrate ships with no tables). The default Health Feature

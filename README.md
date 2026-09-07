@@ -13,6 +13,10 @@ Nara keeps each business capability together and makes public boundaries, static
 
 ## Start here
 
+`@nara-web/cli` is not yet published to the npm registry. The registry command
+below is the canonical user flow once the first publish is complete; until
+then, work from a source checkout or the locally staged/packed package.
+
 ```bash
 npx @nara-web/cli new my-app
 cd my-app
@@ -68,7 +72,7 @@ Nara capabilities (auth, RBAC, users, assets, SQLite lifecycle). It is not
 the starting point for new products — `nara new` is. Additional capabilities
 reach generated projects as explicit open-code features via `nara add`, not
 by cloning the reference app.
-Packaging note: Nara is distributed on npm as `@nara-web/cli`. The package exposes the `nara` executable, so generated projects continue using commands such as `nara doctor`, `nara diff`, and `nara guard`. The publishable package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/`, `official-features/` source, `substrate/`, `LICENSE`, and `README.md`). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
+Packaging note: Nara's publishable npm package is named `@nara-web/cli`. It exposes the `nara` executable, so generated projects use commands such as `nara doctor`, `nara diff`, and `nara guard`. The package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/`, `official-features/` source, `substrate/`, `LICENSE`, and `README.md`). The source release is tagged `v3.2.0`, but the package has not yet been published to the npm registry; source/Git release status and npm distribution status are separate. The remaining registry step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree. Until then, staging plus `npm pack` from `packages/nara` produces the artifact intended for the registry.
 
 Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves the Vue app and HMR, while the Hono application is mounted into that same server for `/api`, `/health`, and `/ready`. There is no second development listener or proxy hop.
 

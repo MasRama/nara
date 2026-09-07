@@ -1,6 +1,8 @@
 # Nara v3.2.0 — Composable & Evolvable Open Code
 
-Status: released as `v3.2.0`. Canonical lifecycle: Compose → Own → Understand → Evolve → Protect.
+Status: source release tagged `v3.2.0`. The publishable npm package is
+`@nara-web/cli`, but the first npm registry publication is still pending.
+Canonical lifecycle: Compose → Own → Understand → Evolve → Protect.
 
 > Nara is an architecture-aware TypeScript application kit built around composable, evolvable open code.
 

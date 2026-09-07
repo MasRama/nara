@@ -2,10 +2,16 @@
 
 The Nara CLI is a TypeScript command-line tool for creating Features, composing official source packages, evolving installed official source, and inspecting architecture. Core analysis is deterministic and does not call an LLM.
 
-The `nara` CLI is distributed on npm as `@nara-web/cli` (not yet published; see the packaging note in [`README.md`](../../README.md)) and the package exposes the `nara` executable. Inside
-a generated project every command below runs from the project's own pinned
+The publishable npm package is `@nara-web/cli` (not yet published; see the
+packaging note in [`README.md`](../../README.md)) and exposes the `nara`
+executable. After the first registry publication, the `npx @nara-web/cli ...`
+examples below are the canonical entry point. Inside a generated project every command below runs from the project's own pinned
 `@nara-web/cli` install (`npx nara <command>` or `npm run architecture:doctor`). From a Nara
 repository checkout, the equivalent command is:
+
+```bash
+npx ts-node -r tsconfig-paths/register src/cli/index.ts <command>
+```
 
 Run `nara --help` for the command list and `-h`/`--help` for command-specific usage.
 
