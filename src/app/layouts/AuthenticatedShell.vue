@@ -44,48 +44,53 @@ async function logout(): Promise<void> {
 <template>
   <div class="min-h-[100dvh] bg-background font-body text-foreground antialiased selection:bg-primary/20 selection:text-primary">
     <header class="border-b border-border bg-background/95 backdrop-blur-md">
-      <nav class="mx-auto flex min-h-16 max-w-[1400px] items-center justify-between gap-6 px-6 sm:px-10 lg:px-16" aria-label="Application navigation">
-        <div class="flex min-w-0 items-center gap-8">
-          <RouterLink to="/" class="group flex shrink-0 items-center gap-2" aria-label="Nara home">
-            <span class="inline-block h-2.5 w-2.5 rounded-full bg-primary transition-transform duration-300 group-hover:scale-125"></span>
-            <span class="font-heading text-lg font-semibold tracking-tight">Nara</span>
-          </RouterLink>
+      <nav
+        class="mx-auto flex min-h-16 max-w-[1400px] flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 sm:px-10 lg:flex-nowrap lg:px-16 lg:py-0"
+        aria-label="Application navigation"
+      >
+        <RouterLink to="/" class="group flex shrink-0 items-center gap-2" aria-label="Nara home">
+          <span class="inline-block h-2.5 w-2.5 rounded-full bg-primary transition-transform duration-300 group-hover:scale-125"></span>
+          <span class="font-heading text-lg font-semibold tracking-tight">Nara</span>
+        </RouterLink>
 
-          <div v-if="authSession.isAuthenticated.value" class="flex items-center gap-1">
-            <RouterLink
-              to="/dashboard"
-              class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-              active-class="bg-muted text-foreground"
-            >
-              Dashboard
-            </RouterLink>
-            <RouterLink
-              v-if="canViewUsers"
-              to="/users"
-              class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-              active-class="bg-muted text-foreground"
-            >
-              Users
-            </RouterLink>
-            <RouterLink
-              v-if="canViewRoles"
-              to="/roles"
-              class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-              active-class="bg-muted text-foreground"
-            >
-              Roles
-            </RouterLink>
-            <RouterLink
-              to="/profile"
-              class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-              active-class="bg-muted text-foreground"
-            >
-              Profile
-            </RouterLink>
-          </div>
+        <div
+          v-if="authSession.isAuthenticated.value"
+          data-testid="authenticated-nav-links"
+          class="order-3 flex w-full min-w-0 items-center gap-1 overflow-x-auto pb-1 lg:order-none lg:w-auto lg:flex-1 lg:overflow-visible lg:pb-0"
+        >
+          <RouterLink
+            to="/dashboard"
+            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            active-class="bg-muted text-foreground"
+          >
+            Dashboard
+          </RouterLink>
+          <RouterLink
+            v-if="canViewUsers"
+            to="/users"
+            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            active-class="bg-muted text-foreground"
+          >
+            Users
+          </RouterLink>
+          <RouterLink
+            v-if="canViewRoles"
+            to="/roles"
+            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            active-class="bg-muted text-foreground"
+          >
+            Roles
+          </RouterLink>
+          <RouterLink
+            to="/profile"
+            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            active-class="bg-muted text-foreground"
+          >
+            Profile
+          </RouterLink>
         </div>
 
-        <div class="flex shrink-0 items-center gap-3">
+        <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           <RouterLink
             to="/profile"
             class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-medium transition-colors hover:border-primary/50"
@@ -97,7 +102,7 @@ async function logout(): Promise<void> {
           <button
             type="button"
             :disabled="isLoggingOut"
-            class="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+            class="whitespace-nowrap rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:px-3"
             @click="logout"
           >
             {{ isLoggingOut ? 'Signing out…' : 'Sign out' }}

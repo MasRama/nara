@@ -6,7 +6,7 @@ import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { createAuthSession, useAuthSession } from '../web';
+import { createAuthSession, useAuthSession, type AuthClient, type CurrentUser } from '../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 
@@ -292,6 +292,55 @@ describe('browser authentication lifecycle', () => {
     const expiredSession = createAuthSession();
     await expiredSession.load();
     expect(expiredSession.status.value).toBe('unauthenticated');
+  });
+
+  it('preserves established auth state across transient current-user failures and clears it only on unauthorized', async () => {
+    const user: CurrentUser = {
+      id: 'session-user',
+      name: 'Session User',
+      email: 'session@example.com',
+      avatar: null,
+      roles: ['admin'],
+      permissions: ['users.view'],
+    };
+    const me = vi
+      .fn()
+      .mockResolvedValueOnce({ success: true, message: 'OK', data: { user } })
+      .mockResolvedValueOnce({ success: false, message: 'Server unavailable', code: 'INTERNAL_ERROR' })
+      .mockRejectedValueOnce(new Error('network unavailable'))
+      .mockResolvedValueOnce({ success: false, message: 'Unauthorized', code: 'UNAUTHORIZED' });
+    const session = createAuthSession({ me } as unknown as AuthClient);
+
+    await session.load();
+    expect(session.isAuthenticated.value).toBe(true);
+
+    await expect(session.refresh()).rejects.toThrow('Server unavailable');
+    expect(session.isAuthenticated.value).toBe(true);
+    expect(session.user.value).toEqual(user);
+
+    await expect(session.refresh()).rejects.toThrow('network unavailable');
+    expect(session.isAuthenticated.value).toBe(true);
+    expect(session.user.value).toEqual(user);
+
+    await expect(session.refresh()).resolves.toBe(false);
+    expect(session.status.value).toBe('unauthenticated');
+    expect(session.user.value).toBeNull();
+  });
+
+  it('revalidates an established session before protected navigation and redirects when it was revoked', async () => {
+    const email = `revoked-${Date.now()}@example.com`;
+    await registerDirect(email);
+    await useAuthSession().refresh();
+    await mountAt('/dashboard');
+    expect(useAuthSession().isAuthenticated.value).toBe(true);
+
+    setSessionCookie(undefined);
+    await router.push('/profile');
+    await router.isReady();
+
+    expect(useAuthSession().status.value).toBe('unauthenticated');
+    expect(router.currentRoute.value.name).toBe('login');
+    expect(router.currentRoute.value.query.redirect).toBe('/profile');
   });
 
   it('redirects guests to login and returns them to the protected destination after login', async () => {

@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
 const cloneCommand = 'git clone https://github.com/MasRama/nara.git';
 const currentYear = new Date().getFullYear();
-const isDark = ref(false);
+const isDark = ref(document.documentElement.classList.contains('dark'));
 const copied = ref(false);
 const scrolled = ref(false);
 let copyTimer: ReturnType<typeof setTimeout> | undefined;
@@ -25,7 +25,11 @@ const landingAction = computed(() =>
 function applyTheme(dark: boolean): void {
   isDark.value = dark;
   document.documentElement.classList.toggle('dark', dark);
-  window.localStorage.setItem('nara-theme', dark ? 'dark' : 'light');
+  try {
+    window.localStorage.setItem('nara-theme', dark ? 'dark' : 'light');
+  } catch {
+    // The visual preference still applies for this page when storage is unavailable.
+  }
 }
 
 function toggleTheme(): void {
@@ -48,9 +52,7 @@ async function copyCommand(): Promise<void> {
 }
 
 onMounted(() => {
-  const savedTheme = window.localStorage.getItem('nara-theme');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(savedTheme ? savedTheme === 'dark' : prefersDark);
+  isDark.value = document.documentElement.classList.contains('dark');
   updateScrollState();
   window.addEventListener('scroll', updateScrollState, { passive: true });
 });
