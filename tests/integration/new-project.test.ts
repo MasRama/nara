@@ -75,23 +75,13 @@ function findFreePort(): Promise<number> {
   return promise;
 }
 
-async function findDistinctPorts(): Promise<{ vitePort: number; serverPort: number }> {
-  const vitePort = await findFreePort();
-  let serverPort = await findFreePort();
-  while (serverPort === vitePort) {
-    serverPort = await findFreePort();
-  }
-  return { vitePort, serverPort };
-}
-
 function startGeneratedDevServer(
   projectDirectory: string,
-  vitePort: number,
-  serverPort: number,
+  port: number,
 ): { child: ChildProcess; output: () => string } {
   const child = spawn(npmCommand, ['run', 'dev'], {
     cwd: projectDirectory,
-    env: { ...process.env, PORT: String(serverPort), VITE_PORT: String(vitePort) },
+    env: { ...process.env, PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],
     detached: process.platform !== 'win32',
   });
@@ -109,16 +99,13 @@ function startGeneratedDevServer(
 
 async function waitForDevelopmentHealth(
   child: ChildProcess,
-  vitePort: number,
-  serverPort: number,
+  port: number,
   output: () => string,
 ): Promise<void> {
-  const frontendUrl = `http://127.0.0.1:${vitePort}/`;
-  const healthUrl = `http://127.0.0.1:${vitePort}/health`;
-  const backendUrl = `http://127.0.0.1:${serverPort}/health`;
+  const frontendUrl = `http://127.0.0.1:${port}/`;
+  const healthUrl = `http://127.0.0.1:${port}/health`;
   let lastFrontend = 'unreached';
-  let lastViaVite = 'unreached';
-  let lastBackend = 'unreached';
+  let lastHealth = 'unreached';
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
@@ -130,16 +117,10 @@ async function waitForDevelopmentHealth(
       if (frontendResponse.status === 200) {
         try {
           const healthResponse = await fetch(healthUrl);
-          lastViaVite = String(healthResponse.status);
+          lastHealth = String(healthResponse.status);
           if (healthResponse.status === 200) return;
         } catch {
-          lastViaVite = 'unreached';
-        }
-        try {
-          const backendResponse = await fetch(backendUrl);
-          lastBackend = String(backendResponse.status);
-        } catch {
-          lastBackend = 'unreached';
+          lastHealth = 'unreached';
         }
       }
     } catch {
@@ -149,7 +130,7 @@ async function waitForDevelopmentHealth(
   }
   throw new Error(
     `Generated development server did not answer ${healthUrl} within 30 seconds. ` +
-      `last frontend ${frontendUrl}=${lastFrontend}, via-Vite health=${lastViaVite}, direct backend ${backendUrl}=${lastBackend}.\n${output()}`,
+      `last frontend ${frontendUrl}=${lastFrontend}, health=${lastHealth}.\n${output()}`,
   );
 }
 
@@ -259,18 +240,17 @@ describe('nara new fresh project', () => {
       pointNaraAtTarball(projectDirectory, await ensurePackedNara());
       await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
 
-      const { vitePort, serverPort } = await findDistinctPorts();
-      const generatedDevServer = startGeneratedDevServer(projectDirectory, vitePort, serverPort);
+      const devPort = await findFreePort();
+      const generatedDevServer = startGeneratedDevServer(projectDirectory, devPort);
       try {
-        await waitForDevelopmentHealth(generatedDevServer.child, vitePort, serverPort, generatedDevServer.output);
-        const response = await fetch(`http://127.0.0.1:${vitePort}/health`);
+        await waitForDevelopmentHealth(generatedDevServer.child, devPort, generatedDevServer.output);
+        const response = await fetch(`http://127.0.0.1:${devPort}/health`);
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toEqual({ status: 'ok' });
       } finally {
         await stopGeneratedDevServer(generatedDevServer.child);
       }
-      await expectUnavailable(`http://127.0.0.1:${vitePort}/`);
-      await expectUnavailable(`http://127.0.0.1:${serverPort}/health`);
+      await expectUnavailable(`http://127.0.0.1:${devPort}/`);
       await runCommand(npmCommand, ['run', 'typecheck'], projectDirectory);
       await runCommand(npmCommand, ['run', 'typecheck:frontend'], projectDirectory);
       await runCommand(npmCommand, ['test'], projectDirectory);

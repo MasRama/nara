@@ -64,8 +64,7 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
         private: true,
         engines: { node: '>=22.0.0' },
         scripts: {
-          dev: 'tsx scripts/dev.ts',
-          'dev:server': 'tsx watch src/server.ts',
+          dev: 'vite',
           build: 'vite build && tsc',
           start: 'node build/server.js',
           typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.tests.json',
@@ -86,6 +85,7 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
         },
         devDependencies: {
           '@nara-web/cli': cliVersion,
+          '@hono/vite-dev-server': '^0.26.1',
           '@types/better-sqlite3': '^7.6.13',
           '@types/node': '^22.20.1',
           '@vitejs/plugin-vue': '^6.0.8',
@@ -179,28 +179,35 @@ function projectFiles(name: string, cliVersion: string): Record<string, string> 
     )}\n`,
     'vite.config.mjs': `import { defineConfig, loadEnv } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import devServer, { defaultOptions } from '@hono/vite-dev-server';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const serverPort = Number(process.env.PORT || env.PORT || 5555);
-  const vitePort = Number(process.env.VITE_PORT || env.VITE_PORT || 5173);
-  const serverOrigin = \`http://127.0.0.1:\${serverPort}\`;
+  const port = Number(process.env.PORT || env.PORT || 5555);
+  const nonBackendPath = /^(?!\\/(?:api(?:\\/|\\?|$)|health(?:\\/|\\?|$)|ready(?:\\/|\\?|$))).*/;
 
   return {
     root: 'resources',
-    plugins: [vue()],
-    server: {
-      // Explicit loopback binding: the dev test dials 127.0.0.1 and the
-      // Hono proxy target below uses 127.0.0.1, so never rely on implicit
-      // localhost resolution (IPv4 vs IPv6 varies across machines/CI).
-      host: '127.0.0.1',
-      port: vitePort,
-      strictPort: true,
-      proxy: {
-        '/api': { target: serverOrigin },
-        '/health': { target: serverOrigin },
-        '/ready': { target: serverOrigin },
+    plugins: [
+      {
+        name: 'nara-application-runtime',
+        async configureServer(server) {
+          const database = await server.ssrLoadModule('../src/shared/database/index.ts');
+          database.migrate();
+        },
       },
+      devServer({
+        entry: '../src/app/server.ts',
+        export: 'app',
+        injectClientScript: false,
+        exclude: [nonBackendPath, ...defaultOptions.exclude],
+      }),
+      vue(),
+    ],
+    server: {
+      host: '127.0.0.1',
+      port,
+      strictPort: true,
     },
     build: {
       outDir: '../build/client',
@@ -222,81 +229,6 @@ export default defineConfig({
 });
 `,
     '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\ndatabase/\n',
-    'scripts/dev.ts': `import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
-
-const isWindows = process.platform === 'win32';
-const children: ChildProcess[] = [];
-let shuttingDown = false;
-let shutdownPromise: Promise<void> | undefined;
-
-function delay(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function resolveBin(name: string): string {
-  // Prefer the project's own install so dev never depends on ambient PATH.
-  // Falls back to the bare name (global install) with an actionable error
-  // below when neither resolves.
-  const binary = isWindows ? name + '.cmd' : name;
-  const local = path.join(process.cwd(), 'node_modules', '.bin', binary);
-  if (existsSync(local)) return local;
-  return name;
-}
-
-function start(command: string, args: string[], label: string): ChildProcess {
-  const resolved = resolveBin(command);
-  const child = spawn(resolved, args, {
-    stdio: 'inherit',
-    shell: isWindows,
-    env: { ...process.env, FORCE_COLOR: '1' },
-  });
-  children.push(child);
-
-  child.once('error', (error) => {
-    if (shuttingDown) return;
-    process.stderr.write('[' + label + '] failed to start ' + resolved + ' ' + args.join(' ') + ': ' + error.message + '\\n');
-    process.stderr.write('[' + label + '] run npm install in this project, then retry npm run dev.\\n');
-    void shutdown(1);
-  });
-  child.once('exit', (code, signal) => {
-    if (shuttingDown) return;
-    const reason = signal ? 'signal ' + signal : 'code ' + String(code ?? 'unknown');
-    process.stderr.write('[' + label + '] exited unexpectedly (' + reason + '). Both Vite and Hono must stay up for npm run dev.\\n');
-    process.stderr.write('[' + label + '] see the [' + label + '] output above for the underlying failure.\\n');
-    void shutdown(signal === 'SIGINT' || signal === 'SIGTERM' ? 0 : 1);
-  });
-
-  return child;
-}
-
-function shutdown(exitCode: number): Promise<void> {
-  if (shutdownPromise) return shutdownPromise;
-  shuttingDown = true;
-  shutdownPromise = (async () => {
-    for (const child of children) {
-      if (child.exitCode === null) child.kill('SIGTERM');
-    }
-    await delay(1_000);
-    for (const child of children) {
-      if (child.exitCode === null) child.kill('SIGKILL');
-    }
-    process.exitCode = exitCode;
-  })();
-  return shutdownPromise;
-}
-
-process.once('SIGINT', () => {
-  void shutdown(0);
-});
-process.once('SIGTERM', () => {
-  void shutdown(0);
-});
-
-start('vite', [], 'vite');
-start('tsx', ['watch', 'src/server.ts'], 'hono');
-`,
     'AGENTS.md': `# ${name}
 
 This is a minimal Nara v3 application.
@@ -304,8 +236,8 @@ This is a minimal Nara v3 application.
 - Runtime: TypeScript, Node.js, Hono, and @hono/node-server.
 - Browser stack: Vue 3 + Vite + TypeScript.
 - Architecture tooling: the local Nara CLI is a pinned devDependency (npm run architecture:doctor runs nara doctor from this project).
-- Run npm run dev for the full-stack development session; it starts Vue/Vite and Hono together.
-- During development, Vite proxies /api, /health, and /ready to Hono.
+- Run npm run dev for the full-stack development session; one Vite server serves Vue/HMR and mounts Hono on the same port.
+- During development, Hono handles /api, /health, and /ready on the Vite listener.
 - Business capabilities belong under src/features/<feature>.
 - Each Feature exposes behavior through its index.ts public boundary.
 - Application-wide Vue composition belongs under src/app/; src/app/router.ts owns browser routes and src/app/pages holds app-owned pages.
@@ -315,7 +247,7 @@ This is a minimal Nara v3 application.
 - The default Health Feature comes from the bundled official open-code source and already has lineage established; npx nara add <feature> records lineage for later official Features, and npx nara evolve <feature> --dry-run previews bundled updates.
 - Run npm run check before handing off changes (it includes the architecture check).
 
-The development ports default to Vite 5173 and Hono 5555; set VITE_PORT and PORT to override them.
+Development uses one port, PORT, which defaults to 5555.
 The app entrypoint is resources/app.ts. The Hono composition is src/app/server.ts, and the production server is src/server.ts.
 `,
     'resources/index.html': `<!doctype html>
@@ -493,9 +425,8 @@ import { app } from './app/server';
 import { migrate } from './shared/database';
 
 const port = Number(process.env.PORT ?? 5555);
-const vitePort = Number(process.env.VITE_PORT ?? 5173);
 const isProduction = process.env.NODE_ENV === 'production';
-const appUrl = process.env.APP_URL?.trim() || 'http://localhost:' + (isProduction ? String(port) : String(vitePort));
+const appUrl = process.env.APP_URL?.trim() || 'http://localhost:' + String(port);
 
 if (isProduction && !process.env.APP_URL?.trim()) {
   throw new Error('APP_URL is required in production');
@@ -509,11 +440,8 @@ try {
   process.stderr.write('Database migration failed: ' + (error instanceof Error ? error.message : String(error)) + '\\n');
   process.exit(1);
 }
-serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, (info) => {
-  const startupMessage = isProduction
-    ? 'Browser/API: ' + appUrl
-    : 'Browser: ' + appUrl + ' (Vite); Backend implementation: http://127.0.0.1:' + info.port;
-  process.stdout.write(startupMessage + '\\n');
+serve({ fetch: app.fetch, port, hostname: '127.0.0.1' }, () => {
+  process.stdout.write('Browser/API: ' + appUrl + '\\n');
 });
 `,
     'tests/health.test.ts': `import { describe, expect, it } from 'vitest';

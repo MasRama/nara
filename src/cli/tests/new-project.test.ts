@@ -52,8 +52,7 @@ describe('new project', () => {
       devDependencies: Record<string, string>;
     };
     expect(packageJson.scripts).toMatchObject({
-      dev: 'tsx scripts/dev.ts',
-      'dev:server': 'tsx watch src/server.ts',
+      dev: 'vite',
       build: 'vite build && tsc',
       start: 'node build/server.js',
       typecheck: 'tsc --noEmit && tsc --noEmit -p tsconfig.tests.json',
@@ -73,6 +72,7 @@ describe('new project', () => {
       'zod',
     ]);
     expect(Object.keys(packageJson.devDependencies).sort()).toEqual([
+      '@hono/vite-dev-server',
       '@nara-web/cli',
       '@types/better-sqlite3',
       '@types/node',
@@ -97,7 +97,6 @@ describe('new project', () => {
     expect(packageJson.devDependencies['@nara-web/cli']).not.toMatch(/^[ ^~]/);
 
     const expectedFiles = [
-      'scripts/dev.ts',
       'AGENTS.md',
       'resources/app.ts',
       'resources/index.css',
@@ -146,10 +145,10 @@ describe('new project', () => {
       expect(readFileSync(file, 'utf8')).not.toMatch(obsoleteStack);
     }
     expect(readFileSync(path.join(projectDirectory, 'vite.config.mjs'), 'utf8')).toContain("host: '127.0.0.1'");
-    expect(readFileSync(path.join(projectDirectory, 'vite.config.mjs'), 'utf8')).toContain('http://127.0.0.1:${serverPort}');
+    expect(readFileSync(path.join(projectDirectory, 'vite.config.mjs'), 'utf8')).toContain("entry: '../src/app/server.ts'");
+    expect(readFileSync(path.join(projectDirectory, 'vite.config.mjs'), 'utf8')).not.toContain('proxy:');
     expect(readFileSync(path.join(projectDirectory, 'src/server.ts'), 'utf8')).toContain("hostname: '127.0.0.1'");
-    expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain('resolveBin');
-    expect(readFileSync(path.join(projectDirectory, 'scripts/dev.ts'), 'utf8')).toContain("node_modules', '.bin'");
+    expect(existsSync(path.join(projectDirectory, 'scripts/dev.ts'))).toBe(false);
     const testsTsconfig = JSON.parse(readFileSync(path.join(projectDirectory, 'tsconfig.tests.json'), 'utf8')) as {
       extends?: string;
       include?: string[];
