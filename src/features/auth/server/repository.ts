@@ -6,6 +6,7 @@ export interface StoredUser {
   email: string;
   password: string;
   avatar: string | null;
+  must_change_password: number;
   created_at: number;
   updated_at: number;
 }
@@ -15,17 +16,18 @@ export interface SessionUser {
   name: string;
   email: string;
   avatar: string | null;
+  must_change_password: number;
 }
 
 export function findUserByEmail(email: string): StoredUser | undefined {
   return getDatabase()
-    .prepare('SELECT id, name, email, password, avatar, created_at, updated_at FROM users WHERE email = ?')
+    .prepare('SELECT id, name, email, password, avatar, must_change_password, created_at, updated_at FROM users WHERE email = ?')
     .get(email) as StoredUser | undefined;
 }
 
 export function findUserById(userId: string): StoredUser | undefined {
   return getDatabase()
-    .prepare('SELECT id, name, email, password, avatar, created_at, updated_at FROM users WHERE id = ?')
+    .prepare('SELECT id, name, email, password, avatar, must_change_password, created_at, updated_at FROM users WHERE id = ?')
     .get(userId) as StoredUser | undefined;
 }
 
@@ -48,7 +50,7 @@ export function createUser(data: {
 
 export function updatePassword(userId: string, password: string): void {
   getDatabase()
-    .prepare('UPDATE users SET password = ?, updated_at = ? WHERE id = ?')
+    .prepare('UPDATE users SET password = ?, must_change_password = 0, updated_at = ? WHERE id = ?')
     .run(password, Date.now(), userId);
 }
 
@@ -73,7 +75,7 @@ export function createSession(data: {
 export function findUserBySessionId(sessionId: string): SessionUser | undefined {
   return getDatabase()
     .prepare(
-      `SELECT u.id, u.name, u.email, u.avatar
+      `SELECT u.id, u.name, u.email, u.avatar, u.must_change_password
        FROM users u
        INNER JOIN sessions s ON s.user_id = u.id
        WHERE s.id = ? AND s.expires_at > ?`,

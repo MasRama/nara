@@ -91,12 +91,15 @@ describe('auth account directory', () => {
   });
   it('revokes target sessions when a managed password reset commits', () => {
     const account = createAccount({ id: randomUUID(), name: 'Reset Target', email: uniqueEmail(), passwordHash: 'old-hash' });
-    startSession({ ...account, password: 'old-hash', created_at: 1, updated_at: 1 }, undefined);
+    startSession({ ...account, password: 'old-hash', must_change_password: 0, created_at: 1, updated_at: 1 }, undefined);
     expect(getDatabase().prepare('SELECT COUNT(*) AS count FROM sessions WHERE user_id = ?').get(account.id)).toEqual({ count: 1 });
 
     const updated = resetAccountPassword(account.id, 'new-hash');
     expect(updated?.id).toBe(account.id);
-    expect(getDatabase().prepare('SELECT password FROM users WHERE id = ?').get(account.id)).toEqual({ password: 'new-hash' });
+    expect(getDatabase().prepare('SELECT password, must_change_password FROM users WHERE id = ?').get(account.id)).toEqual({
+      password: 'new-hash',
+      must_change_password: 1,
+    });
     expect(getDatabase().prepare('SELECT COUNT(*) AS count FROM sessions WHERE user_id = ?').get(account.id)).toEqual({ count: 0 });
   });
 
@@ -108,7 +111,7 @@ describe('auth account directory', () => {
       .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
       .run(randomUUID(), account.id, role.id, Date.now());
     startSession(
-      { ...account, password: 'hash', created_at: 1, updated_at: 1 },
+      { ...account, password: 'hash', must_change_password: 0, created_at: 1, updated_at: 1 },
       undefined,
     );
     expect(deleteAccounts([account.id])).toBe(1);

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouterScrollBehavior } from 'vue-router';
-import { LoginPage, RegisterPage, RolesPage, useAuthSession } from '../features/auth/web';
+import { ChangePasswordPage, LoginPage, RegisterPage, RolesPage, useAuthSession } from '../features/auth/web';
 import usersWebRoutes from './bindings/users.web';
 import DashboardPage from './pages/DashboardPage.vue';
 import HomePage from './pages/HomePage.vue';
@@ -27,6 +27,12 @@ export const appRoutes = [
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/change-password',
+    name: 'change-password',
+    component: ChangePasswordPage,
     meta: { requiresAuth: true },
   },
   ...usersWebRoutes,
@@ -77,6 +83,14 @@ router.beforeEach(async (to) => {
       name: 'login',
       query: { redirect: to.fullPath },
     };
+  }
+
+  if (
+    authSession.isAuthenticated.value &&
+    authSession.user.value?.mustChangePassword === true &&
+    to.name !== 'change-password'
+  ) {
+    return { name: 'change-password' };
   }
   const requiredPermission = to.meta.requiresPermission;
   if (typeof requiredPermission === 'string' && !authSession.can(requiredPermission)) {

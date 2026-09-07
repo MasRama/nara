@@ -62,6 +62,7 @@ export interface PublicUser {
 export interface CurrentUser extends PublicUser {
   roles: readonly string[];
   permissions: readonly string[];
+  mustChangePassword: boolean;
 }
 
 export interface AuthSuccess<T = undefined> {

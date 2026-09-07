@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
+import { getDatabase } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { comparePassword, hashPassword } from '../server/service';
 
@@ -52,5 +53,42 @@ describe('auth password migration', () => {
       body: JSON.stringify({ email, password: newPassword }),
     });
     expect(newLogin.status).toBe(200);
+  });
+
+  it('blocks temporary-password sessions until the user changes that credential', async () => {
+    const email = `${randomUUID()}@example.com`;
+    const oldPassword = 'temporary bootstrap password';
+    const newPassword = 'replacement bootstrap password';
+    const json = { 'Content-Type': 'application/json' };
+
+    const bootstrap = await issueCsrf(app);
+    const registerResponse = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: { ...csrfHeaders(bootstrap), ...json },
+      body: JSON.stringify({ name: 'Temporary User', email, password: oldPassword }),
+    });
+    const sessionCookie = mergeResponseCookies(bootstrap.cookie, registerResponse);
+    getDatabase().prepare('UPDATE users SET must_change_password = 1 WHERE email = ?').run(email);
+
+    const me = await app.request('/api/auth/me', { headers: { Cookie: sessionCookie } });
+    expect(me.status).toBe(200);
+    await expect(me.json()).resolves.toMatchObject({ data: { user: { mustChangePassword: true } } });
+
+    const blocked = await app.request('/api/users/me', { headers: { Cookie: sessionCookie } });
+    expect(blocked.status).toBe(403);
+    await expect(blocked.json()).resolves.toMatchObject({ code: 'PASSWORD_CHANGE_REQUIRED' });
+
+    const changeState = await issueCsrf(app, sessionCookie);
+    const changeResponse = await app.request('/api/auth/change-password', {
+      method: 'POST',
+      headers: { ...csrfHeaders(changeState), ...json },
+      body: JSON.stringify({ current_password: oldPassword, new_password: newPassword }),
+    });
+    expect(changeResponse.status).toBe(200);
+    const changedCookie = mergeResponseCookies(changeState.cookie, changeResponse);
+
+    const refreshed = await app.request('/api/auth/me', { headers: { Cookie: changedCookie } });
+    await expect(refreshed.json()).resolves.toMatchObject({ data: { user: { mustChangePassword: false } } });
+    expect((await app.request('/api/users/me', { headers: { Cookie: changedCookie } })).status).toBe(200);
   });
 });

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
+import { getDatabase } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { createAuthSession, useAuthSession, type AuthClient, type CurrentUser } from '../web';
 
@@ -302,6 +303,7 @@ describe('browser authentication lifecycle', () => {
       avatar: null,
       roles: ['admin'],
       permissions: ['users.view'],
+      mustChangePassword: false,
     };
     const me = vi
       .fn()
@@ -367,6 +369,38 @@ describe('browser authentication lifecycle', () => {
     expect(container.querySelector('h1')?.textContent).toContain('Welcome, Existing User.');
     expect(useAuthSession().isAuthenticated.value).toBe(true);
     expect(document.documentElement).toBe(documentElement);
+  });
+
+  it('forces temporary-password users through password change before dashboard access', async () => {
+    const email = `temporary-${Date.now()}@example.com`;
+    const replacement = 'replacement browser password';
+    await registerDirect(email);
+    getDatabase().prepare('UPDATE users SET must_change_password = 1 WHERE email = ?').run(email);
+    await useAuthSession().logout();
+
+    await mountAt('/login');
+    setInput('#email', email);
+    setInput('#password', TEST_PASSWORD);
+    const forcedNavigation = waitForNavigation();
+    submitForm();
+    await forcedNavigation;
+    await settle();
+
+    expect(router.currentRoute.value.name).toBe('change-password');
+    expect(container.querySelector('h1')?.textContent).toContain('Change your password');
+    expect(useAuthSession().user.value?.mustChangePassword).toBe(true);
+
+    setInput('#current-password', TEST_PASSWORD);
+    setInput('#new-password', replacement);
+    setInput('#confirm-password', replacement);
+    const dashboardNavigation = waitForNavigation();
+    submitForm();
+    await dashboardNavigation;
+    await settle();
+
+    expect(router.currentRoute.value.name).toBe('dashboard');
+    expect(useAuthSession().user.value?.mustChangePassword).toBe(false);
+    expect(fetchPaths).toContain('/api/auth/change-password');
   });
 
   it('logs out through the server and protects the route again', async () => {

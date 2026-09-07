@@ -79,6 +79,8 @@ export function createAuthSession(client: AuthClient = createAuthClient()): Auth
       ...nextUser,
       roles: 'roles' in nextUser ? nextUser.roles : previousUser?.roles ?? [],
       permissions: 'permissions' in nextUser ? nextUser.permissions : previousUser?.permissions ?? [],
+      mustChangePassword:
+        'mustChangePassword' in nextUser ? nextUser.mustChangePassword : previousUser?.mustChangePassword ?? false,
     };
     status.value = 'authenticated';
     loaded = true;

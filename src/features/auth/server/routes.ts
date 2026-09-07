@@ -203,9 +203,13 @@ const changePasswordHandler = async (context: Context) => {
 
 function currentUserPayload(user: SessionUser): CurrentUser {
   return {
-    ...user,
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    avatar: user.avatar,
     roles: getUserRoles(user.id).map((role) => role.slug),
     permissions: getUserPermissions(user.id).map((permission) => permission.slug),
+    mustChangePassword: user.must_change_password === 1,
   };
 }
 

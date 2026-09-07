@@ -140,7 +140,7 @@ export function resetAccountPassword(userId: string, passwordHash: string): Acco
   const database = getDatabase();
   return database.transaction(() => {
     const result = database
-      .prepare('UPDATE users SET password = ?, updated_at = ? WHERE id = ?')
+      .prepare('UPDATE users SET password = ?, must_change_password = 1, updated_at = ? WHERE id = ?')
       .run(passwordHash, Date.now(), userId);
     if (result.changes === 0) return undefined;
     database.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
