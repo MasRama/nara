@@ -16,6 +16,7 @@
     "migrate:status": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts migrate:status",
     "migrate:fresh": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts migrate:fresh",
     "seed": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts seed",
+    "setup": "node -r ts-node/register -r tsconfig-paths/register scripts/setup.ts",
     "bootstrap:admin": "node -r ts-node/register -r tsconfig-paths/register scripts/bootstrap-admin.ts",
     "db:backup": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts db:backup",
     "db:check": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts db:check",
