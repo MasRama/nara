@@ -70,7 +70,7 @@ reach generated projects as explicit open-code features via `nara add`, not
 by cloning the reference app.
 Packaging note: Nara is distributed on npm as `@nara-web/cli`. The package exposes the `nara` executable, so generated projects continue using commands such as `nara doctor`, `nara diff`, and `nara guard`. The publishable package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/`, `official-features/` source, `substrate/`, `LICENSE`, and `README.md`). It has not been published to the npm registry yet; the remaining external step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree, after which the commands above resolve from the registry. Until then, staging plus `npm pack` from `packages/nara` produces the same artifact the registry would serve.
 
-The development topology uses two local ports: Vite serves the browser on `VITE_PORT` (default `5173`) and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono on `PORT` (default `5555`).
+Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves the Vue app and HMR, while the Hono application is mounted into that same server for `/api`, `/health`, and `/ready`. There is no second development listener or proxy hop.
 
 ## The core idea
 
@@ -235,12 +235,10 @@ Development configuration starts from `.env.example`:
 ```text
 NODE_ENV=development
 PORT=5555
-VITE_PORT=5173
-APP_URL=http://localhost:5173
 DB_FILE=database/dev.sqlite3
 ```
 
-`APP_URL` is the public browser-facing application origin. In development it is the Vite URL; `PORT` is the Hono listener and `VITE_PORT` is the Vite browser port.
+`PORT` is the single development HTTP port. `APP_URL` defaults to `http://localhost:${PORT}` in development and can be overridden explicitly when needed. Production still requires an explicit public `APP_URL`.
 
 Nara's database is a local SQLite file managed by `better-sqlite3`. Apply its Feature-owned migrations before using database-backed routes:
 

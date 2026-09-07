@@ -44,7 +44,7 @@ For the canonical full-stack development session:
 npm run dev
 ```
 
-This starts Vue + Vite and Hono together. Vite serves the browser on `VITE_PORT` (default `5173`) and proxies same-origin `/api`, `/health`, and `/ready` requests to Hono on `PORT` (default `5555`).
+This starts one Vite development server on `PORT` (default `5555`). Vite serves Vue/browser/HMR routes and mounts Hono for `/api`, `/health`, and `/ready` on the same origin and same listener.
 
 `npm run check` runs the server typecheck, Vue typecheck, Vitest tests, and the local architecture check. `npm start` runs the generated Node server on port `5555` by default; `GET /health` returns `{"status":"ok"}`.
 
