@@ -1,6 +1,5 @@
 export const SERVER = {
   DEFAULT_PORT: 5555,
-  DEFAULT_VITE_PORT: 5173,
 } as const;
 export const AUTH = {
   SESSION_EXPIRY_MS: 60 * 24 * 60 * 60 * 1000,

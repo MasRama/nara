@@ -1,23 +1,17 @@
 // @vitest-environment node
 import { spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
-import type { Server } from 'node:http';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { serve } from '@hono/node-server';
-import { app } from '../../src/app/server';
 
 /**
- * Real Vite topology smoke (V3-045): the browser reaches Vite, and
- * same-origin `/health` plus `/api/*` flow through the Vite proxy into the
- * real Hono application. Behavior-level Vue interaction stays in
- * `frontend.test.ts` and the Feature browser suites; this file proves the
- * shipped dev wiring those suites assume. No Playwright/Cypress needed.
+ * Real single-server development smoke: Vite owns the only HTTP listener,
+ * serves Vue browser routes itself, and mounts the Hono application only for
+ * backend/reserved paths on that same origin.
  */
 const projectRoot = process.cwd();
 
-let honoServer: Server | undefined;
 let viteProcess: ChildProcess | undefined;
 let viteOutput = '';
 let viteUrl = '';
@@ -48,29 +42,25 @@ async function waitForVite(): Promise<void> {
       throw new Error(`Vite exited with code ${viteProcess.exitCode}.\n${viteOutput}`);
     }
     try {
-      const response = await fetch(`${viteUrl}/`);
+      const response = await fetch(`${viteUrl}/health`);
       if (response.status === 200) return;
     } catch {
       // Vite may still be starting.
     }
     if (Date.now() > deadline) {
-      throw new Error(`Vite did not serve ${viteUrl}/ within 90 seconds.\n${viteOutput}`);
+      throw new Error(`Vite did not serve ${viteUrl}/health within 90 seconds.\n${viteOutput}`);
     }
     await delay(250);
   }
 }
 
 beforeAll(async () => {
-  const honoPort = await findFreePort();
-  const vitePort = await findFreePort();
-  honoServer = serve({ fetch: app.fetch, port: honoPort });
-  await once(honoServer, 'listening');
-
-  viteUrl = `http://127.0.0.1:${vitePort}`;
+  const port = await findFreePort();
+  viteUrl = `http://127.0.0.1:${port}`;
   const viteBinary = path.join(projectRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'vite.cmd' : 'vite');
-  viteProcess = spawn(viteBinary, ['--port', String(vitePort), '--strictPort', '--host', '127.0.0.1'], {
+  viteProcess = spawn(viteBinary, ['--host', '127.0.0.1'], {
     cwd: projectRoot,
-    env: { ...process.env, PORT: String(honoPort), VITE_PORT: String(vitePort) },
+    env: { ...process.env, NODE_ENV: 'development', PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   viteProcess.stdout?.setEncoding('utf8');
@@ -90,13 +80,9 @@ afterAll(async () => {
     await Promise.race([once(viteProcess, 'exit').catch(() => undefined), delay(5_000)]);
   }
   viteProcess = undefined;
-  if (honoServer) {
-    await new Promise<void>((resolve) => honoServer!.close(() => resolve()));
-    honoServer = undefined;
-  }
 });
 
-describe('real Vite topology', () => {
+describe('real single-server Vite topology', () => {
   it('serves the Vue document from Vite for / and a browser route', async () => {
     for (const pathname of ['/', '/login']) {
       const response = await fetch(`${viteUrl}${pathname}`);
@@ -106,13 +92,13 @@ describe('real Vite topology', () => {
     }
   });
 
-  it('proxies /health through Vite to Hono', async () => {
+  it('serves /health from Hono on the same Vite listener', async () => {
     const response = await fetch(`${viteUrl}/health`);
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: 'ok' });
   });
 
-  it('proxies a representative /api request through Vite to Hono', async () => {
+  it('serves a representative /api request from Hono on the same origin', async () => {
     const response = await fetch(`${viteUrl}/api/auth/me`);
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ code: 'UNAUTHORIZED' });

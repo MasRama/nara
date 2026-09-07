@@ -1,6 +1,0 @@
-{
-    "watch": ["src/**","resources/index.html","server.ts"],
-    "ext": ".ts,.js,.vue",
-    "ignore": [],
-    "exec": "npx ts-node -r dotenv/config -r tsconfig-paths/register server.ts"
-  }

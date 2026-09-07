@@ -134,7 +134,7 @@ app.onError(handleError);
 // compressible types above its threshold and never alters security headers.
 app.use('*', requestId());
 app.use('*', requestLifecycleLog());
-app.use('*', securityHeaders({ isProduction: isProductionServer, viteOrigin: `http://localhost:${env.VITE_PORT}` }));
+app.use('*', securityHeaders({ isProduction: isProductionServer }));
 app.use('*', compress());
 
 app.use('*', globalRateLimiter.middleware);
@@ -274,26 +274,26 @@ export function stopSessionCleanup(): void {
   }
 }
 
+export function initializeApplicationRuntime(): SessionCleanupHandle {
+  const migrationResult = migrate();
+  Logger.info('Database migrations ready', {
+    applied: migrationResult.applied,
+    skipped: migrationResult.skipped,
+  });
+  return startSessionCleanup();
+}
+
 export function startServer(port = env.PORT) {
   try {
     ensureProductionFrontend();
-    const migrationResult = migrate();
-    Logger.info('Database migrations ready', {
-      applied: migrationResult.applied,
-      skipped: migrationResult.skipped,
-    });
-    startSessionCleanup();
+    initializeApplicationRuntime();
     const server = serve(
       {
         fetch: app.fetch,
         port,
       },
       (info) => {
-        const startupMessage =
-          env.NODE_ENV === 'development'
-            ? `Browser: ${env.APP_URL} (Vite); Backend implementation: http://localhost:${info.port}`
-            : `Browser/API: ${env.APP_URL}`;
-        Logger.info(startupMessage, {
+        Logger.info(`Browser/API: ${env.APP_URL}`, {
           appUrl: env.APP_URL,
           browserUrl: env.APP_URL,
           port: info.port,

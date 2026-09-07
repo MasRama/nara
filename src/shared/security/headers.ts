@@ -7,26 +7,24 @@ import type { Context, Next } from 'hono';
  */
 export interface SecurityHeadersOptions {
   isProduction: boolean;
-  /** Same-origin Vite dev server origin appended to script/style/connect in dev. */
-  viteOrigin?: string;
 }
 
 const PERMISSIONS_POLICY =
   'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
 
-function contentSecurityPolicy(isProduction: boolean, viteOrigin: string): string {
+function contentSecurityPolicy(isProduction: boolean): string {
   // v2 shipped script-src 'self' 'unsafe-inline' 'unsafe-eval'. v3 drops
   // unsafe-eval (no demonstrated runtime need) and keeps script-src tight:
   // the production Vite build emits external hashed module scripts only.
   // style-src keeps 'unsafe-inline' because Vue applies dynamic styles via
   // style attributes, which style-src governs.
-  const scriptSrc = isProduction ? `'self'` : `'self' 'unsafe-inline' ${viteOrigin}`;
+  const scriptSrc = isProduction ? `'self'` : `'self' 'unsafe-inline'`;
   const styleSrc = isProduction
     ? `'self' 'unsafe-inline' https://rsms.me https://fonts.googleapis.com`
-    : `'self' 'unsafe-inline' https://rsms.me https://fonts.googleapis.com ${viteOrigin}`;
+    : `'self' 'unsafe-inline' https://rsms.me https://fonts.googleapis.com`;
   const connectSrc = isProduction
     ? `'self' https: wss:`
-    : `'self' https: wss: ws: ${viteOrigin}`;
+    : `'self' https: wss: ws:`;
   return [
     `default-src 'self'`,
     `script-src ${scriptSrc}`,
@@ -43,8 +41,8 @@ function contentSecurityPolicy(isProduction: boolean, viteOrigin: string): strin
 }
 
 export function securityHeaders(options: SecurityHeadersOptions) {
-  const { isProduction, viteOrigin = 'http://localhost:5173' } = options;
-  const csp = contentSecurityPolicy(isProduction, viteOrigin);
+  const { isProduction } = options;
+  const csp = contentSecurityPolicy(isProduction);
 
   return async function securityHeadersMiddleware(context: Context, next: Next): Promise<Response | void> {
     await next();

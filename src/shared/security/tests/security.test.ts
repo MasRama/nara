@@ -41,7 +41,7 @@ async function registerWithCsrf(email: string, password = TEST_PASSWORD, name = 
 describe('security headers', () => {
   function probeApp(isProduction: boolean): Hono {
     const probe = new Hono();
-    probe.use('*', securityHeaders({ isProduction, viteOrigin: 'http://localhost:5173' }));
+    probe.use('*', securityHeaders({ isProduction }));
     probe.get('/ok', (context) => context.json({ ok: true }));
     probe.get('/boom', () => {
       throw new Error('probe failure');
@@ -60,7 +60,7 @@ describe('security headers', () => {
     expect(response.headers.get('Strict-Transport-Security')).toBeNull();
     const csp = response.headers.get('Content-Security-Policy') ?? '';
     expect(csp).toContain(`default-src 'self'`);
-    expect(csp).toContain('http://localhost:5173');
+    expect(csp).toContain(`connect-src 'self' https: wss: ws:`);
     expect(csp).not.toContain('unsafe-eval');
   });
 
@@ -70,7 +70,7 @@ describe('security headers', () => {
     const csp = response.headers.get('Content-Security-Policy') ?? '';
     expect(csp).toContain(`script-src 'self'`);
     expect(csp).not.toContain('unsafe-eval');
-    expect(csp).not.toContain('http://localhost:5173');
+    expect(csp).not.toContain('ws:');
   });
 
   it('covers error responses, not just success', async () => {

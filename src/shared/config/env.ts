@@ -8,7 +8,6 @@ import { LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_PORT),
-  VITE_PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_VITE_PORT),
   APP_URL: z.string().optional(),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('debug'),
   DB_FILE: z.string().min(1).optional(),
@@ -53,7 +52,7 @@ export function parseEnv(input: NodeJS.ProcessEnv): Env {
   return {
     ...parsed.data,
     LOG_LEVEL: logLevel,
-    APP_URL: parsed.data.APP_URL?.trim() || `http://localhost:${parsed.data.VITE_PORT}`,
+    APP_URL: parsed.data.APP_URL?.trim() || `http://localhost:${parsed.data.PORT}`,
   };
 }
 

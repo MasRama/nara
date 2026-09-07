@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
+import devServer, { defaultOptions } from '@hono/vite-dev-server';
 import 'dotenv/config';
 import { resolve } from 'path';
 import { readdirSync } from 'fs';
@@ -9,21 +10,42 @@ import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-const files = readdirSync("resources").filter(f => f.endsWith('.html'));
-
-let input = {};
+const files = readdirSync('resources').filter((file) => file.endsWith('.html'));
+const input = {};
 
 for (const filename of files) {
-  input[filename.replace(".html", "")] = resolve(__dirname, `resources/${filename}`);
+  input[filename.replace('.html', '')] = resolve(__dirname, `resources/${filename}`);
 }
 
-const vitePort = Number.parseInt(process.env.VITE_PORT ?? '', 10) || 5173;
-const serverPort = Number.parseInt(process.env.PORT ?? '', 10) || 5555;
-const serverOrigin = `http://127.0.0.1:${serverPort}`;
+const port = Number.parseInt(process.env.PORT ?? '', 10) || 5555;
+const nonBackendPath = /^(?!\/(?:api(?:\/|\?|$)|health(?:\/|\?|$)|ready(?:\/|\?|$))).*/;
+
+function applicationRuntime() {
+  let stopRuntime;
+  return {
+    name: 'nara-application-runtime',
+    async configureServer(server) {
+      const runtime = await server.ssrLoadModule('../src/app/server.ts');
+      stopRuntime = runtime.initializeApplicationRuntime().stop;
+      server.httpServer?.once('close', () => {
+        stopRuntime?.();
+        stopRuntime = undefined;
+      });
+    },
+  };
+}
 
 export default defineConfig({
   plugins: [
+    applicationRuntime(),
+    devServer({
+      entry: '../src/app/server.ts',
+      export: 'app',
+      injectClientScript: false,
+      // Hono owns only backend/reserved paths in development. Vue browser
+      // routes, assets, and Vite HMR remain native Vite requests.
+      exclude: [nonBackendPath, ...defaultOptions.exclude],
+    }),
     tailwindcss(),
     vue(),
   ],
@@ -31,17 +53,8 @@ export default defineConfig({
   publicDir: '../public',
   server: {
     host: '0.0.0.0',
-    port: vitePort,
+    port,
     strictPort: true,
-    // Dev HTML is served by Vite, not Hono: Hono security headers cover only
-    // proxied /api, /health, and /ready responses here. Production
-    // (npm run build && npm start) is authoritative for page headers; adding
-    // Vite CSP here would duplicate policy machinery and risk breaking HMR.
-    proxy: {
-      '/api': { target: serverOrigin },
-      '/health': { target: serverOrigin },
-      '/ready': { target: serverOrigin },
-    },
   },
   build: {
     outDir: '../build/client',

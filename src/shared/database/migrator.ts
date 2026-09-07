@@ -215,7 +215,10 @@ function migrationRoots(options: MigrationOptions): string[] {
   }
 
   const sourceRoot = path.resolve(process.cwd(), 'src', 'features');
-  const runtimeRoot = path.resolve(__dirname, '..', '..', 'features');
+  const runtimeRoot =
+    typeof __dirname === 'string'
+      ? path.resolve(__dirname, '..', '..', 'features')
+      : sourceRoot;
   return [existsSync(runtimeRoot) ? runtimeRoot : sourceRoot];
 }
 
