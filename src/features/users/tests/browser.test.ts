@@ -327,6 +327,8 @@ beforeEach(async () => {
   cookieJar = new Map();
   document.cookie = 'auth_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  window.localStorage.removeItem('nara-theme');
+  document.documentElement.classList.remove('dark');
   fetchRequests = [];
   fetchUrls = [];
   pendingFetches = new Set();
@@ -363,6 +365,9 @@ describe('users browser surfaces', () => {
     expect(router.currentRoute.value.name).toBe('dashboard');
     expect(container.querySelector('h1')?.textContent).toContain('Welcome, Existing User.');
     expect(container.querySelector('nav[aria-label="Application navigation"]')).not.toBeNull();
+    const responsiveLinks = container.querySelector<HTMLElement>('[data-testid="authenticated-nav-links"]');
+    expect(responsiveLinks?.classList.contains('w-full')).toBe(true);
+    expect(responsiveLinks?.classList.contains('overflow-x-auto')).toBe(true);
     expect(container.querySelector('a[href="/dashboard"]')?.textContent).toContain('Dashboard');
     expect(container.querySelector('a[href="/profile"]')?.textContent).toContain('Profile');
 
@@ -374,6 +379,14 @@ describe('users browser surfaces', () => {
     expect(router.currentRoute.value.name).toBe('profile');
     expect(container.querySelector('h1')?.textContent).toContain('Your profile');
     expect(document.documentElement).toBe(documentElement);
+  });
+
+  it('applies a saved theme on direct authenticated entry without visiting home first', async () => {
+    window.localStorage.setItem('nara-theme', 'dark');
+    await startAuthenticatedUser();
+    await mountAt('/dashboard');
+
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
   it('loads and saves the current profile through the users Feature client', async () => {
@@ -532,6 +545,33 @@ describe('users administration browser surfaces', () => {
     expect(container.querySelector('[data-testid="role-list"]')).toBeNull();
   });
 
+  it('surfaces role-directory failures instead of silently rendering an empty assignment list', async () => {
+    await startAuthenticatedAdmin();
+    const delegatedFetch = globalThis.fetch;
+    vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const inputUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = new URL(inputUrl, 'http://nara.test');
+      const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+      if (method.toUpperCase() === 'GET' && url.pathname === '/api/roles') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ success: false, message: 'Role directory unavailable', code: 'INTERNAL_ERROR' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        );
+      }
+      return delegatedFetch(input, init);
+    });
+
+    await mountAt('/users');
+    await settle();
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Role directory unavailable');
+    await click('[data-testid="create-user"]');
+    expect(container.textContent).toContain('Role directory unavailable');
+    expect(container.querySelector('[data-role-slug]')).toBeNull();
+  });
+
   it('uses server search and pagination responses for the users list', async () => {
     const searchTerm = `Searchable-${randomUUID()}`;
     await startAuthenticatedAdmin();
@@ -557,6 +597,55 @@ describe('users administration browser surfaces', () => {
 
     expect(fetchUrls.some((url) => url.includes(`/api/users?page=2&limit=1&search=${encodeURIComponent(searchTerm)}`))).toBe(true);
     expect(container.textContent).toContain('Page 2 of 3');
+  });
+
+  it('keeps the newest users-list response when overlapping searches resolve out of order', async () => {
+    const slowTerm = `Slow-${randomUUID()}`;
+    const fastTerm = `Fast-${randomUUID()}`;
+    await startAuthenticatedAdmin();
+    await registerDirect(`${randomUUID()}@example.com`, `${slowTerm} Result`);
+    await registerDirect(`${randomUUID()}@example.com`, `${fastTerm} Result`);
+    await mountAt('/users');
+    await settle();
+
+    const delegatedFetch = globalThis.fetch;
+    let releaseSlow: (() => void) | undefined;
+    let markSlowStarted: (() => void) | undefined;
+    const slowStarted = new Promise<void>((resolve) => {
+      markSlowStarted = resolve;
+    });
+    const slowGate = new Promise<void>((resolve) => {
+      releaseSlow = resolve;
+    });
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      const inputUrl = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      const url = new URL(inputUrl, 'http://nara.test');
+      const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+      if (
+        method.toUpperCase() === 'GET' &&
+        url.pathname === '/api/users' &&
+        url.searchParams.get('search') === slowTerm
+      ) {
+        markSlowStarted?.();
+        await slowGate;
+      }
+      return delegatedFetch(input, init);
+    });
+
+    setInput('#user-search', slowTerm);
+    submitForm('[data-testid="user-search-form"]');
+    await slowStarted;
+
+    setInput('#user-search', fastTerm);
+    submitForm('[data-testid="user-search-form"]');
+    await settle();
+    expect(container.querySelector('[data-testid="user-list"]')?.textContent).toContain(`${fastTerm} Result`);
+    expect(container.querySelector('[data-testid="user-list"]')?.textContent).not.toContain(`${slowTerm} Result`);
+
+    releaseSlow?.();
+    await settle();
+    expect(container.querySelector('[data-testid="user-list"]')?.textContent).toContain(`${fastTerm} Result`);
+    expect(container.querySelector('[data-testid="user-list"]')?.textContent).not.toContain(`${slowTerm} Result`);
   });
 
   it('requires a password before creating a managed user', async () => {
@@ -621,6 +710,17 @@ describe('users administration browser surfaces', () => {
     const passwordAfterEdit = getDatabase().prepare('SELECT password FROM users WHERE id = ?').get(userId) as { password: string };
     expect(passwordAfterEdit.password).toBe(passwordBeforeEdit.password);
 
+    await click(`[data-testid="edit-user-${userId}"]`);
+    expect(container.querySelector('[data-testid="reset-user-password"]')).not.toBeNull();
+    setInput('#user-password', 'reset-managed-password');
+    await nextTick();
+    await click('[data-testid="reset-user-password"]');
+    await settle();
+    expect(fetchRequests).toContainEqual({ method: 'POST', path: `/api/users/${userId}/reset-password` });
+    const passwordAfterReset = getDatabase().prepare('SELECT password FROM users WHERE id = ?').get(userId) as { password: string };
+    expect(passwordAfterReset.password).not.toBe(passwordBeforeEdit.password);
+    expect(container.textContent).toContain('Password reset');
+
     const response = await serverApp.request(`/api/users?search=${encodeURIComponent(email)}`, { headers: { Cookie: cookieHeader()! } });
     await expect(response.json()).resolves.toMatchObject({
       success: true,
@@ -639,7 +739,8 @@ describe('users administration browser surfaces', () => {
     await click(`[data-testid="edit-user-${selfId}"]`);
     setInput('#user-name', 'Rejected Browser Administrator');
     setInput('#user-email', `${randomUUID()}@example.com`);
-    setInput('#user-password', 'rejected browser password');
+    expect(container.querySelector('#user-password')).toBeNull();
+    expect(container.textContent).toContain('Change your own password from Profile');
     await click('[data-role-slug="admin"]');
     submitForm('[data-testid="user-form"]');
     await settle();
@@ -678,7 +779,7 @@ describe('users administration browser surfaces', () => {
     });
   });
 
-  it('deletes allowed users and surfaces self-delete protection', async () => {
+  it('deletes allowed users and hides the self-delete action', async () => {
     await startAuthenticatedAdmin();
     const targetEmail = `${randomUUID()}@example.com`;
     await registerDirect(targetEmail, 'Delete Me');
@@ -697,11 +798,36 @@ describe('users administration browser surfaces', () => {
     const selfRow = tableRowContaining('Browser Administrator');
     const selfId = selfRow.dataset.userId;
     if (!selfId) throw new Error('Administrator row did not expose its id');
-    await click(`[data-testid="delete-user-${selfId}"]`);
+    expect(container.querySelector(`[data-testid="delete-user-${selfId}"]`)).toBeNull();
+    expect(usersWebHost.currentSessionUser()).not.toBeNull();
+  });
+
+  it('clamps pagination after deleting the only user on the last page', async () => {
+    const marker = `Clamp-${randomUUID()}`;
+    await startAuthenticatedAdmin();
+    await registerDirect(`${randomUUID()}@example.com`, `${marker} One`);
+    await registerDirect(`${randomUUID()}@example.com`, `${marker} Two`);
+    await mountAt('/users');
+    await settle();
+
+    setInput('#user-search', marker);
+    submitForm('[data-testid="user-search-form"]');
+    await settle();
+    setSelect('#user-page-size', '1');
+    await settle();
+    await click('[data-testid="user-next"]');
+    await settle();
+    expect(container.textContent).toContain('Page 2 of 2');
+
+    const row = container.querySelector<HTMLTableRowElement>('[data-testid="user-list"] tbody tr[data-user-id]');
+    const userId = row?.dataset.userId;
+    if (!userId) throw new Error('Last-page user row did not expose its id');
+    await click(`[data-testid="delete-user-${userId}"]`);
     await click('[data-testid="confirm-delete"]');
     await settle();
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Cannot delete your own account');
-    expect(usersWebHost.currentSessionUser()).not.toBeNull();
+
+    expect(container.textContent).toContain('Page 1 of 1');
+    expect(fetchUrls.some((url) => url.includes(`/api/users?page=1&limit=1&search=${encodeURIComponent(marker)}`))).toBe(true);
   });
 
   it('surfaces last-admin protection through the users browser client', async () => {

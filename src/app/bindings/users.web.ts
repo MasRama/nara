@@ -56,7 +56,9 @@ export const usersWebHost: UsersWebHost = {
 
   listRoles: async () => {
     const response = await accessClient.listRoles();
-    if (!response.success || !response.data) return [];
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Unable to load roles');
+    }
     return response.data.roles.map((role) => ({ id: role.id, name: role.name, slug: role.slug }));
   },
 
