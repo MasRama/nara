@@ -107,7 +107,8 @@ npm run migrate
 npm run migrate:status
 npm run migrate:fresh       # development only; also runs reference seeds
 npm run seed
-npm run bootstrap:admin     # requires NARA_ADMIN_EMAIL and NARA_ADMIN_PASSWORD
+npm run setup               # migrate + seed + idempotent first-admin bootstrap
+npm run bootstrap:admin     # defaults to a temporary development admin; env-overridable
 npm run db:backup
 npm run db:check
 ```

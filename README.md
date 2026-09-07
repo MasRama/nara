@@ -51,8 +51,17 @@ git clone https://github.com/MasRama/nara.git
 cd nara
 npm install
 cp .env.example .env
+npm run setup
 npm run dev
 ```
+
+`npm run setup` applies pending migrations, reference seeds, and creates the
+first administrator when one does not already exist. With no admin environment
+overrides it prints the development bootstrap credential
+`admin@nara.local` / `admin12345`; that credential is marked temporary and the
+application requires a password change before any normal authenticated API or
+workspace route can be used. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
+`NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
 
 The repository root is the development/reference application proving richer
 Nara capabilities (auth, RBAC, users, assets, SQLite lifecycle). It is not
@@ -236,10 +245,15 @@ DB_FILE=database/dev.sqlite3
 Nara's database is a local SQLite file managed by `better-sqlite3`. Apply its Feature-owned migrations before using database-backed routes:
 
 ```bash
+npm run setup              # migrate + reference seeds + first-admin bootstrap
 npm run migrate
 npm run seed
 npm run db:check
 ```
+
+Reference seeds contain structural data such as roles and permissions; they do
+not recreate administrator accounts. `npm run setup` is idempotent for the
+first-admin step and never resets an existing administrator password.
 
 For the production Node process, copy `.env.production.example` to `.env.production`, set `APP_URL` to the public application origin, choose a production database path, and build:
 

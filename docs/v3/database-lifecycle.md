@@ -102,7 +102,8 @@ npm run migrate          # apply pending migrations
 npm run migrate:status   # show applied/pending and verify checksums
 npm run migrate:fresh    # development reset, migrate, and reference seeds
 npm run seed             # run reference seeds explicitly
-npm run bootstrap:admin  # create the first administrator explicitly
+npm run setup            # migrate, seed, and create the first admin if needed
+npm run bootstrap:admin  # first-admin bootstrap only (also ensures migrate + seed)
 npm run db:backup        # create an online SQLite backup
 npm run db:check         # run quick_check and foreign_key_check
 ```
@@ -113,7 +114,18 @@ npm run db:check         # run quick_check and foreign_key_check
 
 Feature seeds are deterministic, idempotent, and run in transactions. The auth reference seeds restore permissions, `admin`/`user` roles, and their role-permission relationships. Re-running them does not create duplicates.
 
-No administrator account or known password is seeded. `npm run bootstrap:admin` requires non-empty `NARA_ADMIN_EMAIL` and `NARA_ADMIN_PASSWORD` environment variables, validates them using the application registration contract, hashes the password with the real PBKDF2-SHA512 implementation, and assigns the existing `admin` role through `user_roles`. Duplicate email creation is rejected without changes.
+Administrator credentials remain separate from reference seeds. `npm run setup`
+and `npm run bootstrap:admin` create an administrator only when no administrator
+already exists. Without overrides the reference application uses the convenient
+development bootstrap `Admin` / `admin@nara.local` / `admin12345`, stores only
+its PBKDF2-SHA512 hash, marks the credential temporary, and forces a password
+change before normal authenticated access. `NARA_ADMIN_NAME`,
+`NARA_ADMIN_EMAIL`, and `NARA_ADMIN_PASSWORD` override the bootstrap values; an
+explicit password is treated as intentional and is not marked temporary.
+Existing administrator credentials are never reset by setup/bootstrap, and a
+non-admin collision on the requested bootstrap email is rejected without
+changes. Managed password resets are also temporary: sessions are revoked and
+the target must choose a new password after the next login.
 
 ## Backup and integrity
 
