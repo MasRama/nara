@@ -21,6 +21,7 @@ const isLoading = ref(false);
 const loadError = ref('');
 const loadForbidden = ref(false);
 const actionError = ref('');
+const roleLoadError = ref('');
 const notice = ref('');
 
 const isFormOpen = ref(false);
@@ -33,14 +34,53 @@ const selectedRoles = ref<string[]>([]);
 const formError = ref('');
 const fieldErrors = ref<FieldErrors>({});
 const isSubmitting = ref(false);
+const isResettingPassword = ref(false);
 
 const pendingDelete = ref<ManagedUser | null>(null);
 const isDeleting = ref(false);
+let usersLoadRequestId = 0;
 
 const canCreate = computed(() => props.host.can('users.create'));
 const canEdit = computed(() => props.host.can('users.edit'));
 const canDelete = computed(() => props.host.can('users.delete'));
 const canAssignRoles = computed(() => props.host.isAdmin());
+const canResetPasswords = computed(() => props.host.isAdmin() || props.host.can('users.reset-password'));
+const editingSelf = computed(() => editingUser.value?.id === props.host.currentSessionUser()?.id);
+const editingAdmin = computed(() => editingUser.value?.roles.includes('admin') === true);
+const canEditCurrentForm = computed(
+  () => isCreating.value || (editingUser.value !== null && canEditUser(editingUser.value)),
+);
+const canResetEditingPassword = computed(
+  () =>
+    !isCreating.value &&
+    !editingSelf.value &&
+    canResetPasswords.value &&
+    (props.host.isAdmin() || !editingAdmin.value),
+);
+
+function isProtectedAdmin(user: ManagedUser): boolean {
+  return user.roles.includes('admin') && !props.host.isAdmin();
+}
+
+function canEditUser(user: ManagedUser): boolean {
+  return canEdit.value && !isProtectedAdmin(user);
+}
+
+function canResetUser(user: ManagedUser): boolean {
+  return (
+    canResetPasswords.value &&
+    user.id !== props.host.currentSessionUser()?.id &&
+    !isProtectedAdmin(user)
+  );
+}
+
+function canDeleteUser(user: ManagedUser): boolean {
+  return (
+    canDelete.value &&
+    user.id !== props.host.currentSessionUser()?.id &&
+    !isProtectedAdmin(user)
+  );
+}
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
 
 function mapIssues(issues: Array<{ path: PropertyKey[]; message: string }>): FieldErrors {
@@ -62,11 +102,15 @@ function roleLabel(slug: string): string {
 }
 
 async function loadUsers(nextPage = page.value): Promise<void> {
+  const requestId = ++usersLoadRequestId;
+  const requestedLimit = limit.value;
+  const requestedSearch = search.value;
   isLoading.value = true;
   loadError.value = '';
   loadForbidden.value = false;
   try {
-    const response = await usersClient.listUsers({ page: nextPage, limit: limit.value, search: search.value });
+    const response = await usersClient.listUsers({ page: nextPage, limit: requestedLimit, search: requestedSearch });
+    if (requestId !== usersLoadRequestId) return;
     if (!response.success || !response.data) {
       loadForbidden.value = !response.success && response.code === 'FORBIDDEN';
       if (!loadForbidden.value) loadError.value = response.message;
@@ -79,34 +123,43 @@ async function loadUsers(nextPage = page.value): Promise<void> {
     page.value = response.data.page;
     limit.value = response.data.limit;
   } catch (error) {
+    if (requestId !== usersLoadRequestId) return;
     loadError.value = error instanceof Error ? error.message : 'Unable to load users';
     users.value = [];
   } finally {
-    isLoading.value = false;
+    if (requestId === usersLoadRequestId) isLoading.value = false;
   }
 }
 
 async function loadRoles(): Promise<void> {
-  if (!canAssignRoles.value) return;
+  roleLoadError.value = '';
+  if (!canAssignRoles.value) {
+    roles.value = [];
+    return;
+  }
 
   try {
     roles.value = await props.host.listRoles();
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : 'Unable to load roles';
+    roles.value = [];
+    roleLoadError.value = error instanceof Error ? error.message : 'Unable to load roles';
   }
 }
 
 function submitSearch(): void {
+  if (pendingDelete.value || isDeleting.value) return;
   page.value = 1;
   void loadUsers(1);
 }
 
 function changeLimit(): void {
+  if (pendingDelete.value || isDeleting.value) return;
   page.value = 1;
   void loadUsers(1);
 }
 
 function goToPage(nextPage: number): void {
+  if (pendingDelete.value || isDeleting.value) return;
   if (nextPage < 1 || nextPage > totalPages.value || nextPage === page.value) return;
   void loadUsers(nextPage);
 }
@@ -122,6 +175,7 @@ function resetForm(): void {
 }
 
 function openCreate(): void {
+  if (roleLoadError.value || isResettingPassword.value || isSubmitting.value || pendingDelete.value) return;
   resetForm();
   isCreating.value = true;
   isFormOpen.value = true;
@@ -129,6 +183,8 @@ function openCreate(): void {
 }
 
 function openEdit(user: ManagedUser): void {
+  if (isResettingPassword.value || isSubmitting.value || pendingDelete.value) return;
+  if (!canEditUser(user) && !canResetUser(user)) return;
   resetForm();
   editingUser.value = user;
   isCreating.value = false;
@@ -140,7 +196,7 @@ function openEdit(user: ManagedUser): void {
 }
 
 function closeForm(): void {
-  if (isSubmitting.value) return;
+  if (isSubmitting.value || isResettingPassword.value) return;
   isFormOpen.value = false;
   resetForm();
 }
@@ -149,7 +205,6 @@ function validateUser(): UpdateUserInput | undefined {
   const payload = {
     name: userName.value,
     email: userEmail.value,
-    ...(userPassword.value ? { password: userPassword.value } : {}),
     ...(canAssignRoles.value ? { roles: selectedRoles.value } : {}),
   };
   const parsed = updateUserInputSchema.safeParse(payload);
@@ -161,6 +216,35 @@ function validateUser(): UpdateUserInput | undefined {
   fieldErrors.value = mapIssues(parsed.error.issues);
   formError.value = 'Please correct the highlighted fields.';
   return undefined;
+}
+
+async function resetManagedPassword(): Promise<void> {
+  if (!editingUser.value || !canResetEditingPassword.value || isResettingPassword.value) return;
+
+  fieldErrors.value = {};
+  formError.value = '';
+  notice.value = '';
+  if (userPassword.value.length < 8) {
+    fieldErrors.value = { password: ['Password must be at least 8 characters'] };
+    formError.value = 'Please correct the highlighted fields.';
+    return;
+  }
+
+  isResettingPassword.value = true;
+  try {
+    const response = await usersClient.resetPassword(editingUser.value.id, { password: userPassword.value });
+    if (!response.success) {
+      formError.value = response.message;
+      fieldErrors.value = response.errors ?? {};
+      return;
+    }
+    userPassword.value = '';
+    notice.value = response.message;
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : 'Unable to reset password';
+  } finally {
+    isResettingPassword.value = false;
+  }
 }
 
 async function submitUser(): Promise<void> {
@@ -230,6 +314,7 @@ async function submitUser(): Promise<void> {
 }
 
 function requestDelete(user: ManagedUser): void {
+  if (isResettingPassword.value || isSubmitting.value || !canDeleteUser(user)) return;
   pendingDelete.value = user;
   actionError.value = '';
   notice.value = '';
@@ -253,7 +338,9 @@ async function confirmDelete(): Promise<void> {
     }
     notice.value = response.message;
     pendingDelete.value = null;
-    await loadUsers(page.value);
+    const remainingTotal = Math.max(0, total.value - response.data.deleted);
+    const remainingPages = Math.max(1, Math.ceil(remainingTotal / limit.value));
+    await loadUsers(Math.min(page.value, remainingPages));
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : 'Unable to delete user';
   } finally {
@@ -286,7 +373,8 @@ onMounted(() => {
               v-if="canCreate"
               type="button"
               data-testid="create-user"
-              class="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              :disabled="Boolean(roleLoadError) || Boolean(pendingDelete) || isResettingPassword || isSubmitting"
+              class="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               @click="openCreate"
             >
               New user
@@ -299,6 +387,7 @@ onMounted(() => {
         </p>
         <p v-if="loadError" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{{ loadError }}</p>
         <p v-if="actionError" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{{ actionError }}</p>
+        <p v-if="roleLoadError" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{{ roleLoadError }}</p>
         <p v-if="notice" role="status" class="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">{{ notice }}</p>
 
         <template v-if="!loadForbidden">
@@ -314,6 +403,7 @@ onMounted(() => {
                   id="user-search"
                   v-model="search"
                   type="search"
+                  :disabled="Boolean(pendingDelete) || isDeleting"
                   class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
                   placeholder="Search users"
                 />
@@ -323,6 +413,7 @@ onMounted(() => {
                 <select
                   id="user-page-size"
                   v-model.number="limit"
+                  :disabled="Boolean(pendingDelete) || isDeleting"
                   class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
                   @change="changeLimit"
                 >
@@ -332,38 +423,67 @@ onMounted(() => {
                   <option :value="25">25</option>
                 </select>
               </label>
-              <button type="submit" class="h-10 rounded-md border border-border px-4 text-sm font-medium transition-colors hover:border-primary/50 hover:text-primary">Search</button>
+              <button type="submit" :disabled="Boolean(pendingDelete) || isDeleting" class="h-10 rounded-md border border-border px-4 text-sm font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">Search</button>
             </form>
           </section>
 
           <section v-if="isFormOpen" class="rounded-2xl border border-primary/30 bg-card p-5 shadow-soft sm:p-6" aria-labelledby="user-form-title">
             <div class="flex items-start justify-between gap-4">
               <div>
-                <h2 id="user-form-title" class="mt-2 font-heading text-xl font-semibold tracking-tight">{{ isCreating ? 'Create user' : 'Edit user' }}</h2>
+                <h2 id="user-form-title" class="mt-2 font-heading text-xl font-semibold tracking-tight">{{ isCreating ? 'Create user' : canEditCurrentForm ? 'Edit user' : 'Reset password' }}</h2>
               </div>
-              <button type="button" class="text-sm text-muted-foreground hover:text-foreground" :disabled="isSubmitting" @click="closeForm">Close</button>
+              <button type="button" class="text-sm text-muted-foreground hover:text-foreground" :disabled="isSubmitting || isResettingPassword" @click="closeForm">Close</button>
             </div>
 
             <p v-if="formError" role="alert" class="mt-5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ formError }}</p>
             <form class="mt-5 grid gap-5 md:grid-cols-2" data-testid="user-form" @submit.prevent="submitUser">
               <label class="grid gap-2 text-sm font-medium" for="user-name">
                 Name
-                <input id="user-name" v-model="userName" type="text" autocomplete="name" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
+                <input id="user-name" v-model="userName" type="text" autocomplete="name" :disabled="!canEditCurrentForm" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
                 <span v-if="fieldError('name')" class="text-xs font-normal text-destructive">{{ fieldError('name') }}</span>
               </label>
               <label class="grid gap-2 text-sm font-medium" for="user-email">
                 Email
-                <input id="user-email" v-model="userEmail" type="email" autocomplete="email" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
+                <input id="user-email" v-model="userEmail" type="email" autocomplete="email" :disabled="!canEditCurrentForm" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary disabled:cursor-not-allowed disabled:opacity-60" />
                 <span v-if="fieldError('email')" class="text-xs font-normal text-destructive">{{ fieldError('email') }}</span>
               </label>
-              <label class="grid gap-2 text-sm font-medium" for="user-password">
+              <label v-if="isCreating" class="grid gap-2 text-sm font-medium" for="user-password">
                 Password
                 <input id="user-password" v-model="userPassword" type="password" autocomplete="new-password" :required="isCreating" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
-                <span class="text-xs font-normal text-muted-foreground">{{ isCreating ? 'Required; use at least 8 characters.' : 'Leave blank to keep the current password.' }}</span>
+                <span class="text-xs font-normal text-muted-foreground">Required; use at least 8 characters.</span>
                 <span v-if="fieldError('password')" class="text-xs font-normal text-destructive">{{ fieldError('password') }}</span>
               </label>
+              <p v-else-if="editingSelf" class="self-end text-xs leading-relaxed text-muted-foreground">
+                Change your own password from Profile so the current password can be verified.
+              </p>
 
-              <fieldset v-if="canAssignRoles" class="grid gap-2 text-sm font-medium">
+              <div v-else-if="canResetEditingPassword" class="grid gap-2 text-sm font-medium md:col-span-2">
+                <label for="user-password">Reset password</label>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="user-password"
+                    v-model="userPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="New password"
+                    class="h-10 min-w-0 flex-1 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary"
+                    @keydown.enter.prevent="resetManagedPassword"
+                  />
+                  <button
+                    type="button"
+                    data-testid="reset-user-password"
+                    :disabled="isSubmitting || isResettingPassword || !userPassword"
+                    class="rounded-md border border-border px-4 py-2 text-sm transition-colors hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+                    @click="resetManagedPassword"
+                  >
+                    {{ isResettingPassword ? 'Resetting…' : 'Reset password' }}
+                  </button>
+                </div>
+                <span class="text-xs font-normal text-muted-foreground">Resetting revokes all active sessions for this account.</span>
+                <span v-if="fieldError('password')" class="text-xs font-normal text-destructive">{{ fieldError('password') }}</span>
+              </div>
+
+              <fieldset v-if="canAssignRoles && canEditCurrentForm" class="grid gap-2 text-sm font-medium">
                 <legend>Roles</legend>
                 <span class="text-xs font-normal text-muted-foreground">Role assignment is limited by the server to administrators.</span>
                 <label v-for="role in roles" :key="role.id" class="flex items-center gap-2 font-normal">
@@ -372,11 +492,11 @@ onMounted(() => {
                 </label>
               </fieldset>
 
-              <div class="flex items-center gap-3 md:col-span-2">
-                <button type="submit" :disabled="isSubmitting" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+              <div v-if="canEditCurrentForm" class="flex items-center gap-3 md:col-span-2">
+                <button type="submit" :disabled="isSubmitting || isResettingPassword" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
                   {{ isSubmitting ? 'Saving…' : isCreating ? 'Create user' : 'Save changes' }}
                 </button>
-                <button type="button" :disabled="isSubmitting" class="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground" @click="closeForm">Cancel</button>
+                <button type="button" :disabled="isSubmitting || isResettingPassword" class="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground" @click="closeForm">Cancel</button>
               </div>
             </form>
           </section>
@@ -391,9 +511,9 @@ onMounted(() => {
                 <p class="mt-1 text-sm text-muted-foreground">{{ total }} total user{{ total === 1 ? '' : 's' }}</p>
               </div>
               <div class="flex items-center gap-2 text-sm text-muted-foreground">
-                <button type="button" data-testid="user-previous" :disabled="page <= 1 || isLoading" class="rounded-md border border-border px-3 py-2 transition-colors hover:border-primary/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50" @click="goToPage(page - 1)">Previous</button>
+                <button type="button" data-testid="user-previous" :disabled="page <= 1 || isLoading || Boolean(pendingDelete) || isDeleting" class="rounded-md border border-border px-3 py-2 transition-colors hover:border-primary/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50" @click="goToPage(page - 1)">Previous</button>
                 <span aria-live="polite">Page {{ page }} of {{ totalPages }}</span>
-                <button type="button" data-testid="user-next" :disabled="page >= totalPages || isLoading" class="rounded-md border border-border px-3 py-2 transition-colors hover:border-primary/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50" @click="goToPage(page + 1)">Next</button>
+                <button type="button" data-testid="user-next" :disabled="page >= totalPages || isLoading || Boolean(pendingDelete) || isDeleting" class="rounded-md border border-border px-3 py-2 transition-colors hover:border-primary/50 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50" @click="goToPage(page + 1)">Next</button>
               </div>
             </div>
 
@@ -428,8 +548,8 @@ onMounted(() => {
                     </td>
                     <td class="px-5 py-4 text-right sm:px-6">
                       <div class="flex justify-end gap-2">
-                        <button v-if="canEdit" type="button" :data-testid="`edit-user-${user.id}`" class="rounded-md border border-border px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary" @click="openEdit(user)">Edit</button>
-                        <button v-if="canDelete" type="button" :data-testid="`delete-user-${user.id}`" class="rounded-md border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10" @click="requestDelete(user)">Delete</button>
+                        <button v-if="canEditUser(user) || canResetUser(user)" type="button" :disabled="isResettingPassword || isSubmitting || Boolean(pendingDelete)" :data-testid="`edit-user-${user.id}`" class="rounded-md border border-border px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50" @click="openEdit(user)">{{ canEditUser(user) ? 'Edit' : 'Reset password' }}</button>
+                        <button v-if="canDeleteUser(user)" type="button" :disabled="isResettingPassword || isSubmitting || Boolean(pendingDelete)" :data-testid="`delete-user-${user.id}`" class="rounded-md border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-50" @click="requestDelete(user)">Delete</button>
                       </div>
                     </td>
                   </tr>

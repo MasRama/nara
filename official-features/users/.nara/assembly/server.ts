@@ -1,6 +1,6 @@
 import type { Hono } from 'hono';
 import {
-  createAccount,
+  createAccountWithRoles,
   deleteAccounts,
   findAccountById,
   findAllRoles,
@@ -11,9 +11,9 @@ import {
   hasPermission,
   isAdmin,
   listAccounts,
+  resetAccountPassword,
   SESSION_COOKIE_NAME,
-  syncUserRoles,
-  updateAccount,
+  updateAccountWithRoles,
 } from '../../features/auth';
 import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../../features/users';
 /**
@@ -44,9 +44,11 @@ export const usersServerHost: UsersServerHost = {
 
   listAccounts: (page, limit, search) => listAccounts(page, limit, search),
 
-  createAccount: (input) => createAccount(input),
+  createAccount: (input, roleIds) => createAccountWithRoles(input, roleIds),
 
-  updateAccount: (userId, patch) => updateAccount(userId, patch),
+  updateAccount: (userId, patch, options) => updateAccountWithRoles(userId, patch, options),
+
+  resetPassword: (userId, passwordHash) => resetAccountPassword(userId, passwordHash),
 
   deleteAccounts: (userIds) => deleteAccounts(userIds),
 
@@ -54,13 +56,11 @@ export const usersServerHost: UsersServerHost = {
 
   canAssignRoles: (actorId) => isAdmin(actorId),
 
+  canResetPasswords: (actorId) => isAdmin(actorId) || hasPermission(actorId, 'users.reset-password'),
+
   availableRoles: () => findAllRoles().map((role) => ({ id: role.id, slug: role.slug })),
 
   rolesForUser: (userId) => getUserRoles(userId).map((role) => role.slug),
-
-  setUserRoles: (userId, roleIds) => {
-    syncUserRoles(userId, roleIds);
-  },
 
   usersWithRole: (roleId) => getUsersWithRole(roleId).map((user) => ({ id: user.id })),
 };

@@ -17,8 +17,7 @@ import {
  * deliberate policy adaptation: Auth reports snake_case fields while Users
  * pages render camelCase fields.
  *
- * This file belongs to the application permanently. Feature evolution never
- * touches it.
+ * Feature evolution never touches this file.
  */
 const authSession = useAuthSession();
 const authClient = createAuthClient();
@@ -57,7 +56,9 @@ export const usersWebHost: UsersWebHost = {
 
   listRoles: async () => {
     const response = await accessClient.listRoles();
-    if (!response.success || !response.data) return [];
+    if (!response.success || !response.data) {
+      throw new Error(response.message || 'Unable to load roles');
+    }
     return response.data.roles.map((role) => ({ id: role.id, name: role.name, slug: role.slug }));
   },
 

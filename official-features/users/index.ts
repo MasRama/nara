@@ -2,6 +2,7 @@ export {
   createUserInputSchema,
   deleteUsersInputSchema,
   profileInputSchema,
+  resetUserPasswordInputSchema,
   updateUserInputSchema,
 } from './contract';
 export type {
@@ -15,6 +16,7 @@ export type {
   ManagedUserResponse,
   ManagedUserResponseSuccess,
   ProfileInput,
+  ResetUserPasswordInput,
   UpdateUserInput,
   UserAsset,
   UserProfile,
@@ -28,6 +30,7 @@ export { createAssetRoutes } from './server/assets-routes';
 export type {
   UsersAccountCreateInput,
   UsersAccountUpdateInput,
+  UsersAccountUpdateOptions,
   UsersActor,
   UsersAuthorizationHost,
   UsersIdentityHost,

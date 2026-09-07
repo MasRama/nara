@@ -56,20 +56,20 @@ export default createRouter({
 });
 `;
 
-const AUTH_BOUNDARY = `export const createAccount = (): unknown => ({});
+const AUTH_BOUNDARY = `export const createAccountWithRoles = (): unknown => ({});
 export const deleteAccounts = (): number => 0;
 export const findAccountById = (): undefined => undefined;
 export const findAllRoles = (): Array<{ id: string; slug: string }> => [];
 export const getCurrentUser = (): undefined => undefined;
 export const getUserRoles = (): Array<{ slug: string }> => [];
 export const getUsersWithRole = (): Array<{ id: string }> => [];
-export const hashPassword = (password: string): string => password;
+export const hashPassword = async (password: string): Promise<string> => password;
 export const hasPermission = (): boolean => false;
 export const isAdmin = (): boolean => false;
 export const listAccounts = (): { data: unknown[]; total: number } => ({ data: [], total: 0 });
+export const resetAccountPassword = (): undefined => undefined;
 export const SESSION_COOKIE_NAME = 'auth_id';
-export const syncUserRoles = (): void => {};
-export const updateAccount = (): undefined => undefined;
+export const updateAccountWithRoles = (): undefined => undefined;
 `;
 const AUTH_WEB_BOUNDARY = `export const createAccessClient = (): unknown => ({});
 export const createAuthClient = (): unknown => ({});
@@ -233,7 +233,7 @@ describe('users feature assembly', () => {
   it('fails closed when the provider lacks a required symbol', () => {
     const fixture = createFixture();
     projectShell(fixture, {
-      auth: AUTH_BOUNDARY.replace('export const syncUserRoles = (): void => {};\n', ''),
+      auth: AUTH_BOUNDARY.replace('export const resetAccountPassword = (): undefined => undefined;\n', ''),
     });
 
     const result = installOfficialFeature('users', fixture);
@@ -241,7 +241,7 @@ describe('users feature assembly', () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.kind).toBe('prerequisite');
-    expect(result.error.message).toContain('syncUserRoles');
+    expect(result.error.message).toContain('resetAccountPassword');
     expect(existsSync(path.join(fixture, 'src/features/users'))).toBe(false);
     expect(existsSync(path.join(fixture, 'src/app/bindings'))).toBe(false);
     expect(stageFiles(fixture)).toEqual([]);

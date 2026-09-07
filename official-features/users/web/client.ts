@@ -5,6 +5,7 @@ import type {
   DeleteUsersResponse,
   ManagedUserResponse,
   ProfileInput,
+  ResetUserPasswordInput,
   UpdateUserInput,
   UserProfileResponse,
   UsersResponse,
@@ -42,6 +43,7 @@ export interface UsersClient {
   listUsers(input?: { page?: number; limit?: number; search?: string }): Promise<UsersResponse>;
   createUser(input: CreateUserInput): Promise<ManagedUserResponse>;
   updateUser(id: string, input: UpdateUserInput): Promise<ManagedUserResponse>;
+  resetPassword(id: string, input: ResetUserPasswordInput): Promise<ManagedUserResponse>;
   deleteUsers(input: DeleteUsersInput): Promise<DeleteUsersResponse>;
   uploadAvatar(file: File): Promise<AvatarUploadResponse>;
 }
@@ -85,6 +87,11 @@ export function createUsersClient(options: UsersClientOptions = {}): UsersClient
     updateUser: async (id, input) =>
       jsonRequest<ManagedUserResponse>(`${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(id)}`, {
         method: 'PUT',
+        body: JSON.stringify(input),
+      }, csrf),
+    resetPassword: async (id, input) =>
+      jsonRequest<ManagedUserResponse>(`${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(id)}/reset-password`, {
+        method: 'POST',
         body: JSON.stringify(input),
       }, csrf),
     deleteUsers: async (input) =>

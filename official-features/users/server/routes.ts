@@ -7,11 +7,16 @@ import {
   createUserInputSchema,
   deleteUsersInputSchema,
   profileInputSchema,
+  resetUserPasswordInputSchema,
   updateUserInputSchema,
   type ManagedUser,
   type UserProfile,
 } from '../contract';
+import { cleanupUserAvatarAssets } from './assets-routes';
 import type { UsersServerHost } from './host';
+
+const MAX_PAGE = 1_000_000;
+const MAX_PAGE_SIZE = 100;
 
 function validationErrors(error: z.ZodError): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
@@ -39,12 +44,39 @@ function unauthorized(context: Context): Response {
   return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
 }
 
-function forbidden(context: Context): Response {
-  return context.json({ success: false as const, message: 'Forbidden', code: 'FORBIDDEN' }, 403);
+function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN'): Response {
+  return context.json({ success: false as const, message, code }, 403);
+}
+
+function validationFailure(context: Context, field: string, messages: string[]): Response {
+  return context.json(
+    { success: false as const, message: 'Validation failed', code: 'VALIDATION_ERROR', errors: { [field]: messages } },
+    422,
+  );
 }
 
 function adminRoleId(host: UsersServerHost): string | undefined {
   return host.availableRoles().find((role) => role.slug === 'admin')?.id;
+}
+
+function resolveRoleIds(host: UsersServerHost, slugs: string[]): { ids: string[]; unknown: string[] } {
+  const roles = host.availableRoles();
+  const bySlug = new Map(roles.map((role) => [role.slug, role.id]));
+  const uniqueSlugs = [...new Set(slugs)];
+  const unknown = uniqueSlugs.filter((slug) => !bySlug.has(slug));
+  return {
+    ids: uniqueSlugs.flatMap((slug) => {
+      const id = bySlug.get(slug);
+      return id ? [id] : [];
+    }),
+    unknown,
+  };
+}
+
+function normalizedQueryInteger(raw: string | undefined, fallback: number, maximum: number): number {
+  const parsed = Number.parseInt(raw ?? String(fallback), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(1, Math.min(maximum, parsed));
 }
 
 /**
@@ -106,10 +138,8 @@ export function createUserRoutes(host: UsersServerHost) {
     if (!sessionUser) return unauthorized(context);
     if (!host.canManageUsers(sessionUser.id, 'view')) return forbidden(context);
 
-    const requestedPage = Number.parseInt(context.req.query('page') ?? '1', 10);
-    const requestedLimit = Number.parseInt(context.req.query('limit') ?? '10', 10);
-    const page = Math.max(1, Number.isNaN(requestedPage) ? 1 : requestedPage);
-    const limit = Math.max(1, Math.min(100, Number.isNaN(requestedLimit) ? 10 : requestedLimit));
+    const page = normalizedQueryInteger(context.req.query('page'), 1, MAX_PAGE);
+    const limit = normalizedQueryInteger(context.req.query('limit'), 10, MAX_PAGE_SIZE);
     const search = context.req.query('search') ?? '';
     const result = host.listAccounts(page, limit, search);
     return context.json({
@@ -141,22 +171,28 @@ export function createUserRoutes(host: UsersServerHost) {
         422,
       );
     }
-    if (parsed.data.roles !== undefined && !host.canAssignRoles(sessionUser.id)) return forbidden(context);
+
+    const canAssignRoles = host.canAssignRoles(sessionUser.id);
+    if (parsed.data.roles !== undefined && !canAssignRoles) return forbidden(context);
+    const roleSelection = parsed.data.roles === undefined ? undefined : resolveRoleIds(host, parsed.data.roles);
+    if (roleSelection && roleSelection.unknown.length > 0) {
+      return validationFailure(
+        context,
+        'roles',
+        roleSelection.unknown.map((slug) => `Unknown role: ${slug}`),
+      );
+    }
 
     try {
-      const user = host.createAccount({
-        id: randomUUID(),
-        name: parsed.data.name,
-        email: parsed.data.email,
-        passwordHash: host.hashPassword(parsed.data.password),
-      });
-      if (host.canAssignRoles(sessionUser.id) && parsed.data.roles) {
-        const roleIds = host
-          .availableRoles()
-          .filter((role) => parsed.data.roles!.includes(role.slug))
-          .map((role) => role.id);
-        host.setUserRoles(user.id, roleIds);
-      }
+      const user = host.createAccount(
+        {
+          id: randomUUID(),
+          name: parsed.data.name,
+          email: parsed.data.email,
+          passwordHash: await host.hashPassword(parsed.data.password),
+        },
+        roleSelection?.ids,
+      );
       return context.json({ success: true as const, message: 'User created', data: { user: userWithRoles(user)! } }, 201);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -173,7 +209,6 @@ export function createUserRoutes(host: UsersServerHost) {
     const userId = context.req.param('id');
     if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
     const self = sessionUser.id === userId;
-    if (!self && !host.canManageUsers(sessionUser.id, 'edit')) return forbidden(context);
 
     const parsed = updateUserInputSchema.safeParse(await requestBody(context));
     if (!parsed.success) {
@@ -187,20 +222,37 @@ export function createUserRoutes(host: UsersServerHost) {
         422,
       );
     }
-    const sessionCanAssignRoles = host.canAssignRoles(sessionUser.id);
-    if (parsed.data.roles !== undefined && !sessionCanAssignRoles) return forbidden(context);
 
     const { roles, password, ...profile } = parsed.data;
-    const roleIds =
-      roles !== undefined && sessionCanAssignRoles
-        ? host
-          .availableRoles()
-          .filter((role) => roles.includes(role.slug))
-          .map((role) => role.id)
-        : undefined;
-    if (self && roleIds !== undefined) {
+    const actorIsAdmin = host.canAssignRoles(sessionUser.id);
+
+    if (!self && !host.canManageUsers(sessionUser.id, 'edit')) return forbidden(context);
+
+    const target = host.findAccountById(userId);
+    if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    const targetIsAdmin = host.rolesForUser(userId).includes('admin');
+    if (!self && targetIsAdmin && !actorIsAdmin) {
+      return forbidden(context, 'Only administrators may modify an administrator account', 'PROTECTED_ADMIN');
+    }
+
+    // Email is the Auth login identifier. Delegated users.edit may maintain
+    // non-sensitive profile data, but cannot take over another account by
+    // changing its login identifier.
+    if (!self && profile.email !== undefined && !actorIsAdmin) return forbidden(context);
+    if (roles !== undefined && !actorIsAdmin) return forbidden(context);
+
+    const roleSelection = roles === undefined ? undefined : resolveRoleIds(host, roles);
+    if (roleSelection && roleSelection.unknown.length > 0) {
+      return validationFailure(
+        context,
+        'roles',
+        roleSelection.unknown.map((slug) => `Unknown role: ${slug}`),
+      );
+    }
+
+    if (self && roleSelection !== undefined) {
       const adminId = adminRoleId(host);
-      if (adminId && !roleIds.includes(adminId)) {
+      if (adminId && !roleSelection.ids.includes(adminId)) {
         return context.json(
           { success: false as const, message: 'Cannot remove admin role from yourself', code: 'SELF_DEMOTION' },
           400,
@@ -208,16 +260,13 @@ export function createUserRoutes(host: UsersServerHost) {
       }
     }
 
-    try {
-      const user = host.updateAccount(userId, {
-        ...profile,
-        ...(password ? { passwordHash: host.hashPassword(password) } : {}),
-      });
-      if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    if (password !== undefined && password !== '') {
+      return validationFailure(context, 'password', ['Use the dedicated reset-password endpoint for managed credentials']);
+    }
 
-      if (roleIds !== undefined) {
-        host.setUserRoles(userId, roleIds);
-      }
+    try {
+      const user = host.updateAccount(userId, profile, roleSelection ? { roleIds: roleSelection.ids } : undefined);
+      if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
       return context.json({ success: true as const, message: 'User updated', data: { user: userWithRoles(user)! } });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -225,6 +274,46 @@ export function createUserRoutes(host: UsersServerHost) {
       }
       throw error;
     }
+  };
+
+  const resetPasswordHandler = async (context: Context) => {
+    const sessionUser = currentActor(context);
+    if (!sessionUser) return unauthorized(context);
+
+    const userId = context.req.param('id');
+    if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
+    if (sessionUser.id === userId) {
+      return forbidden(
+        context,
+        'Use the authenticated password-change flow to change your own password',
+        'CURRENT_PASSWORD_REQUIRED',
+      );
+    }
+    if (!host.canResetPasswords(sessionUser.id)) return forbidden(context);
+
+    const target = host.findAccountById(userId);
+    if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    const actorIsAdmin = host.canAssignRoles(sessionUser.id);
+    if (host.rolesForUser(userId).includes('admin') && !actorIsAdmin) {
+      return forbidden(context, 'Only administrators may reset an administrator password', 'PROTECTED_ADMIN');
+    }
+
+    const parsed = resetUserPasswordInputSchema.safeParse(await requestBody(context));
+    if (!parsed.success) {
+      return context.json(
+        {
+          success: false as const,
+          message: 'Validation failed',
+          code: 'VALIDATION_ERROR',
+          errors: validationErrors(parsed.error),
+        },
+        422,
+      );
+    }
+
+    const user = host.resetPassword(userId, await host.hashPassword(parsed.data.password));
+    if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    return context.json({ success: true as const, message: 'Password reset', data: { user: userWithRoles(user)! } });
   };
 
   const deleteUsersHandler = async (context: Context) => {
@@ -257,6 +346,7 @@ export function createUserRoutes(host: UsersServerHost) {
     }
 
     const deleted = host.deleteAccounts(parsed.data.ids);
+    await cleanupUserAvatarAssets(parsed.data.ids);
     return context.json({ success: true as const, message: 'Users deleted', data: { deleted } });
   };
 
@@ -266,5 +356,6 @@ export function createUserRoutes(host: UsersServerHost) {
     .get('/', listUsersHandler)
     .post('/', createUserHandler)
     .put('/:id', updateUserHandler)
+    .post('/:id/reset-password', resetPasswordHandler)
     .delete('/', deleteUsersHandler);
 }

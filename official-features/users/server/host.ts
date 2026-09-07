@@ -37,8 +37,11 @@ export interface UsersAccountCreateInput {
 export interface UsersAccountUpdateInput {
   name?: string;
   email?: string;
-  passwordHash?: string;
   avatar?: string | null;
+}
+
+export interface UsersAccountUpdateOptions {
+  roleIds?: string[];
 }
 
 /** Account-directory behavior Users needs but does not own. */
@@ -47,7 +50,7 @@ export interface UsersIdentityHost {
   resolveActor(sessionToken: string | undefined): UsersActor | undefined;
 
   /** One-way password hash for managed user credentials. */
-  hashPassword(password: string): string;
+  hashPassword(password: string): Promise<string>;
 
   /** Read one account presentation record, or undefined when absent. */
   findAccountById(userId: string): UserProfile | undefined;
@@ -56,10 +59,17 @@ export interface UsersIdentityHost {
   listAccounts(page: number, limit: number, search?: string): { data: UserProfile[]; total: number };
 
   /** Create one account with an already-hashed password. */
-  createAccount(input: UsersAccountCreateInput): UserProfile;
+  createAccount(input: UsersAccountCreateInput, roleIds?: string[]): UserProfile;
 
   /** Patch one account; returns the updated record or undefined when absent. */
-  updateAccount(userId: string, patch: UsersAccountUpdateInput): UserProfile | undefined;
+  updateAccount(
+    userId: string,
+    patch: UsersAccountUpdateInput,
+    options?: UsersAccountUpdateOptions,
+  ): UserProfile | undefined;
+
+  /** Explicit credential reset; provider must revoke target sessions atomically. */
+  resetPassword(userId: string, passwordHash: string): UserProfile | undefined;
 
   /** Delete accounts by id; returns the removed count. */
   deleteAccounts(userIds: string[]): number;
@@ -73,14 +83,14 @@ export interface UsersAuthorizationHost {
   /** Whether an actor may assign roles (administrator-level trust). */
   canAssignRoles(actorId: string): boolean;
 
+  /** Whether an actor may reset another account credential. */
+  canResetPasswords(actorId: string): boolean;
+
   /** All roles the host knows about, for slug-to-id assignment. */
   availableRoles(): UsersRoleRef[];
 
   /** Role slugs currently assigned to a user. */
   rolesForUser(userId: string): string[];
-
-  /** Replace a user's role assignments. */
-  setUserRoles(userId: string, roleIds: string[]): void;
 
   /** Minimal identity rows holding a role, for last-admin protection. */
   usersWithRole(roleId: string): Array<{ id: string }>;

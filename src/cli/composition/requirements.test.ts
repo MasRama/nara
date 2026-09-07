@@ -475,20 +475,20 @@ describe('requirements metadata separation', () => {
     const fixture = createFixture();
     projectShell(fixture, {
       'src/features/auth/index.ts': [
-        'export const createAccount = (): unknown => ({});',
+        'export const createAccountWithRoles = (): unknown => ({});',
         'export const deleteAccounts = (): number => 0;',
         'export const findAccountById = (): undefined => undefined;',
         'export const findAllRoles = (): Array<{ id: string; slug: string }> => [];',
         'export const getCurrentUser = (): undefined => undefined;',
         'export const getUserRoles = (): Array<{ slug: string }> => [];',
         'export const getUsersWithRole = (): Array<{ id: string }> => [];',
-        'export const hashPassword = (password: string): string => password;',
+        'export const hashPassword = async (password: string): Promise<string> => password;',
         'export const hasPermission = (): boolean => false;',
         'export const isAdmin = (): boolean => false;',
         'export const listAccounts = (): { data: unknown[]; total: number } => ({ data: [], total: 0 });',
+        'export const resetAccountPassword = (): undefined => undefined;',
         "export const SESSION_COOKIE_NAME = 'auth_id';",
-        'export const syncUserRoles = (): void => {};',
-        'export const updateAccount = (): undefined => undefined;',
+        'export const updateAccountWithRoles = (): undefined => undefined;',
         '',
       ].join('\n'),
       'src/features/auth/web/index.ts': [
