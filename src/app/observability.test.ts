@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 import { compress } from 'hono/compress';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleError } from './error-handler';
-import { getRequestId, normalizeRequestId, requestId } from './observability';
+import { getRequestId, normalizeRequestId, requestId, requestLifecycleLog } from './observability';
 import { app, startSessionCleanup, stopSessionCleanup } from './server';
 import { cleanupExpiredSessions } from '../features/auth';
 import { getDatabase } from '../shared/database';
@@ -179,7 +179,19 @@ describe('request lifecycle logging', () => {
     vi.spyOn(Logger, 'info').mockImplementation(((...args: unknown[]) => {
       seen.push(args);
     }) as typeof Logger.info);
-    await app.request('/arbitrary-public-browser-path');
+
+    // Unit-test lifecycle logging independently from whether build/client is
+    // present in the checkout. Fresh CI intentionally runs `npm run check`
+    // before `npm run build`, while local worktrees may already contain a
+    // previous frontend build. Both environments must exercise the same
+    // successful-browser-navigation behavior here.
+    const probe = new Hono();
+    probe.use('*', requestId());
+    probe.use('*', requestLifecycleLog());
+    probe.get('*', (context) => context.html('<!doctype html><title>Nara</title>'));
+
+    const response = await probe.request('/arbitrary-public-browser-path');
+    expect(response.status).toBe(200);
     const events = seen.filter(([message]) => message === 'HTTP request');
     expect(events).toHaveLength(0);
   });

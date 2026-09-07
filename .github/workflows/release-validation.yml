@@ -1,17 +1,17 @@
-name: CI
+name: Release Validation
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    tags:
+      - 'v*'
 
 env:
   NODE_VERSION: '22'
 
 jobs:
-  app:
-    name: App validation
+  release:
+    name: Canonical release validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -45,14 +45,5 @@ jobs:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ steps.npm-cache-restore.outputs.cache-primary-key }}
 
-      - name: Check app
-        run: npm run check
-
-      - name: Build production app
-        run: npm run build
-
-      - name: Verify production serving
-        run: npm run test:production-serving
-
-      - name: Verify production startup
-        run: npm run test:production-startup
+      - name: Canonical release validation
+        run: npm run validate:release
