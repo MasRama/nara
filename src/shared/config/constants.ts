@@ -29,4 +29,5 @@ export const UPLOAD = {
 
 export const LOGGING = {
   LEVELS: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'] as const,
+  ROTATED_FILE_LIMIT: 30,
 } as const;

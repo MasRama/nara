@@ -431,13 +431,43 @@ describe('login identifier/IP lockout', () => {
     });
     expect(success.status).toBe(200);
 
-    const afterReset = await failedLogin(email, ip);
+    // Identifier state is reset by successful authentication. Use a fresh IP
+    // here so the independent shared-IP spray counter does not intentionally
+    // trigger on its fifth failure.
+    const afterReset = await failedLogin(email, testIp());
     expect(afterReset.status).toBe(401);
     await expect(afterReset.json()).resolves.toMatchObject({
       success: false,
       code: 'INVALID_CREDENTIALS',
       message: 'Invalid email or password',
     });
+  });
+
+
+  it('does not let a successful login erase shared IP password-spray failures', async () => {
+    const controlledEmail = uniqueEmail();
+    expect((await registerWithCsrf(controlledEmail)).response.status).toBe(201);
+    const ip = { 'x-test-ip': '203.0.113.240' };
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      expect((await failedLogin(uniqueEmail(), ip)).status).toBe(401);
+    }
+
+    const state = await issueCsrf(app);
+    const success = await app.request('/api/auth/login', {
+      method: 'POST',
+      headers: { ...csrfHeaders(state), 'Content-Type': 'application/json', ...ip },
+      body: JSON.stringify({ email: controlledEmail, password: TEST_PASSWORD }),
+    });
+    expect(success.status).toBe(200);
+
+    // The fifth failure on the same IP still consumes the preserved spray
+    // counter; the following request is locked even though the intervening
+    // authentication succeeded for a different identifier.
+    expect((await failedLogin(uniqueEmail(), ip)).status).toBe(401);
+    const locked = await failedLogin(uniqueEmail(), ip);
+    expect(locked.status).toBe(429);
+    await expect(locked.json()).resolves.toMatchObject({ code: 'RATE_LIMITED' });
   });
 });
 
@@ -718,6 +748,27 @@ describe('request body Content-Type bypass', () => {
     form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
     const smuggled = await probe.request('/api/upload', { method: 'POST', body: form });
     expect(smuggled.status).toBe(413);
+  });
+});
+
+describe('cheap rejection ordering', () => {
+  it('rejects an invalid CSRF mutation without consuming its request body', async () => {
+    const body = new ReadableStream<Uint8Array>({
+      pull() {
+        throw new Error('request body should not be consumed before CSRF rejection');
+      },
+    });
+    const request = new Request('http://localhost/api/auth/logout', {
+      method: 'POST',
+      headers: testIp(),
+      body,
+      duplex: 'half',
+    } as RequestInit);
+
+    const response = await app.request(request);
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: 'CSRF_INVALID' });
+    expect(request.bodyUsed).toBe(false);
   });
 });
 

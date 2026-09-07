@@ -88,8 +88,9 @@ function isApiRequest(context: { req: { url: string } }): boolean {
 }
 
 // Feature-neutral request protections (V3-043). Auth-specific lockout lives
-// inside the Auth Feature; everything here applies uniformly. Order mirrors
-// the effective v2 pipeline: headers → body limits → rate limits → CSRF.
+// inside the Auth Feature; everything here applies uniformly. Cheap request
+// rejection runs before any body streaming so rate-limited or CSRF-invalid
+// callers cannot make the server inspect up to the full request-body budget.
 export const globalRateLimiter = createRateLimiter({
   maxRequests: env.RATE_LIMIT_MAX,
   windowMs: env.RATE_LIMIT_WINDOW_MS,
@@ -122,11 +123,6 @@ app.use('*', requestLifecycleLog());
 app.use('*', securityHeaders({ isProduction: isProductionServer, viteOrigin: `http://localhost:${env.VITE_PORT}` }));
 app.use('*', compress());
 
-// Route-owned body budgets: every state-changing /api/* request is bounded
-// by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
-// POST /api/assets/avatar owns the narrowly larger upload request budget
-// (5 MB file + 256 KiB framing) with the Feature file check authoritative.
-app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: UPLOAD.MAX_FILE_SIZE + 256 * 1024 }));
 app.use('*', globalRateLimiter.middleware);
 app.use('/api/auth/login', authRateLimiter.middleware);
 app.use('/api/auth/register', authRateLimiter.middleware);
@@ -134,15 +130,33 @@ app.use('/api/auth/change-password', authRateLimiter.middleware);
 app.use('/api/auth/logout', authRateLimiter.middleware);
 app.use('/api/assets/avatar', authRateLimiter.middleware);
 app.use('*', csrfProtection({ isProduction: isProductionServer }));
+// Route-owned body budgets: every state-changing /api/* request is bounded
+// by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
+// POST /api/assets/avatar owns the narrowly larger upload request budget
+// (5 MB file + 256 KiB framing) with the Feature file check authoritative.
+app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: UPLOAD.MAX_FILE_SIZE + 256 * 1024 }));
 
 app.route('/health', healthRoutes);
-app.get('/ready', (context) => {
+export function databaseReady(database: ReturnType<typeof getDatabase> = getDatabase()): boolean {
   try {
-    getDatabase().prepare('SELECT 1').get();
-    return context.json({ status: 'ok' });
+    // A connection-level SELECT 1 can succeed even when migrations were not
+    // applied or the application schema was damaged. Touch the core tables
+    // the running reference app requires so readiness reflects usable state.
+    database.prepare('SELECT id FROM users LIMIT 1').get();
+    database.prepare('SELECT id FROM sessions LIMIT 1').get();
+    database.prepare('SELECT id FROM roles LIMIT 1').get();
+    database.prepare('SELECT id FROM permissions LIMIT 1').get();
+    database.prepare('SELECT id FROM _nara_migrations LIMIT 1').get();
+    return true;
   } catch {
-    return context.json({ status: 'error' }, 503);
+    return false;
   }
+}
+
+app.get('/ready', (context) => {
+  return databaseReady()
+    ? context.json({ status: 'ok' })
+    : context.json({ status: 'error' }, 503);
 });
 
 if (staticHandler) {
@@ -257,7 +271,8 @@ export function startServer(port = env.PORT) {
     );
 
     server.on('error', (error: Error) => {
-      Logger.error('Nara v3 server error', error);
+      stopSessionCleanup();
+      Logger.fatal('Nara v3 server error', error);
     });
     server.on('close', () => {
       stopSessionCleanup();

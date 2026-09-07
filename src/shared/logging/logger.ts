@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pino from 'pino';
-import { env } from '../config';
+import { env, LOGGING } from '../config';
 
 type LogData = Record<string, unknown>;
 type LogError = Error | LogData;
@@ -42,6 +42,7 @@ const transport = pino.transport({
         size: '10m',
         mkdir: true,
         extension: '.log',
+        limit: { count: LOGGING.ROTATED_FILE_LIMIT, removeOtherLogFiles: true },
       },
     },
     {
@@ -53,6 +54,7 @@ const transport = pino.transport({
         size: '10m',
         mkdir: true,
         extension: '.log',
+        limit: { count: LOGGING.ROTATED_FILE_LIMIT, removeOtherLogFiles: true },
       },
     },
   ],

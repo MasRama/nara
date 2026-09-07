@@ -120,6 +120,25 @@ afterAll(() => {
  * path. Every test guarantees its child is reaped and no listener remains.
  */
 describe('production startup failures', () => {
+  it('exits non-zero when the configured port is already in use', async () => {
+    const port = await findFreePort();
+    const blocker = createServer();
+    await new Promise<void>((resolve, reject) => {
+      blocker.once('error', reject);
+      blocker.listen(port, '127.0.0.1', () => resolve());
+    });
+    try {
+      const { child, output } = spawnProduction(npmCommand, ['start'], projectRoot, productionEnv(port));
+      const code = await waitForExit(child, 30_000);
+      expect(code, output()).not.toBe(0);
+      expect(code, output()).not.toBeNull();
+      expect(output()).toMatch(/EADDRINUSE|address already in use/i);
+    } finally {
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
+    await expect(isPortFree(port)).resolves.toBe(true);
+  });
+
   it('exits non-zero and names APP_URL when it is blank in production', async () => {
     // Blank exercises the same `required in production` guard as absent:
     // dotenv never overrides an explicitly set variable, so '' stays ''

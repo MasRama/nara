@@ -158,6 +158,32 @@ describe('request lifecycle logging', () => {
     expect(paths).not.toContain('/ready');
   });
 
+  it('does not emit lifecycle logs for static asset traffic', async () => {
+    const seen: unknown[][] = [];
+    vi.spyOn(Logger, 'info').mockImplementation(((...args: unknown[]) => {
+      seen.push(args);
+    }) as typeof Logger.info);
+    await app.request('/assets/app.js');
+    await app.request('/landing/hero.webp');
+    await app.request('/nara.png');
+    const paths = seen
+      .filter(([message]) => message === 'HTTP request')
+      .map(([, payload]) => (payload as Record<string, unknown>).path);
+    expect(paths).not.toContain('/assets/app.js');
+    expect(paths).not.toContain('/landing/hero.webp');
+    expect(paths).not.toContain('/nara.png');
+  });
+
+  it('keeps successful public SPA navigation out of request logs', async () => {
+    const seen: unknown[][] = [];
+    vi.spyOn(Logger, 'info').mockImplementation(((...args: unknown[]) => {
+      seen.push(args);
+    }) as typeof Logger.info);
+    await app.request('/arbitrary-public-browser-path');
+    const events = seen.filter(([message]) => message === 'HTTP request');
+    expect(events).toHaveLength(0);
+  });
+
   it('still assigns request IDs to health and readiness probes', async () => {
     expect((await app.request('/health')).headers.get('X-Request-Id')).toMatch(SAFE_ID);
     expect((await app.request('/ready')).headers.get('X-Request-Id')).toMatch(SAFE_ID);

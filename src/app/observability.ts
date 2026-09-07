@@ -49,6 +49,23 @@ export function requestId() {
 }
 
 const QUIET_PATHS = new Set(['/health', '/ready']);
+const QUIET_PREFIXES = ['/assets/', '/landing/'];
+
+function quietPath(pathname: string): boolean {
+  return (
+    QUIET_PATHS.has(pathname) ||
+    pathname === '/nara.png' ||
+    QUIET_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
+
+function shouldLogLifecycle(pathname: string, status: number): boolean {
+  if (quietPath(pathname)) return false;
+  // API traffic is operationally meaningful. Successful browser document
+  // requests are intentionally quiet: arbitrary public SPA paths otherwise
+  // provide an unauthenticated, unbounded way to fill application logs.
+  return pathname.startsWith('/api/') || status >= 400;
+}
 
 /**
  * One structured completion event per request with method, path, status,
@@ -64,7 +81,10 @@ export function requestLifecycleLog() {
     const start = Date.now();
     await next();
     const pathname = new URL(context.req.url).pathname;
-    if (QUIET_PATHS.has(pathname)) return;
+    // Static/public assets are intentionally omitted too: logging every
+    // browser asset hit adds little operational value and lets trivial
+    // anonymous traffic create unbounded high-volume request logs.
+    if (!shouldLogLifecycle(pathname, context.res.status)) return;
     Logger.info('HTTP request', {
       requestId: getRequestId(context),
       method: context.req.method,
