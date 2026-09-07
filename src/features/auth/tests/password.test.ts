@@ -2,8 +2,18 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
+import { comparePassword, hashPassword } from '../server/service';
 
 describe('auth password migration', () => {
+
+  it('derives and verifies password hashes asynchronously', async () => {
+    const pending = hashPassword('non-blocking password');
+    expect(pending).toBeInstanceOf(Promise);
+    const hash = await pending;
+    await expect(comparePassword('non-blocking password', hash)).resolves.toBe(true);
+    await expect(comparePassword('wrong password', hash)).resolves.toBe(false);
+  });
+
   it('changes the password and invalidates the previous credential', async () => {
     const email = `${randomUUID()}@example.com`;
     const oldPassword = 'correct horse battery staple';

@@ -1,4 +1,5 @@
 import { getDatabase } from '../../../shared/database';
+import { syncUserRoles } from './access';
 
 /**
  * Auth-owned account directory. Auth owns account identity data
@@ -7,8 +8,9 @@ import { getDatabase } from '../../../shared/database';
  * through these functions or through a typed host requirement adapted in
  * application-owned bindings — never through direct SQL on the users table.
  *
- * Returned records never include password hashes. Credential writes accept
- * an already-hashed password; hashing policy lives in the auth service.
+ * Returned records never include password hashes. Credential reset is a
+ * dedicated operation so generic profile edits cannot accidentally mutate
+ * credentials without also revoking active sessions.
  */
 export interface AccountRecord {
   id: string;
@@ -32,8 +34,19 @@ export interface AccountCreateInput {
 export interface AccountUpdateInput {
   name?: AccountRecord['name'];
   email?: AccountRecord['email'];
-  passwordHash?: string;
   avatar?: AccountRecord['avatar'];
+}
+
+const MAX_PAGE = 1_000_000;
+const MAX_PAGE_SIZE = 100;
+
+function boundedInteger(value: number, fallback: number, minimum: number, maximum: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(minimum, Math.min(maximum, Math.trunc(value)));
+}
+
+function escapeLikeLiteral(value: string): string {
+  return value.replace(/[!%_]/g, (character) => `!${character}`);
 }
 
 export function findAccountById(userId: string): AccountRecord | undefined {
@@ -43,18 +56,18 @@ export function findAccountById(userId: string): AccountRecord | undefined {
 }
 
 export function listAccounts(page: number, limit: number, search = ''): AccountList {
-  const normalizedPage = Math.max(1, page);
-  const normalizedLimit = Math.max(1, Math.min(100, limit));
-  const pattern = `%${search.replace(/[%_]/g, '')}%`;
+  const normalizedPage = boundedInteger(page, 1, 1, MAX_PAGE);
+  const normalizedLimit = boundedInteger(limit, 10, 1, MAX_PAGE_SIZE);
+  const pattern = `%${escapeLikeLiteral(search)}%`;
   const database = getDatabase();
   const count = database
-    .prepare('SELECT COUNT(*) AS count FROM users WHERE name LIKE ? OR email LIKE ?')
+    .prepare("SELECT COUNT(*) AS count FROM users WHERE name LIKE ? ESCAPE '!' OR email LIKE ? ESCAPE '!'")
     .get(pattern, pattern) as { count: number };
   const data = database
     .prepare(
       `SELECT id, name, email, avatar
        FROM users
-       WHERE name LIKE ? OR email LIKE ?
+       WHERE name LIKE ? ESCAPE '!' OR email LIKE ? ESCAPE '!'
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
     )
@@ -73,6 +86,15 @@ export function createAccount(data: AccountCreateInput): AccountRecord {
   return findAccountById(data.id)!;
 }
 
+export function createAccountWithRoles(data: AccountCreateInput, roleIds?: string[]): AccountRecord {
+  const database = getDatabase();
+  return database.transaction(() => {
+    const account = createAccount(data);
+    if (roleIds !== undefined) syncUserRoles(account.id, roleIds);
+    return account;
+  })();
+}
+
 export function updateAccount(userId: string, data: AccountUpdateInput): AccountRecord | undefined {
   const fields: string[] = [];
   const values: unknown[] = [];
@@ -84,10 +106,6 @@ export function updateAccount(userId: string, data: AccountUpdateInput): Account
     fields.push('email = ?');
     values.push(data.email);
   }
-  if (data.passwordHash !== undefined) {
-    fields.push('password = ?');
-    values.push(data.passwordHash);
-  }
   if (data.avatar !== undefined) {
     fields.push('avatar = ?');
     values.push(data.avatar);
@@ -98,6 +116,36 @@ export function updateAccount(userId: string, data: AccountUpdateInput): Account
     getDatabase().prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
   }
   return findAccountById(userId);
+}
+
+export interface AccountManagedUpdateOptions {
+  roleIds?: string[];
+}
+
+export function updateAccountWithRoles(
+  userId: string,
+  data: AccountUpdateInput,
+  options: AccountManagedUpdateOptions = {},
+): AccountRecord | undefined {
+  const database = getDatabase();
+  return database.transaction(() => {
+    const account = updateAccount(userId, data);
+    if (!account) return undefined;
+    if (options.roleIds !== undefined) syncUserRoles(userId, options.roleIds);
+    return findAccountById(userId);
+  })();
+}
+
+export function resetAccountPassword(userId: string, passwordHash: string): AccountRecord | undefined {
+  const database = getDatabase();
+  return database.transaction(() => {
+    const result = database
+      .prepare('UPDATE users SET password = ?, updated_at = ? WHERE id = ?')
+      .run(passwordHash, Date.now(), userId);
+    if (result.changes === 0) return undefined;
+    database.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
+    return findAccountById(userId);
+  })();
 }
 
 export function deleteAccounts(userIds: string[]): number {

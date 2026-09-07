@@ -60,6 +60,31 @@ export function createRole(data: {
   return findRoleById(data.id)!;
 }
 
+
+function replaceRolePermissions(database: ReturnType<typeof getDatabase>, roleId: string, permissionIds: string[]): void {
+  database.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(roleId);
+  const statement = database.prepare(
+    `INSERT INTO role_permissions (id, role_id, permission_id, created_at)
+     VALUES (?, ?, ?, ?)`,
+  );
+  const now = Date.now();
+  for (const permissionId of permissionIds) {
+    statement.run(randomUUID(), roleId, permissionId, now);
+  }
+}
+
+export function createRoleWithPermissions(
+  data: { id: string; name: string; slug: string; description: string | null },
+  permissionIds: string[],
+): Role {
+  const database = getDatabase();
+  return database.transaction(() => {
+    const role = createRole(data);
+    replaceRolePermissions(database, role.id, permissionIds);
+    return role;
+  })();
+}
+
 export function updateRole(
   roleId: string,
   data: Partial<Pick<Role, 'name' | 'slug' | 'description'>>,
@@ -183,18 +208,21 @@ export function getUserCountsForRoles(roleIds: string[]): Map<string, number> {
 
 export function syncRolePermissions(roleId: string, permissionIds: string[]): void {
   const database = getDatabase();
-  const replace = database.transaction(() => {
-    database.prepare('DELETE FROM role_permissions WHERE role_id = ?').run(roleId);
-    const statement = database.prepare(
-      `INSERT INTO role_permissions (id, role_id, permission_id, created_at)
-       VALUES (?, ?, ?, ?)`,
-    );
-    const now = Date.now();
-    for (const permissionId of permissionIds) {
-      statement.run(randomUUID(), roleId, permissionId, now);
-    }
-  });
-  replace();
+  database.transaction(() => replaceRolePermissions(database, roleId, permissionIds))();
+}
+
+export function updateRoleWithPermissions(
+  roleId: string,
+  data: Partial<Pick<Role, 'name' | 'slug' | 'description'>>,
+  permissionIds?: string[],
+): Role | undefined {
+  const database = getDatabase();
+  return database.transaction(() => {
+    const role = updateRole(roleId, data);
+    if (!role) return undefined;
+    if (permissionIds !== undefined) replaceRolePermissions(database, roleId, permissionIds);
+    return role;
+  })();
 }
 
 export function syncUserRoles(userId: string, roleIds: string[]): void {

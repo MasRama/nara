@@ -23,7 +23,4 @@ export function run(database: Database.Database): void {
     insert.run(SEED_TIMESTAMP, 'admin', permission.slug);
   }
 
-  for (const permission of ['users.view', 'settings.view']) {
-    insert.run(SEED_TIMESTAMP, 'user', permission);
-  }
 }

@@ -38,15 +38,18 @@ export const createUserInputSchema = z.object({
   email: emailSchema,
   // Passwords are length-bounded only: never trimmed or transformed.
   password: z.string().min(8, 'Password must be at least 8 characters').max(100),
-  roles: z.array(z.string().min(1, 'Role is required')).optional(),
+  roles: z.array(z.string().min(1, 'Role is required')).max(100).optional(),
 });
 
 export const updateUserInputSchema = z
   .object({
     name: personNameSchema.optional(),
     email: emailSchema.optional(),
+    // Kept in the management contract for backwards-compatible diagnostics;
+    // the server rejects non-empty values and directs callers to the explicit
+    // reset-password endpoint.
     password: z.string().min(8, 'Password must be at least 8 characters').max(100).optional().or(z.literal('')),
-    roles: z.array(z.string().min(1, 'Role is required')).optional(),
+    roles: z.array(z.string().min(1, 'Role is required')).max(100).optional(),
   })
   .refine(
     (value) =>
@@ -57,6 +60,11 @@ export const updateUserInputSchema = z
     { message: 'At least one field is required to update', path: ['_root'] },
   );
 
+
+export const resetUserPasswordInputSchema = z.object({
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100),
+});
+
 export const deleteUsersInputSchema = z.object({
   ids: z.array(z.string().uuid('Invalid ID format')).min(1, 'At least one ID must be selected'),
 });
@@ -64,6 +72,7 @@ export const deleteUsersInputSchema = z.object({
 export type ProfileInput = z.infer<typeof profileInputSchema>;
 export type CreateUserInput = z.infer<typeof createUserInputSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;
+export type ResetUserPasswordInput = z.infer<typeof resetUserPasswordInputSchema>;
 export type DeleteUsersInput = z.infer<typeof deleteUsersInputSchema>;
 
 export interface UserProfile {

@@ -9,7 +9,7 @@ import {
   updateRoleInputSchema,
 } from '../contract';
 import {
-  createRole,
+  createRoleWithPermissions,
   deleteRoles,
   findAllPermissions,
   findAllRoles,
@@ -18,8 +18,7 @@ import {
   getUserCountsForRoles,
   hasPermission,
   isAdmin,
-  syncRolePermissions,
-  updateRole,
+  updateRoleWithPermissions,
 } from './access';
 import { currentUser as getCurrentUser, SESSION_COOKIE_NAME } from './service';
 import { Logger } from '../../../shared/logging';
@@ -67,6 +66,31 @@ function roleResponse(roleId: string) {
     permissions: getRolePermissions(role.id).map((permission) => permission.slug),
     userCount: getUserCountsForRoles([role.id]).get(role.id) ?? 0,
   };
+}
+
+function resolvePermissionIds(slugs: string[]): { ids: string[]; unknown: string[] } {
+  const permissions = findAllPermissions();
+  const bySlug = new Map(permissions.map((permission) => [permission.slug, permission.id]));
+  const unknown = [...new Set(slugs.filter((slug) => !bySlug.has(slug)))];
+  return {
+    ids: [...new Set(slugs)].flatMap((slug) => {
+      const id = bySlug.get(slug);
+      return id ? [id] : [];
+    }),
+    unknown,
+  };
+}
+
+function unknownPermissions(context: Context, slugs: string[]): Response {
+  return context.json(
+    {
+      success: false as const,
+      message: 'Validation failed',
+      code: 'VALIDATION_ERROR',
+      errors: { permissions: slugs.map((slug) => `Unknown permission: ${slug}`) },
+    },
+    422,
+  );
 }
 
 const listRolesHandler = (context: Context) => {
@@ -120,17 +144,20 @@ const createRoleHandler = async (context: Context) => {
     );
   }
 
+  const permissions = resolvePermissionIds(parsed.data.permissions);
+  if (permissions.unknown.length > 0) return unknownPermissions(context, permissions.unknown);
+  if (permissions.ids.length > 0 && !isAdmin(user.id)) return forbidden(context);
+
   try {
-    const role = createRole({
-      id: randomUUID(),
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      description: parsed.data.description ?? null,
-    });
-    const permissionIds = findAllPermissions()
-      .filter((permission) => parsed.data.permissions.includes(permission.slug))
-      .map((permission) => permission.id);
-    syncRolePermissions(role.id, permissionIds);
+    const role = createRoleWithPermissions(
+      {
+        id: randomUUID(),
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        description: parsed.data.description ?? null,
+      },
+      permissions.ids,
+    );
     return context.json({ success: true as const, message: 'Role created', data: { role: roleResponse(role.id)! } }, 201);
   } catch (error) {
     if (uniqueConstraint(error)) {
@@ -167,16 +194,16 @@ const updateRoleHandler = async (context: Context) => {
     );
   }
 
+  const { permissions, ...roleData } = parsed.data;
+  const permissionSelection = permissions === undefined ? undefined : resolvePermissionIds(permissions);
+  if (permissionSelection && permissionSelection.unknown.length > 0) {
+    return unknownPermissions(context, permissionSelection.unknown);
+  }
+  if (permissionSelection !== undefined && !isAdmin(user.id)) return forbidden(context);
+
   try {
-    const { permissions, ...roleData } = parsed.data;
-    const role = updateRole(roleId, roleData);
+    const role = updateRoleWithPermissions(roleId, roleData, permissionSelection?.ids);
     if (!role) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
-    if (permissions !== undefined) {
-      const permissionIds = findAllPermissions()
-        .filter((permission) => permissions.includes(permission.slug))
-        .map((permission) => permission.id);
-      syncRolePermissions(roleId, permissionIds);
-    }
     return context.json({ success: true as const, message: 'Role updated', data: { role: roleResponse(roleId)! } });
   } catch (error) {
     if (uniqueConstraint(error)) {

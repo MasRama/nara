@@ -142,10 +142,14 @@ export function recordFailedAttempt(
   return { isLocked: false, lockoutMs: 0 };
 }
 
+/**
+ * A successful login proves only this identifier. Clear its failure history
+ * without erasing the shared IP spray counter, otherwise one valid account
+ * could be used to reset an IP-wide password-spraying budget.
+ */
 export function clearLoginAttempts(identifier: string, ip: string): void {
-  const [idKey, ipKey] = keys(identifier, ip);
+  const [idKey] = keys(identifier, ip);
   store.delete(idKey);
-  store.delete(ipKey);
 }
 
 /** Test-only reset for deterministic lockout suites. */

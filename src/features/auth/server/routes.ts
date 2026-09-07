@@ -81,7 +81,7 @@ const registerHandler = async (context: Context) => {
       id: randomUUID(),
       name: parsed.data.name,
       email: parsed.data.email,
-      password: hashPassword(parsed.data.password),
+      password: await hashPassword(parsed.data.password),
     });
     const token = startSession(user, context.req.header('user-agent'));
     setSessionCookie(context, token);
@@ -140,7 +140,7 @@ const loginHandler = async (context: Context) => {
   const user = findUserByEmail(parsed.data.email);
   // checkPassword always runs a hash comparison (dummy hash for unknown
   // emails) so failure timing does not disclose account existence.
-  if (!checkPassword(parsed.data.password, user)) {
+  if (!(await checkPassword(parsed.data.password, user))) {
     const result = recordFailedAttempt(identifier, ip);
     Logger.logSecurity('login_failed', { email: parsed.data.email });
     return context.json(
@@ -187,14 +187,14 @@ const changePasswordHandler = async (context: Context) => {
     );
   }
 
-  if (!checkPassword(parsed.data.current_password, user)) {
+  if (!(await checkPassword(parsed.data.current_password, user))) {
     return context.json(
       { success: false as const, message: 'Current password is incorrect', code: 'INVALID_PASSWORD' },
       400,
     );
   }
 
-  updatePassword(user.id, hashPassword(parsed.data.new_password));
+  updatePassword(user.id, await hashPassword(parsed.data.new_password));
   const token = startSession(user, context.req.header('user-agent'));
   setSessionCookie(context, token);
   Logger.logAuth('password_changed', { userId: user.id });

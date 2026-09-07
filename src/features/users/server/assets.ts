@@ -27,3 +27,11 @@ export function findUserAssets(userId: string): UserAsset[] {
     .prepare('SELECT * FROM assets WHERE user_id = ? ORDER BY created_at DESC')
     .all(userId) as UserAsset[];
 }
+
+export function findUserAssetByUrl(url: string): UserAsset | undefined {
+  return getDatabase().prepare('SELECT * FROM assets WHERE url = ?').get(url) as UserAsset | undefined;
+}
+
+export function deleteUserAsset(assetId: string): boolean {
+  return getDatabase().prepare('DELETE FROM assets WHERE id = ?').run(assetId).changes > 0;
+}

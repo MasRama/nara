@@ -65,7 +65,7 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       const account = state.accounts.get(id);
       return account ? { id: account.id, avatar: account.avatar } : undefined;
     },
-    hashPassword: (password) => `mock-hash:${password}`,
+    hashPassword: async (password) => `mock-hash:${password}`,
     findAccountById: (userId) => {
       const account = state.accounts.get(userId);
       return account ? visible(account) : undefined;
@@ -82,15 +82,16 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
         total: matching.length,
       };
     },
-    createAccount: (input) => {
+    createAccount: (input, roleIds) => {
       for (const account of state.accounts.values()) {
         if (account.email.toLowerCase() === input.email.toLowerCase()) throw uniqueViolation();
       }
       const account: MockAccount = { id: input.id, name: input.name, email: input.email, passwordHash: input.passwordHash, avatar: null };
       state.accounts.set(account.id, account);
+      if (roleIds !== undefined) state.assignments.set(account.id, [...roleIds]);
       return visible(account);
     },
-    updateAccount: (userId, patch) => {
+    updateAccount: (userId, patch, options = {}) => {
       const account = state.accounts.get(userId);
       if (!account) return undefined;
       if (patch.email !== undefined) {
@@ -100,8 +101,17 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
         account.email = patch.email;
       }
       if (patch.name !== undefined) account.name = patch.name;
-      if (patch.passwordHash !== undefined) account.passwordHash = patch.passwordHash;
       if (patch.avatar !== undefined) account.avatar = patch.avatar;
+      if (options.roleIds !== undefined) state.assignments.set(userId, [...options.roleIds]);
+      return visible(account);
+    },
+    resetPassword: (userId, passwordHash) => {
+      const account = state.accounts.get(userId);
+      if (!account) return undefined;
+      account.passwordHash = passwordHash;
+      for (const [token, actorId] of state.actors) {
+        if (actorId === userId) state.actors.delete(token);
+      }
       return visible(account);
     },
     deleteAccounts: (userIds) => {
@@ -114,12 +124,11 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
     canManageUsers: (actorId, action) =>
       state.admins.has(actorId) || (state.permissions.get(actorId)?.has(`users.${action}`) ?? false),
     canAssignRoles: (actorId) => state.admins.has(actorId),
+    canResetPasswords: (actorId) =>
+      state.admins.has(actorId) || (state.permissions.get(actorId)?.has('users.reset-password') ?? false),
     availableRoles: () => state.roles.map((role) => ({ ...role })),
     rolesForUser: (userId) =>
       (state.assignments.get(userId) ?? []).map((id) => state.roles.find((role) => role.id === id)?.slug ?? id),
-    setUserRoles: (userId, roleIds) => {
-      state.assignments.set(userId, [...roleIds]);
-    },
     usersWithRole: (roleId) =>
       [...state.assignments.entries()].filter(([, ids]) => ids.includes(roleId)).map(([id]) => ({ id })),
   };
@@ -134,7 +143,7 @@ function seedAccount(
     id: randomUUID(),
     name: overrides.name ?? 'Mock User',
     email: overrides.email ?? `${randomUUID()}@example.com`,
-    passwordHash: host.hashPassword(overrides.password ?? `password-${randomUUID()}`),
+    passwordHash: `mock-hash:${overrides.password ?? `password-${randomUUID()}`}`,
   });
   return { id: account.id, email: account.email };
 }
@@ -320,6 +329,11 @@ describe('users host requirements with an alternative provider', () => {
     expect(listed.status).toBe(200);
     expect(received).toEqual({ page: 1, limit: 100 });
     expect(listed.payload).toMatchObject({ data: { page: 1, limit: 100 } });
+
+    const extreme = await jsonRequest(app, '/api/users?page=999999999999999999999999&limit=999999999999999999', { cookie });
+    expect(extreme.status).toBe(200);
+    expect(received).toEqual({ page: 1_000_000, limit: 100 });
+    expect(extreme.payload).toMatchObject({ data: { page: 1_000_000, limit: 100 } });
   });
 
   it('creates users through host password hashing and role assignment', async () => {
@@ -346,6 +360,33 @@ describe('users host requirements with an alternative provider', () => {
     expect(listed.payload).toMatchObject({
       data: { users: expect.arrayContaining([expect.objectContaining({ id: userId, roles: ['user'] })]) },
     });
+  });
+
+  it('rejects unknown role slugs before creating or updating accounts', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: adminId } = seedAccount(host);
+    const cookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+    const email = `${randomUUID()}@example.com`;
+
+    const created = await jsonRequest(app, '/api/users', {
+      method: 'POST',
+      cookie,
+      body: { name: 'Unknown Role', email, password: 'correct horse battery staple', roles: ['missing-role'] },
+    });
+    expect(created.status).toBe(422);
+    expect(created.payload).toMatchObject({ code: 'VALIDATION_ERROR', errors: { roles: ['Unknown role: missing-role'] } });
+    expect([...state.accounts.values()].some((account) => account.email === email)).toBe(false);
+
+    const { id: targetId } = seedAccount(host);
+    const before = state.assignments.get(targetId);
+    const updated = await jsonRequest(app, `/api/users/${targetId}`, {
+      method: 'PUT',
+      cookie,
+      body: { roles: ['missing-role'] },
+    });
+    expect(updated.status).toBe(422);
+    expect(state.assignments.get(targetId)).toEqual(before);
   });
 
   it('maps duplicate emails through host unique violations', async () => {
@@ -420,6 +461,75 @@ describe('users host requirements with an alternative provider', () => {
     expect(state.accounts.get(targetId)?.passwordHash).toBe(before);
   });
 
+  it('separates profile edits from credential reset and blocks delegated account takeover', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: managerId } = seedAccount(host);
+    const { id: targetId, email: targetEmail } = seedAccount(host);
+    const managerCookie = cookieFor(host, loginAs(state, managerId, { permissions: ['users.edit'] }));
+    const targetToken = loginAs(state, targetId);
+    const beforeHash = state.accounts.get(targetId)?.passwordHash;
+
+    const emailTakeover = await jsonRequest(app, `/api/users/${targetId}`, {
+      method: 'PUT',
+      cookie: managerCookie,
+      body: { email: `${randomUUID()}@example.com` },
+    });
+    expect(emailTakeover.status).toBe(403);
+    expect(state.accounts.get(targetId)?.email).toBe(targetEmail);
+
+    const passwordViaEdit = await jsonRequest(app, `/api/users/${targetId}`, {
+      method: 'PUT',
+      cookie: managerCookie,
+      body: { password: 'new delegated password' },
+    });
+    expect(passwordViaEdit.status).toBe(422);
+    expect(state.accounts.get(targetId)?.passwordHash).toBe(beforeHash);
+
+    const selfCookie = cookieFor(host, targetToken);
+    const selfBypass = await jsonRequest(app, `/api/users/${targetId}`, {
+      method: 'PUT',
+      cookie: selfCookie,
+      body: { password: 'self bypass password' },
+    });
+    expect(selfBypass.status).toBe(422);
+    expect(state.accounts.get(targetId)?.passwordHash).toBe(beforeHash);
+
+    state.permissions.set(managerId, new Set(['users.edit', 'users.reset-password']));
+    const reset = await jsonRequest(app, `/api/users/${targetId}/reset-password`, {
+      method: 'POST',
+      cookie: managerCookie,
+      body: { password: 'explicit reset password' },
+    });
+    expect(reset.status).toBe(200);
+    expect(state.accounts.get(targetId)?.passwordHash).toBe('mock-hash:explicit reset password');
+    expect(state.actors.has(targetToken)).toBe(false);
+  });
+
+  it('protects administrator accounts from delegated users.edit and reset-password', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: managerId } = seedAccount(host);
+    const { id: adminId } = seedAccount(host);
+    state.assignments.set(adminId, ['mock-role-admin']);
+    const cookie = cookieFor(
+      host,
+      loginAs(state, managerId, { permissions: ['users.edit', 'users.reset-password'] }),
+    );
+
+    const edit = await jsonRequest(app, `/api/users/${adminId}`, { method: 'PUT', cookie, body: { name: 'Taken Over' } });
+    expect(edit.status).toBe(403);
+    expect(edit.payload).toMatchObject({ code: 'PROTECTED_ADMIN' });
+
+    const reset = await jsonRequest(app, `/api/users/${adminId}/reset-password`, {
+      method: 'POST',
+      cookie,
+      body: { password: 'should never apply' },
+    });
+    expect(reset.status).toBe(403);
+    expect(reset.payload).toMatchObject({ code: 'PROTECTED_ADMIN' });
+  });
+
   it('protects the last admin and self-demotion through host role state', async () => {
     const { host, state } = createMockHost();
     const app = buildApp(host);
@@ -488,6 +598,78 @@ describe('users host requirements with an alternative provider', () => {
     for (const asset of assets as Array<{ id: string }>) {
       getDatabase().prepare('DELETE FROM assets WHERE id = ?').run(asset.id);
     }
+  });
+
+  it('replaces avatar rows/files and cleans them when the account is deleted', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: adminId } = seedAccount(host);
+    state.assignments.set(adminId, ['mock-role-admin']);
+    const { id: targetId } = seedAccount(host);
+    const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+    const targetCookie = cookieFor(host, loginAs(state, targetId));
+
+    async function upload(): Promise<string> {
+      const form = new FormData();
+      form.set('file', new Blob([ONE_PIXEL_PNG], { type: 'image/png' }), 'avatar.png');
+      const response = await app.request('/api/assets/avatar', { method: 'POST', headers: { Cookie: targetCookie }, body: form });
+      expect(response.status).toBe(200);
+      return ((await response.json()) as { data: { url: string } }).data.url;
+    }
+
+    const first = await upload();
+    const second = await upload();
+    expect(first).not.toBe(second);
+    expect((await app.request(first)).status).toBe(404);
+    expect(getDatabase().prepare('SELECT id FROM assets WHERE user_id = ?').all(targetId)).toHaveLength(1);
+
+    const deleted = await jsonRequest(app, '/api/users', { method: 'DELETE', cookie: adminCookie, body: { ids: [targetId] } });
+    expect(deleted.status).toBe(200);
+    expect((await app.request(second)).status).toBe(404);
+    expect(getDatabase().prepare('SELECT id FROM assets WHERE user_id = ?').all(targetId)).toEqual([]);
+  });
+
+  it('keeps concurrent avatar uploads serveable while the account settles on one winner', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id } = seedAccount(host);
+    const cookie = cookieFor(host, loginAs(state, id));
+
+    const upload = () => {
+      const form = new FormData();
+      form.set('file', new Blob([ONE_PIXEL_PNG], { type: 'image/png' }), 'avatar.png');
+      return app.request('/api/assets/avatar', { method: 'POST', headers: { Cookie: cookie }, body: form });
+    };
+
+    const responses = await Promise.all([upload(), upload()]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const urls = await Promise.all(
+      responses.map(async (response) => ((await response.json()) as { data: { url: string } }).data.url),
+    );
+    expect(new Set(urls).size).toBe(2);
+    expect(urls).toContain(state.accounts.get(id)?.avatar);
+    for (const url of urls) expect((await app.request(url)).status).toBe(200);
+
+    for (const url of urls) {
+      const filename = url.split('/').pop();
+      if (filename) await rm(resolve(process.cwd(), 'storage', 'avatars', filename), { force: true });
+      getDatabase().prepare('DELETE FROM assets WHERE url = ?').run(url);
+    }
+  });
+
+  it('compensates avatar file and row creation when account update fails', async () => {
+    const { host, state } = createMockHost();
+    const { id } = seedAccount(host);
+    const cookie = cookieFor(host, loginAs(state, id));
+    host.updateAccount = () => undefined;
+    const app = buildApp(host);
+    const before = getDatabase().prepare('SELECT COUNT(*) AS count FROM assets WHERE user_id = ?').get(id) as { count: number };
+    const form = new FormData();
+    form.set('file', new Blob([ONE_PIXEL_PNG], { type: 'image/png' }), 'avatar.png');
+    const response = await app.request('/api/assets/avatar', { method: 'POST', headers: { Cookie: cookie }, body: form });
+    expect(response.status).toBe(400);
+    const after = getDatabase().prepare('SELECT COUNT(*) AS count FROM assets WHERE user_id = ?').get(id) as { count: number };
+    expect(after.count).toBe(before.count);
   });
 
   it('rejects invalid input through host-authorized actors without touching providers', async () => {

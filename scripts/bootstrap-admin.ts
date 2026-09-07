@@ -22,7 +22,7 @@ function requiredCredentials(): { name: string; email: string; password: string 
   return parsed.data;
 }
 
-function bootstrapAdmin(credentials: { name: string; email: string; password: string }): void {
+async function bootstrapAdmin(credentials: { name: string; email: string; password: string }): Promise<void> {
   const database = getDatabase();
   const existing = database
     .prepare('SELECT id FROM users WHERE lower(email) = ?')
@@ -40,7 +40,7 @@ function bootstrapAdmin(credentials: { name: string; email: string; password: st
 
   const userId = randomUUID();
   const now = Date.now();
-  const passwordHash = hashPassword(credentials.password);
+  const passwordHash = await hashPassword(credentials.password);
   const insert = database.transaction(() => {
     database
       .prepare(
@@ -58,17 +58,15 @@ function bootstrapAdmin(credentials: { name: string; email: string; password: st
   insert();
 }
 
-function run(): void {
+async function run(): Promise<void> {
   const credentials = requiredCredentials();
   migrate();
   seed();
-  bootstrapAdmin(credentials);
+  await bootstrapAdmin(credentials);
   process.stdout.write(`Admin bootstrap complete for ${credentials.email}.\n`);
 }
 
-try {
-  run();
-} catch (error: unknown) {
+void run().catch((error: unknown) => {
   process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;
-}
+});
