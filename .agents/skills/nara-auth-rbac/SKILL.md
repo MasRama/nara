@@ -52,8 +52,8 @@ In the reference application that is `src/features/auth/` (`contract.ts`,
 `server/repository.ts`, plus routes). Other capabilities reach accounts
 only through the provider's public boundary or through a typed host
 requirement adapted in an application-owned binding — never through direct
-SQL on Auth-owned tables. Full model: `../../ARCHITECTURE.md` and
-`../../docs/v3/database-lifecycle.md`.
+SQL on Auth-owned tables. Full model: `../../../ARCHITECTURE.md` and
+`../../../docs/v3/database-lifecycle.md`.
 
 ## Host-requirement pattern (for reusable Features)
 
@@ -66,6 +66,7 @@ import type { UsersServerHost } from '@/features/users/server/host';
 export function createUserRoutes(host: UsersServerHost) {
   // Resolve the actor through the host, never through Auth imports.
   const actor = host.resolveActor(sessionToken);
+  if (!actor) return unauthorized(context);
   if (!host.canManageUsers(actor.id, 'edit')) return forbidden(context);
   if (rolesChanged && !host.canAssignRoles(actor.id)) return forbidden(context);
 }
@@ -96,20 +97,23 @@ imports Auth web internals.
 
 ## Direct Auth APIs (provider and bindings only)
 
-`getCurrentUser`, `hasPermission`, and `isAdmin` from
-`src/features/auth` are appropriate inside Auth implementation itself,
-application-owned Auth composition, and application-owned bindings. They
-are not the default recipe for an arbitrary reusable Feature — that path
-goes through a typed host requirement.
+The Auth public boundary exposes provider APIs such as `getCurrentUser`,
+`hasPermission`, and `isAdmin` for application-owned composition/bindings and
+legitimate public consumers. Inside the Auth provider implementation itself,
+import the owning relative modules directly rather than importing Auth's own
+public barrel back into itself. These public Auth APIs are not the default
+recipe for an arbitrary reusable Feature — that path goes through a typed host
+requirement.
 
 Route-guard shape for provider-owned routes:
 
 ```typescript
 import { getCookie } from 'hono/cookie';
 import type { Context } from 'hono';
-import { getCurrentUser, hasPermission, isAdmin, SESSION_COOKIE_NAME } from '@/features/auth';
+import { hasPermission, isAdmin } from './access';
+import { currentUser, SESSION_COOKIE_NAME } from './service';
 
-const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
+const user = currentUser(getCookie(context, SESSION_COOKIE_NAME));
 if (!user) return unauthorized(context);
 if (!isAdmin(user.id) && !hasPermission(user.id, 'users.edit')) {
   return forbidden(context);
@@ -123,15 +127,22 @@ permission list as the security decision.
 ## Permission slugs and admin bypass
 
 Permissions follow `<resource>.<action>` (`users.view`, `users.create`,
-`users.edit`, `users.delete`, `roles.view`, …). The owning Feature defines
-its permission data; the server route enforces it in this order:
+`users.edit`, `users.delete`, `roles.view`, …). A capability may define the
+permission vocabulary it requires, but the selected Auth provider owns the
+persisted permission rows, roles, and assignments. In the reference app that
+provider-owned data is seeded under `src/features/auth/server/seeds/`; a
+reusable Feature must not write the Auth-owned permission tables itself.
+
+The server route enforces authorization in this order:
 
 1. resolve the session user
 2. allow the `admin` bypass where the route requires it
 3. check the specific permission with `hasPermission(userId, '<resource>.<action>')`
 
-Password hashing and session creation stay inside the Auth service;
-boundaries expose only `hashPassword()` and session-token operations.
+Password hashing and session creation stay inside the Auth provider. Expose
+only the credential/session operations a caller actually needs; the Auth
+public boundary may also intentionally expose provider-owned account-directory
+and role/permission APIs for application bindings.
 Session cookies stay HTTP-only with the configured expiry and production
 secure flags. Never return password hashes from an API.
 

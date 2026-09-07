@@ -6,19 +6,27 @@ description: Creating or changing a business feature — skeleton, boundaries, a
 # Feature Development
 
 Primary procedural skill for creating or changing a business capability.
-Authority stays in `AGENTS.md`, `ARCHITECTURE.md`, and
-`../../docs/v3/feature-model.md`; this file is the workflow.
+Authority stays in `../../../AGENTS.md`, `../../../ARCHITECTURE.md`, and
+`../../../docs/v3/feature-model.md`; this file is the workflow.
 
 ## Workflow
 
-1. Scope the capability against deterministic facts first: `node
-   build/src/cli/index.js context <related-feature> --json` for neighbors,
-   `node build/src/cli/index.js impact <feature> --json` before touching a
-   public contract, `node build/src/cli/index.js inspect <feature> --json`
-   for the reading order.
-2. Scaffold only what the capability needs: `nara make feature billing`
-   creates `contract.ts` + `index.ts`. Add `server/`, `web/`, `tests/` when
-   the capability needs them — never empty layers for symmetry.
+1. For an existing Feature, scope the change against deterministic facts first:
+   `node build/src/cli/index.js context <feature> --json` for the bounded
+   context pack and reading order, `node build/src/cli/index.js impact
+   <feature> --json` before changing a public contract, and `node
+   build/src/cli/index.js inspect <feature> --json` for exports, consumers,
+   dependencies, surfaces, and integrations.
+2. For a new Feature, the target does not exist yet, so do not run `inspect` or
+   `impact` against that name before scaffolding. Use `context` on a related
+   existing Feature when useful, then scaffold only what the new capability
+   needs. In an installed/generated app use `npx nara make feature billing`;
+   in this contributor checkout use the built CLI (`node
+   build/src/cli/index.js make feature billing`) or the source CLI form
+   documented in `AGENTS.md`. The command creates `contract.ts` + `index.ts`.
+   After that, `context` / `inspect` can describe the new Feature. Add
+   `server/`, `web/`, `tests/` only when needed — never empty layers for
+   symmetry.
 3. Put the boundary types in `contract.ts` (Zod schema + inferred types together).
 4. Implement server code under `server/` (routes, service, repository). Export only the intentional public surface from `index.ts`.
 5. If the capability needs browser UI, add `web/` (pages, components, composables, typed client) and export browser-safe surfaces from `web/index.ts`. Never export server-only symbols through it.

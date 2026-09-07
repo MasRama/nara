@@ -304,6 +304,24 @@ describe('users host requirements with an alternative provider', () => {
     expect(deleted.status).toBe(403);
   });
 
+  it('normalizes pagination once at the route boundary', async () => {
+    const { host, state } = createMockHost();
+    const originalListAccounts = host.listAccounts;
+    let received: { page: number; limit: number } | undefined;
+    host.listAccounts = (page, limit, search) => {
+      received = { page, limit };
+      return originalListAccounts(page, limit, search);
+    };
+    const app = buildApp(host);
+    const { id } = seedAccount(host);
+    const cookie = cookieFor(host, loginAs(state, id, { permissions: ['users.view'] }));
+
+    const listed = await jsonRequest(app, '/api/users?page=0&limit=500', { cookie });
+    expect(listed.status).toBe(200);
+    expect(received).toEqual({ page: 1, limit: 100 });
+    expect(listed.payload).toMatchObject({ data: { page: 1, limit: 100 } });
+  });
+
   it('creates users through host password hashing and role assignment', async () => {
     const { host, state } = createMockHost();
     const app = buildApp(host);
@@ -343,8 +361,35 @@ describe('users host requirements with an alternative provider', () => {
       cookie,
       body: { name: 'Duplicate User', email: email.toUpperCase(), password: 'correct horse battery staple' },
     });
-    expect(created.status).toBe(400);
+    expect(created.status).toBe(409);
     expect(created.payload).toMatchObject({ success: false, code: 'DUPLICATE_EMAIL' });
+  });
+
+  it('reports duplicate email conflicts for profile and managed-user updates', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: firstId } = seedAccount(host);
+    const { id: secondId, email: secondEmail } = seedAccount(host);
+    const firstCookie = cookieFor(host, loginAs(state, firstId));
+
+    const profile = await jsonRequest(app, '/api/users/me', {
+      method: 'PATCH',
+      cookie: firstCookie,
+      body: { name: 'Conflicting Profile', email: secondEmail },
+    });
+    expect(profile.status).toBe(409);
+    expect(profile.payload).toMatchObject({ success: false, code: 'DUPLICATE_EMAIL' });
+
+    const { id: adminId } = seedAccount(host);
+    const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+    const managed = await jsonRequest(app, `/api/users/${firstId}`, {
+      method: 'PUT',
+      cookie: adminCookie,
+      body: { email: secondEmail },
+    });
+    expect(managed.status).toBe(409);
+    expect(managed.payload).toMatchObject({ success: false, code: 'DUPLICATE_EMAIL' });
+    expect(state.accounts.get(firstId)?.email).not.toBe(state.accounts.get(secondId)?.email);
   });
 
   it('refuses role assignment without host trust and keeps passwords stable on edit', async () => {

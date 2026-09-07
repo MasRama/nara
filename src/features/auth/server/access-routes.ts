@@ -134,7 +134,7 @@ const createRoleHandler = async (context: Context) => {
     return context.json({ success: true as const, message: 'Role created', data: { role: roleResponse(role.id)! } }, 201);
   } catch (error) {
     if (uniqueConstraint(error)) {
-      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 400);
+      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 409);
     }
     Logger.error('Failed to create role', error instanceof Error ? error : new Error(String(error)));
     throw error;
@@ -180,7 +180,7 @@ const updateRoleHandler = async (context: Context) => {
     return context.json({ success: true as const, message: 'Role updated', data: { role: roleResponse(roleId)! } });
   } catch (error) {
     if (uniqueConstraint(error)) {
-      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 400);
+      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 409);
     }
     Logger.error('Failed to update role', error instanceof Error ? error : new Error(String(error)));
     throw error;

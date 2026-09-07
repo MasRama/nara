@@ -99,7 +99,7 @@ const registerHandler = async (context: Context) => {
     if (isUniqueConstraintError(error)) {
       return context.json(
         { success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' },
-        400,
+        409,
       );
     }
     throw error;

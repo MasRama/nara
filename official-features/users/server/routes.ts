@@ -95,7 +95,7 @@ export function createUserRoutes(host: UsersServerHost) {
       return context.json({ success: true as const, message: 'Profile updated', data: { user } });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 400);
+        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
       }
       throw error;
     }
@@ -106,18 +106,20 @@ export function createUserRoutes(host: UsersServerHost) {
     if (!sessionUser) return unauthorized(context);
     if (!host.canManageUsers(sessionUser.id, 'view')) return forbidden(context);
 
-    const page = Number.parseInt(context.req.query('page') ?? '1', 10);
-    const limit = Number.parseInt(context.req.query('limit') ?? '10', 10);
+    const requestedPage = Number.parseInt(context.req.query('page') ?? '1', 10);
+    const requestedLimit = Number.parseInt(context.req.query('limit') ?? '10', 10);
+    const page = Math.max(1, Number.isNaN(requestedPage) ? 1 : requestedPage);
+    const limit = Math.max(1, Math.min(100, Number.isNaN(requestedLimit) ? 10 : requestedLimit));
     const search = context.req.query('search') ?? '';
-    const result = host.listAccounts(Number.isNaN(page) ? 1 : page, Number.isNaN(limit) ? 10 : limit, search);
+    const result = host.listAccounts(page, limit, search);
     return context.json({
       success: true as const,
       message: 'OK',
       data: {
         users: result.data.map((user) => userWithRoles(user)!),
         total: result.total,
-        page: Math.max(1, Number.isNaN(page) ? 1 : page),
-        limit: Math.max(1, Number.isNaN(limit) ? 10 : limit),
+        page,
+        limit,
       },
     });
   };
@@ -158,7 +160,7 @@ export function createUserRoutes(host: UsersServerHost) {
       return context.json({ success: true as const, message: 'User created', data: { user: userWithRoles(user)! } }, 201);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 400);
+        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
       }
       throw error;
     }
@@ -219,7 +221,7 @@ export function createUserRoutes(host: UsersServerHost) {
       return context.json({ success: true as const, message: 'User updated', data: { user: userWithRoles(user)! } });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 400);
+        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
       }
       throw error;
     }

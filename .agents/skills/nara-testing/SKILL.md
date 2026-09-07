@@ -97,12 +97,14 @@ Exercise routes through the app's public HTTP boundary instead of calling privat
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
+import { csrfHeaders, issueCsrf } from '../../../shared/security/tests/helpers';
 
 describe('auth route', () => {
   it('rejects malformed input with field diagnostics', async () => {
+    const csrf = await issueCsrf(app);
     const response = await app.request('/api/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...csrfHeaders(csrf), 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: 'A',
         email: `${randomUUID()}@example.com`,
@@ -119,6 +121,11 @@ describe('auth route', () => {
   });
 });
 ```
+
+When exercising the real app boundary, unsafe `/api/*` requests must bootstrap
+and echo the CSRF cookie/header just like the browser. Only omit that step when
+the test intentionally constructs a smaller Feature-local Hono application
+without the app security middleware.
 
 Cover unauthenticated (`401`), unauthorized (`403`), malformed input
 (`422`), not-found (`404`), conflict, success, and unexpected-error

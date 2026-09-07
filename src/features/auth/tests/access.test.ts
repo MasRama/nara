@@ -42,12 +42,13 @@ describe('auth access capability', () => {
   it('lists and creates roles behind the public auth boundary', async () => {
     const cookie = await registerAdmin();
     const roleName = `Billing ${randomUUID()}`;
+    const roleSlug = `billing-${randomUUID()}`;
 
     const createState = await issueCsrf(app, cookie);
     const createResponse = await app.request('/api/roles', {
       method: 'POST',
       headers: { ...csrfHeaders(createState), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: roleName, slug: `billing-${randomUUID()}`, permissions: [] }),
+      body: JSON.stringify({ name: roleName, slug: roleSlug, permissions: [] }),
     });
     expect(createResponse.status).toBe(201);
     await expect(createResponse.json()).resolves.toMatchObject({
@@ -58,6 +59,15 @@ describe('auth access capability', () => {
     const listResponse = await app.request('/api/roles', { headers: { Cookie: cookie } });
     expect(listResponse.status).toBe(200);
     await expect(listResponse.json()).resolves.toMatchObject({ success: true });
+
+    const duplicateState = await issueCsrf(app, cookie);
+    const duplicateResponse = await app.request('/api/roles', {
+      method: 'POST',
+      headers: { ...csrfHeaders(duplicateState), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: `${roleName} duplicate`, slug: roleSlug, permissions: [] }),
+    });
+    expect(duplicateResponse.status).toBe(409);
+    await expect(duplicateResponse.json()).resolves.toMatchObject({ success: false, code: 'DUPLICATE_SLUG' });
   });
 
   it('rejects admin-role edits without changing the canonical role', async () => {
@@ -84,6 +94,35 @@ describe('auth access capability', () => {
       code: 'PROTECTED_ROLE',
     });
     expect(database.prepare('SELECT * FROM roles WHERE id = ?').get(before.id)).toEqual(before);
+  });
+
+  it('reports duplicate role slugs as conflicts on update', async () => {
+    const cookie = await registerAdmin();
+    const firstSlug = `first-${randomUUID()}`;
+    const secondSlug = `second-${randomUUID()}`;
+
+    async function createRole(name: string, slug: string): Promise<string> {
+      const state = await issueCsrf(app, cookie);
+      const response = await app.request('/api/roles', {
+        method: 'POST',
+        headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, slug, permissions: [] }),
+      });
+      expect(response.status).toBe(201);
+      const payload = await response.json() as { data: { role: { id: string } } };
+      return payload.data.role.id;
+    }
+
+    await createRole('First Role', firstSlug);
+    const secondId = await createRole('Second Role', secondSlug);
+    const updateState = await issueCsrf(app, cookie);
+    const response = await app.request(`/api/roles/${secondId}`, {
+      method: 'PUT',
+      headers: { ...csrfHeaders(updateState), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: firstSlug }),
+    });
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ success: false, code: 'DUPLICATE_SLUG' });
   });
 
   it('denies role access without a session', async () => {

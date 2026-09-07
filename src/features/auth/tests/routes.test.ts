@@ -76,4 +76,24 @@ describe('auth feature', () => {
       },
     });
   });
+
+  it('reports duplicate registration as a conflict', async () => {
+    const email = `${randomUUID()}@example.com`;
+    const firstCsrf = await issueCsrf(app);
+    const first = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: { ...csrfHeaders(firstCsrf), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'First User', email, password: 'correct horse battery staple' }),
+    });
+    expect(first.status).toBe(201);
+
+    const secondCsrf = await issueCsrf(app);
+    const duplicate = await app.request('/api/auth/register', {
+      method: 'POST',
+      headers: { ...csrfHeaders(secondCsrf), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Duplicate User', email, password: 'correct horse battery staple' }),
+    });
+    expect(duplicate.status).toBe(409);
+    await expect(duplicate.json()).resolves.toMatchObject({ success: false, code: 'DUPLICATE_EMAIL' });
+  });
 });

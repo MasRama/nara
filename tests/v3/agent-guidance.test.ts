@@ -141,6 +141,16 @@ describe('agent guidance stays current', () => {
     }
   });
 
+  it('resolves repo-relative authority references from every active skill', () => {
+    for (const file of skillFiles()) {
+      const content = readFileSync(file, 'utf-8');
+      for (const match of content.matchAll(/`((?:\.\.\/)+(?:AGENTS\.md|ARCHITECTURE\.md|docs\/[^`]+\.md))`/g)) {
+        const target = match[1];
+        expect(existsSync(path.resolve(path.dirname(file), target)), `${file} references missing ${target}`).toBe(true);
+      }
+    }
+  });
+
   it('references only npm scripts that exist', () => {
     const manifest = JSON.parse(readFileSync(path.join(projectRoot, 'package.json'), 'utf-8')) as {
       scripts?: Record<string, string>;
@@ -158,6 +168,35 @@ describe('agent guidance stays current', () => {
     const frontend = readFileSync(path.join(agentsDir, 'nara-frontend', 'SKILL.md'), 'utf-8');
     expect(frontend).toContain('vue-router');
     expect(frontend).toContain('src/app/router.ts');
+  });
+
+  it('keeps mutation guidance aligned with the application CSRF boundary', () => {
+    const frontend = readFileSync(path.join(agentsDir, 'nara-frontend', 'SKILL.md'), 'utf-8');
+    const testing = readFileSync(path.join(agentsDir, 'nara-testing', 'SKILL.md'), 'utf-8');
+    expect(frontend).toContain('UsersWebHost.csrf');
+    expect(frontend).toContain('createUsersClient({ csrf })');
+    expect(testing).toContain('issueCsrf(app)');
+    expect(testing).toContain('csrfHeaders(csrf)');
+  });
+
+  it('keeps auth ownership and host examples aligned with the provider model', () => {
+    const auth = readFileSync(path.join(agentsDir, 'nara-auth-rbac', 'SKILL.md'), 'utf-8');
+    expect(auth).toContain('if (!actor) return unauthorized(context)');
+    expect(auth).toMatch(/Auth provider owns the\s+persisted permission rows/);
+    expect(auth).toContain('src/features/auth/server/seeds/');
+    expect(auth).toContain("from './access'");
+    expect(auth).toContain("from './service'");
+    expect(auth).not.toContain('The owning Feature defines\nits permission data');
+  });
+
+  it('keeps CLI and database procedures aligned with current runtime behavior', () => {
+    const feature = readFileSync(path.join(agentsDir, 'nara-feature-development', 'SKILL.md'), 'utf-8');
+    const database = readFileSync(path.join(agentsDir, 'nara-database', 'SKILL.md'), 'utf-8');
+    expect(feature).toMatch(/context <feature> --json[\s\S]*reading order/);
+    expect(feature).toContain('do not run `inspect` or\n   `impact` against that name before scaffolding');
+    expect(feature).toContain('npx nara make feature billing');
+    expect(feature).not.toMatch(/inspect <feature> --json`\s*for the reading order/);
+    expect(database).toContain('ordinary Feature tests must not close it');
   });
 });
 

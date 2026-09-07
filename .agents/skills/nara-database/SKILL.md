@@ -6,7 +6,7 @@ description: Writing SQL queries, transactions, dynamic updates, or any database
 # Database (SQLite Usage)
 
 How to read and write SQLite the Nara way. Lifecycle authority lives in
-`../../docs/v3/database-lifecycle.md`; this file is the working procedure.
+`../../../docs/v3/database-lifecycle.md`; this file is the working procedure.
 
 ## Ownership and lifecycle terms
 
@@ -33,9 +33,11 @@ by the migrator. Applied migrations are immutable: editing or renaming one
 fails checksum verification loudly, so schema changes require forward
 migrations with new globally unique numeric identifiers.
 
-Feature repositories own SQL. Shared database lifecycle lives in
-`src/shared/database/`; route modules and browser code must not access
-SQLite directly.
+Feature-owned server persistence modules own business SQL — commonly a
+`repository.ts`, but a narrowly named provider module such as Auth's account
+directory is also valid. Shared database lifecycle lives in
+`src/shared/database/`; route modules and browser code must not access SQLite
+directly.
 
 ```typescript
 import { getDatabase } from '../../../shared/database';
@@ -111,8 +113,9 @@ writes across tables.
 
 ## Pagination
 
-Validate page and limit at the request boundary, then use a deterministic
-order and a bound offset:
+Parse and normalize page/limit at the request boundary (including the maximum
+limit), then pass the normalized values onward and report those same normalized
+values in the API response. Use a deterministic order and a bound offset:
 
 ```typescript
 const offset = (page - 1) * limit;
@@ -132,15 +135,17 @@ sorting input.
 ## Testing database behavior
 
 Repository tests use the configured in-memory SQLite database and assert
-through the public repository function: parameter binding, empty
-collections, pagination boundaries, uniqueness constraints, foreign-key
-behavior, and transaction rollback. Call `closeDatabase()` in test
-teardown when a test opens the shared connection, and never use
-production or developer SQLite files in tests.
+through the public repository function: parameter binding, empty collections,
+pagination boundaries, uniqueness constraints, foreign-key behavior, and
+transaction rollback. The normal Vitest setup migrates one shared `:memory:`
+connection for the suite, so ordinary Feature tests must not close it in
+per-test teardown. Only a lifecycle test that deliberately owns the connection
+should call `closeDatabase()`, and that test must reopen/remigrate as part of
+its own setup. Never use production or developer SQLite files in tests.
 
 ## Do / Don't
 
-- **Do** keep SQL in Feature repositories or the smallest intentional shared database module.
+- **Do** keep business SQL in the owning Feature's server persistence module.
 - **Do** bind every value through prepared statements.
 - **Do** use `crypto.randomUUID()` for new IDs and `Date.now()` for timestamps.
 - **Do** use transactions for all-or-nothing multi-row writes.

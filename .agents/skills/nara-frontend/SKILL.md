@@ -62,6 +62,13 @@ validation, and error state in the page or a Feature-owned composable:
 disable the submit control while pending, render field errors from the
 contract's error shape, and clear stale errors on input.
 
+Every state-changing `/api/*` request must satisfy the application's
+double-submit CSRF middleware. Provider-owned Auth clients may use Auth's CSRF
+helpers directly. A reusable Feature must stay provider-neutral: declare the
+CSRF capability on its web host and inject it into the typed client, following
+`UsersWebHost.csrf` + `createUsersClient({ csrf })`. Do not import Auth web
+internals merely to obtain a CSRF token.
+
 Cross-feature browser code uses public Feature exports from
 `web/index.ts` — never another Feature's `server/` implementation,
 database access, Node-only built-ins, or server-only packages. Never
@@ -69,10 +76,13 @@ export server-only symbols through `web/index.ts`.
 
 ## Navigation
 
-Browser routes live in `src/app/router.ts` (Vue Router via the
+The canonical browser router lives in `src/app/router.ts` (Vue Router via the
 `vue-router` package, `createWebHistory`). App-owned pages sit under
-`src/app/pages/`; feature pages are composed through the owning feature's
-`web/index.ts` barrel — never a deep page import:
+`src/app/pages/`; direct Feature pages are composed through the owning
+Feature's `web/index.ts` barrel — never a deep page import. Reusable Feature
+assemblies may instead install an application-owned route array under
+`src/app/bindings/` (for example `users.web.ts`) which the canonical router
+explicitly imports/spreads:
 
 ```typescript
 import { LoginPage } from '@/features/auth/web';

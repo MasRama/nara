@@ -4,7 +4,8 @@ Procedural deep dives loaded on demand. Each skill is one directory with a `SKIL
 
 `AGENTS.md` / `ARCHITECTURE.md` are authority and policy. Skills are
 task-specific procedures: they explain how to perform a specific kind of
-work and link back to the authoritative docs instead of restating policy.
+work and keep only the small policy reminders needed to execute those
+procedures safely. When wording overlaps, the authoritative docs win.
 
 | Skill | When to load |
 |---|---|

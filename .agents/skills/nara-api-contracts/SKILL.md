@@ -11,7 +11,9 @@ owning Feature's `contract.ts`.
 
 ## Response shapes
 
-Feature JSON endpoints use a discriminated response shape:
+Business Feature JSON endpoints under `/api/*` use a discriminated response
+shape. Operational probes such as `/health` and `/ready` intentionally use
+their smaller probe-specific payloads instead:
 
 ```typescript
 // Success
@@ -21,17 +23,18 @@ Feature JSON endpoints use a discriminated response shape:
 { success: false, message: string, code: string, errors?: Record<string, string[]> }
 ```
 
-Keep messages in English (ADR 0010). Return responses with `context.json()`
-and literal `success` discriminants directly from the owning Feature's Hono
-route module. Use the correct HTTP status: `401` missing authentication,
-`403` missing permission, `404` absent resource, `409` conflict, `422`
-validation failure.
+Keep messages in English (ADR 0010). Return business API responses with
+`context.json()` and literal `success` discriminants directly from the owning
+Feature's Hono route module. Use the correct HTTP status: `401` missing
+authentication, `403` missing permission, `404` absent resource, `409`
+resource/state conflict, `422` validation failure.
 
 ## Runtime validation
 
-Validate request data at the route boundary with the Feature's Zod schema.
-Route modules keep small local `requestBody` / `validationErrors` helpers
-(see `src/features/auth/server/routes.ts` for the reference shape):
+Validate structured client input at the route boundary with the owning
+Feature's Zod schema. JSON body routes commonly keep small local `requestBody`
+/ `validationErrors` helpers (see `src/features/auth/server/routes.ts` for the
+reference shape):
 
 ```typescript
 const parsed = loginInputSchema.safeParse(await requestBody(context));
@@ -48,24 +51,33 @@ if (!parsed.success) {
 }
 ```
 
-Use `safeParse()` for expected client input. Do not expose stack traces,
-SQL, password hashes, or other internal details.
+Use `safeParse()` for expected structured client input. File-upload routes may
+parse multipart data first and then validate the Feature-owned file metadata,
+size, and content rules explicitly. Path/query values still need explicit
+parsing, normalization, bounds, or schemas before use. Do not expose stack
+traces, SQL, password hashes, or other internal details.
 
 ## Error propagation
 
-Expected domain failures use `createApplicationError()` or
+In the reference application, expected failures that should propagate through
+the app-level handler may use `createApplicationError()` or
 `createValidationError()` from `src/shared/errors`:
 
 ```typescript
 throw createApplicationError('Role not found', 404, 'NOT_FOUND');
 ```
 
-`src/app/error-handler.ts` maps those errors to the public JSON shape, so
-do not catch errors merely to rethrow them or duplicate the global
-handler. Catch only when the Feature adds meaningful behavior, such as
-translating a known SQLite uniqueness constraint into a stable response
-code. Log unexpected failures through `src/shared/logging`; never use
-`console.log`.
+`src/app/error-handler.ts` maps those reference-app errors to the public JSON
+shape. A route may also return an expected public failure directly when that
+is clearer. Do not catch errors merely to rethrow them or duplicate the global
+handler; catch when the Feature adds meaningful behavior, such as translating
+a known SQLite uniqueness constraint into a stable `409` response code.
+
+Installable Features cannot assume reference-only shared modules such as
+`src/shared/errors` or `src/shared/logging` exist in every host. They should
+own the small behavior they need or declare a typed host requirement when the
+behavior is application-specific. Reference-app code logs unexpected failures
+through `src/shared/logging`; never use `console.log` for application logging.
 
 ## Feature-scoped frontend consumption
 
@@ -85,7 +97,7 @@ them.
 ## Do / Don't
 
 - **Do** keep schemas, inferred types, routes, and typed clients Feature-scoped.
-- **Do** validate all external input at the Hono boundary.
+- **Do** validate or explicitly normalize all external input at the Hono boundary.
 - **Do** preserve stable error codes for client behavior and tests.
 - **Don't** duplicate request/response interfaces in Vue pages.
 - **Don't** expose internal errors or sensitive fields.
