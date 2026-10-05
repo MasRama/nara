@@ -49,13 +49,17 @@ jobs:
         if: github.event_name == 'pull_request'
         run: npm run check:fast
 
-      - name: Full main check
+      - name: Full main tests
         if: github.event_name == 'push'
-        run: npm run check
+        run: npm run check:frontend && npm test
 
       - name: Build production app
         if: github.event_name == 'push'
         run: npm run build
+
+      - name: Verify architecture
+        if: github.event_name == 'push'
+        run: npm run architecture:doctor:build
 
       - name: Verify production serving
         if: github.event_name == 'push'
