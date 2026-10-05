@@ -1,0 +1,65 @@
+name: Feature request
+description: Propose a capability or improvement for Nara.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What user, maintainer, or application-development problem should Nara solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the capability from the user's point of view, without requiring a specific implementation.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - Generated project
+        - Official feature
+        - Architecture tooling
+        - Reference application
+        - Database lifecycle
+        - Build or release
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: architecture
+    attributes:
+      label: Architecture impact
+      description: |
+        Note any expected effect on Feature ownership, app composition, generated-project contracts,
+        CLI semantics, lineage/evolution, dependencies, or machine-readable output. "None known" is valid.
+      placeholder: "None known."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing commands, workarounds, or simpler approaches you considered.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for a similar proposal.
+          required: true
+        - label: I described the problem separately from the implementation I prefer.
+          required: true

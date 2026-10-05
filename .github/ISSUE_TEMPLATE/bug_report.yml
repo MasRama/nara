@@ -1,0 +1,80 @@
+name: Bug report
+description: Report a reproducible problem in Nara.
+title: "fix: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please keep security vulnerabilities out of public issues and use the Security policy instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: Nara version
+      description: The Nara or @nara-web/cli version where you observed the problem.
+      placeholder: "3.2.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - Generated project
+        - Official feature
+        - Architecture tooling
+        - Reference application
+        - Database lifecycle
+        - Build or release
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide the smallest reliable steps, commands, or repository that reproduces the problem.
+      placeholder: |
+        1. Run ...
+        2. Add ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Relevant output
+      description: Paste concise logs, diagnostics, or nara doctor --json output. Remove secrets and private data.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node.js version, npm version, and anything else relevant.
+      placeholder: "Ubuntu 24.04, Node 22.20.0, npm 10.9.8"
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: This report does not contain credentials, tokens, private data, or an undisclosed security vulnerability.
+          required: true
