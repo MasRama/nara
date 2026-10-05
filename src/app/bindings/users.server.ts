@@ -30,7 +30,8 @@ import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../..
  * Feature evolution never touches this file. Local customization belongs
  * here (for example, swapping the provider or tightening policy).
  */
-export const usersServerHost: UsersServerHost = {
+function createUsersServerHost(recordActivity?: UsersServerHost['recordActivity']): UsersServerHost {
+  return {
   sessionCookieName: SESSION_COOKIE_NAME,
 
   resolveActor: (sessionToken) => {
@@ -63,12 +64,19 @@ export const usersServerHost: UsersServerHost = {
   rolesForUser: (userId) => getUserRoles(userId).map((role) => role.slug),
 
   usersWithRole: (roleId) => getUsersWithRole(roleId).map((user) => ({ id: user.id })),
-};
+  ...(recordActivity ? { recordActivity } : {}),
+  };
+}
 
-const userRoutes = createUserRoutes(usersServerHost);
-const assetRoutes = createAssetRoutes(usersServerHost);
+export const usersServerHost: UsersServerHost = createUsersServerHost();
 
-export default function composeUsersServer(app: Hono): void {
+export default function composeUsersServer(
+  app: Hono,
+  options: { recordActivity?: UsersServerHost['recordActivity'] } = {},
+): void {
+  const host = options.recordActivity ? createUsersServerHost(options.recordActivity) : usersServerHost;
+  const userRoutes = createUserRoutes(host);
+  const assetRoutes = createAssetRoutes(host);
   app.route('/api/users', userRoutes);
   app.route('/api/assets', assetRoutes);
 }

@@ -12,6 +12,7 @@ const permissions = [
   { id: 'nara-permission-roles-create', name: 'Create Roles', slug: 'roles.create', resource: 'roles', action: 'create' },
   { id: 'nara-permission-roles-edit', name: 'Edit Roles', slug: 'roles.edit', resource: 'roles', action: 'edit' },
   { id: 'nara-permission-roles-delete', name: 'Delete Roles', slug: 'roles.delete', resource: 'roles', action: 'delete' },
+  { id: 'nara-permission-activity-view', name: 'View Activity', slug: 'activity.view', resource: 'activity', action: 'view' },
 ] as const;
 
 export function run(database: Database.Database): void {

@@ -22,6 +22,7 @@ import {
 } from './access';
 import { currentUser as getCurrentUser, SESSION_COOKIE_NAME } from './service';
 import { Logger } from '../../../shared/logging';
+import type { AuthActivitySink } from './activity';
 
 function validationErrors(error: z.ZodError): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
@@ -126,7 +127,7 @@ const listPermissionsHandler = (context: Context) => {
   return context.json({ success: true as const, message: 'OK', data: grouped });
 };
 
-const createRoleHandler = async (context: Context) => {
+const createRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
   const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
   if (!user) return unauthorized(context);
   if (!canAccess(context, 'roles.create')) return forbidden(context);
@@ -158,6 +159,14 @@ const createRoleHandler = async (context: Context) => {
       },
       permissions.ids,
     );
+    activity?.({
+      action: 'roles.created',
+      resource: 'roles',
+      actorId: user.id,
+      targetId: role.id,
+      targetLabel: role.name,
+      metadata: { permissionCount: permissions.ids.length },
+    });
     return context.json({ success: true as const, message: 'Role created', data: { role: roleResponse(role.id)! } }, 201);
   } catch (error) {
     if (uniqueConstraint(error)) {
@@ -168,7 +177,7 @@ const createRoleHandler = async (context: Context) => {
   }
 };
 
-const updateRoleHandler = async (context: Context) => {
+const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
   const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
   if (!user) return unauthorized(context);
   if (!canAccess(context, 'roles.edit')) return forbidden(context);
@@ -204,6 +213,16 @@ const updateRoleHandler = async (context: Context) => {
   try {
     const role = updateRoleWithPermissions(roleId, roleData, permissionSelection?.ids);
     if (!role) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+    activity?.({
+      action: 'roles.updated',
+      resource: 'roles',
+      actorId: user.id,
+      targetId: role.id,
+      targetLabel: role.name,
+      metadata: {
+        permissionsChanged: permissionSelection !== undefined,
+      },
+    });
     return context.json({ success: true as const, message: 'Role updated', data: { role: roleResponse(roleId)! } });
   } catch (error) {
     if (uniqueConstraint(error)) {
@@ -214,7 +233,7 @@ const updateRoleHandler = async (context: Context) => {
   }
 };
 
-const deleteRolesHandler = async (context: Context) => {
+const deleteRolesHandler = async (context: Context, activity?: AuthActivitySink) => {
   const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
   if (!user) return unauthorized(context);
   if (!canAccess(context, 'roles.delete')) return forbidden(context);
@@ -235,14 +254,31 @@ const deleteRolesHandler = async (context: Context) => {
     return context.json({ success: false as const, message: 'Cannot delete the admin role', code: 'PROTECTED_ROLE' }, 400);
   }
 
+  const targets = parsed.data.ids.flatMap((roleId) => {
+    const role = findRoleById(roleId);
+    return role ? [{ id: role.id, name: role.name }] : [];
+  });
   const deleted = deleteRoles(parsed.data.ids);
   Logger.warn('Roles deleted', { adminId: user.id, deletedIds: parsed.data.ids, count: deleted });
+  for (const target of targets) {
+    activity?.({
+      action: 'roles.deleted',
+      resource: 'roles',
+      actorId: user.id,
+      targetId: target.id,
+      targetLabel: target.name,
+    });
+  }
   return context.json({ success: true as const, message: 'Roles deleted', data: { deleted } });
 };
 
-export const accessRoutes = new Hono()
-  .get('/', listRolesHandler)
-  .get('/permissions', listPermissionsHandler)
-  .post('/', createRoleHandler)
-  .put('/:id', updateRoleHandler)
-  .delete('/', deleteRolesHandler);
+export function createAccessRoutes(activity?: AuthActivitySink) {
+  return new Hono()
+    .get('/', listRolesHandler)
+    .get('/permissions', listPermissionsHandler)
+    .post('/', (context) => createRoleHandler(context, activity))
+    .put('/:id', (context) => updateRoleHandler(context, activity))
+    .delete('/', (context) => deleteRolesHandler(context, activity));
+}
+
+export const accessRoutes = createAccessRoutes();

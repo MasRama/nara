@@ -16,8 +16,8 @@ import { Logger } from '../shared/logging';
 import { handleError } from './error-handler';
 import { requestId, requestLifecycleLog } from './observability';
 import {
-  authRoutes,
-  accessRoutes,
+  createAuthRoutes,
+  createAccessRoutes,
   cleanupExpiredSessions,
   getCurrentUser,
   resetLoginThrottle,
@@ -25,6 +25,7 @@ import {
 } from '../features/auth';
 import { getDatabase, migrate } from '../shared/database';
 import composeUsersServer from './bindings/users.server';
+import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
 import { healthRoutes } from '../../official-features/health';
 
 const frontendBuildDirectory = resolve(process.cwd(), 'build', 'client');
@@ -177,6 +178,7 @@ export function databaseReady(database: ReturnType<typeof getDatabase> = getData
     database.prepare('SELECT id FROM sessions LIMIT 1').get();
     database.prepare('SELECT id FROM roles LIMIT 1').get();
     database.prepare('SELECT id FROM permissions LIMIT 1').get();
+    database.prepare('SELECT id FROM activity_events LIMIT 1').get();
     database.prepare('SELECT id FROM _nara_migrations LIMIT 1').get();
     return true;
   } catch {
@@ -203,9 +205,10 @@ if (staticHandler) {
   });
 }
 
-app.route('/api/auth', authRoutes);
-app.route('/api/roles', accessRoutes);
-composeUsersServer(app);
+app.route('/api/auth', createAuthRoutes(authActivitySink));
+app.route('/api/roles', createAccessRoutes(authActivitySink));
+composeUsersServer(app, { recordActivity: recordApplicationActivity });
+composeActivityServer(app);
 
 app.get('*', async (context, next) => {
   const requested = requestPath(context);

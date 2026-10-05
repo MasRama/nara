@@ -1,4 +1,4 @@
-export { authRoutes } from './server/routes';
+export { authRoutes, createAuthRoutes } from './server/routes';
 export {
   createAccount,
   createAccountWithRoles,
@@ -67,4 +67,5 @@ export {
   updateRoleWithPermissions,
 } from './server/access';
 export type { Permission, Role, RoleSummary } from './server/access';
-export { accessRoutes } from './server/access-routes';
+export { accessRoutes, createAccessRoutes } from './server/access-routes';
+export type { AuthActivityAction, AuthActivityEvent, AuthActivitySink } from './server/activity';

@@ -11,6 +11,7 @@ const logoutError = ref('');
 const user = computed(() => authSession.user.value);
 const canViewUsers = computed(() => authSession.can('users.view'));
 const canViewRoles = computed(() => authSession.can('roles.view'));
+const canViewActivity = computed(() => authSession.can('activity.view'));
 const initials = computed(() => {
   const name = user.value?.name.trim() ?? '';
   return name
@@ -80,6 +81,14 @@ async function logout(): Promise<void> {
             active-class="bg-muted text-foreground"
           >
             Roles
+          </RouterLink>
+          <RouterLink
+            v-if="canViewActivity"
+            to="/activity"
+            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+            active-class="bg-muted text-foreground"
+          >
+            Activity
           </RouterLink>
           <RouterLink
             to="/profile"

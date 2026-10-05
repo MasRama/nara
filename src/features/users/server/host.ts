@@ -44,6 +44,22 @@ export interface UsersAccountUpdateOptions {
   roleIds?: string[];
 }
 
+export type UsersActivityAction =
+  | 'users.profile-updated'
+  | 'users.created'
+  | 'users.updated'
+  | 'users.password-reset'
+  | 'users.deleted';
+
+export interface UsersActivityEvent {
+  action: UsersActivityAction;
+  resource: 'users';
+  actorId: string;
+  targetId: string;
+  targetLabel?: string | null;
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
 /** Account-directory behavior Users needs but does not own. */
 export interface UsersIdentityHost {
   /** Resolve the actor for a session token, or undefined when anonymous. */
@@ -99,4 +115,7 @@ export interface UsersAuthorizationHost {
 export interface UsersServerHost extends UsersIdentityHost, UsersAuthorizationHost {
   /** Cookie carrying the session token the host can resolve. */
   readonly sessionCookieName: string;
+
+  /** Optional application-owned side effect; the Feature stays provider-neutral. */
+  recordActivity?(event: UsersActivityEvent): void;
 }

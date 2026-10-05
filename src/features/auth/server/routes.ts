@@ -28,6 +28,7 @@ import {
   SESSION_COOKIE_NAME,
   startSession,
 } from './service';
+import type { AuthActivitySink } from './activity';
 
 function validationErrors(error: z.ZodError): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
@@ -61,7 +62,7 @@ function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
 }
 
-const registerHandler = async (context: Context) => {
+const registerHandler = async (context: Context, activity?: AuthActivitySink) => {
   const parsed = registerInputSchema.safeParse(await requestBody(context));
   if (!parsed.success) {
     const errors = validationErrors(parsed.error);
@@ -86,6 +87,13 @@ const registerHandler = async (context: Context) => {
     const token = startSession(user, context.req.header('user-agent'));
     setSessionCookie(context, token);
     Logger.logAuth('registration_success', { userId: user.id });
+    activity?.({
+      action: 'auth.registered',
+      resource: 'auth',
+      actorId: user.id,
+      targetId: user.id,
+      targetLabel: user.name,
+    });
 
     return context.json(
       {
@@ -106,7 +114,7 @@ const registerHandler = async (context: Context) => {
   }
 };
 
-const loginHandler = async (context: Context) => {
+const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
   const parsed = loginInputSchema.safeParse(await requestBody(context));
   if (!parsed.success) {
     const errors = validationErrors(parsed.error);
@@ -159,11 +167,18 @@ const loginHandler = async (context: Context) => {
   const token = startSession(user!, context.req.header('user-agent'));
   setSessionCookie(context, token);
   Logger.logAuth('login_success', { userId: user!.id });
+  activity?.({
+    action: 'auth.login',
+    resource: 'auth',
+    actorId: user!.id,
+    targetId: user!.id,
+    targetLabel: user!.name,
+  });
   return context.json({ success: true as const, message: 'Login successful' });
 };
 
 
-const changePasswordHandler = async (context: Context) => {
+const changePasswordHandler = async (context: Context, activity?: AuthActivitySink) => {
   const sessionUser = currentUser(getCookie(context, SESSION_COOKIE_NAME));
   if (!sessionUser) {
     return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
@@ -198,6 +213,13 @@ const changePasswordHandler = async (context: Context) => {
   const token = startSession(user, context.req.header('user-agent'));
   setSessionCookie(context, token);
   Logger.logAuth('password_changed', { userId: user.id });
+  activity?.({
+    action: 'auth.password-changed',
+    resource: 'auth',
+    actorId: user.id,
+    targetId: user.id,
+    targetLabel: user.name,
+  });
   return context.json({ success: true as const, message: 'Password updated' });
 };
 
@@ -228,16 +250,31 @@ const csrfHandler = (context: Context) => {
   return context.json({ success: true as const, message: 'CSRF token issued', data: { csrfToken: token } });
 };
 
-const logoutHandler = (context: Context) => {
-  endSession(getCookie(context, SESSION_COOKIE_NAME));
+const logoutHandler = (context: Context, activity?: AuthActivitySink) => {
+  const sessionToken = getCookie(context, SESSION_COOKIE_NAME);
+  const user = currentUser(sessionToken);
+  endSession(sessionToken);
   deleteCookie(context, SESSION_COOKIE_NAME, { path: '/' });
+  if (user) {
+    activity?.({
+      action: 'auth.logout',
+      resource: 'auth',
+      actorId: user.id,
+      targetId: user.id,
+      targetLabel: user.name,
+    });
+  }
   return context.json({ success: true as const, message: 'Logout successful' });
 };
 
-export const authRoutes = new Hono()
-  .get('/csrf', csrfHandler)
-  .post('/register', registerHandler)
-  .post('/login', loginHandler)
-  .post('/change-password', changePasswordHandler)
-  .get('/me', currentUserHandler)
-  .post('/logout', logoutHandler);
+export function createAuthRoutes(activity?: AuthActivitySink) {
+  return new Hono()
+    .get('/csrf', csrfHandler)
+    .post('/register', (context) => registerHandler(context, activity))
+    .post('/login', (context) => loginHandler(context, activity))
+    .post('/change-password', (context) => changePasswordHandler(context, activity))
+    .get('/me', currentUserHandler)
+    .post('/logout', (context) => logoutHandler(context, activity));
+}
+
+export const authRoutes = createAuthRoutes();

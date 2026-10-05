@@ -26,6 +26,7 @@ export type {
   UsersResponse,
   UsersResponseSuccess,
 } from './contract';
+export type { UsersActivityAction, UsersActivityEvent } from './server/host';
 export { createAssetRoutes } from './server/assets-routes';
 export type {
   UsersAccountCreateInput,

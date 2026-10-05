@@ -124,6 +124,13 @@ export function createUserRoutes(host: UsersServerHost) {
     try {
       const user = host.updateAccount(sessionUser.id, parsed.data);
       if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      host.recordActivity?.({
+        action: 'users.profile-updated',
+        resource: 'users',
+        actorId: sessionUser.id,
+        targetId: user.id,
+        targetLabel: user.name,
+      });
       return context.json({ success: true as const, message: 'Profile updated', data: { user } });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -193,6 +200,14 @@ export function createUserRoutes(host: UsersServerHost) {
         },
         roleSelection?.ids,
       );
+      host.recordActivity?.({
+        action: 'users.created',
+        resource: 'users',
+        actorId: sessionUser.id,
+        targetId: user.id,
+        targetLabel: user.name,
+        metadata: { rolesAssigned: roleSelection?.ids.length ?? 0 },
+      });
       return context.json({ success: true as const, message: 'User created', data: { user: userWithRoles(user)! } }, 201);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -267,6 +282,18 @@ export function createUserRoutes(host: UsersServerHost) {
     try {
       const user = host.updateAccount(userId, profile, roleSelection ? { roleIds: roleSelection.ids } : undefined);
       if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      host.recordActivity?.({
+        action: 'users.updated',
+        resource: 'users',
+        actorId: sessionUser.id,
+        targetId: user.id,
+        targetLabel: user.name,
+        metadata: {
+          self: self,
+          rolesChanged: roleSelection !== undefined,
+          emailChanged: profile.email !== undefined,
+        },
+      });
       return context.json({ success: true as const, message: 'User updated', data: { user: userWithRoles(user)! } });
     } catch (error) {
       if (isUniqueConstraintError(error)) {
@@ -313,6 +340,13 @@ export function createUserRoutes(host: UsersServerHost) {
 
     const user = host.resetPassword(userId, await host.hashPassword(parsed.data.password));
     if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    host.recordActivity?.({
+      action: 'users.password-reset',
+      resource: 'users',
+      actorId: sessionUser.id,
+      targetId: user.id,
+      targetLabel: user.name,
+    });
     return context.json({ success: true as const, message: 'Password reset', data: { user: userWithRoles(user)! } });
   };
 
@@ -345,8 +379,21 @@ export function createUserRoutes(host: UsersServerHost) {
       }
     }
 
+    const targets = parsed.data.ids.flatMap((userId) => {
+      const user = host.findAccountById(userId);
+      return user ? [{ id: user.id, name: user.name }] : [];
+    });
     const deleted = host.deleteAccounts(parsed.data.ids);
     await cleanupUserAvatarAssets(parsed.data.ids);
+    for (const target of targets) {
+      host.recordActivity?.({
+        action: 'users.deleted',
+        resource: 'users',
+        actorId: sessionUser.id,
+        targetId: target.id,
+        targetLabel: target.name,
+      });
+    }
     return context.json({ success: true as const, message: 'Users deleted', data: { deleted } });
   };
 

@@ -68,7 +68,7 @@ workspace route can be used. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 `NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
 
 The repository root is the development/reference application proving richer
-Nara capabilities (auth, RBAC, users, assets, SQLite lifecycle). It is not
+Nara capabilities (auth, RBAC, users, activity history, assets, SQLite lifecycle). It is not
 the starting point for new products — `nara new` is. Additional capabilities
 reach generated projects as explicit open-code features via `nara add`, not
 by cloning the reference app.
@@ -183,6 +183,7 @@ The reference application (repository root) exposes:
 | `/api/roles` | Role and permission administration |
 | `/api/users` | Profile and user administration |
 | `/api/assets` | Avatar upload and delivery |
+| `/api/activity` | Permission-gated application activity history |
 
 Hono is the HTTP layer. Nara records static Feature composition from `src/app/server.ts` and Vue route composition from `src/app/router.ts`; it does not replace either with a custom runtime or a native HTTP dependency.
 
@@ -193,6 +194,7 @@ src/
 ├── app/                 HTTP composition and error handling
 ├── cli/                 TypeScript CLI and architecture engine
 ├── features/
+│   ├── activity/        Persistent application activity history
 │   ├── auth/            Sessions, passwords, roles, permissions
 │   └── users/           Profiles, administration, and avatars
 └── shared/              Configuration, database, errors, logging
