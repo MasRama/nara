@@ -20,7 +20,7 @@ Write "None" when there is no architecture-visible change.
 
 - [ ] `npm run check:fast`
 - [ ] `npm run check` when heavy lifecycle/release-sensitive behavior is affected
-- [ ] `npm run build` when runtime/build output is affected
+- [ ] `npm run test:integration` when integration-tier behavior is affected
 - [ ] Relevant focused/integration tests when applicable
 
 ## Review checklist

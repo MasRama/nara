@@ -54,6 +54,7 @@ jobs:
         run: npm run check
 
       - name: Build production app
+        if: github.event_name == 'push'
         run: npm run build
 
       - name: Verify production serving

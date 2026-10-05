@@ -97,8 +97,9 @@ npm run check:fast
 ```
 
 This covers TypeScript, Vue typechecking, the broad fast Vitest suite, and
-architecture validation. CI uses this path for pull requests so small changes
-receive feedback quickly.
+architecture validation. The fast gate also produces the production build, so
+the server TypeScript compilation is not repeated separately in pull-request CI.
+CI uses this path for pull requests so small changes receive feedback quickly.
 
 The canonical full repository gate remains:
 
@@ -117,8 +118,20 @@ You can also run only the slow lifecycle group with:
 npm run test:heavy
 ```
 
-Also run a production build when the change can affect runtime code, frontend
-assets, package composition, or build configuration:
+Integration-heavy tests that exercise real Git repositories, Vite topology,
+frontend build smoke, transition history, and the extended browser workflow are
+grouped separately:
+
+```bash
+npm run test:integration
+```
+
+The full `npm test` / `npm run check` path still runs every project: fast,
+integration, and heavy.
+
+When running focused commands instead of `npm run check:fast`, also run a
+production build when the change can affect runtime code, frontend assets,
+package composition, or build configuration:
 
 ```bash
 npm run build

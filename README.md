@@ -218,10 +218,11 @@ Make a focused change, then run the checks that defend it:
 npm run lint                 # TypeScript typecheck
 npm run check:frontend       # Vue-aware frontend typecheck
 npm run test:fast            # Fast PR test suite
+npm run test:integration     # Real Git/Vite/browser integration tier
 npm run test:heavy           # Slow lifecycle/process test group
 npm test                     # Full Vitest suite
 npm run architecture:doctor # Human-readable architecture report
-npm run check:fast           # Fast pull-request gate
+npm run check:fast           # Fast PR tests + production build + doctor
 npm run check                # Full canonical repository gate
 npm run build                # Production client and server build
 ```
