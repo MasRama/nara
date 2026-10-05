@@ -357,6 +357,7 @@ source; divergent legacy source fails closed. Application-owned Features
 without an official package are not evolved.
 
 ## Read next
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow, local validation, and pull request expectations
 - [`docs/v3/release-notes-3.2.0.md`](./docs/v3/release-notes-3.2.0.md) — v3.2 Composable & Evolvable Open Code
 - [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
 - [`docs/v3/release-checklist.md`](./docs/v3/release-checklist.md) — pre-RC gates and validation semantics
@@ -368,6 +369,7 @@ without an official package are not evolved.
 - [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md) — Compose, Understand, Protect
 - [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md) — canonical SQLite migrations, seeds, backup, and integrity lifecycle
 - [`SECURITY.md`](./SECURITY.md) — security reporting
+- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community participation standard
 
 ## License
 
