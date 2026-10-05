@@ -21,6 +21,8 @@
     "db:backup": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts db:backup",
     "db:check": "node -r ts-node/register -r tsconfig-paths/register scripts/database.ts db:check",
     "test": "vitest run",
+    "test:fast": "vitest run --exclude tests/v3/database-lifecycle.test.ts --exclude tests/v3/build-artifacts.test.ts --exclude tests/v3/bootstrap-admin.test.ts --exclude src/cli/evolution/transition-executable.test.ts",
+    "test:heavy": "vitest run tests/v3/database-lifecycle.test.ts tests/v3/build-artifacts.test.ts tests/v3/bootstrap-admin.test.ts src/cli/evolution/transition-executable.test.ts",
     "test:production-serving": "vitest run --config vitest.integration.config.mjs tests/integration/production-serving.test.ts",
     "test:production-startup": "vitest run --config vitest.integration.config.mjs tests/integration/production-startup.test.ts",
     "test:http-stack-compat": "vitest run --config vitest.integration.config.mjs tests/integration/http-stack-compat.test.ts",
@@ -38,6 +40,7 @@
     "lint": "tsc --noEmit",
     "check:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
     "architecture:doctor": "npx ts-node -r tsconfig-paths/register src/cli/index.ts doctor",
+    "check:fast": "npm run lint && npm run check:frontend && npm run test:fast && npm run architecture:doctor",
     "check": "npm run lint && npm run check:frontend && npm test && npm run architecture:doctor"
   },
   "author": "MasRama",

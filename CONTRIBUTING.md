@@ -90,14 +90,32 @@ Do not mix unrelated cleanup into a feature or bug-fix pull request.
 
 ## Validation
 
-Run the main repository gate before opening or updating a pull request:
+Run the fast pull-request gate while iterating:
+
+```bash
+npm run check:fast
+```
+
+This covers TypeScript, Vue typechecking, the broad fast Vitest suite, and
+architecture validation. CI uses this path for pull requests so small changes
+receive feedback quickly.
+
+The canonical full repository gate remains:
 
 ```bash
 npm run check
 ```
 
-This covers TypeScript, Vue typechecking, the Vitest suite, and architecture
-validation.
+It includes the process-heavy database lifecycle, build-artifact,
+bootstrap-admin, and executable-transition suites. Run it when changing those
+areas, before release work, or whenever you need the full local signal. After a
+pull request merges, `main` CI runs this full gate automatically.
+
+You can also run only the slow lifecycle group with:
+
+```bash
+npm run test:heavy
+```
 
 Also run a production build when the change can affect runtime code, frontend
 assets, package composition, or build configuration:

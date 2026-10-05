@@ -18,7 +18,8 @@ Write "None" when there is no architecture-visible change.
 
 <!-- List the commands or focused checks you ran. -->
 
-- [ ] `npm run check`
+- [ ] `npm run check:fast`
+- [ ] `npm run check` when heavy lifecycle/release-sensitive behavior is affected
 - [ ] `npm run build` when runtime/build output is affected
 - [ ] Relevant focused/integration tests when applicable
 
