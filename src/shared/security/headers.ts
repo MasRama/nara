@@ -1,10 +1,7 @@
 import type { Context, Next } from 'hono';
 
-/**
- * Browser security headers ported from the v2 `securityHeaders` middleware
- * into idiomatic Hono. Headers are applied after downstream handlers run so
- * they also cover deterministic error responses (401/403/404/422/429).
- */
+// Apply after downstream handlers so deterministic error responses receive
+// the same browser security headers as successful responses.
 export interface SecurityHeadersOptions {
   isProduction: boolean;
 }
@@ -13,11 +10,9 @@ const PERMISSIONS_POLICY =
   'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()';
 
 function contentSecurityPolicy(isProduction: boolean): string {
-  // v2 shipped script-src 'self' 'unsafe-inline' 'unsafe-eval'. v3 drops
-  // unsafe-eval (no demonstrated runtime need) and keeps script-src tight:
-  // the production Vite build emits external hashed module scripts only.
-  // style-src keeps 'unsafe-inline' because Vue applies dynamic styles via
-  // style attributes, which style-src governs.
+  // Production Vite emits external module scripts, so script-src can stay
+  // strict. Vue still applies dynamic style attributes, so style-src keeps
+  // 'unsafe-inline'.
   const scriptSrc = isProduction ? `'self'` : `'self' 'unsafe-inline'`;
   const styleSrc = isProduction
     ? `'self' 'unsafe-inline' https://rsms.me https://fonts.googleapis.com`
@@ -52,8 +47,7 @@ export function securityHeaders(options: SecurityHeadersOptions) {
     context.header('X-XSS-Protection', '0');
     context.header('Content-Security-Policy', csp);
     context.header('Permissions-Policy', PERMISSIONS_POLICY);
-    // HSTS is production-only: emitting it over local HTTP development would
-    // be misleading. Conservative max-age matching the prior v2 policy.
+    // HSTS is production-only; emitting it over local HTTP is misleading.
     if (isProduction) {
       context.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }

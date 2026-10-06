@@ -4,7 +4,7 @@ Nara is an **architecture-aware TypeScript application kit**. Build by feature, 
 
 Nara stays useful after project creation: compose capabilities from explicit features, understand the feature graph, statically provable public API consumers and public-boundary provenance, and canonical application integrations with deterministic CLI facts (no AI provider required), protect current boundaries with `nara doctor`, and protect architecture change with `nara guard --base origin/main` before new debt enters unnoticed.
 
-This document is the current architecture authority. History lives in [`docs/archive/v3/](./docs/archive/v3/)` and [`docs/decisions/`](./docs/decisions/).
+This document is the current architecture authority. Obsolete implementation history stays in Git, not in the active documentation set.
 
 - **Compose** — build from explicit business features (`nara make feature`, `nara add`), including Feature assemblies with application-owned bindings.
 - **Own** — application-owned code stays application-owned: bindings, provider choice, authorization policy, manifests, tests, and data change only with application consent, while Nara keeps reasoning across those boundaries.
@@ -26,7 +26,7 @@ This document is the current architecture authority. History lives in [`docs/arc
 | Auth | Session cookies, owned by the `auth` feature (no second mechanism without explicit spec) |
 | Tests | Vitest (+ `jsdom` for browser code) |
 
-No native HTTP engine: Ultimate Express / uWebSockets.js are intentionally unsupported (portability over synthetic benchmarks; see `docs/decisions/` history). Other native packages (`better-sqlite3`, Sharp) are legitimate and unrelated to that contract.
+No native HTTP engine: Ultimate Express / uWebSockets.js are intentionally unsupported; portability is preferred over a custom native HTTP runtime. Other native packages (`better-sqlite3`, Sharp) are legitimate and unrelated to that contract.
 
 ## The feature model
 
@@ -50,12 +50,12 @@ Rules:
 - Application integration is inferred from the canonical composition roots only: `src/app/server.ts` for public-boundary imports and Hono route mounts, and `src/app/router.ts` for web-boundary imports and Vue Router records. Nara follows a statically provable chain from framework composition root to Feature boundary before reporting a route integration; dynamic or non-canonical composition is not reported. Official Features may additionally ship assembly templates that install application-owned bindings under `src/app/bindings/`; a binding counts as an integration only when its canonical root explicitly consumes it (server binding called with the proven Hono instance, web binding spread into the proven route array), and orphan bindings are never reported.
 - Feature dependencies must be acyclic.
 
-Details: [`docs/v3/feature-model.md`](./docs/v3/feature-model.md).
+Details: [`docs/feature-model.md`](./docs/feature-model.md).
 
 ## Application and shared layers
 
 - `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `bindings/` (application-owned Feature assembly bindings: ordinary Hono/Vue Router code activated explicitly from the canonical roots), `App.vue`, `pages/`, `layouts/`. The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
-- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `errors/`, `logging/`, `security/`. Never a second global services/repositories layer. Every generated app guarantees a small substrate — the stack, the canonical roots, the Feature structure, plus `src/shared/database/` and `src/shared/config/` — so installable Features can rely on the persistence engine without copying reference-app files; nothing else under `src/shared/` is guaranteed.
+- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `logging/`, `security/`. Never a second global services/repositories layer. Every generated app guarantees a small substrate — the stack, the canonical roots, the Feature structure, plus `src/shared/database/` and `src/shared/config/` — so installable Features can rely on the persistence engine without copying reference-app files; nothing else under `src/shared/` is guaranteed.
 - `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`, `users`, each optionally with assembly templates and a distribution-only `.nara/requirements.json` describing provider and npm prerequisites).
 
 ## HTTP and contracts
@@ -159,10 +159,6 @@ No custom runtime, HTTP framework, frontend framework, ORM, auth framework, DI c
 ## Further reading
 
 - [`README.md`](./README.md) — first run, topology, deployment
-- [`docs/v3/feature-model.md`](./docs/v3/feature-model.md) — ownership and boundaries
-- [`docs/v3/cli.md`](./docs/v3/cli.md) — CLI and JSON reference
-- [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md) — Compose, Understand, Protect
-- [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md) — SQLite lifecycle
-- [`docs/v3/migration-v2-v3.md`](./docs/v3/migration-v2-v3.md) — v2 porting guide
-- [`docs/v3/v2-inventory.md`](./docs/v3/v2-inventory.md) — v2 capability inventory
-- [`docs/decisions/`](./docs/decisions/) — why past decisions were made
+- [`docs/feature-model.md`](./docs/feature-model.md) — ownership and boundaries
+- [`docs/cli.md`](./docs/cli.md) — CLI and JSON reference
+- [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle

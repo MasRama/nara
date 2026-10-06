@@ -110,7 +110,7 @@ afterAll(() => {
 });
 
 /**
- * Production-startup failure regressions (V3-112 hardening).
+ * Production-startup failure regressions.
  *
  * These spawn the real built production process (`npm start` =
  * `node build/server.js`) and prove startup wiring fails loudly instead of

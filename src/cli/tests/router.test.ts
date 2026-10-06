@@ -19,7 +19,7 @@ describe('Nara CLI router', () => {
     const result = runCli(['--help'], io);
 
     expect(result.exitCode).toBe(0);
-    expect(io.output.join('')).toContain('Nara v3 CLI');
+    expect(io.output.join('')).toContain('Nara CLI');
     expect(io.errors).toHaveLength(0);
   });
   it('dispatches evolve help', () => {

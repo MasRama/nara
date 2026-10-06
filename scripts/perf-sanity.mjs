@@ -1,5 +1,5 @@
 /**
- * Nara v3 performance sanity (V3-115).
+ * Nara performance sanity.
  *
  * Local sanity baseline only: detects gross practical regressions in
  * startup, HTTP dispatch, `nara doctor`, and architecture discovery.
@@ -244,7 +244,7 @@ async function main() {
   } catch {
     // Source tree without git metadata still yields usable numbers.
   }
-  console.log('Nara v3 performance sanity (local baseline, not a benchmark)');
+  console.log('Nara performance sanity (local baseline, not a benchmark)');
   console.log(
     `date=${new Date().toISOString()} commit=${head} node=${process.version} os=${os.platform()}/${os.arch()} cpus=${os.cpus().length} mem=${Math.round(os.totalmem() / 1024 ** 3)}GiB`,
   );

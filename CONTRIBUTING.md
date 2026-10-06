@@ -54,8 +54,7 @@ npm run dev
 Before changing implementation structure, read:
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md);
-- [`docs/v3/feature-model.md`](./docs/v3/feature-model.md);
-- [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md).
+- [`docs/feature-model.md`](./docs/feature-model.md).
 
 The important defaults are:
 

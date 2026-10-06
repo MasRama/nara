@@ -5,18 +5,15 @@ import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import sharp from 'sharp';
+import {
+  AVATAR_ALLOWED_MIME_TYPES,
+  AVATAR_MAX_FILE_SIZE_BYTES,
+  AVATAR_MAX_FILE_SIZE_MB,
+} from '../contract';
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
 import type { UsersServerHost } from './host';
 
-/**
- * Users-owned avatar upload policy. These limits mirror the upload
- * contract the Feature validates and reports; they live here (not in
- * shared config) because the Users Feature must install without
- * reference-only shared modules.
- */
-const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
 const AVATAR_DIR = 'avatars';
-const AVATAR_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
 const IMAGE_MAGIC_BYTES: Record<string, number[]> = {
   'image/jpeg': [0xff, 0xd8, 0xff],
@@ -128,8 +125,8 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
   const uploaded = body.file;
   const file = uploadedFile(uploaded);
   if (!file) return invalidFile(context, 'Avatar file is required', 'FILE_REQUIRED');
-  if (file.size > AVATAR_MAX_FILE_SIZE) {
-    return invalidFile(context, 'File too large (max 5MB)', 'FILE_TOO_LARGE', 413);
+  if (file.size > AVATAR_MAX_FILE_SIZE_BYTES) {
+    return invalidFile(context, `File too large (max ${AVATAR_MAX_FILE_SIZE_MB}MB)`, 'FILE_TOO_LARGE', 413);
   }
   if (!AVATAR_ALLOWED_MIME_TYPES.some((mimeType) => mimeType === file.type)) {
     return invalidFile(context, 'Invalid file type', 'INVALID_FILE_TYPE');

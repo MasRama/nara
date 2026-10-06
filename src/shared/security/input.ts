@@ -1,21 +1,7 @@
 import { z } from 'zod';
 
-/**
- * v2's global HTML-stripping sanitizer is intentionally not ported: mutating
- * arbitrary business input corrupts legitimate data and Vue's default
- * interpolation already escapes rendered text. The restored contract is
- * validate-then-normalize at the owning Feature schema.
- *
- * Shared code owns only feature-neutral primitives: the control-byte check
- * plus the genuinely generic person/email schemas reused by auth and users.
- * Domain validation (roles, slugs, descriptions) lives in the owning Feature
- * contract and composes this primitive; it is not duplicated here.
- *
- * Passwords are never trimmed or transformed, only length-bounded.
- * Prototype pollution needs no separate filter: schemas are strict Zod
- * objects that discard unknown keys, and request data is never recursively
- * merged into prototypes (covered by security tests).
- */
+// Shared validation stays feature-neutral. Business-specific schemas live in
+// their Feature contracts; passwords are never trimmed or transformed.
 export function hasNoControlChars(value: string): boolean {
   for (let index = 0; index < value.length; index += 1) {
     const code = value.charCodeAt(index);

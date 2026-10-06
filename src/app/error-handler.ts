@@ -1,7 +1,6 @@
 import type { ErrorHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { env } from '../shared/config';
-import { isApplicationError, isValidationError } from '../shared/errors';
 import { Logger } from '../shared/logging';
 import { getRequestId } from './observability';
 export const handleError: ErrorHandler = (error, context) => {
@@ -17,29 +16,6 @@ export const handleError: ErrorHandler = (error, context) => {
         code: 'APPLICATION_ERROR',
       },
       error.status,
-    );
-  }
-
-  if (isValidationError(error)) {
-    return context.json(
-      {
-        success: false as const,
-        message: error.message,
-        code: error.code,
-        errors: error.errors,
-      },
-      422,
-    );
-  }
-
-  if (isApplicationError(error)) {
-    return context.json(
-      {
-        success: false as const,
-        message: error.message,
-        ...(error.code ? { code: error.code } : {}),
-      },
-      error.status as 400,
     );
   }
 

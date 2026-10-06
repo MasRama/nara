@@ -3,20 +3,15 @@ import type { Context, Next } from 'hono';
 import { clientIp } from '../shared/security';
 import { Logger } from '../shared/logging';
 
-/**
- * Request lifecycle observability (V3-044): stable request IDs plus one
- * structured completion event per non-health request. Application/shared
- * infrastructure, not a Feature. Uses Hono context directly; no
- * request-context framework.
- */
+// Stable request IDs plus one structured completion event for operationally
+// meaningful requests. This stays app infrastructure, not a Feature.
 
-export const REQUEST_ID_HEADER = 'X-Request-Id';
+const REQUEST_ID_HEADER = 'X-Request-Id';
 const MAX_REQUEST_ID_LENGTH = 128;
 // Opaque IDs are allowed, but only from a bounded safe alphabet: no control
 // characters, no whitespace, nothing that could inject log/header content.
 const SAFE_REQUEST_ID_PATTERN = /^[A-Za-z0-9._~:+-]+$/;
 
-/** Preserve a safe incoming ID, otherwise generate a server UUID. */
 export function normalizeRequestId(incoming: string | undefined): string {
   const candidate = (incoming ?? '').trim();
   if (
@@ -29,7 +24,6 @@ export function normalizeRequestId(incoming: string | undefined): string {
   return randomUUID();
 }
 
-/** Request ID stashed by {@link requestId} for logging, errors, and handlers. */
 export function getRequestId(context: Context): string | undefined {
   const id = context.get('requestId');
   return typeof id === 'string' && id.length > 0 ? id : undefined;

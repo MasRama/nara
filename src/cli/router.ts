@@ -31,7 +31,7 @@ export interface CliResult {
   exitCode: number;
 }
 
-const HELP_TEXT = `Nara v3 CLI
+const HELP_TEXT = `Nara CLI
 
 Usage:
   nara <command> [options]
@@ -62,7 +62,7 @@ Creates src/features/<name>/index.ts and contract.ts without overwriting an exis
 const NEW_HELP = `Usage:
   nara new <name>
 
-Creates a runnable Nara v3 application without overwriting an existing directory.
+Creates a runnable Nara application without overwriting an existing directory.
 `;
 
 const DOCTOR_HELP = `Usage:

@@ -1,21 +1,21 @@
 # Nara
 
-Nara is an architecture-aware TypeScript application kit built around composable, evolvable open code.
+Nara is an architecture-aware TypeScript application kit built around
+composable, evolvable open code.
 
-Build by feature, not by layer. Own the source. Compose explicitly.
-Understand architecture. Evolve without losing customization. Protect change.
+Build by feature, own the source, compose explicitly, and keep architecture
+machine-checkable without hiding Hono, Vue, TypeScript, or SQLite behind a
+custom runtime.
 
 ```text
 Compose → Own → Understand → Evolve → Protect
 ```
 
-Nara keeps each business capability together and makes public boundaries, statically provable public API consumers, and canonical application integrations machine-checkable. The underlying stack stays transparent: Hono handles HTTP, TypeScript defines the application, and Nara's CLI explains the repository without an LLM.
-
 ## Start here
 
-`@nara-web/cli` is not yet published to the npm registry. The registry command
-below is the canonical user flow once the first publish is complete; until
-then, work from a source checkout or the locally staged/packed package.
+The publishable CLI package is `@nara-web/cli`. It is not yet published to the
+npm registry, so the command below is the canonical flow for the first public
+release; until then use a source checkout or a locally staged/packed package.
 
 ```bash
 npx @nara-web/cli new my-app
@@ -24,31 +24,21 @@ npm install
 npm run dev
 ```
 
-This is the canonical lifecycle: `nara new` creates a minimal runnable
-application that carries its own pinned Nara tooling as a devDependency,
-so architecture checks travel with the project. Its default Health Feature is
-copied from the same official open-code source used by `nara add`, with
-lineage already established before the generated project is visible:
-
+Generated applications pin the exact Nara CLI version that created them as a
+devDependency. The default Health Feature is installed from the same official
+open-code source used by `nara add`.
 
 ```bash
-npm run check                  # typechecks, tests, and nara doctor
-npx nara doctor                # validate architecture from the local install
+npm run check
+npx nara doctor
 npx nara context health --json
-npx nara impact health --json
-npx nara add audit             # install an official open-code feature
+npx nara add audit
 ```
 
-Nara stays useful after creation: the same local CLI that scaffolds the
-project keeps understanding (`inspect`, `context`, `impact`), including which
-Features consume exact public or browser-safe symbols and whether each usage is
-explicitly type-only or uses value-capable syntax. Nara does not resolve
-declaration categories through the TypeScript type checker. It describes change
-(`diff --base main`), and protects (`doctor` for current architecture,
-`guard --base origin/main` for architecture change) its feature architecture in
-month 12. No AI provider is required.
+Nara's architecture analysis is deterministic and does not require an AI
+provider.
 
-To work on Nara itself instead, clone the reference repository:
+## Work on Nara itself
 
 ```bash
 git clone https://github.com/MasRama/nara.git
@@ -59,211 +49,141 @@ npm run setup
 npm run dev
 ```
 
-`npm run setup` applies pending migrations, reference seeds, and creates the
-first administrator when one does not already exist. With no admin environment
-overrides it prints the development bootstrap credential
-`admin@nara.local` / `admin12345`; that credential is marked temporary and the
-application requires a password change before any normal authenticated API or
-workspace route can be used. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
+`npm run setup` applies pending migrations, reference seeds, and bootstraps the
+first administrator if needed. Without admin environment overrides it creates
+a temporary development credential:
+
+```text
+admin@nara.local / admin12345
+```
+
+The application requires that temporary password to be changed before normal
+authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 `NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
 
-The repository root is the development/reference application proving richer
-Nara capabilities (auth, RBAC, users, activity history, assets, SQLite lifecycle). It is not
-the starting point for new products — `nara new` is. Additional capabilities
-reach generated projects as explicit open-code features via `nara add`, not
-by cloning the reference app.
-Packaging note: Nara's publishable npm package is named `@nara-web/cli`. It exposes the `nara` executable, so generated projects use commands such as `nara doctor`, `nara diff`, and `nara guard`. The package lives at `packages/nara` (`bin` points at the staged CLI and `files` ships only the staged `dist/`, `official-features/` source, `substrate/`, `LICENSE`, and `README.md`). The source release is tagged `v3.2.0`, but the package has not yet been published to the npm registry; source/Git release status and npm distribution status are separate. The remaining registry step is a one-time `npm run build && npm run stage:package && npm publish` from `packages/nara` on a clean tree. Until then, staging plus `npm pack` from `packages/nara` produces the artifact intended for the registry.
+The repository root is a richer reference application proving Auth/RBAC,
+Users, Activity, assets, and the SQLite lifecycle. New applications should be
+created with `nara new`; additional capabilities are installed explicitly with
+`nara add`.
 
-Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves the Vue app and HMR, while the Hono application is mounted into that same server for `/api`, `/health`, and `/ready`. There is no second development listener or proxy hop.
+Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves
+the Vue app and HMR while Hono handles `/api`, `/health`, and `/ready` on the
+same origin.
 
-## The core idea
+## Core model
 
-A feature owns a business capability, its public contract, runtime code, optional web code, and tests:
+A Feature owns one business capability:
 
 ```text
 src/features/billing/
-├── contract.ts       # types and runtime-safe boundary data
-├── index.ts          # the only public import boundary
-├── server/           # routes, services, repositories
-├── web/              # optional client-side surface
+├── contract.ts       # shared boundary types and schemas
+├── index.ts          # public server/general boundary
+├── server/           # runtime and persistence
+├── web/              # optional browser surface
 └── tests/            # feature tests
 ```
 
-Cross-feature code imports the target feature's public `index.ts`:
+Cross-feature imports use the target Feature's public boundary:
 
 ```ts
 import { getUser } from '@/features/users';
 ```
 
-This is invalid:
+Deep cross-feature imports such as `@/features/users/server/repository` are
+invalid and detected by `nara doctor`.
 
-```ts
-import { findUserById } from '@/features/users/server/repository';
-```
-
-The second import couples one feature to another feature's implementation. `nara doctor` detects this, along with malformed features, dependency cycles, and server-only code leaking into `web/`.
+See [`ARCHITECTURE.md`](./ARCHITECTURE.md) and
+[`docs/feature-model.md`](./docs/feature-model.md) for the full ownership and
+composition rules.
 
 ## CLI
 
-Inside a generated project the CLI is a pinned local devDependency — every
-command below runs from the project's own install, reproducibly:
-
-```bash
-npm run architecture:doctor    # local nara doctor
-npx nara make feature billing
-npx nara doctor
-```
-
-When working directly from a Nara checkout, use the equivalent command:
-
-```bash
-node build/src/cli/index.js make feature billing
-node build/src/cli/index.js doctor
-```
-
-Available commands:
+Common commands:
 
 ```text
-nara new <name>                 Create a runnable v3 application
-nara make feature <name>        Create the canonical feature skeleton
-nara add <feature>              Install an official open-code feature
-nara evolve <feature>           Safely evolve an installed official Feature
-nara doctor                    Validate architecture
-nara inspect <feature>         Show bounded feature facts
-nara context <feature>|--file <path>  Architecture Context Pack before editing a feature
-nara impact <feature>          Show feature-graph dependents
-nara diff --base main          Show how the architecture is changing
-nara guard --base origin/main  Fail when the change introduces new violations
+nara new <name>                 Create a runnable Nara application
+nara make feature <name>        Create the canonical Feature skeleton
+nara add <feature>              Install an official open-code Feature
+nara evolve <feature>           Evolve installed official source
+nara doctor                     Validate current architecture
+nara inspect <feature>          Show bounded Feature facts
+nara context <feature>          Produce a focused architecture context pack
+nara impact <feature>           Show structural dependents
+nara diff --base main           Describe architecture change
+nara guard --base origin/main   Fail on newly introduced architecture debt
 ```
 
-Nara can describe not only what the architecture is, but how the architecture is changing. `git diff` explains text changes; `nara diff` explains deterministic Feature-architecture changes, including public/web consumer evidence, removed-public-symbol consumer impact, canonical application imports, Hono mounts, and Vue Router records, with affected output labeled structural dependency impact (never semantic behavior prediction) and no AI provider required. `nara guard` turns that intelligence into a regression ratchet: it fails only when the change introduces new `doctor` diagnostics compared with the Git baseline, so existing debt is tolerated while new debt cannot enter unnoticed. See [`docs/v3/cli.md`](./docs/v3/cli.md#nara-diff---base-ref---head-ref---json).
+All architecture commands support deterministic JSON where documented.
+Generated projects run them from their pinned local CLI installation.
 
-Architecture facts are deterministic and available as JSON for scripts and agents:
+Full command and output semantics live in [`docs/cli.md`](./docs/cli.md).
 
-```bash
-npx nara inspect health --json
-npx nara context health --json
-npx nara impact health --json
-npx nara diff --base main --json
-npx nara guard --base origin/main --json
-```
-
-No AI provider is required for these commands. `nara new` pins the creating
-CLI version exactly as `@nara-web/cli` in the generated project, so
-architecture-rule changes arrive only through an explicit dependency update
-(see ADR 0011).
-
-## HTTP and application structure
-
-```text
-Request
-  │
-  ▼
-Hono application (src/app/server.ts)
-  │
-  ├── Feature routes
-  │     ├── auth
-  │     └── users
-  │
-  ├── Health and readiness
-  └── Shared infrastructure
-        ├── configuration
-        ├── SQLite database
-        ├── structured logging
-        └── error handling
-```
-
-The reference application (repository root) exposes:
-
-| Surface | Purpose |
-|---|---|
-| `/health` | Liveness response |
-| `/ready` | Database readiness response |
-| `/api/auth` | Registration, login, sessions, and password changes |
-| `/api/roles` | Role and permission administration |
-| `/api/users` | Profile and user administration |
-| `/api/assets` | Avatar upload and delivery |
-| `/api/activity` | Permission-gated application activity history |
-
-Hono is the HTTP layer. Nara records static Feature composition from `src/app/server.ts` and Vue route composition from `src/app/router.ts`; it does not replace either with a custom runtime or a native HTTP dependency.
-
-## Source map
+## Repository map
 
 ```text
 src/
-├── app/                 HTTP composition and error handling
-├── cli/                 TypeScript CLI and architecture engine
+├── app/                 application composition
+├── cli/                 CLI and architecture engine
 ├── features/
-│   ├── activity/        Persistent application activity history
-│   ├── auth/            Sessions, passwords, roles, permissions
-│   └── users/           Profiles, administration, and avatars
-└── shared/              Configuration, database, errors, logging
+│   ├── activity/
+│   ├── auth/
+│   └── users/
+└── shared/              business-neutral infrastructure
 
 official-features/
-├── audit/               Installable audit feature
-├── health/              Installable health feature
-└── users/               Installable users assembly (requires a compatible provider)
+├── audit/
+├── health/
+└── users/
 
-resources/                Vue 3/Vite/TypeScript frontend shell
- tests/
-├── v3/                  Runtime and CLI tests
-└── fixtures/architecture Valid and invalid architecture projects
+resources/               Vue/Vite application shell
+scripts/                 setup, database, build, release helpers
+tests/                   cross-cutting and integration tests
 ```
 
-`web/` is optional inside a feature. A backend-only feature is valid. The supported browser stack is Vue 3 + Vite + TypeScript; feature-specific Vue pages, components, and composables live in the owning Feature's `web/`, while application-wide composition lives under `src/app/`. The architecture CLI treats only the canonical `server.ts` and `router.ts` roots as application integration evidence.
+`web/` is optional inside a Feature. The supported browser stack is Vue 3 +
+Vite + TypeScript; Hono is the HTTP layer; SQLite uses `better-sqlite3` and raw
+SQL.
 
-## Development loop
+## Development and verification
 
-Make a focused change, then run the checks that defend it:
+Use the narrowest relevant test while iterating, then run the canonical gate
+before handoff:
 
 ```bash
-npm run lint                 # TypeScript typecheck
-npm run check:frontend       # Vue-aware frontend typecheck
-npm run test:fast            # Fast PR test suite
-npm run test:integration     # Real Git/Vite/browser integration tier
-npm run test:heavy           # Slow lifecycle/process test group
-npm test                     # Full Vitest suite
-npm run architecture:doctor # Human-readable architecture report
-npm run check:fast           # Fast PR tests + production build + doctor
-npm run check                # Full canonical repository gate
-npm run build                # Production client and server build
+npm run lint
+npm run check:frontend
+npm run test:fast
+npm run test:integration
+npm run test:heavy
+npm run architecture:doctor
+npm run check
+npm run build
 ```
 
-The architecture tests include valid projects and intentionally invalid fixtures for:
-
-- invalid feature shape
-- cross-feature internal imports
-- circular feature dependencies
-- server/client leaks
-
-Diagnostics report the problem, source file, relationship, reason, and recommended fix. Human output and `--json` output use the same analysis.
-
-## Configuration and deployment
-
-Development configuration starts from `.env.example`:
-
-```text
-NODE_ENV=development
-PORT=5555
-DB_FILE=database/dev.sqlite3
-```
-
-`PORT` is the single development HTTP port. `APP_URL` defaults to `http://localhost:${PORT}` in development and can be overridden explicitly when needed. Production still requires an explicit public `APP_URL`.
-
-Nara's database is a local SQLite file managed by `better-sqlite3`. Apply its Feature-owned migrations before using database-backed routes:
+`npm run check` is the canonical repository gate. Release/distribution work
+uses:
 
 ```bash
-npm run setup              # migrate + reference seeds + first-admin bootstrap
+npm run validate:release
+npm run perf:sanity   # separate machine-sensitive sanity check
+```
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for contribution workflow and
+validation expectations.
+
+## Database and production
+
+Development starts from `.env.example`. The main lifecycle commands are:
+
+```bash
+npm run setup
 npm run migrate
 npm run seed
 npm run db:check
+npm run db:backup
 ```
 
-Reference seeds contain structural data such as roles and permissions; they do
-not recreate administrator accounts. `npm run setup` is idempotent for the
-first-admin step and never resets an existing administrator password.
-
-For the production Node process, copy `.env.production.example` to `.env.production`, set `APP_URL` to the public application origin, choose a production database path, and build:
+Production requires an explicit public `APP_URL` and a local SQLite path:
 
 ```bash
 cp .env.production.example .env.production
@@ -271,111 +191,48 @@ npm run build
 npm start
 ```
 
-Production serves the built Vue SPA, public files, and backend APIs from the same Node/Hono origin. `npm start` requires `build/client/index.html`; run `npm run build` first. The startup log identifies the browser/API URL from `APP_URL`.
+Production serves the built Vue SPA and Hono APIs from the same Node process.
+SQLite files, WAL files, and backups must live on storage local to the
+application host; the default architecture is not intended for shared
+multi-host network filesystems.
 
-Linux runtime: the Hono + `@hono/node-server` HTTP path uses no Ultimate/uWebSockets native HTTP runtime. (Other native dependencies such as `better-sqlite3` or Sharp are legitimate and unrelated to this contract; the portable HTTP-stack audit in release validation guards against reintroducing the old runtime.) Canonical validation is one gate:
+Database ownership, migrations, seeds, backup, and integrity behavior are
+documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
 
-```bash
-npm run validate:release   # check, production serving + startup
-                           # failures, HTTP-stack audit, fresh project, official feature
-npm run perf:sanity        # separate machine-sensitive sanity (catastrophic tripwires only)
-```
+## Official Features
 
-Production configuration fails during startup with the invalid field named in the error. SQLite files, WAL files, and backups must live on storage local to the application host; Nara's default SQLite architecture is not intended for multi-host shared network filesystems. Applications with high write concurrency or multi-host database requirements should use a client/server database architecture instead. Put TLS termination and public traffic handling in a reverse proxy such as nginx or Caddy.
-
-Development HTML is served by Vite and is not covered by Hono security headers; production is authoritative for page headers.
-
-## Official feature packages
-
-Official features are composable open TypeScript source. Installation is
-transactional and explicit: Feature-owned source lands in
-`src/features/<name>`, application-owned bindings land in
-`src/app/bindings/` with composition calls in the canonical roots, npm
-prerequisites compose into `package.json` for the application to install,
-and lineage records the exact official source under `.nara/lineage`.
-Existing source is never merged into or silently overwritten:
-
-```bash
-npx nara add health
-npx nara add audit
-npx nara add users            # requires a compatible provider (e.g. Auth)
-```
-
-The installation result is inspectable source, not a hidden runtime plugin. Run `npx nara doctor` after adding a feature.
-
-The catalog is intentionally small (`health`, `audit`, `users`). Users is
-the substantial proof of typed host requirements: it declares the account
-surface it needs, and the application binding satisfies it with Auth or
-another compatible provider — no DI container, no direct Users → Auth
-implementation dependency. Auth itself stays a reference implementation in
-this repository, not an installable package.
-
-## Evolvable Open Code
-
-Official Features remain ordinary project source after `nara new` or
-`nara add`, but they also carry a small local lineage record. The Health
-Feature created by `nara new` starts from the same official open-code source
-that later `nara evolve health` treats as `INCOMING`.
+The current installable catalog is intentionally small:
 
 ```text
-.nara/
-└── lineage/
-    └── official-features/<feature>/
-        ├── base/          # exact official source bytes
-        └── lineage.json   # schema, source kind, SHA-256 base digest
+health
+audit
+users
 ```
 
-The lineage directory is not an architecture manifest. Architecture facts
-remain derived from `src/` by the existing inspect, context, diff, snapshot,
-and doctor primitives. `.nara/lineage` is only the deterministic historical
-BASE used by `nara evolve`.
+Installation copies visible source into the application and composes explicit
+application-owned bindings where needed. There is no runtime plugin registry or
+DI container. Users is the substantial assembly proof and can bind to the
+reference Auth capability or another compatible provider.
 
-```bash
-npx nara evolve audit --dry-run
-npx nara evolve audit --dry-run --json
-npx nara evolve audit
-```
+Package shape and prerequisites are documented in
+[`docs/feature-format.md`](./docs/feature-format.md).
 
-Evolution compares three states:
+## Package status
 
-| State | Meaning |
-|---|---|
-| `BASE` | exact official source recorded by the last add or successful evolve |
-| `LOCAL` | the installed, possibly customized `src/features/<feature>` |
-| `INCOMING` | the current official source bundled with the installed Nara CLI |
-
-Unchanged files, upstream-only updates, local-only changes, additions, and
-deletions are resolved deterministically. Text files use `git merge-file`;
-binary files merge only when one side is unchanged or both sides reached the
-same bytes. Conflicts are reported as a stable path list, never written as
-conflict markers, and never partially applied.
-
-Before a conflict-free apply, Nara materializes an isolated candidate
-Feature, reruns the existing architecture snapshot and diff model, computes
-structural downstream impact, and blocks only newly introduced architecture
-diagnostics. Existing diagnostics are baseline debt and remain tolerated.
-Successful application replaces the Feature and advances `BASE` to pure
-`INCOMING` bytes while preserving local-only code. Application-owned
-bindings, `package.json` composition, and the provider choice are never
-modified by evolution. A missing lineage is
-bootstrapped only when local source is byte-identical to the current official
-source; divergent legacy source fails closed. Application-owned Features
-without an official package are not evolved.
+The npm package is `@nara-web/cli` and exposes the `nara` executable. The first
+registry publication is still pending. The staged publishable package lives at
+`packages/nara`; `npm run stage:package` and `npm pack` produce the artifact
+used by release validation.
 
 ## Read next
-- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow, local validation, and pull request expectations
-- [`docs/v3/release-notes-3.2.0.md`](./docs/v3/release-notes-3.2.0.md) — v3.2 Composable & Evolvable Open Code
-- [`docs/v3/release-notes.md`](./docs/v3/release-notes.md) — v3 release notes and verification
-- [`docs/v3/release-checklist.md`](./docs/v3/release-checklist.md) — pre-RC gates and validation semantics
-- [`docs/v3/feature-model.md`](./docs/v3/feature-model.md) — feature ownership and boundaries
-- [`docs/v3/cli.md`](./docs/v3/cli.md) — CLI command reference and JSON output
-- [`docs/v3/feature-format.md`](./docs/v3/feature-format.md) — installable feature format
-- [`docs/v3/v2-inventory.md`](./docs/v3/v2-inventory.md) — capability migration inventory
-- [`docs/v3/migration-v2-v3.md`](./docs/v3/migration-v2-v3.md) — v2 to v3 porting guide
-- [`docs/v3/architecture-philosophy.md`](./docs/v3/architecture-philosophy.md) — Compose, Understand, Protect
-- [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md) — canonical SQLite migrations, seeds, backup, and integrity lifecycle
-- [`SECURITY.md`](./SECURITY.md) — security reporting
-- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community participation standard
+
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md) — current architecture authority
+- [`docs/feature-model.md`](./docs/feature-model.md) — Feature ownership and boundaries
+- [`docs/feature-format.md`](./docs/feature-format.md) — installable Feature format
+- [`docs/cli.md`](./docs/cli.md) — CLI reference
+- [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
+- [`SECURITY.md`](./SECURITY.md) — security model and reporting
+- [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community participation
 
 ## License
 

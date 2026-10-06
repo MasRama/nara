@@ -21,11 +21,6 @@ export interface Permission {
   updated_at: number;
 }
 
-export interface RoleSummary extends Role {
-  permissions: Permission[];
-  userCount: number;
-}
-
 export interface AccessUser {
   id: string;
   name: string;
@@ -38,10 +33,6 @@ export function findAllRoles(): Role[] {
 
 export function findRoleById(roleId: string): Role | undefined {
   return getDatabase().prepare('SELECT * FROM roles WHERE id = ?').get(roleId) as Role | undefined;
-}
-
-export function findRoleBySlug(slug: string): Role | undefined {
-  return getDatabase().prepare('SELECT * FROM roles WHERE slug = ?').get(slug) as Role | undefined;
 }
 
 export function createRole(data: {
@@ -204,11 +195,6 @@ export function getUserCountsForRoles(roleIds: string[]): Map<string, number> {
     .all(...roleIds) as Array<{ role_id: string; count: number }>;
   for (const row of rows) counts.set(row.role_id, row.count);
   return counts;
-}
-
-export function syncRolePermissions(roleId: string, permissionIds: string[]): void {
-  const database = getDatabase();
-  database.transaction(() => replaceRolePermissions(database, roleId, permissionIds))();
 }
 
 export function updateRoleWithPermissions(

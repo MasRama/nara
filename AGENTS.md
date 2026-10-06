@@ -4,14 +4,14 @@ Nara is an **architecture-aware TypeScript application kit**. Build by feature, 
 
 Stack: TypeScript, Node.js 22+, Hono + `@hono/node-server`, Vue 3 + Vite + `vue-router`, SQLite (`better-sqlite3`, raw SQL), Zod, Vitest. Session auth owned by the `auth` feature.
 
-Authority: user instruction → this file → [`ARCHITECTURE.md`](./ARCHITECTURE.md) → tests → implementation. History (`docs/archive/v3/`, ADRs) explains past decisions; it never overrides current code.
+Authority: user instruction → this file → [`ARCHITECTURE.md`](./ARCHITECTURE.md) → tests → implementation. Git history explains past decisions; it never overrides current code.
 
 ## Architecture model
 
 ```text
 src/features/<feature>/   contract.ts · index.ts · server/ · web/ (optional) · tests/
 src/app/                  server.ts · router.ts · App.vue · pages/ · layouts/
-src/shared/               config/ · database/ · errors/ · logging/ · security/
+src/shared/               config/ · database/ · logging/ · security/
 resources/app.ts          thin Vite entry mounting the app shell
 official-features/        installable open-code features (health, audit, users)
 ```
@@ -19,7 +19,7 @@ official-features/        installable open-code features (health, audit, users)
 - `src/features/<feature>/index.ts` is the general/server-facing public boundary. Cross-feature server use imports only from there.
 - `src/features/<feature>/web/index.ts` is the optional browser-safe boundary. `src/app/` imports browser surfaces only from there.
 - Internals (`server/*`, `web/pages/*`, `web/components/*`, `web/client`) are private. Feature dependencies must be acyclic.
-- Details: [`docs/v3/feature-model.md`](./docs/v3/feature-model.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+- Details: [`docs/feature-model.md`](./docs/feature-model.md), [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ## Hard rules
 
@@ -29,7 +29,7 @@ official-features/        installable open-code features (health, audit, users)
 - Server is authoritative: enforce auth/permissions in Hono routes, never only in Vue. Permission slugs are `<resource>.<action>`; `admin` bypasses where the route requires it.
 - Responses use `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`, English messages, Zod `safeParse` at the route boundary (401 auth, 403 permission, 404 absent, 409 conflict, 422 validation).
 - SQL lives in the owning feature's repository via `better-sqlite3` prepared statements; multi-write replacements use transactions. No ORM, no string-interpolated values.
-- Locked stack: do not replace Hono, add a frontend framework (React/Svelte/Nuxt/SSR), add a native HTTP engine (Ultimate Express/uWebSockets.js), or wrap Hono/Vue behind a custom Nara abstraction. New dependency genuinely required → prefer the existing stack or standard library, update the actual package manifest (`package.json`), and add an ADR only when the dependency represents a material architectural decision.
+- Locked stack: do not replace Hono, add a frontend framework (React/Svelte/Nuxt/SSR), add a native HTTP engine (Ultimate Express/uWebSockets.js), or wrap Hono/Vue behind a custom Nara abstraction. New dependency genuinely required → prefer the existing stack or standard library and update the actual package manifest (`package.json`). If it changes current architecture, update `ARCHITECTURE.md`; otherwise keep rationale close to the code or test that enforces it.
 - No overengineering: no speculative abstractions, plugin systems, caches, DI containers, RPC/ORM/validation frameworks, or duplicated architecture metadata. Keep changes scoped; no mass-formatting, no unrelated refactors, no secrets, no force-push.
 
 ## Where work belongs
@@ -55,19 +55,6 @@ node build/src/cli/index.js impact <feature> --json    # dependents before contr
 
 (Or `npx ts-node -r tsconfig-paths/register src/cli/index.ts <command>` without a build.)
 
-## Skills
-
-Procedural deep dives in [`.agents/skills/`](./.agents/skills/) (one directory per skill, `SKILL.md` inside). Load only the smallest set of procedural skills directly relevant to the current task:
-
-- `nara-feature-development` — feature skeleton, boundaries, composition
-- `nara-api-contracts` — Hono shapes, errors, Zod
-- `nara-auth-rbac` — Auth provider, sessions, authorization composition
-- `nara-database` — repositories, transactions, lifecycle
-- `nara-frontend` — Vue pages, router, typed clients
-- `nara-testing` — layout, route/repo/Vue/CLI tests
-
-`AGENTS.md` and `ARCHITECTURE.md` win on conflict.
-
 ## Verify
 
 Narrow first, full gate before handoff:
@@ -88,10 +75,8 @@ Database-backed routes need migrations first: `npm run migrate` (`seed`, `db:che
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — current architecture authority
 - [`README.md`](./README.md) — first run, topology, deployment
-- [`docs/v3/cli.md`](./docs/v3/cli.md) — CLI and JSON reference
-- [`docs/v3/database-lifecycle.md`](./docs/v3/database-lifecycle.md) — SQLite lifecycle
-- [`docs/v3/migration-v2-v3.md`](./docs/v3/migration-v2-v3.md) — v2 porting guide
-- [`docs/decisions/`](./docs/decisions/) — decision history
+- [`docs/cli.md`](./docs/cli.md) — CLI and JSON reference
+- [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
 - [`SECURITY.md`](./SECURITY.md) — security reporting and model notes
 
 Keep it boring where the ecosystem solves it; keep it explicit where ownership matters.

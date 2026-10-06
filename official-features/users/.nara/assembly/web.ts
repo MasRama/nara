@@ -8,22 +8,13 @@ import {
   useAuthSession,
 } from '../../features/auth/web';
 
-/**
- * Application-owned Users web binding.
- *
- * Users pages declare a `UsersWebHost` requirement received as route props;
- * this file supplies the Auth-backed implementation and owns route
- * placement (`/profile`, `/users`). The password-error translation below is
- * deliberate policy adaptation: Auth reports snake_case fields while Users
- * pages render camelCase fields.
- *
- * Feature evolution never touches this file.
- */
+// Application-owned Auth adapter and route placement for Users.
 const authSession = useAuthSession();
 const authClient = createAuthClient();
 const accessClient = createAccessClient();
 
 function translatePasswordErrors(errors: Record<string, string[]> = {}): Record<string, string[]> {
+  // Auth owns snake_case API fields; Users renders camelCase form fields.
   const translated: Record<string, string[]> = {};
   for (const [key, messages] of Object.entries(errors)) {
     if (key === 'current_password') translated.currentPassword = messages;

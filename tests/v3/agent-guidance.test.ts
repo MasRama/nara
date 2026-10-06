@@ -1,152 +1,56 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const projectRoot = process.cwd();
-const agentsDir = path.join(projectRoot, '.agents', 'skills');
-const archivedSkillsDir = path.join(projectRoot, 'docs', 'archive', 'v3', 'skills');
 
-const ACTIVE_SKILLS = [
-  'nara-feature-development',
-  'nara-api-contracts',
-  'nara-auth-rbac',
-  'nara-database',
-  'nara-frontend',
-  'nara-testing',
-];
-
-const ARCHIVED_SKILLS = ['nara-pitfalls', 'nara-dependencies'];
-
-function skillFiles(): string[] {
-  const found: string[] = [];
-  for (const entry of readdirSync(agentsDir)) {
-    if (!entry.startsWith('nara-')) continue;
-    const skillFile = path.join(agentsDir, entry, 'SKILL.md');
-    if (statSync(skillFile).isFile()) found.push(skillFile);
-  }
-  return found.sort();
-}
-
-function readActiveSkillDocuments(): { file: string; content: string }[] {
+function guidanceFiles(): string[] {
   return [
-    ...skillFiles().map((file) => ({
-      file,
-      content: readFileSync(file, 'utf-8'),
-    })),
-    {
-      file: path.join(projectRoot, 'AGENTS.md'),
-      content: readFileSync(path.join(projectRoot, 'AGENTS.md'), 'utf-8'),
-    },
-    {
-      file: path.join(projectRoot, 'ARCHITECTURE.md'),
-      content: readFileSync(path.join(projectRoot, 'ARCHITECTURE.md'), 'utf-8'),
-    },
+    path.join(projectRoot, 'AGENTS.md'),
+    path.join(projectRoot, 'ARCHITECTURE.md'),
   ];
 }
 
-function readActiveGuidanceDocuments(): { file: string; content: string }[] {
-  return [
-    ...readActiveSkillDocuments(),
-    {
-      file: path.join(projectRoot, '.agents', 'skills', 'README.md'),
-      content: readFileSync(path.join(projectRoot, '.agents', 'skills', 'README.md'), 'utf-8'),
-    },
-  ];
-}
-
-/** Agent guidance must describe the current product, not the v2 → v3 rewrite. */
-describe('agent guidance stays current', () => {
-  it('keeps no rewrite task authority at the root or in active guidance', () => {
-    expect(existsSync(path.join(projectRoot, 'TODO.md'))).toBe(false);
-    expect(existsSync(path.join(projectRoot, 'V3_SPEC.md'))).toBe(false);
-    for (const { file, content } of readActiveSkillDocuments()) {
-      expect(content, `${file} must not depend on TODO.md`).not.toMatch(/TODO\.md/);
-      expect(content, `${file} must not cite the archived rewrite spec`).not.toMatch(/V3_SPEC\.md/);
-    }
+describe('agent guidance', () => {
+  it('keeps repository guidance concentrated in root authority files', () => {
+    expect(existsSync(path.join(projectRoot, '.agents'))).toBe(false);
+    expect(existsSync(path.join(projectRoot, 'AGENTS.md'))).toBe(true);
+    expect(existsSync(path.join(projectRoot, 'ARCHITECTURE.md'))).toBe(true);
   });
 
-  it('references no deleted v2 source paths from active skills', () => {
-    const deadPaths = [
+  it('keeps obsolete rewrite material out of the active tree', () => {
+    expect(existsSync(path.join(projectRoot, 'docs', 'archive'))).toBe(false);
+    expect(existsSync(path.join(projectRoot, 'TODO.md'))).toBe(false);
+    expect(existsSync(path.join(projectRoot, 'V3_SPEC.md'))).toBe(false);
+
+    const stale = [
+      '@inertiajs/',
+      'res.inertia',
+      '$state(',
+      '$derived(',
+      'bits-ui',
       'routes/web.ts',
       'app/handlers',
       'app/queries',
       'app/services',
-      'app/middlewares',
-      'app/validators',
-      'app/core',
       'resources/Pages',
-      'resources/Components',
-      'resources/inertia.html',
-      'import.meta.glob',
-      'NaraRequest',
-      'NaraResponse',
-      'NaraMiddleware',
-      'NaraHandler',
+      'docs/archive',
     ];
-    for (const file of skillFiles()) {
+    for (const file of guidanceFiles()) {
       const content = readFileSync(file, 'utf-8');
-      for (const dead of deadPaths) {
-        expect(content, `${file} references deleted v2 path ${dead}`).not.toContain(dead);
+      for (const pattern of stale) {
+        expect(content, `${file} contains stale guidance: ${pattern}`).not.toContain(pattern);
       }
     }
   });
 
-  it('teaches no removed Svelte/Inertia runtime patterns in active skills', () => {
-    const removedPatterns = [
-      '@inertiajs/',
-      'res.inertia',
-      'router.visit(',
-      '$props()',
-      '$state(',
-      '$derived(',
-      'bits-ui',
-      '.svelte',
-    ];
-    for (const file of skillFiles()) {
-      const content = readFileSync(file, 'utf-8');
-      for (const pattern of removedPatterns) {
-        expect(content, `${file} teaches removed pattern ${pattern}`).not.toContain(pattern);
-      }
-    }
-  });
-
-  it('keeps superseded v2 skills out of the active retrieval path', () => {
-    for (const stale of ['inertia-patterns.md', 'crud-pattern.md', 'new-world.md', 'pentest-pattern.md']) {
-      expect(existsSync(path.join(agentsDir, stale))).toBe(false);
-      expect(existsSync(path.join(archivedSkillsDir, stale))).toBe(true);
-    }
-    expect(existsSync(path.join(projectRoot, '.agents', 'types-baseline.json'))).toBe(false);
-  });
-
-  it('gives every skill a directory with machine-readable frontmatter', () => {
-    const skills = skillFiles();
-    expect(skills.length).toBeGreaterThan(0);
-    for (const file of skills) {
-      const content = readFileSync(file, 'utf-8');
-      expect(content, `${file} needs name frontmatter`).toMatch(/^---\nname: /);
-      expect(content, `${file} needs description frontmatter`).toMatch(/\ndescription: .+\n---/);
-    }
-  });
-
-  it('resolves documentation links from the agent entry points', () => {
-    for (const entry of ['AGENTS.md', 'ARCHITECTURE.md', '.agents/skills/README.md']) {
-      const file = path.join(projectRoot, entry);
+  it('resolves relative documentation links from guidance entry points', () => {
+    for (const relative of ['AGENTS.md', 'ARCHITECTURE.md']) {
+      const file = path.join(projectRoot, relative);
       const content = readFileSync(file, 'utf-8');
       for (const match of content.matchAll(/\]\((\.[^)]+)\)/g)) {
         const target = match[1].split('#')[0];
-        expect(existsSync(path.resolve(path.dirname(file), target)), `${entry} links to missing ${target}`).toBe(
-          true,
-        );
-      }
-    }
-  });
-
-  it('resolves repo-relative authority references from every active skill', () => {
-    for (const file of skillFiles()) {
-      const content = readFileSync(file, 'utf-8');
-      for (const match of content.matchAll(/`((?:\.\.\/)+(?:AGENTS\.md|ARCHITECTURE\.md|docs\/[^`]+\.md))`/g)) {
-        const target = match[1];
-        expect(existsSync(path.resolve(path.dirname(file), target)), `${file} references missing ${target}`).toBe(true);
+        expect(existsSync(path.resolve(path.dirname(file), target)), `${relative} links to missing ${target}`).toBe(true);
       }
     }
   });
@@ -156,118 +60,13 @@ describe('agent guidance stays current', () => {
       scripts?: Record<string, string>;
     };
     const scripts = new Set(Object.keys(manifest.scripts ?? {}));
-    for (const { file, content } of readActiveSkillDocuments()) {
+
+    for (const file of guidanceFiles()) {
+      const content = readFileSync(file, 'utf-8');
       for (const match of content.matchAll(/npm run ([a-z0-9:.-]+)/gi)) {
         expect(scripts.has(match[1]), `${file} references missing npm script ${match[1]}`).toBe(true);
       }
     }
   });
 
-  it('matches frontend guidance to the real Vue Router composition', () => {
-    expect(existsSync(path.join(projectRoot, 'src', 'app', 'router.ts'))).toBe(true);
-    const frontend = readFileSync(path.join(agentsDir, 'nara-frontend', 'SKILL.md'), 'utf-8');
-    expect(frontend).toContain('vue-router');
-    expect(frontend).toContain('src/app/router.ts');
-  });
-
-  it('keeps mutation guidance aligned with the application CSRF boundary', () => {
-    const frontend = readFileSync(path.join(agentsDir, 'nara-frontend', 'SKILL.md'), 'utf-8');
-    const testing = readFileSync(path.join(agentsDir, 'nara-testing', 'SKILL.md'), 'utf-8');
-    expect(frontend).toContain('UsersWebHost.csrf');
-    expect(frontend).toContain('createUsersClient({ csrf })');
-    expect(testing).toContain('issueCsrf(app)');
-    expect(testing).toContain('csrfHeaders(csrf)');
-  });
-
-  it('keeps auth ownership and host examples aligned with the provider model', () => {
-    const auth = readFileSync(path.join(agentsDir, 'nara-auth-rbac', 'SKILL.md'), 'utf-8');
-    expect(auth).toContain('if (!actor) return unauthorized(context)');
-    expect(auth).toMatch(/Auth provider owns the\s+persisted permission rows/);
-    expect(auth).toContain('src/features/auth/server/seeds/');
-    expect(auth).toContain("from './access'");
-    expect(auth).toContain("from './service'");
-    expect(auth).not.toContain('The owning Feature defines\nits permission data');
-  });
-
-  it('keeps CLI and database procedures aligned with current runtime behavior', () => {
-    const feature = readFileSync(path.join(agentsDir, 'nara-feature-development', 'SKILL.md'), 'utf-8');
-    const database = readFileSync(path.join(agentsDir, 'nara-database', 'SKILL.md'), 'utf-8');
-    expect(feature).toMatch(/context <feature> --json[\s\S]*reading order/);
-    expect(feature).toContain('do not run `inspect` or\n   `impact` against that name before scaffolding');
-    expect(feature).toContain('npx nara make feature billing');
-    expect(feature).not.toMatch(/inspect <feature> --json`\s*for the reading order/);
-    expect(database).toContain('ordinary Feature tests must not close it');
-  });
-});
-
-/** Agent guidance keeps a small procedural surface: authority in AGENTS.md/ARCHITECTURE.md, procedures in six skills. */
-describe('agent guidance stays minimal', () => {
-  it('exposes exactly the six intended active skills', () => {
-    const active = readdirSync(agentsDir).filter((entry) => entry.startsWith('nara-')).sort();
-    expect(active).toEqual([...ACTIVE_SKILLS].sort());
-    for (const skill of ACTIVE_SKILLS) {
-      expect(statSync(path.join(agentsDir, skill, 'SKILL.md')).isFile(), `${skill} needs a SKILL.md`).toBe(true);
-    }
-  });
-
-  it('keeps archived skills out of the active path but preserved in history', () => {
-    for (const archived of ARCHIVED_SKILLS) {
-      expect(
-        existsSync(path.join(agentsDir, archived)),
-        `${archived} must not remain in the active retrieval path`,
-      ).toBe(false);
-      expect(
-        existsSync(path.join(archivedSkillsDir, `${archived}.md`)),
-        `${archived} history must be preserved in the skills archive`,
-      ).toBe(true);
-    }
-  });
-
-  it('references only active skills from AGENTS.md', () => {
-    const agents = readFileSync(path.join(projectRoot, 'AGENTS.md'), 'utf-8');
-    for (const skill of ACTIVE_SKILLS) {
-      expect(agents, `AGENTS.md must reference active skill ${skill}`).toContain(skill);
-    }
-    for (const archived of ARCHIVED_SKILLS) {
-      expect(agents, `AGENTS.md must not reference archived skill ${archived}`).not.toContain(archived);
-    }
-  });
-
-  it('references only active skills from the skill index', () => {
-    const index = readFileSync(path.join(agentsDir, 'README.md'), 'utf-8');
-    for (const skill of ACTIVE_SKILLS) {
-      expect(index, `skill index must reference active skill ${skill}`).toContain(skill);
-    }
-    for (const archived of ARCHIVED_SKILLS) {
-      expect(index, `skill index must not reference archived skill ${archived}`).not.toContain(archived);
-    }
-    expect(index).toMatch(/smallest set of procedural skills/);
-  });
-
-  it('requires neither the dependency nor the pitfalls skill anywhere in active guidance', () => {
-    for (const { file, content } of readActiveGuidanceDocuments()) {
-      for (const archived of ARCHIVED_SKILLS) {
-        expect(content, `${file} must not require archived skill ${archived}`).not.toContain(archived);
-      }
-    }
-    for (const file of skillFiles()) {
-      const content = readFileSync(file, 'utf-8');
-      expect(content, `${file} must not retain a static banned-dependency table`).not.toMatch(/\| Banned \|/);
-    }
-  });
-
-  it('teaches reusable Features to use host requirements instead of direct Auth coupling', () => {
-    const auth = readFileSync(path.join(agentsDir, 'nara-auth-rbac', 'SKILL.md'), 'utf-8');
-    expect(auth).toMatch(/host requirement/);
-    expect(auth).toMatch(/binding/);
-    expect(auth).toContain('UsersServerHost');
-    expect(auth).toContain('src/app/bindings/users.server.ts');
-    expect(auth).toMatch(/must NOT directly depend on Auth/);
-    expect(auth).toMatch(/no DI container/i);
-  });
-
-  it('does not advertise contributor-only skills as a generated-app capability', () => {
-    const homepage = readFileSync(path.join(projectRoot, 'src', 'app', 'pages', 'HomePage.vue'), 'utf-8');
-    expect(homepage).not.toMatch(/loads skill:/);
-  });
 });

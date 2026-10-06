@@ -280,5 +280,3 @@ export function createAccessRoutes(activity?: AuthActivitySink) {
     .put('/:id', (context) => updateRoleHandler(context, activity))
     .delete('/', (context) => deleteRolesHandler(context, activity));
 }
-
-export const accessRoutes = createAccessRoutes();

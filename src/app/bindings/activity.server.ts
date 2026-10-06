@@ -14,11 +14,8 @@ import {
 } from '../../features/auth';
 import { Logger } from '../../shared/logging';
 
-/**
- * Activity writes are intentionally best-effort. Mutations in Auth/Users are
- * already committed when their side-effect sink runs, so a logging outage
- * must not turn a successful business operation into an ambiguous 500.
- */
+// Activity is best-effort: its failure must not turn an already-committed
+// business mutation into an ambiguous 500 response.
 export function recordApplicationActivity(input: ActivityRecordInput): void {
   try {
     recordActivity(input);
@@ -34,7 +31,7 @@ export const authActivitySink: AuthActivitySink = (event) => {
   recordApplicationActivity(event);
 };
 
-export const activityServerHost: ActivityServerHost = {
+const activityServerHost: ActivityServerHost = {
   sessionCookieName: SESSION_COOKIE_NAME,
   resolveActor: (sessionToken) => {
     const user = getCurrentUser(sessionToken);

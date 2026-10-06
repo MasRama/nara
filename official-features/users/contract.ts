@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export const AVATAR_MAX_FILE_SIZE_MB = 5;
+export const AVATAR_MAX_FILE_SIZE_BYTES = AVATAR_MAX_FILE_SIZE_MB * 1024 * 1024;
+export const AVATAR_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+
 /**
  * Users-owned input validation. These schemas are deliberately local
  * copies of the generic person/email shapes: the Users Feature must not

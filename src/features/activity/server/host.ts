@@ -1,9 +1,5 @@
-export interface ActivityActor {
-  id: string;
-}
-
 export interface ActivityServerHost {
   readonly sessionCookieName: string;
-  resolveActor(sessionToken: string | undefined): ActivityActor | undefined;
+  resolveActor(sessionToken: string | undefined): { id: string } | undefined;
   canViewActivity(actorId: string): boolean;
 }

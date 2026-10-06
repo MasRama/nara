@@ -1,17 +1,14 @@
 export { authRoutes, createAuthRoutes } from './server/routes';
 export {
-  createAccount,
   createAccountWithRoles,
   deleteAccounts,
   findAccountById,
   listAccounts,
   resetAccountPassword,
-  updateAccount,
   updateAccountWithRoles,
 } from './server/accounts';
-export type { AccountCreateInput, AccountList, AccountManagedUpdateOptions, AccountRecord, AccountUpdateInput } from './server/accounts';
 export { currentUser as getCurrentUser, hashPassword, SESSION_COOKIE_NAME } from './server/service';
-export { resetLoginThrottle, setThrottleMaxKeysForTests } from './server/login-throttle';
+export { resetLoginThrottle } from './server/login-throttle';
 export { cleanupExpiredSessions } from './server/repository';
 export {
   changePasswordInputSchema,
@@ -22,8 +19,6 @@ export {
   updateRoleInputSchema,
 } from './contract';
 export type {
-  AuthError,
-  AuthSuccess,
   ChangePasswordInput,
   ChangePasswordResponse,
   CreateRoleInput,
@@ -31,7 +26,6 @@ export type {
   CurrentUserResponse,
   DeleteRolesInput,
   DeleteRolesResponse,
-  DeleteRolesResponseSuccess,
   LoginInput,
   LoginResponse,
   PermissionData,
@@ -41,31 +35,15 @@ export type {
   RegisterResponse,
   RoleData,
   RoleResponse,
-  RoleResponseSuccess,
   RolesResponse,
   UpdateRoleInput,
 } from './contract';
 export {
-  createRole,
-  createRoleWithPermissions,
-  deleteRoles,
-  findAllPermissions,
   findAllRoles,
-  findRoleById,
-  findRoleBySlug,
-  getRolePermissions,
-  getUserCountsForRoles,
-  getUserPermissions,
   getUserRoles,
   getUsersWithRole,
   hasPermission,
-  hasRole,
   isAdmin,
-  syncRolePermissions,
-  syncUserRoles,
-  updateRole,
-  updateRoleWithPermissions,
 } from './server/access';
-export type { Permission, Role, RoleSummary } from './server/access';
-export { accessRoutes, createAccessRoutes } from './server/access-routes';
-export type { AuthActivityAction, AuthActivityEvent, AuthActivitySink } from './server/activity';
+export { createAccessRoutes } from './server/access-routes';
+export type { AuthActivitySink } from './server/activity';

@@ -24,7 +24,7 @@ const EnvSchema = z.object({
 });
 
 type ParsedEnv = z.infer<typeof EnvSchema>;
-export type Env = Omit<ParsedEnv, 'APP_URL'> & { APP_URL: string };
+type Env = Omit<ParsedEnv, 'APP_URL'> & { APP_URL: string };
 
 function formatIssues(error: z.ZodError): string {
   return error.issues
@@ -56,7 +56,7 @@ export function parseEnv(input: NodeJS.ProcessEnv): Env {
   };
 }
 
-export function loadEnvFile(): void {
+function loadEnvFile(): void {
   const productionPath = join(process.cwd(), '.env.production');
   if (existsSync(productionPath)) {
     dotenv.config({ path: productionPath });
@@ -71,12 +71,3 @@ export function loadEnvFile(): void {
 loadEnvFile();
 
 export const env = parseEnv(process.env);
-
-export function getEnvSummary(envConfig: Env) {
-  return {
-    nodeEnv: envConfig.NODE_ENV,
-    port: envConfig.PORT,
-    appUrl: envConfig.APP_URL,
-    logLevel: envConfig.LOG_LEVEL,
-  };
-}

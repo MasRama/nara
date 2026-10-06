@@ -1,9 +1,9 @@
-# Nara v3 CLI
+# Nara CLI
 
 The Nara CLI is a TypeScript command-line tool for creating Features, composing official source packages, evolving installed official source, and inspecting architecture. Core analysis is deterministic and does not call an LLM.
 
 The publishable npm package is `@nara-web/cli` (not yet published; see the
-packaging note in [`README.md`](../../README.md)) and exposes the `nara`
+packaging note in [`README.md`](../README.md)) and exposes the `nara`
 executable. After the first registry publication, the `npx @nara-web/cli ...`
 examples below are the canonical entry point. Inside a generated project every command below runs from the project's own pinned
 `@nara-web/cli` install (`npx nara <command>` or `npm run architecture:doctor`). From a Nara
@@ -16,7 +16,7 @@ npx ts-node -r tsconfig-paths/register src/cli/index.ts <command>
 Run `nara --help` for the command list and `-h`/`--help` for command-specific usage.
 
 ## `nara new <name>`
-Create a runnable minimal Nara v3 application in a new sibling directory. `nara new` writes the project files but does not install dependencies:
+Create a runnable minimal Nara application in a new sibling directory. `nara new` writes the project files but does not install dependencies:
 
 ```bash
 npx @nara-web/cli new ledger
@@ -29,8 +29,8 @@ NODE_ENV=production APP_URL=http://localhost:5555 npm start
 
 Every generated project exact-pins the version of the Nara CLI that created
 it as `@nara-web/cli` in devDependencies (no range), so architecture-rule
-changes arrive only through an explicit dependency update — never silently
-(see ADR 0011). Its `npm run check` ends with `npm run architecture:doctor`.
+changes arrive only through an explicit dependency update — never silently.
+Its `npm run check` ends with `npm run architecture:doctor`.
 The Health Feature created by `nara new` comes from the same official
 open-code source used by `nara add`, and its lineage is established before the
 generated project is made visible. Health is composed through the same
@@ -176,7 +176,7 @@ binding import and the route) with no newly introduced `doctor`
 diagnostic, and only then is anything applied. Existing diagnostics in the
 project baseline are tolerated. Later `nara evolve` advances Feature-owned
 source while leaving application bindings untouched. See
-[`feature-format.md`](./feature-format.md) and ADR 0018.
+[`feature-format.md`](./feature-format.md).
 
 ### Explicit prerequisites
 
@@ -349,7 +349,7 @@ the named evidence and scope, not universally safe.
 Application-owned evidence selection lives in
 `.nara/transitions/<feature>.checks.json` (owned by the application,
 never modified by evolution) and only nominates relevant tests and the
-history fixture. See ADR 0021.
+history fixture.
 
 ## `nara doctor`
 

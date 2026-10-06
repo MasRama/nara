@@ -1,6 +1,6 @@
-# Nara v3 SQLite lifecycle
+# Nara SQLite lifecycle
 
-Nara v3 uses a local SQLite file through `better-sqlite3` and raw SQL. There is no ORM, query builder, or Nara database abstraction. The connection layer opens the file and configures SQLite; Features own their application schema.
+Nara uses a local SQLite file through `better-sqlite3` and raw SQL. There is no ORM, query builder, or Nara database abstraction. The connection layer opens the file and configures SQLite; Features own their application schema.
 
 ## Layout and ownership
 

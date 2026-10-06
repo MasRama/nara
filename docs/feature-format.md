@@ -1,6 +1,6 @@
 # Installable Feature Format
 
-Nara v3 installs open source code into `src/features/<name>/`. The installed files become ordinary project source: users can inspect, edit, test, and remove them without an opaque runtime.
+Nara installs open source code into `src/features/<name>/`. The installed files become ordinary project source: users can inspect, edit, test, and remove them without an opaque runtime.
 
 ## Package shape
 

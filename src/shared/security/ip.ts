@@ -20,7 +20,7 @@ import { getConnInfo } from '@hono/node-server/conninfo';
  * Tests control the IP deterministically with an `x-test-ip` header, which
  * is honored only when `NODE_ENV=test`.
  */
-export function proxyTrust(): { enabled: boolean; hops: number } {
+function proxyTrust(): { enabled: boolean; hops: number } {
   const enabled = process.env.TRUST_PROXY === 'true';
   const parsed = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10);
   const hops = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 10) : 1;

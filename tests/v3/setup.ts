@@ -1,5 +1,10 @@
 process.env.NODE_ENV = 'test';
 process.env.DB_FILE = ':memory:';
+
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'scrollTo', { configurable: true, value: () => undefined });
+}
+
 // Load after test environment assignment so shared config selects :memory:.
 const { migrate } = await import('../../src/shared/database');
 migrate();

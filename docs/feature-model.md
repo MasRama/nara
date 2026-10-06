@@ -1,4 +1,4 @@
-# Nara v3 Feature Architecture
+# Nara Feature Architecture
 
 A Feature is one business capability and the primary unit of application organization. Its public contract, runtime behavior, optional web surface, and tests stay together.
 
@@ -217,7 +217,6 @@ application binding:
 src/shared/
 ├── config/       Environment and application constants
 ├── database/     SQLite connection, migration, and seed engines
-├── errors/       Application error types
 └── logging/      Structured logger
 ```
 

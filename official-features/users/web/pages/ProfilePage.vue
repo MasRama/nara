@@ -2,7 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { z } from 'zod';
-import { profileInputSchema } from '../../contract';
+import {
+  AVATAR_ALLOWED_MIME_TYPES,
+  AVATAR_MAX_FILE_SIZE_BYTES,
+  AVATAR_MAX_FILE_SIZE_MB,
+  profileInputSchema,
+} from '../../contract';
 import type { UserProfile } from '../../contract';
 import { createUsersClient } from '../client';
 import type { UsersWebHost } from '../host';
@@ -180,14 +185,13 @@ async function handleAvatarChange(event: Event): Promise<void> {
 
   avatarError.value = '';
   avatarNotice.value = '';
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (!allowedTypes.includes(file.type)) {
+  if (!AVATAR_ALLOWED_MIME_TYPES.some((type) => type === file.type)) {
     avatarError.value = 'Choose a JPEG, PNG, GIF, or WebP image.';
     input.value = '';
     return;
   }
-  if (file.size > 5 * 1024 * 1024) {
-    avatarError.value = 'Choose an image smaller than 5MB.';
+  if (file.size > AVATAR_MAX_FILE_SIZE_BYTES) {
+    avatarError.value = `Choose an image smaller than ${AVATAR_MAX_FILE_SIZE_MB}MB.`;
     input.value = '';
     return;
   }
@@ -258,8 +262,8 @@ onMounted(() => {
               <label for="avatar-file" class="mt-6 inline-flex cursor-pointer items-center rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground" :class="avatarSaving ? 'pointer-events-none opacity-60' : ''">
                 {{ avatarSaving ? 'Uploading…' : 'Change profile photo' }}
               </label>
-              <input id="avatar-file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="sr-only" :disabled="avatarSaving" @change="handleAvatarChange" />
-              <p class="mt-2 text-xs text-muted-foreground">JPEG, PNG, GIF, or WebP up to 5MB.</p>
+              <input id="avatar-file" type="file" :accept="AVATAR_ALLOWED_MIME_TYPES.join(',')" class="sr-only" :disabled="avatarSaving" @change="handleAvatarChange" />
+              <p class="mt-2 text-xs text-muted-foreground">JPEG, PNG, GIF, or WebP up to {{ AVATAR_MAX_FILE_SIZE_MB }}MB.</p>
               <p v-if="avatarError" role="alert" class="mt-3 text-sm text-destructive">{{ avatarError }}</p>
               <p v-if="avatarNotice" role="status" class="mt-3 text-sm text-primary">{{ avatarNotice }}</p>
             </article>

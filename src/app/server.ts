@@ -102,18 +102,17 @@ function isApiRequest(context: { req: { url: string } }): boolean {
   return new URL(context.req.url).pathname.startsWith('/api/');
 }
 
-// Feature-neutral request protections (V3-043). Auth-specific lockout lives
-// inside the Auth Feature; everything here applies uniformly. Cheap request
-// rejection runs before any body streaming so rate-limited or CSRF-invalid
+// Auth-specific lockout lives inside the Auth Feature; everything here applies
+// uniformly. Cheap request rejection runs before any body streaming so rate-limited or CSRF-invalid
 // callers cannot make the server inspect up to the full request-body budget.
-export const globalRateLimiter = createRateLimiter({
+const globalRateLimiter = createRateLimiter({
   maxRequests: env.RATE_LIMIT_MAX,
   windowMs: env.RATE_LIMIT_WINDOW_MS,
   name: 'global',
   skip: (context) => !isApiRequest(context),
 });
 
-export const authRateLimiter = createRateLimiter({
+const authRateLimiter = createRateLimiter({
   maxRequests: env.AUTH_RATE_LIMIT_MAX,
   windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
   name: 'auth',
@@ -128,9 +127,9 @@ export function resetSecurityState(): void {
 
 app.onError(handleError);
 
-// Request lifecycle (V3-044) runs outermost so the request ID is stashed
-// before any security middleware can reject (401/403/404/413/429 all carry
-// it) and the completion event covers the full pipeline. Health/readiness
+// Request lifecycle runs outermost so the request ID is stashed before any
+// security middleware can reject (401/403/404/413/429 all carry it) and the
+// completion event covers the full pipeline. Health/readiness
 // keep IDs but stay out of normal logs. Compression follows: it only touches
 // compressible types above its threshold and never alters security headers.
 app.use('*', requestId());
@@ -306,7 +305,7 @@ export function startServer(port = env.PORT) {
 
     server.on('error', (error: Error) => {
       stopSessionCleanup();
-      Logger.fatal('Nara v3 server error', error);
+      Logger.fatal('Nara server error', error);
     });
     server.on('close', () => {
       stopSessionCleanup();
@@ -315,7 +314,7 @@ export function startServer(port = env.PORT) {
     return server;
   } catch (error) {
     Logger.error(
-      'Nara v3 failed to start',
+      'Nara failed to start',
       error instanceof Error ? error : { error: String(error) },
     );
     throw error;

@@ -130,10 +130,10 @@ export interface PermissionData {
   description: string | null;
 }
 
-export interface RolesResponseSuccess extends AuthSuccess<{ roles: RoleData[] }> {}
-export interface RoleResponseSuccess extends AuthSuccess<{ role: RoleData }> {}
-export interface DeleteRolesResponseSuccess extends AuthSuccess<{ deleted: number }> {}
-export interface PermissionsResponseSuccess extends AuthSuccess<Record<string, PermissionData[]>> {}
+export type RolesResponseSuccess = AuthSuccess<{ roles: RoleData[] }>;
+export type RoleResponseSuccess = AuthSuccess<{ role: RoleData }>;
+export type DeleteRolesResponseSuccess = AuthSuccess<{ deleted: number }>;
+export type PermissionsResponseSuccess = AuthSuccess<Record<string, PermissionData[]>>;
 export type RolesResponse = RolesResponseSuccess | AuthError;
 export type PermissionsResponse = PermissionsResponseSuccess | AuthError;
 export type RoleResponse = RoleResponseSuccess | AuthError;

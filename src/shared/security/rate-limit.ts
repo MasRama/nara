@@ -1,18 +1,9 @@
 import type { Context, Next } from 'hono';
 import { clientIp } from './ip';
 
-/**
- * Bounded in-memory sliding-window rate limiter for the single-host v3
- * architecture. No Redis, no distributed state, no per-key intervals.
- *
- * Boundedness is explicit: stale buckets are swept lazily each window, and
- * key cardinality has a hard ceiling (`maxKeys`, default 10_000). Sweeping
- * expired entries runs first; when the ceiling is still full of active
- * entries, unseen identities fail closed with deterministic `429
- * RATE_LIMITED` instead of evicting active protected state to admit
- * attacker-controlled churn. Evicting the active oldest key would hand a
- * throttled attacker a fresh budget, so saturation never forgives.
- */
+// Bounded in-memory sliding window for the single-host runtime. At max key
+// cardinality, unseen identities fail closed instead of evicting active
+// buckets and accidentally refreshing an attacker's budget.
 export interface RateLimitOptions {
   maxRequests: number;
   windowMs: number;

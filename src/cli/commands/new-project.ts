@@ -231,7 +231,7 @@ export default defineConfig({
     '.gitignore': 'node_modules/\nbuild/\ndist/\n.env\ndatabase/\n',
     'AGENTS.md': `# ${name}
 
-This is a minimal Nara v3 application.
+This is a minimal Nara application.
 
 - Runtime: TypeScript, Node.js, Hono, and @hono/node-server.
 - Browser stack: Vue 3 + Vite + TypeScript.
@@ -255,7 +255,7 @@ The app entrypoint is resources/app.ts. The Hono composition is src/app/server.t
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${name} — Nara v3</title>
+    <title>${name} — Nara</title>
   </head>
   <body>
     <div id="app"></div>
@@ -296,7 +296,7 @@ import { RouterView } from 'vue-router';
 `,
     'src/app/pages/HomePage.vue': `<template>
   <main>
-    <h1>Welcome to Nara v3</h1>
+    <h1>Welcome to Nara</h1>
     <p>This Vue application is composed by feature.</p>
   </main>
 </template>
