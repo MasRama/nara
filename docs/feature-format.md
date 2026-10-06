@@ -21,7 +21,7 @@ Empty directories and placeholder files are not part of the format. A package co
 
 ## Installation
 
-`nara add <name>` resolves an official package, checks the destination before writing, and installs its files to `src/features/<name>/` plus explicit application-owned bindings (`src/app/bindings/`) with composition calls in the canonical roots and transactional `package.json` prerequisite composition. `nara new` uses the same source-copy transaction for the default `health` Feature. Neither command merges into an existing same-name directory. A collision is an error and leaves the existing source unchanged.
+`nara add <name>` resolves an official package, checks the destination before writing, and installs its files to `src/features/<name>/` plus explicit application-owned bindings (`src/app/bindings/`) with composition calls in the canonical roots and transactional `package.json` prerequisite composition. It never merges into an existing same-name directory. A collision is an error and leaves the existing source unchanged.
 
 The installer does not replace npm, load code dynamically, keep installed behavior in the Nara package, edit `package-lock.json`, run `npm install`, or auto-install provider Features. The resulting files belong to the application and use its existing TypeScript dependencies. Package dependency changes remain ordinary `package.json` changes the application installs itself.
 
@@ -109,7 +109,7 @@ bindings byte-identical.
 
 ## Local lineage
 
-After a successful `nara new` or `nara add`, the CLI stores the exact
+After a successful `nara add`, the CLI stores the exact
 official source bytes under
 `.nara/lineage/official-features/<name>/base/` and writes a minimal
 `lineage.json` record containing the source kind and deterministic SHA-256

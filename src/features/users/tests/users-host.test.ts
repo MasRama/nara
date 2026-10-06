@@ -2,8 +2,6 @@
 import { randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { rm } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { Hono } from 'hono';
 import { describe, expect, it } from 'vitest';
 import { getDatabase } from '../../../shared/database';
@@ -36,6 +34,7 @@ interface MockHostState {
   roles: Array<{ id: string; slug: string }>;
   assignments: Map<string, string[]>;
   accounts: Map<string, MockAccount>;
+  storage: Map<string, { data: Uint8Array; contentType: string }>;
 }
 
 function uniqueViolation(): Error {
@@ -55,10 +54,24 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
     ],
     assignments: new Map(),
     accounts: new Map(),
+    storage: new Map(),
   };
   const visible = (account: MockAccount) => ({ id: account.id, name: account.name, email: account.email, avatar: account.avatar });
   const host: UsersServerHost = {
     sessionCookieName: cookieName,
+    assetStorage: {
+      put: async ({ key, data, contentType }) => {
+        if (state.storage.has(key)) throw new Error(`Duplicate storage key: ${key}`);
+        state.storage.set(key, { data: new Uint8Array(data), contentType });
+      },
+      get: async (key) => {
+        const stored = state.storage.get(key);
+        return stored
+          ? { data: new Uint8Array(stored.data), size: stored.data.byteLength }
+          : undefined;
+      },
+      delete: async (key) => state.storage.delete(key),
+    },
     resolveActor: (sessionToken) => {
       const id = sessionToken ? state.actors.get(sessionToken) : undefined;
       if (!id) return undefined;
@@ -212,8 +225,8 @@ function isAuthSpecifier(specifier: string): boolean {
 }
 
 function isSharedSpecifier(specifier: string): boolean {
-  // Only the guaranteed application substrate (shared/database for the
-  // persistence engine, shared/config for its environment) may be imported.
+  // Only the guaranteed application substrate (shared/database,
+  // shared/config, and shared/storage) may be imported.
   // Reference-only modules such as logging or security validation must be
   // feature-owned or host-provided instead.
   return specifier.includes('shared/logging') || specifier.includes('shared/security');
@@ -592,8 +605,6 @@ describe('users host requirements with an alternative provider', () => {
     expect(served.status).toBe(200);
     expect(state.accounts.get(id)?.avatar).toBe(payload.data.url);
 
-    const filename = payload.data.url.split('/').pop();
-    if (filename) await rm(resolve(process.cwd(), 'storage', 'avatars', filename), { force: true });
     const assets = getDatabase().prepare('SELECT * FROM assets WHERE url = ?').all(payload.data.url);
     for (const asset of assets as Array<{ id: string }>) {
       getDatabase().prepare('DELETE FROM assets WHERE id = ?').run(asset.id);
@@ -650,11 +661,7 @@ describe('users host requirements with an alternative provider', () => {
     expect(urls).toContain(state.accounts.get(id)?.avatar);
     for (const url of urls) expect((await app.request(url)).status).toBe(200);
 
-    for (const url of urls) {
-      const filename = url.split('/').pop();
-      if (filename) await rm(resolve(process.cwd(), 'storage', 'avatars', filename), { force: true });
-      getDatabase().prepare('DELETE FROM assets WHERE url = ?').run(url);
-    }
+    for (const url of urls) getDatabase().prepare('DELETE FROM assets WHERE url = ?').run(url);
   });
 
   it('compensates avatar file and row creation when account update fails', async () => {

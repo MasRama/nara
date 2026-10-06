@@ -126,7 +126,7 @@ export interface UserAsset {
   url: string;
   mime_type: string | null;
   size: number | null;
-  s3_key: string | null;
+  storage_key: string | null;
   user_id: string | null;
   created_at: number;
   updated_at: number;

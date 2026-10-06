@@ -9,7 +9,6 @@
   "files": [
     "dist/",
     "official-features/",
-    "substrate/",
     "LICENSE",
     "README.md"
   ],

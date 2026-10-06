@@ -5,104 +5,13 @@ The Nara CLI is a TypeScript command-line tool for creating Features, composing 
 The publishable npm package is `@nara-web/cli` (not yet published; see the
 packaging note in [`README.md`](../README.md)) and exposes the `nara`
 executable. After the first registry publication, the `npx @nara-web/cli ...`
-examples below are the canonical entry point. Inside a generated project every command below runs from the project's own pinned
-`@nara-web/cli` install (`npx nara <command>` or `npm run architecture:doctor`). From a Nara
-repository checkout, the equivalent command is:
+examples below are the canonical entry point. Inside a Nara project, run the CLI from the project's own local installation when available. From the reference repository checkout, the equivalent source command is:
 
 ```bash
 npx ts-node -r tsconfig-paths/register src/cli/index.ts <command>
 ```
 
 Run `nara --help` for the command list and `-h`/`--help` for command-specific usage.
-
-## `nara new <name>`
-Create a runnable minimal Nara application in a new sibling directory. `nara new` writes the project files but does not install dependencies:
-
-```bash
-npx @nara-web/cli new ledger
-cd ledger
-npm install
-npm run check
-npm run build
-NODE_ENV=production APP_URL=http://localhost:5555 npm start
-```
-
-Every generated project exact-pins the version of the Nara CLI that created
-it as `@nara-web/cli` in devDependencies (no range), so architecture-rule
-changes arrive only through an explicit dependency update — never silently.
-Its `npm run check` ends with `npm run architecture:doctor`.
-The Health Feature created by `nara new` comes from the same official
-open-code source used by `nara add`, and its lineage is established before the
-generated project is made visible. Health is composed through the same
-Feature-assembly primitive as `nara add`: the project ships an
-application-owned `src/app/bindings/health.server.ts` that mounts
-`healthRoutes` at `/health`, explicitly invoked from `src/app/server.ts`.
-A fresh `nara evolve health --json` therefore reports `up-to-date`.
-
-`nara inspect/context/impact/doctor/add/evolve` all run from the project's own
-install with no global CLI and no network service. Production serving needs
-no Nara runtime: the CLI is development tooling, not request-path
-infrastructure.
-
-For the canonical full-stack development session:
-
-```bash
-npm run dev
-```
-
-This starts one Vite development server on `PORT` (default `5555`). Vite serves Vue/browser/HMR routes and mounts Hono for `/api`, `/health`, and `/ready` on the same origin and same listener.
-
-`npm run check` runs the server typecheck, Vue typecheck, Vitest tests, and the local architecture check. `npm start` runs the generated Node server on port `5555` by default; `GET /health` returns `{"status":"ok"}`.
-
-The production build writes the browser artifact to `build/client`. The generated Node server serves that artifact, including history-mode SPA routes and hashed assets, from the same origin as Hono. Missing asset paths and reserved API/health paths stay 404s instead of receiving the SPA shell. Set `APP_URL` to the public browser origin when deploying behind a public hostname; production startup fails clearly if the client artifact or `APP_URL` is missing.
-
-The generated project is intentionally small:
-
-```text
-ledger/
-├── .gitignore
-├── .nara/
-│   └── lineage/
-│       └── official-features/
-│           └── health/
-│               ├── base/
-│               └── lineage.json
-├── AGENTS.md
-├── package.json
-├── resources/
-│   ├── app.ts
-│   ├── index.css
-│   └── index.html
-├── scripts/
-│   └── dev.ts
-├── src/
-│   ├── app/
-│   │   ├── App.vue
-│   │   ├── bindings/
-│   │   │   └── health.server.ts
-│   │   ├── pages/
-│   │   │   ├── HomePage.vue
-│   │   │   └── NotFoundPage.vue
-│   │   ├── router.ts
-│   │   └── server.ts
-│   ├── features/
-│   │   └── health/
-│   │       ├── contract.ts
-│   │       ├── index.ts
-│   │       └── tests/
-│   │           └── health.test.ts
-│   ├── server.ts
-│   └── vue.d.ts
-├── tests/
-│   └── health.test.ts
-├── tsconfig.frontend.json
-├── tsconfig.json
-├── vite.config.mjs
-└── vitest.config.mjs
-```
-
-`resources/app.ts` mounts the Vue 3 browser shell from `src/app/App.vue` and installs the app router. `src/app/router.ts` composes the home and browser not-found pages; `src/app/server.ts` explicitly invokes the application-owned `src/app/bindings/health.server.ts` binding (which mounts the Health Feature's Hono route at `/health`) and owns production static/SPA delivery, and `src/server.ts` serves it through `@hono/node-server`. The Feature test proves `healthRoutes` itself; `tests/health.test.ts` proves the application mount. The starter contains no database or authentication features; add capabilities explicitly with `nara make feature` or `nara add`. `nara new` copies the same official Health source used by `nara add` and establishes its `.nara` lineage before the project directory is renamed into place. The command refuses unsafe names and existing directories; it never merges into or overwrites an existing project.
-
 
 ## Database lifecycle
 
@@ -119,7 +28,7 @@ npm run db:backup
 npm run db:check
 ```
 
-Migrations are forward-only and checksummed in `_nara_migrations`. Applied migration files are immutable; create a new corrective migration instead of editing history. Startup applies pending migrations before Hono listens. See [`database-lifecycle.md`](./database-lifecycle.md) for the SQLite layout, WAL settings, compatibility behavior, and local-disk deployment boundary. The minimal project generated by `nara new` has no database Feature, so these scripts are supplied by the reference application rather than copied into a health-only starter.
+Migrations are forward-only and checksummed in `_nara_migrations`. Applied migration files are immutable; create a new corrective migration instead of editing history. Startup applies pending migrations before Hono listens. See [`database-lifecycle.md`](./database-lifecycle.md) for the SQLite layout, WAL settings, compatibility behavior, and local-disk deployment boundary. These lifecycle scripts belong to the reference application and operate on its Feature-owned migrations.
 
 ## `nara make feature <name>`
 
@@ -237,9 +146,7 @@ npx nara evolve audit --dry-run --json
 npx nara evolve audit
 ```
 
-`nara new` establishes the initial Health `BASE` from the same exact official
-source it installs into `src/features/health`. `nara add` records the exact
-official source as `BASE` under
+`nara add` records the exact official source as `BASE` under
 `.nara/lineage/official-features/<feature>/base/`. Evolution compares that
 snapshot with `LOCAL` (`src/features/<feature>`) and `INCOMING` (the current
 bundled official source). The source remains ordinary project code; lineage is

@@ -87,7 +87,11 @@ describe('official users host requirements', () => {
 
   it('ships users-owned migrations with the feature', () => {
     const migrations = readdirSync(path.join(featureDirectory, 'server', 'migrations')).sort();
-    expect(migrations).toEqual(['202609030007_create_assets.sql', '202609030008_assets_owner_reference.sql']);
+    expect(migrations).toEqual([
+      '202609030007_create_assets.sql',
+      '202609030008_assets_owner_reference.sql',
+      '202610060001_provider_neutral_asset_storage.sql',
+    ]);
   });
 
   it('ships source with no reference-only shared import', () => {

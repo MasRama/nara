@@ -41,4 +41,14 @@ describe('Nara CLI router', () => {
     expect(result.exitCode).toBe(64);
     expect(io.errors.join('')).toContain('Unknown command: missing');
   });
+
+  it('does not expose the retired project generator', () => {
+    const io = createTestIO();
+    const result = runCli(['new', 'example'], io);
+
+    expect(result.exitCode).toBe(64);
+    expect(io.output.join('')).not.toContain('Created project');
+    expect(io.errors.join('')).toContain('Unknown command: new');
+    expect(runCli(['--help'], createTestIO()).exitCode).toBe(0);
+  });
 });

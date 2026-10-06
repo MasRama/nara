@@ -1,11 +1,10 @@
 import { execFile } from 'node:child_process';
-import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
-import { runCli, type CliIO } from '../../src/cli/router';
-import { ensurePackedNara, npmCommand, pointNaraAtTarball, runLocalNara } from './pack-helpers';
+import { ensurePackedNara, npmCommand, runLocalNara } from './pack-helpers';
 const execFileAsync = promisify(execFile);
 
 type CommandFailure = Error & {
@@ -18,18 +17,7 @@ type CommandResult = {
   stderr: string;
 };
 
-function createIO(): CliIO & { output: string[]; errors: string[] } {
-  const output: string[] = [];
-  const errors: string[] = [];
-  return {
-    output,
-    errors,
-    stdout: (message) => output.push(message),
-    stderr: (message) => errors.push(message),
-  };
-}
-
-async function runCommand(command: string, args: string[], cwd: string): Promise<CommandResult> {
+async function runProcess(command: string, args: string[], cwd: string): Promise<CommandResult> {
   try {
     const result = await execFileAsync(command, args, {
       cwd,
@@ -45,18 +33,31 @@ async function runCommand(command: string, args: string[], cwd: string): Promise
 }
 
 describe('nara add official feature', () => {
-  it('installs audit into a clean generated project and validates it', { timeout: 300_000 }, async () => {
+  it('installs audit into an existing Nara project and validates it', { timeout: 300_000 }, async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'nara-add-integration-'));
     try {
-      const newResult = runCli(['new', 'clean-app'], createIO(), { cwd: root });
-      expect(newResult.exitCode).toBe(0);
+      const projectDirectory = path.join(root, 'existing-app');
+      mkdirSync(path.join(projectDirectory, 'src', 'app'), { recursive: true });
+      writeFileSync(
+        path.join(projectDirectory, 'src', 'app', 'server.ts'),
+        "import { Hono } from 'hono';\n\nexport const app = new Hono();\n",
+      );
+      writeFileSync(
+        path.join(projectDirectory, 'src', 'app', 'router.ts'),
+        "import { createRouter, createWebHistory } from 'vue-router';\n\nexport default createRouter({ history: createWebHistory(), routes: [] });\n",
+      );
+      const tarball = await ensurePackedNara();
+      writeFileSync(
+        path.join(projectDirectory, 'package.json'),
+        `${JSON.stringify({
+          name: 'existing-app',
+          private: true,
+          devDependencies: { '@nara-web/cli': `file:${tarball}` },
+        }, null, 2)}\n`,
+      );
+      await runProcess(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
 
-      const projectDirectory = path.join(root, 'clean-app');
-      // Pre-publish stand-in for the registry: same tarball bytes via file:.
-      pointNaraAtTarball(projectDirectory, await ensurePackedNara());
-      await runCommand(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
-
-      // `nara add` and `nara doctor` run from the generated project's own tooling.
+      // `nara add` and `nara doctor` run from the existing project's own tooling.
       const addResult = await runLocalNara(projectDirectory, ['add', 'audit']);
       expect(addResult.stdout).toContain('src/features/audit/index.ts');
 
@@ -64,15 +65,6 @@ describe('nara add official feature', () => {
       expect(existsSync(auditDirectory)).toBe(true);
       expect(readFileSync(path.join(auditDirectory, 'index.ts'), 'utf8')).toContain('createAuditEvent');
       expect(existsSync(path.join(auditDirectory, 'tests', 'audit.test.ts'))).toBe(true);
-
-      await runCommand(npmCommand, ['run', 'typecheck'], projectDirectory);
-      await runCommand(npmCommand, ['run', 'typecheck:frontend'], projectDirectory);
-      // Exit status is the stable contract: runCommand throws on non-zero,
-      // so success here proves the suite passed. Human reporter formatting
-      // (ANSI, summary layout) is intentionally never parsed.
-      await runCommand(npmCommand, ['test'], projectDirectory);
-
-      await runCommand(npmCommand, ['run', 'check'], projectDirectory);
 
       const doctorResult = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctorResult.stdout).toBe('Architecture looks healthy.\n');

@@ -65,11 +65,15 @@ describe('server-client boundaries', () => {
     const fixture = createFixture();
     writeFeature(fixture, 'billing', {
       'index.ts': 'export {};\n',
-      'web/client.ts': "import { getDatabase } from '@/shared/database';\nimport crypto from 'node:crypto';\nexport { getDatabase, crypto };\n",
+      'web/client.ts': "import { getDatabase } from '@/shared/database';\nimport { createLocalAssetStorage } from '@/shared/storage';\nimport crypto from 'node:crypto';\nexport { getDatabase, createLocalAssetStorage, crypto };\n",
     });
 
     const leaks = detectServerClientLeaks(fixture);
 
-    expect(leaks.map((leak) => leak.importSpecifier)).toEqual(['@/shared/database', 'node:crypto']);
+    expect(leaks.map((leak) => leak.importSpecifier)).toEqual([
+      '@/shared/database',
+      '@/shared/storage',
+      'node:crypto',
+    ]);
   });
 });

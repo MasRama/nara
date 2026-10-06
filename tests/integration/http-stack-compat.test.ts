@@ -68,9 +68,10 @@ describe('http stack compatibility audit (portable)', () => {
     }
   });
 
-  it('keeps the generated starter on the same Hono HTTP stack', () => {
-    const template = readFileSync(path.join(projectRoot, 'src', 'cli', 'commands', 'new-project.ts'), 'utf-8');
-    expect(template).toMatch(/@hono\/node-server/);
-    expect(template).not.toMatch(/ultimate-express|uwebsockets\.js/i);
+  it('keeps the reference application on the same Hono HTTP stack', () => {
+    const server = readFileSync(path.join(projectRoot, 'server.ts'), 'utf-8');
+    const appServer = readFileSync(path.join(projectRoot, 'src', 'app', 'server.ts'), 'utf-8');
+    expect(`${server}\n${appServer}`).toMatch(/@hono\/node-server/);
+    expect(`${server}\n${appServer}`).not.toMatch(/ultimate-express|uwebsockets\.js/i);
   });
 });

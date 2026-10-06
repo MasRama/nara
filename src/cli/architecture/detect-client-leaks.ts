@@ -69,13 +69,13 @@ function resolvesInsideServer(specifier: string, file: string, root: string): bo
 
 function sharedServerModule(specifier: string, file: string, root: string): string | undefined {
   const normalized = specifier.replaceAll('\\', '/');
-  const sharedPath = normalized.match(/^(?:@\/|@)?shared\/(database|logging|config)(?:\/|$)/)?.[1];
+  const sharedPath = normalized.match(/^(?:@\/|@)?shared\/(database|logging|config|storage)(?:\/|$)/)?.[1];
   if (sharedPath) {
     return `shared/${sharedPath}`;
   }
   if (normalized.startsWith('src/shared/')) {
     const sharedPath = normalized.slice('src/shared/'.length).split('/')[0];
-    if (['database', 'logging', 'config'].includes(sharedPath)) {
+    if (['database', 'logging', 'config', 'storage'].includes(sharedPath)) {
       return `shared/${sharedPath}`;
     }
   }
@@ -83,7 +83,7 @@ function sharedServerModule(specifier: string, file: string, root: string): stri
     const resolved = path.resolve(path.dirname(file), specifier);
     const relative = path.relative(path.resolve(root, 'src', 'shared'), resolved);
     const sharedPath = relative.split(path.sep)[0];
-    if (!relative.startsWith('..') && ['database', 'logging', 'config'].includes(sharedPath)) {
+    if (!relative.startsWith('..') && ['database', 'logging', 'config', 'storage'].includes(sharedPath)) {
       return `shared/${sharedPath}`;
     }
   }

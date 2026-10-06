@@ -1,6 +1,7 @@
 // Users owns its workflow but not identity/RBAC persistence. The application
 // supplies those capabilities through this host; Users never imports Auth.
 import type { UserProfile } from '../contract';
+import type { AssetStorage } from '../../../shared/storage';
 
 export type UsersManageAction = 'view' | 'create' | 'edit' | 'delete';
 
@@ -74,5 +75,6 @@ export interface UsersAuthorizationHost {
 
 export interface UsersServerHost extends UsersIdentityHost, UsersAuthorizationHost {
   readonly sessionCookieName: string;
+  readonly assetStorage: AssetStorage;
   recordActivity?(event: UsersActivityEvent): void;
 }

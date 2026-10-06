@@ -67,16 +67,3 @@ export function readNaraCliVersion(startDirectory: string = __dirname): string {
 export function resolveOfficialFeatureDirectory(name: string, startDirectory: string = __dirname): string {
   return path.join(resolveNaraPackageRoot(startDirectory), 'official-features', name);
 }
-
-/**
- * Resolve the guaranteed application substrate every generated app
- * carries. The published artifact stages it under `substrate/` with
- * app-relative paths; in a development checkout the same paths resolve
- * against the repository root itself, so both layouts share one helper.
- */
-export function resolveSubstrateDirectory(startDirectory: string = __dirname): string {
-  const root = resolveNaraPackageRoot(startDirectory);
-  const staged = path.join(root, 'substrate');
-  if (existsSync(staged)) return staged;
-  return root;
-}

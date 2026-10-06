@@ -23,9 +23,8 @@ export interface RehearsalResult {
 /**
  * Minimal structural handle over the lazily loaded SQLite runtime. The
  * `better-sqlite3` package is never imported statically: unrelated CLI
- * commands (notably `nara new` from the packed artifact, whose only
- * runtime dependency is `typescript`) must not require the migration
- * rehearsal runtime at startup.
+ * architecture commands must not require the migration rehearsal runtime at
+ * startup.
  */
 interface RehearsalDatabase {
   exec(sql: string): void;
@@ -49,8 +48,7 @@ const MIGRATION_LEDGER = '_nara_migrations';
 
 /**
  * Load the SQLite rehearsal runtime only when migration evidence actually
- * executes. Resolution prefers the target application's own dependency
- * (pinned generated apps carry `better-sqlite3` themselves) and falls
+ * executes. Resolution prefers the target application's own dependency and falls
  * back to the ambient resolution scope. Set NARA_TRANSITION_NO_SQLITE=1
  * to force the unavailable path (tests, minimal environments).
  */

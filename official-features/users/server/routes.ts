@@ -384,7 +384,7 @@ export function createUserRoutes(host: UsersServerHost) {
       return user ? [{ id: user.id, name: user.name }] : [];
     });
     const deleted = host.deleteAccounts(parsed.data.ids);
-    await cleanupUserAvatarAssets(parsed.data.ids);
+    await cleanupUserAvatarAssets(host, parsed.data.ids);
     for (const target of targets) {
       host.recordActivity?.({
         action: 'users.deleted',

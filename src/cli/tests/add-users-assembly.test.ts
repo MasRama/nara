@@ -140,6 +140,9 @@ describe('users feature assembly', () => {
     expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202609030008_assets_owner_reference.sql'))).toBe(
       true,
     );
+    expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202610060001_provider_neutral_asset_storage.sql'))).toBe(
+      true,
+    );
     expect(existsSync(path.join(fixture, 'src/features/users/server/migrations/202609030001_create_users.sql'))).toBe(
       false,
     );
@@ -205,6 +208,7 @@ describe('users feature assembly', () => {
     expect(usersMigrations.map((migration) => migration.name).sort()).toEqual([
       '202609030007_create_assets.sql',
       '202609030008_assets_owner_reference.sql',
+      '202610060001_provider_neutral_asset_storage.sql',
     ]);
   });
 

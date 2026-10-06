@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -49,11 +49,8 @@ let cachedTarball: string | undefined;
 
 /**
  * Pack the publishable package exactly as npm would publish it and return
- * the tarball path. Pre-publish this is the stand-in for the npm registry:
- * generated projects pin `@nara-web/cli: <version>`, which only resolves from the
- * registry after the first publish. Tests rewrite that spec to
- * `file:<tarball>` (same bytes the registry would serve) and assert the
- * pinned spec before rewriting.
+ * the tarball path. Pre-publish this is the stand-in for the npm registry so
+ * integration tests exercise the same bytes an existing project would install.
  */
 export async function ensurePackedNara(): Promise<string> {
   if (cachedTarball && existsSync(cachedTarball)) return cachedTarball;
@@ -72,16 +69,6 @@ export async function ensurePackedNara(): Promise<string> {
   return cachedTarball;
 }
 
-/** Pre-publish stand-in for the registry: point the pinned spec at the packed tarball. */
-export function pointNaraAtTarball(projectDirectory: string, tarball: string): void {
-  const manifestPath = path.join(projectDirectory, 'package.json');
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
-    devDependencies: Record<string, string>;
-  };
-  manifest.devDependencies['@nara-web/cli'] = `file:${tarball}`;
-  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-}
-
 function localNaraEntrypoint(projectDirectory: string): { command: string; argsPrefix: string[] } {
   if (!isWindows) {
     return { command: path.join(projectDirectory, 'node_modules', '.bin', 'nara'), argsPrefix: [] };
@@ -92,27 +79,8 @@ function localNaraEntrypoint(projectDirectory: string): { command: string; argsP
   };
 }
 
-/** Run the generated project's own installed Nara CLI (never the repo checkout). */
+/** Run an existing project's own installed Nara CLI (never the repo checkout). */
 export async function runLocalNara(projectDirectory: string, args: string[]): Promise<CommandResult> {
   const entrypoint = localNaraEntrypoint(projectDirectory);
   return runCommand(entrypoint.command, [...entrypoint.argsPrefix, ...args], projectDirectory);
-}
-
-/** Run the generated project's own installed Nara CLI, expecting failure. */
-export async function runLocalNaraExpectingFailure(
-  projectDirectory: string,
-  args: string[],
-): Promise<CommandResult & { status: number }> {
-  const entrypoint = localNaraEntrypoint(projectDirectory);
-  try {
-    await execFileAsync(entrypoint.command, [...entrypoint.argsPrefix, ...args], {
-      cwd: projectDirectory,
-      env: { ...process.env },
-      maxBuffer: 16 * 1024 * 1024,
-    });
-  } catch (error) {
-    const failure = error as Error & { stdout?: string; stderr?: string; status?: number };
-    return { stdout: failure.stdout ?? '', stderr: failure.stderr ?? '', status: failure.status ?? 1 };
-  }
-  throw new Error(`local nara ${args.join(' ')} unexpectedly succeeded`);
 }

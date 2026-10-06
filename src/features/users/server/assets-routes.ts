@@ -1,6 +1,4 @@
-import { mkdir, readFile, realpath, unlink, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { basename, resolve } from 'node:path';
 import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
@@ -13,7 +11,7 @@ import {
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
 import type { UsersServerHost } from './host';
 
-const AVATAR_DIR = 'avatars';
+const AVATAR_STORAGE_PREFIX = 'avatars';
 
 const IMAGE_MAGIC_BYTES: Record<string, number[]> = {
   'image/jpeg': [0xff, 0xd8, 0xff],
@@ -45,10 +43,6 @@ function uploadedFile(value: unknown): File | undefined {
   return value as File;
 }
 
-function avatarDirectory(): string {
-  return resolve(process.cwd(), 'storage', AVATAR_DIR);
-}
-
 function unauthorized(context: Context): Response {
   return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
 }
@@ -57,57 +51,52 @@ function invalidFile(context: Context, message: string, code: string, status = 4
   return context.json({ success: false as const, message, code }, status as 400 | 413);
 }
 
-function avatarFileTarget(avatarUrl: string | null | undefined): string | undefined {
-  if (!avatarUrl) return undefined;
-  const pathname = new URL(avatarUrl, 'http://nara.local').pathname;
+function validAvatarFilename(filename: string): boolean {
+  return /^[a-f0-9-]+\.webp$/i.test(filename);
+}
+
+function legacyAvatarStorageKey(url: string): string | undefined {
+  const pathname = new URL(url, 'http://nara.local').pathname;
   if (!pathname.startsWith('/api/assets/avatar/')) return undefined;
-  const filename = basename(pathname);
-  if (filename !== pathname.split('/').pop() || !/^[a-f0-9-]+\.webp$/i.test(filename)) return undefined;
-  const directory = avatarDirectory();
-  const target = resolve(directory, filename);
-  return target !== directory && target.startsWith(`${directory}/`) ? target : undefined;
+  const filename = pathname.slice('/api/assets/avatar/'.length);
+  return validAvatarFilename(filename) ? `${AVATAR_STORAGE_PREFIX}/${filename}` : undefined;
 }
 
-async function removeAvatarFile(avatarUrl: string | null | undefined): Promise<boolean> {
-  const target = avatarFileTarget(avatarUrl);
-  if (!target) return true;
-  try {
-    await unlink(target);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === 'ENOENT';
-  }
+function assetStorageKey(asset: { storage_key: string | null; url: string }): string | undefined {
+  return asset.storage_key ?? legacyAvatarStorageKey(asset.url);
 }
 
-async function cleanupPreviousUserAvatar(userId: string, previousAvatarUrl: string | null | undefined): Promise<void> {
-  if (avatarFileTarget(previousAvatarUrl) === undefined) return;
+async function cleanupPreviousUserAvatar(
+  host: UsersServerHost,
+  userId: string,
+  previousAvatarUrl: string | null | undefined,
+): Promise<void> {
+  if (!previousAvatarUrl) return;
   const previous = findUserAssets(userId).find((asset) => asset.url === previousAvatarUrl);
-  if (!previous) {
-    await removeAvatarFile(previousAvatarUrl);
-    return;
-  }
+  if (!previous) return;
+  const storageKey = assetStorageKey(previous);
   try {
     deleteUserAsset(previous.id);
   } catch {
     // Keep cleanup best-effort after the new avatar has committed.
     return;
   }
-  await removeAvatarFile(previous.url);
+  if (storageKey) await host.assetStorage.delete(storageKey).catch(() => false);
 }
 
-/** Remove every persisted local avatar for accounts that have been deleted. */
-export async function cleanupUserAvatarAssets(userIds: string[]): Promise<void> {
+/** Remove persisted avatar objects after their owning accounts are deleted. */
+export async function cleanupUserAvatarAssets(host: UsersServerHost, userIds: string[]): Promise<void> {
   for (const userId of [...new Set(userIds)]) {
     for (const asset of findUserAssets(userId)) {
-      if (avatarFileTarget(asset.url) === undefined) continue;
+      const storageKey = assetStorageKey(asset);
       try {
         deleteUserAsset(asset.id);
       } catch {
         continue;
       }
-      // Once the row is gone, the HTTP serving path refuses this URL even if
-      // filesystem cleanup fails. The physical unlink remains best-effort.
-      await removeAvatarFile(asset.url);
+      // Once metadata is gone, the HTTP serving path refuses this URL even if
+      // provider cleanup fails. Binary deletion remains best-effort.
+      if (storageKey) await host.assetStorage.delete(storageKey).catch(() => false);
     }
   }
 }
@@ -147,10 +136,8 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
     }
 
     const filename = `${randomUUID()}.webp`;
-    const directory = avatarDirectory();
-    await mkdir(directory, { recursive: true });
-    const target = resolve(directory, filename);
-    await writeFile(target, processed, { flag: 'wx' });
+    const storageKey = `${AVATAR_STORAGE_PREFIX}/${filename}`;
+    await host.assetStorage.put({ key: storageKey, data: processed, contentType: 'image/webp' });
     const url = `/api/assets/avatar/${filename}`;
     let asset: ReturnType<typeof createUserAsset> | undefined;
     try {
@@ -160,6 +147,7 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
         url,
         mimeType: 'image/webp',
         size: processed.length,
+        storageKey,
         userId: sessionUser.id,
       });
       const updated = host.updateAccount(sessionUser.id, { avatar: url });
@@ -168,40 +156,37 @@ const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Contex
       if (asset) {
         try { deleteUserAsset(asset.id); } catch { /* compensation is best-effort */ }
       }
-      await unlink(target).catch(() => undefined);
+      await host.assetStorage.delete(storageKey).catch(() => false);
       throw error;
     }
 
     // Delete only the avatar this request replaced. Deleting every sibling
     // asset here is unsafe under concurrent uploads: another request may have
     // created its file before committing it as the account avatar.
-    await cleanupPreviousUserAvatar(sessionUser.id, sessionUser.avatar);
+    await cleanupPreviousUserAvatar(host, sessionUser.id, sessionUser.avatar);
     return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } });
   } catch (error) {
     return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' }, 400);
   }
 };
 
-const serveAvatarHandler = async (context: Context) => {
+const serveAvatarHandlerFor = (host: UsersServerHost) => async (context: Context) => {
   const filename = context.req.param('filename');
-  if (!filename || basename(filename) !== filename || !/^[a-f0-9-]+\.webp$/i.test(filename)) {
+  if (!filename || !validAvatarFilename(filename)) {
     return context.body('Access denied', 403);
   }
-  const directory = avatarDirectory();
-  const target = resolve(directory, filename);
   try {
     const url = `/api/assets/avatar/${filename}`;
-    if (!findUserAssetByUrl(url)) return context.body('Not found', 404);
-    const resolvedTarget = await realpath(target);
-    const resolvedDirectory = await realpath(directory);
-    if (!resolvedTarget.startsWith(`${resolvedDirectory}/`)) {
-      return context.body('Access denied', 403);
-    }
-    const content = await readFile(resolvedTarget);
-    return new Response(content, {
+    const asset = findUserAssetByUrl(url);
+    if (!asset) return context.body('Not found', 404);
+    const storageKey = assetStorageKey(asset);
+    if (!storageKey) return context.body('Not found', 404);
+    const stored = await host.assetStorage.get(storageKey);
+    if (!stored) return context.body('Not found', 404);
+    return new Response(Buffer.from(stored.data), {
       headers: {
         'Cache-Control': 'public, max-age=31536000, immutable',
-        'Content-Type': 'image/webp',
+        'Content-Type': asset.mime_type ?? 'application/octet-stream',
       },
     });
   } catch {
@@ -217,5 +202,5 @@ const serveAvatarHandler = async (context: Context) => {
  * provider-owned; only the `assets` rows are written here.
  */
 export function createAssetRoutes(host: UsersServerHost) {
-  return new Hono().post('/avatar', uploadAvatarHandlerFor(host)).get('/avatar/:filename', serveAvatarHandler);
+  return new Hono().post('/avatar', uploadAvatarHandlerFor(host)).get('/avatar/:filename', serveAvatarHandlerFor(host));
 }

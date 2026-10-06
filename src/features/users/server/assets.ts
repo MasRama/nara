@@ -9,16 +9,17 @@ export function createUserAsset(data: {
   url: string;
   mimeType: string;
   size: number;
+  storageKey: string;
   userId: string;
 }): UserAsset {
   const id = data.id ?? randomUUID();
   const now = Date.now();
   getDatabase()
     .prepare(
-      `INSERT INTO assets (id, name, type, url, mime_type, size, user_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO assets (id, name, type, url, mime_type, size, storage_key, user_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(id, data.name, data.type, data.url, data.mimeType, data.size, data.userId, now, now);
+    .run(id, data.name, data.type, data.url, data.mimeType, data.size, data.storageKey, data.userId, now, now);
   return getDatabase().prepare('SELECT * FROM assets WHERE id = ?').get(id) as UserAsset;
 }
 

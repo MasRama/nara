@@ -17,7 +17,6 @@ import { formatEvolutionHuman, evolveFeature } from './commands/evolve';
 import { acceptTransition, formatTransitionHuman, planTransition } from './commands/transition';
 import { formatGuardHuman, runArchitectureGuard } from './commands/guard';
 import { makeFeature } from './commands/make-feature';
-import { newProject } from './commands/new-project';
 export interface CliIO {
   stdout(message: string): void;
   stderr(message: string): void;
@@ -37,7 +36,6 @@ Usage:
   nara <command> [options]
 
   help                      Show this help message
-  new <name>                Create a runnable Nara application
   make feature <name>       Create a feature using the canonical structure
   doctor [--json]           Validate feature architecture
   inspect <feature> [--json] Describe one feature
@@ -57,12 +55,6 @@ const MAKE_FEATURE_HELP = `Usage:
   nara make feature <name>
 
 Creates src/features/<name>/index.ts and contract.ts without overwriting an existing feature.
-`;
-
-const NEW_HELP = `Usage:
-  nara new <name>
-
-Creates a runnable Nara application without overwriting an existing directory.
 `;
 
 const DOCTOR_HELP = `Usage:
@@ -822,27 +814,6 @@ export function runCli(argv: string[], io: CliIO = defaultIO, options: CliOption
     return { exitCode: renderEvolutionReport(io, args, options.cwd) };
   }
 
-
-  if (command === 'new') {
-    const [name, ...extraArgs] = args;
-    if (name === '--help' || name === '-h') {
-      io.stdout(NEW_HELP);
-      return { exitCode: 0 };
-    }
-    if (!name || extraArgs.length > 0) {
-      io.stderr(NEW_HELP);
-      return { exitCode: 64 };
-    }
-
-    const result = newProject(name, options.cwd);
-    if (!result.ok) {
-      io.stderr(`${result.error.message}\n`);
-      return { exitCode: generationExitCode(result.error.kind) };
-    }
-
-    io.stdout(`Created project "${name}" at ${result.project.directory}.\n`);
-    return { exitCode: 0 };
-  }
 
   if (command === 'make') {
     const [subcommand, name, ...extraArgs] = args;

@@ -10,20 +10,7 @@ const licenseSource = path.join(projectRoot, 'LICENSE');
 const licenseDest = path.join(packageDir, 'LICENSE');
 const distDir = path.join(packageDir, 'dist');
 const officialDest = path.join(packageDir, 'official-features');
-const substrateDest = path.join(packageDir, 'substrate');
-
-// Guaranteed application substrate: source modules every generated app
-// carries, mirrored under app-relative paths (substrate/src/shared/...).
-// Kept explicit and small; see resolveSubstrateDirectory.
-const SUBSTRATE_FILES = [
-  'src/shared/database/index.ts',
-  'src/shared/database/sqlite.ts',
-  'src/shared/database/migrator.ts',
-  'src/shared/database/seeder.ts',
-  'src/shared/config/index.ts',
-  'src/shared/config/constants.ts',
-  'src/shared/config/env.ts',
-];
+const legacySubstrateDest = path.join(packageDir, 'substrate');
 
 function fail(message) {
   console.error(`stage:package: ${message}`);
@@ -42,16 +29,11 @@ if (!existsSync(officialSource)) {
 if (!existsSync(licenseSource)) {
   fail(`missing ${licenseSource}`);
 }
-for (const relative of SUBSTRATE_FILES) {
-  if (!existsSync(path.join(projectRoot, relative))) {
-    fail(`missing substrate source ${relative}`);
-  }
-}
-
 // Clean previous staged artifacts (generated only; never the package source).
-for (const directory of [distDir, officialDest, substrateDest]) {
+for (const directory of [distDir, officialDest]) {
   rmSync(directory, { recursive: true, force: true });
 }
+rmSync(legacySubstrateDest, { recursive: true, force: true });
 rmSync(licenseDest, { force: true });
 
 // Copy only CLI build output and official-feature source. Root runtime and
@@ -64,11 +46,5 @@ chmodSync(path.join(distDir, 'index.js'), 0o755);
 mkdirSync(officialDest, { recursive: true });
 cpSync(officialSource, officialDest, { recursive: true });
 
-mkdirSync(substrateDest, { recursive: true });
-for (const relative of SUBSTRATE_FILES) {
-  const destination = path.join(substrateDest, ...relative.split('/'));
-  mkdirSync(path.dirname(destination), { recursive: true });
-  copyFileSync(path.join(projectRoot, relative), destination);
-}
 copyFileSync(licenseSource, licenseDest);
-console.log('stage:package: staged dist, official-features, substrate, LICENSE');
+console.log('stage:package: staged dist, official-features, LICENSE');

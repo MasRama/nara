@@ -262,7 +262,7 @@ describe('canonical SQLite migration lifecycle', () => {
     const database = openMemoryDatabase();
     try {
       const first = migrate({ database, root: process.cwd() });
-      expect(first.applied).toHaveLength(13);
+      expect(first.applied).toHaveLength(14);
       expect(first.skipped).toEqual([]);
       expect(tableNames(database)).toEqual([
         '_nara_migrations',
@@ -277,7 +277,7 @@ describe('canonical SQLite migration lifecycle', () => {
       ]);
       expect(
         database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get(),
-      ).toEqual({ count: 13 });
+      ).toEqual({ count: 14 });
       expect(
         (database.prepare('SELECT checksum FROM _nara_migrations').all() as Array<{ checksum: string }>).every(
           (row) => /^[a-f0-9]{64}$/.test(row.checksum),
@@ -419,7 +419,7 @@ describe('canonical SQLite migration lifecycle', () => {
       await waitForReady(child, port);
       const database = new Database(databaseFile);
       try {
-        expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 13 });
+        expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 14 });
       } finally {
         database.close();
       }
@@ -465,13 +465,13 @@ describe('canonical SQLite migration lifecycle', () => {
       // alternate migrations after the held lock is released. What matters is
       // that every process accounts for the complete ordered set and each
       // migration is applied exactly once globally.
-      expect(migrationResults.every((result) => result.applied.length + result.skipped.length === 13)).toBe(true);
-      expect(migrationResults.reduce((total, result) => total + result.applied.length, 0)).toBe(13);
-      expect(migrationResults.reduce((total, result) => total + result.skipped.length, 0)).toBe(13);
+      expect(migrationResults.every((result) => result.applied.length + result.skipped.length === 14)).toBe(true);
+      expect(migrationResults.reduce((total, result) => total + result.applied.length, 0)).toBe(14);
+      expect(migrationResults.reduce((total, result) => total + result.skipped.length, 0)).toBe(14);
 
       const database = new Database(databaseFile);
       try {
-        expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 13 });
+        expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 14 });
         expect(
           database
             .prepare(
@@ -624,13 +624,14 @@ describe('canonical SQLite migration lifecycle', () => {
         '202609030011_require_bootstrap_password_change.sql',
         '202610050001_create_activity_events.sql',
         '202610050002_register_activity_permission.sql',
+        '202610060001_provider_neutral_asset_storage.sql',
       ]);
       expect(result.skipped).toHaveLength(7);
       expect(database.prepare('SELECT email, name FROM users').get()).toEqual({
         email: 'legacy@example.com',
         name: 'legacy@example.com',
       });
-      expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 13 });
+      expect(database.prepare('SELECT COUNT(*) AS count FROM _nara_migrations').get()).toEqual({ count: 14 });
       expect(database.pragma('foreign_key_list(assets)')).toEqual([]);
     } finally {
       database.close();
@@ -706,7 +707,7 @@ describe('canonical SQLite migration lifecycle', () => {
       database.close();
     }
   });
-  it('preserves asset data and required indexes through the owner-reference migration', () => {
+  it('preserves asset data while moving owner references and storage keys to provider-neutral shape', () => {
     const database = openMemoryDatabase();
     try {
       database.exec(readFileSync(path.resolve('src/features/auth/server/migrations/202609030001_create_users.sql'), 'utf8'));
@@ -719,6 +720,11 @@ describe('canonical SQLite migration lifecycle', () => {
           'INSERT INTO assets (id, name, type, url, mime_type, size, s3_key, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         )
         .run('asset-1', 'avatar.png', 'avatar', 'https://cdn.example/avatar.png', 'image/png', 42, 's3-key-1', 'asset-owner', 2, 3);
+      database
+        .prepare(
+          'INSERT INTO assets (id, name, type, url, mime_type, size, s3_key, user_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        )
+        .run('asset-2', 'legacy.webp', 'avatar', '/api/assets/avatar/11111111-1111-1111-1111-111111111111.webp', 'image/webp', 43, null, 'asset-owner', 3, 4);
 
       // Only the forward owner-reference migration is pending: the ledger
       // bootstrap accepts 0001..0007 at their current locations by
@@ -750,14 +756,27 @@ describe('canonical SQLite migration lifecycle', () => {
         '202609030008_assets_owner_reference.sql',
         readFileSync(path.resolve('src/features/users/server/migrations/202609030008_assets_owner_reference.sql'), 'utf8'),
       );
+      writeMigration(
+        root,
+        'users',
+        '202610060001_provider_neutral_asset_storage.sql',
+        readFileSync(path.resolve('src/features/users/server/migrations/202610060001_provider_neutral_asset_storage.sql'), 'utf8'),
+      );
 
       const result = migrate({ database, root });
-      expect(result.applied).toEqual(['202609030008_assets_owner_reference.sql']);
+      expect(result.applied).toEqual([
+        '202609030008_assets_owner_reference.sql',
+        '202610060001_provider_neutral_asset_storage.sql',
+      ]);
       expect(result.skipped).toHaveLength(7);
-      expect(database.prepare('SELECT id, user_id, size FROM assets WHERE id = ?').get('asset-1')).toEqual({
+      expect(database.prepare('SELECT id, user_id, size, storage_key FROM assets WHERE id = ?').get('asset-1')).toEqual({
         id: 'asset-1',
         user_id: 'asset-owner',
         size: 42,
+        storage_key: 's3-key-1',
+      });
+      expect(database.prepare('SELECT storage_key FROM assets WHERE id = ?').get('asset-2')).toEqual({
+        storage_key: 'avatars/11111111-1111-1111-1111-111111111111.webp',
       });
       expect(database.prepare('SELECT email FROM users WHERE id = ?').get('asset-owner')).toEqual({
         email: 'asset-owner@example.com',
@@ -767,7 +786,7 @@ describe('canonical SQLite migration lifecycle', () => {
           name: string;
         }>
       ).map((row) => row.name);
-      expect(indexes).toEqual(expect.arrayContaining(['idx_assets_user_id', 'idx_assets_s3_key']));
+      expect(indexes).toEqual(expect.arrayContaining(['idx_assets_user_id', 'idx_assets_storage_key']));
       expect(database.pragma('foreign_key_list(assets)')).toEqual([]);
     } finally {
       database.close();

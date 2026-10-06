@@ -206,7 +206,7 @@ application binding:
 - Requirements stay demand-driven and narrow: a small number of cohesive interfaces when responsibilities genuinely separate (for Users, `UsersIdentityHost` for account-directory behavior and `UsersAuthorizationHost` for roles and permissions), never a speculative universal service bag or a generic `execute()`/`services` catch-all.
 - The provider relationship belongs to application composition (`src/app/bindings/`), never to Feature-owned source. `inspect`/`context` therefore show no Feature dependency while the binding reading order shows the composition.
 - Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
-- Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
+- Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment, `shared/storage` binary-object capability). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
 - Persistence ownership is single-writer per table: a Feature that needs another Feature's rows reaches them exclusively through a typed host requirement, never through direct SQL. The `users` table is Auth-owned; Users owns its workflow and its `assets` table with a provider-neutral owner reference.
 
 ## Shared code
@@ -226,15 +226,19 @@ Put a concept in a Feature when it has a natural business owner. Do not use `sha
 
 ### Guaranteed application substrate
 
-Every generated app carries a small guaranteed substrate, so installable
-Features can rely on it without copying reference-app files:
+The canonical Nara application carries a small guaranteed substrate, so
+installable Features can rely on it:
 
 - the Hono/Vue/Vue Router/TypeScript stack and canonical `src/app` roots,
 - the Feature structure itself (`src/features/<feature>/`),
-- `src/shared/database/` (SQLite persistence engine) and
-- `src/shared/config/` (environment and constants it reads).
+- `src/shared/database/` (SQLite persistence engine),
+- `src/shared/config/` (environment and constants it reads), and
+- `src/shared/storage/` (provider-neutral `AssetStorage` contract plus the local filesystem adapter).
 
-Only these `src/shared/` modules are guaranteed. Everything else under
+Only these `src/shared/` modules are guaranteed. `AssetStorage` keys are
+provider-neutral logical object identifiers; Features own asset metadata and
+delivery URLs while the application binding chooses the storage provider.
+Everything else under
 `src/shared/` (logging, security validation, error taxonomy, app tuning
 constants) is reference-only: official Features must own such behavior
 themselves or receive it through a typed host requirement. `nara add`
@@ -296,11 +300,8 @@ Do not move role policy, billing rules, or user workflows into `src/shared/` sim
 
 ## Evolvable official source
 
-`nara new` creates the default Health Feature from the official
-`official-features/health` source and establishes its local lineage before the
-generated project becomes visible. `nara add <feature>` installs later official
-Features as ordinary source and records the same kind of local lineage
-snapshot:
+`nara add <feature>` installs official Features as ordinary source and records
+their local lineage snapshot:
 
 ```text
 .nara/lineage/official-features/<feature>/

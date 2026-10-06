@@ -55,7 +55,7 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 ## Application and shared layers
 
 - `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `bindings/` (application-owned Feature assembly bindings: ordinary Hono/Vue Router code activated explicitly from the canonical roots), `App.vue`, `pages/`, `layouts/`. The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
-- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `logging/`, `security/`. Never a second global services/repositories layer. Every generated app guarantees a small substrate — the stack, the canonical roots, the Feature structure, plus `src/shared/database/` and `src/shared/config/` — so installable Features can rely on the persistence engine without copying reference-app files; nothing else under `src/shared/` is guaranteed.
+- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `storage/` (provider-neutral binary-object contract plus the local default), `logging/`, `security/`. Never a second global services/repositories layer. The canonical reference application guarantees the stack, canonical roots, Feature structure, plus `src/shared/database/`, `src/shared/config/`, and `src/shared/storage/`; official Features may rely on that baseline, while nothing else under `src/shared/` is guaranteed.
 - `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`, `users`, each optionally with assembly templates and a distribution-only `.nara/requirements.json` describing provider and npm prerequisites).
 
 ## HTTP and contracts
@@ -67,7 +67,6 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 ## CLI
 
 ```text
-nara new <name>            Create a runnable application
 nara make feature <name>   Create the canonical feature skeleton
 nara add <feature>         Install an official open-code feature
 nara doctor [--json]       Validate architecture
@@ -85,7 +84,7 @@ nara evolve <feature> --accept [--json]
 
 ## Product lifecycle
 
-Six distinct things; do not conflate them:
+Five distinct things; do not conflate them:
 
 1. **Ecosystem/runtime stack** — Hono, Vue, SQLite, TypeScript. Nara never
 2. **Nara's architecture model** — feature ownership, public and browser-safe boundaries, deterministic import evidence, public-symbol consumers, direct public-boundary provenance, and statically provable application integrations (this document).
@@ -96,27 +95,15 @@ Six distinct things; do not conflate them:
    only the staged `dist/` and `official-features/` source). The source release
    may be tagged independently; the npm package has not yet had its first
    registry publication and will be acquired from the registry once published.
-4. **Generated applications** — `nara new` output: the minimal canonical
-   application (health-only: no database-consuming Feature, no auth; the
-   persistence substrate ships with no tables). The default Health Feature
-   is copied from the same official open-code source used by `nara add`, and
-   its `.nara/lineage/official-features/health` BASE is established before
-   the generated project becomes visible. Each project carries the creating
-   CLI as an exact-pinned `@nara-web/cli` devDependency, so `npm run check`
-   (which ends in `nara doctor`) and
-   `nara add/inspect/context/impact/diff/guard/evolve` work reproducibly from
-   the project's own install. Guard is an explicit CI/review command
-   there (`npx nara guard --base origin/main`) because a new project has
-   no universal baseline ref to assume.
-5. **Official open-code features** — installable source (`health`, `audit`, `users`).
-   `nara new` and `nara add` install official package source into
+4. **Official open-code features** — installable source (`health`, `audit`, `users`).
+   `nara add` installs official package source into
    `src/features/<name>` plus explicit application-owned bindings; the result is ordinary project code. A package
    may also ship assembly templates (`.nara/assembly/`) that install
    application-owned bindings plus explicit canonical-root composition;
    installation proves the resulting integration before applying and
    `nara evolve` never touches bindings.
 
-6. **Evolvable open code** — `nara new` and `nara add` establish exact official
+5. **Evolvable open code** — `nara add` establishes exact official
    source bytes under `.nara/lineage/official-features/<feature>/base`.
    `nara evolve` compares BASE, LOCAL, and INCOMING deterministically, blocks
    conflicts and newly introduced architecture diagnostics, and advances
@@ -129,10 +116,9 @@ Six distinct things; do not conflate them:
    UNVERIFIED outcomes, and explicit acceptance; lineage BASE then advances
    to pure INCOMING bytes while application-owned bindings stay untouched.
 
-The repository root is the development/reference application: it proves
-richer capabilities (auth, RBAC, users, assets, SQLite lifecycle) but is
-not the starting point for new products. Cloning it is for Nara
-contributors; building on Nara starts with `nara new`.
+The repository root is both the development reference and the canonical
+starting application. New products start from that codebase and keep or remove
+Git history according to their own repository workflow.
 
 ## Versioning
 

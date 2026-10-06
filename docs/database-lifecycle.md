@@ -50,7 +50,7 @@ Schema ownership follows the business Feature above.
 
 SQLite `STRICT` tables were evaluated but are not used for this baseline. Keeping the existing non-STRICT table shape avoids an unnecessary table-reconstruction compatibility break; the previous-v3 compatibility check rejects a `STRICT` schema as non-equivalent, so it requires an explicit corrective migration. A future Feature may adopt `STRICT` for a new table when its data contract warrants it.
 
-`nara new` creates a health-only application with no database-consuming Feature, but it still ships the guaranteed persistence substrate (`src/shared/database/` engine and `src/shared/config/` environment) with no tables, seeds, or scripts. The engine is platform: installable Features with migrations need it present, and copying reference-app database files during installation would recreate starterkit patching. Startup applies pending migrations; on an empty schema that is a no-op.
+The reference application ships the guaranteed application substrate (`src/shared/database/` engine, `src/shared/config/` environment, and `src/shared/storage/` asset-storage capability). The database engine and storage contract are platform; application tables remain Feature-owned. Startup applies pending migrations before serving traffic.
 
 ## Connection settings
 

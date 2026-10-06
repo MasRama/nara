@@ -1,4 +1,5 @@
 import type { Hono } from 'hono';
+import { resolve } from 'node:path';
 import {
   createAccountWithRoles,
   deleteAccounts,
@@ -16,12 +17,16 @@ import {
   updateAccountWithRoles,
 } from '../../features/auth';
 import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../../features/users';
+import { createLocalAssetStorage } from '../../shared/storage';
+
+const assetStorage = createLocalAssetStorage({ root: resolve(process.cwd(), 'storage') });
 
 // Application-owned policy adapter: Users declares the host it needs; Auth
 // supplies identity/RBAC. Feature evolution never owns this file.
 function createUsersServerHost(recordActivity?: UsersServerHost['recordActivity']): UsersServerHost {
   return {
     sessionCookieName: SESSION_COOKIE_NAME,
+    assetStorage,
 
     resolveActor: (sessionToken) => {
       const user = getCurrentUser(sessionToken);

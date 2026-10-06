@@ -13,20 +13,10 @@ Compose → Own → Understand → Evolve → Protect
 
 ## Start here
 
-The publishable CLI package is `@nara-web/cli`. It is not yet published to the
-npm registry, so the command below is the canonical flow for the first public
-release; until then use a source checkout or a locally staged/packed package.
-
-```bash
-npx @nara-web/cli new my-app
-cd my-app
-npm install
-npm run dev
-```
-
-Generated applications pin the exact Nara CLI version that created them as a
-devDependency. The default Health Feature is installed from the same official
-open-code source used by `nara add`.
+The repository root is the canonical Nara application baseline. Start a new
+product from a source checkout/copy of this reference app, then remove its Git
+history if you want an independent repository. Nara intentionally does not
+generate a second, smaller starter shape.
 
 ```bash
 npm run check
@@ -61,10 +51,9 @@ The application requires that temporary password to be changed before normal
 authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 `NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
 
-The repository root is a richer reference application proving Auth/RBAC,
-Users, Activity, assets, and the SQLite lifecycle. New applications should be
-created with `nara new`; additional capabilities are installed explicitly with
-`nara add`.
+The repository root proves Auth/RBAC, Users, Activity, assets, storage, and the
+SQLite lifecycle. Additional official capabilities are installed explicitly
+with `nara add`.
 
 Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves
 the Vue app and HMR while Hono handles `/api`, `/health`, and `/ready` on the
@@ -101,7 +90,6 @@ composition rules.
 Common commands:
 
 ```text
-nara new <name>                 Create a runnable Nara application
 nara make feature <name>        Create the canonical Feature skeleton
 nara add <feature>              Install an official open-code Feature
 nara evolve <feature>           Evolve installed official source
@@ -114,7 +102,6 @@ nara guard --base origin/main   Fail on newly introduced architecture debt
 ```
 
 All architecture commands support deterministic JSON where documented.
-Generated projects run them from their pinned local CLI installation.
 
 Full command and output semantics live in [`docs/cli.md`](./docs/cli.md).
 
@@ -204,6 +191,20 @@ retention is intentional.
 
 Database ownership, migrations, seeds, backup, and integrity behavior are
 documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
+
+### Asset storage
+
+Nara ships a provider-neutral `AssetStorage` capability as part of the
+guaranteed substrate. The reference app binds Users to the local filesystem
+adapter under `storage/`, so cloning the repository still works with no cloud
+account or extra service.
+
+Features store a logical `storage_key` in their own metadata and depend only on
+the `AssetStorage` contract. The application binding chooses the provider. A
+deployment can therefore replace the local adapter with S3/R2-compatible
+storage without changing Users-owned upload, cleanup, or delivery workflows.
+Browser Feature code may not import `shared/storage`; storage providers remain
+server-only infrastructure.
 
 ## Official Features
 
