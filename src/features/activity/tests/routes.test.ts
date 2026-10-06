@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
+import { pruneActivityBefore, recordActivity } from '../index';
 import { getDatabase } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 
@@ -38,6 +39,25 @@ function makeAdmin(userId: string): void {
 }
 
 describe('activity capability', () => {
+  it('prunes old activity in bounded batches without touching recent events', () => {
+    const now = Date.now();
+    const oldIds = [
+      recordActivity({ action: 'test.old.1', resource: 'test', actorId: null, occurredAt: now - 400 * 86_400_000 }).id,
+      recordActivity({ action: 'test.old.2', resource: 'test', actorId: null, occurredAt: now - 399 * 86_400_000 }).id,
+    ];
+    const recent = recordActivity({ action: 'test.recent', resource: 'test', actorId: null, occurredAt: now }).id;
+    const cutoff = now - 365 * 86_400_000;
+
+    expect(pruneActivityBefore(cutoff, 1)).toBe(1);
+    expect(
+      getDatabase().prepare('SELECT COUNT(*) AS count FROM activity_events WHERE id IN (?, ?)').get(...oldIds),
+    ).toEqual({ count: 1 });
+    expect(getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(recent)).toBeDefined();
+
+    expect(pruneActivityBefore(cutoff, 10)).toBeGreaterThanOrEqual(1);
+    expect(getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(recent)).toBeDefined();
+  });
+
   it('keeps the feed server-authoritative and records Auth/Role events', async () => {
     const anonymous = await app.request('/api/activity');
     expect(anonymous.status).toBe(401);

@@ -30,12 +30,17 @@ function openDatabase(): Database.Database {
   }
   connection.pragma('foreign_keys = ON');
   connection.pragma('busy_timeout = 5000');
+  connection.pragma('optimize=0x10002');
   return connection;
 }
 
 export function getDatabase(): Database.Database {
   database ??= openDatabase();
   return database;
+}
+
+export function optimizeDatabase(connection: Database.Database = getDatabase()): void {
+  connection.pragma('optimize');
 }
 
 export function closeDatabase(): void {

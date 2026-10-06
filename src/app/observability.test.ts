@@ -6,7 +6,14 @@ import { compress } from 'hono/compress';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleError } from './error-handler';
 import { getRequestId, normalizeRequestId, requestId, requestLifecycleLog } from './observability';
-import { app, startSessionCleanup, stopSessionCleanup } from './server';
+import {
+  app,
+  startApplicationMaintenance,
+  startSessionCleanup,
+  stopApplicationMaintenance,
+  stopSessionCleanup,
+} from './server';
+import { recordActivity } from '../features/activity';
 import { cleanupExpiredSessions } from '../features/auth';
 import { getDatabase } from '../shared/database';
 import { Logger } from '../shared/logging';
@@ -38,6 +45,7 @@ function sessionExists(id: string): boolean {
 
 afterEach(() => {
   stopSessionCleanup();
+  stopApplicationMaintenance();
   vi.restoreAllMocks();
 });
 
@@ -299,5 +307,61 @@ describe('expired session cleanup', () => {
     expect(() => handle.stop()).not.toThrow();
     expect(() => handle.stop()).not.toThrow();
     expect(() => stopSessionCleanup()).not.toThrow();
+  });
+});
+
+describe('application maintenance', () => {
+  it('prunes expired activity immediately and on the scheduled path', async () => {
+    const now = Date.now();
+    const expired = recordActivity({
+      action: 'maintenance.expired',
+      resource: 'test',
+      actorId: null,
+      occurredAt: now - 366 * 86_400_000,
+    });
+    const recent = recordActivity({ action: 'maintenance.recent', resource: 'test', actorId: null, occurredAt: now });
+    const exists = (id: string) => getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(id) !== undefined;
+
+    const handle = startApplicationMaintenance({ intervalMs: 15, now });
+    try {
+      expect(exists(expired.id)).toBe(false);
+      expect(exists(recent.id)).toBe(true);
+
+      const later = recordActivity({
+        action: 'maintenance.later-expired',
+        resource: 'test',
+        actorId: null,
+        occurredAt: now - 366 * 86_400_000,
+      });
+      await vi.waitFor(() => expect(exists(later.id)).toBe(false), { timeout: 5_000 });
+      expect(exists(recent.id)).toBe(true);
+    } finally {
+      handle.stop();
+    }
+  });
+
+  it('is stoppable and safe to stop twice', () => {
+    const handle = startApplicationMaintenance({ intervalMs: 60_000 });
+    expect(() => handle.stop()).not.toThrow();
+    expect(() => handle.stop()).not.toThrow();
+    expect(() => stopApplicationMaintenance()).not.toThrow();
+  });
+
+  it('preserves old activity when retention is disabled', () => {
+    const originalRetention = env.ACTIVITY_RETENTION_DAYS;
+    env.ACTIVITY_RETENTION_DAYS = 0;
+    const old = recordActivity({
+      action: 'maintenance.retained',
+      resource: 'test',
+      actorId: null,
+      occurredAt: Date.now() - 10 * 365 * 86_400_000,
+    });
+    try {
+      const handle = startApplicationMaintenance({ intervalMs: 60_000 });
+      handle.stop();
+      expect(getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(old.id)).toBeDefined();
+    } finally {
+      env.ACTIVITY_RETENTION_DAYS = originalRetention;
+    }
   });
 });

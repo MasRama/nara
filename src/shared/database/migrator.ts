@@ -626,6 +626,8 @@ export function migrate(options: MigrationOptions = {}): MigrationResult {
     appliedRows = validateLedgerAgainstFiles(database, migrations);
   }
 
+  if (applied.length > 0) database.pragma('optimize');
+
   return { applied, skipped };
 }
 

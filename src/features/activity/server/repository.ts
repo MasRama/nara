@@ -114,3 +114,22 @@ export function listActivity(query: ActivityQuery): { data: ActivityRecord[]; to
 
   return { data: data.map(fromRow), total: total.count };
 }
+
+export function pruneActivityBefore(before: number, limit: number): number {
+  if (!Number.isFinite(before)) throw new Error('Activity prune cutoff must be finite');
+  const normalizedLimit = Number.isFinite(limit) ? Math.trunc(limit) : 1;
+  const boundedLimit = Math.max(1, Math.min(100_000, normalizedLimit));
+  const result = getDatabase()
+    .prepare(
+      `DELETE FROM activity_events
+       WHERE id IN (
+         SELECT id
+         FROM activity_events
+         WHERE occurred_at < ?
+         ORDER BY occurred_at ASC, id ASC
+         LIMIT ?
+       )`,
+    )
+    .run(before, boundedLimit);
+  return Number(result.changes);
+}

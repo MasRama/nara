@@ -61,9 +61,17 @@ PRAGMA journal_mode = WAL;
 PRAGMA synchronous = NORMAL;
 PRAGMA foreign_keys = ON;
 PRAGMA busy_timeout = 5000;
+PRAGMA optimize=0x10002;
 ```
 
 `:memory:` databases skip the persistent WAL/synchronous settings and still enable foreign keys and the busy timeout. Do not put a SQLite database on a shared network filesystem. The database file, its WAL files, and backups must be on storage local to the application host.
+
+`PRAGMA optimize=0x10002` runs when the shared connection opens so SQLite can
+refresh planner statistics when appropriate without forcing a full `ANALYZE`.
+After a migration actually applies schema changes Nara also runs
+`PRAGMA optimize`. The reference app repeats the normal `PRAGMA optimize`
+periodically as low-cost maintenance. This is deliberately separate from
+`VACUUM`: Nara never performs an automatic database rebuild or compaction.
 
 ## Forward-only migrations
 
@@ -133,5 +141,32 @@ the target must choose a new password after the next login.
 
 `npm run db:check` reports failure and exits non-zero if `PRAGMA quick_check` returns anything other than `ok` or `PRAGMA foreign_key_check` returns rows. A healthy database reports both checks passed.
 Both operational commands require an existing persistent database file and fail before opening SQLite when it is absent. They never initialize an empty database; run `npm run migrate` for intentional database creation.
+
+## Runtime maintenance and retention
+
+The reference application starts one maintenance timer in addition to the
+hourly expired-session cleanup. The maintenance timer runs every 24 hours and
+is stopped with the rest of the application runtime during graceful shutdown.
+
+Each maintenance pass performs two bounded operations:
+
+1. `PRAGMA optimize` lets SQLite update planner statistics only when SQLite
+   determines that doing so is useful.
+2. Activity events older than `ACTIVITY_RETENTION_DAYS` are deleted oldest
+   first, with at most 10,000 rows removed per pass. The same bounded prune
+   runs once at application startup so stale history starts converging without
+   waiting a full day.
+
+The default retention is 365 days. Set `ACTIVITY_RETENTION_DAYS=0` to disable
+automatic Activity pruning. Values above zero are interpreted as whole days
+and validated at startup. Retention is application policy: deployments with a
+legal or audit requirement for a longer history should increase the value or
+disable pruning and manage archival/storage explicitly.
+
+Deleting old rows makes their pages reusable inside SQLite but does not promise
+that the database file shrinks on disk. Nara intentionally does not run
+`VACUUM` automatically because it is a heavier rebuild-style maintenance
+operation. Likewise WAL checkpointing remains SQLite-managed during normal
+runtime; the application does not force periodic `TRUNCATE` checkpoints.
 
 SQLite is the default local-disk architecture, not a multi-host shared database. Applications requiring high write concurrency or a database shared across hosts should use a client/server database architecture instead of stretching SQLite beyond its intended deployment boundary.

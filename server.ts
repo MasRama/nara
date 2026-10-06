@@ -1,6 +1,6 @@
 import { closeDatabase } from './src/shared/database';
 import { Logger } from './src/shared/logging';
-import { startServer, stopSessionCleanup } from './src/app/server';
+import { startServer, stopApplicationRuntime } from './src/app/server';
 
 const server = startServer();
 let shuttingDown = false;
@@ -9,7 +9,7 @@ let shutdownFinalized = false;
 async function finishShutdown(exitCode: number): Promise<void> {
   if (shutdownFinalized) return;
   shutdownFinalized = true;
-  stopSessionCleanup();
+  stopApplicationRuntime();
   closeDatabase();
   process.exitCode = exitCode;
   try {

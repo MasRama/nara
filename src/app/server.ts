@@ -5,7 +5,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { getCookie } from 'hono/cookie';
 import { compress } from 'hono/compress';
 import { Hono } from 'hono';
-import { AUTH, UPLOAD, env } from '../shared/config';
+import { AUTH, MAINTENANCE, UPLOAD, env } from '../shared/config';
 import {
   apiBodyLimit,
   createRateLimiter,
@@ -23,7 +23,8 @@ import {
   resetLoginThrottle,
   SESSION_COOKIE_NAME,
 } from '../features/auth';
-import { getDatabase, migrate } from '../shared/database';
+import { getDatabase, migrate, optimizeDatabase } from '../shared/database';
+import { pruneActivityBefore } from '../features/activity';
 import composeUsersServer from './bindings/users.server';
 import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
 import { healthRoutes } from '../../official-features/health';
@@ -237,11 +238,12 @@ function ensureProductionFrontend(): void {
   }
 }
 
-export interface SessionCleanupHandle {
+export interface RuntimeHandle {
   stop: () => void;
 }
 
 let sessionCleanupTimer: NodeJS.Timeout | undefined;
+let applicationMaintenanceTimer: NodeJS.Timeout | undefined;
 
 /**
  * App-owned session cleanup scheduling. Runs Auth's expired-session delete
@@ -250,7 +252,7 @@ let sessionCleanupTimer: NodeJS.Timeout | undefined;
  * {@link stopSessionCleanup} clears it on shutdown. No timers are created
  * at import time.
  */
-export function startSessionCleanup(options?: { intervalMs?: number; now?: number }): SessionCleanupHandle {
+export function startSessionCleanup(options?: { intervalMs?: number; now?: number }): RuntimeHandle {
   stopSessionCleanup();
   const removed = cleanupExpiredSessions(options?.now ?? Date.now());
   if (removed > 0) Logger.info('Expired sessions removed', { removed });
@@ -276,13 +278,75 @@ export function stopSessionCleanup(): void {
   }
 }
 
-export function initializeApplicationRuntime(): SessionCleanupHandle {
+function pruneExpiredActivity(now = Date.now()): number {
+  if (env.ACTIVITY_RETENTION_DAYS === 0) return 0;
+  const cutoff = now - env.ACTIVITY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return pruneActivityBefore(cutoff, MAINTENANCE.ACTIVITY_PRUNE_LIMIT);
+}
+
+function pruneExpiredActivityAndLog(now = Date.now()): void {
+  const removed = pruneExpiredActivity(now);
+  if (removed > 0) {
+    Logger.info('Expired activity events removed', {
+      removed,
+      retentionDays: env.ACTIVITY_RETENTION_DAYS,
+    });
+  }
+}
+
+function runApplicationMaintenance(now = Date.now()): void {
+  try {
+    optimizeDatabase();
+  } catch (error) {
+    Logger.error('SQLite optimize failed', error instanceof Error ? error : new Error(String(error)));
+  }
+
+  try {
+    pruneExpiredActivityAndLog(now);
+  } catch (error) {
+    Logger.error('Activity retention cleanup failed', error instanceof Error ? error : new Error(String(error)));
+  }
+}
+
+export function startApplicationMaintenance(options?: { intervalMs?: number; now?: number }): RuntimeHandle {
+  stopApplicationMaintenance();
+
+  try {
+    pruneExpiredActivityAndLog(options?.now ?? Date.now());
+  } catch (error) {
+    Logger.error('Activity retention cleanup failed', error instanceof Error ? error : new Error(String(error)));
+  }
+
+  const timer = setInterval(
+    () => runApplicationMaintenance(),
+    options?.intervalMs ?? MAINTENANCE.INTERVAL_MS,
+  );
+  timer.unref?.();
+  applicationMaintenanceTimer = timer;
+  return { stop: stopApplicationMaintenance };
+}
+
+export function stopApplicationMaintenance(): void {
+  if (applicationMaintenanceTimer) {
+    clearInterval(applicationMaintenanceTimer);
+    applicationMaintenanceTimer = undefined;
+  }
+}
+
+export function stopApplicationRuntime(): void {
+  stopSessionCleanup();
+  stopApplicationMaintenance();
+}
+
+export function initializeApplicationRuntime(): RuntimeHandle {
   const migrationResult = migrate();
   Logger.info('Database migrations ready', {
     applied: migrationResult.applied,
     skipped: migrationResult.skipped,
   });
-  return startSessionCleanup();
+  startSessionCleanup();
+  startApplicationMaintenance();
+  return { stop: stopApplicationRuntime };
 }
 
 export function startServer(port = env.PORT) {
@@ -304,11 +368,11 @@ export function startServer(port = env.PORT) {
     );
 
     server.on('error', (error: Error) => {
-      stopSessionCleanup();
+      stopApplicationRuntime();
       Logger.fatal('Nara server error', error);
     });
     server.on('close', () => {
-      stopSessionCleanup();
+      stopApplicationRuntime();
     });
 
     return server;

@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-import { LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
+import { LOGGING, MAINTENANCE, RATE_LIMIT, SECURITY, SERVER } from './constants';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -18,6 +18,7 @@ const EnvSchema = z.object({
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.AUTH_WINDOW_MS),
   AUTH_LOCKOUT_ATTEMPTS: z.coerce.number().int().positive().default(RATE_LIMIT.MAX_LOGIN_ATTEMPTS),
   AUTH_LOCKOUT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.LOGIN_LOCKOUT_MS),
+  ACTIVITY_RETENTION_DAYS: z.coerce.number().int().min(0).max(36_500).default(MAINTENANCE.ACTIVITY_RETENTION_DAYS),
   MAX_JSON_BODY_BYTES: z.coerce.number().int().positive().default(SECURITY.MAX_JSON_BODY_BYTES),
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(1).max(10).default(1),

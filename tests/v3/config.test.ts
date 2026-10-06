@@ -36,6 +36,9 @@ describe('v3 configuration', () => {
     expect(() => parseEnv({ ...base, TRUST_PROXY_HOPS: '11' })).toThrow(/TRUST_PROXY_HOPS/);
     expect(() => parseEnv({ ...base, MAX_JSON_BODY_BYTES: '-1' })).toThrow(/MAX_JSON_BODY_BYTES/);
     expect(() => parseEnv({ ...base, AUTH_RATE_LIMIT_MAX: '0' })).toThrow(/AUTH_RATE_LIMIT_MAX/);
+    expect(parseEnv({ ...base, ACTIVITY_RETENTION_DAYS: '0' }).ACTIVITY_RETENTION_DAYS).toBe(0);
+    expect(parseEnv({ ...base, ACTIVITY_RETENTION_DAYS: '730' }).ACTIVITY_RETENTION_DAYS).toBe(730);
+    expect(() => parseEnv({ ...base, ACTIVITY_RETENTION_DAYS: '-1' })).toThrow(/ACTIVITY_RETENTION_DAYS/);
   });
 
   it('reports malformed values with their field names', () => {

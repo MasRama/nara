@@ -196,6 +196,12 @@ SQLite files, WAL files, and backups must live on storage local to the
 application host; the default architecture is not intended for shared
 multi-host network filesystems.
 
+The reference app also performs bounded SQLite maintenance: planner statistics
+are optimized at connection/migration boundaries and periodically at runtime,
+while Activity events older than `ACTIVITY_RETENTION_DAYS` (default `365`) are
+pruned in bounded batches. Set the value to `0` only when indefinite Activity
+retention is intentional.
+
 Database ownership, migrations, seeds, backup, and integrity behavior are
 documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
 

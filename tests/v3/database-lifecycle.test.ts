@@ -8,6 +8,7 @@ import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 import { discoverMigrations, migrate, migrateFresh, migrateStatus } from '../../src/shared/database/migrator';
 import { discoverSeeds, seed } from '../../src/shared/database/seeder';
+import { optimizeDatabase } from '../../src/shared/database/sqlite';
 
 type TestDatabase = Database.Database;
 
@@ -245,6 +246,18 @@ afterEach(() => {
 });
 
 describe('canonical SQLite migration lifecycle', () => {
+  it('supports explicit low-cost planner maintenance', () => {
+    const database = openMemoryDatabase();
+    try {
+      database.exec('CREATE TABLE optimize_probe (id INTEGER PRIMARY KEY, value TEXT); CREATE INDEX optimize_probe_value_idx ON optimize_probe(value);');
+      database.prepare('INSERT INTO optimize_probe (value) VALUES (?)').run('probe');
+      expect(() => optimizeDatabase(database)).not.toThrow();
+      expect(database.prepare('SELECT value FROM optimize_probe WHERE value = ?').get('probe')).toEqual({ value: 'probe' });
+    } finally {
+      database.close();
+    }
+  });
+
   it('migrates an empty database and makes the second run a no-op', () => {
     const database = openMemoryDatabase();
     try {
