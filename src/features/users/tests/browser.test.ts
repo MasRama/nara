@@ -477,7 +477,8 @@ describe('users browser surfaces', () => {
 
   it('changes landing calls to match the current session', async () => {
     await mountAt('/');
-    expect(container.querySelector('a[href="/register"]')?.textContent).toContain('Begin');
+    expect(container.querySelector('a[href="/login"]')?.textContent).toContain('Sign in');
+    expect(container.querySelector('a[href="/dashboard"]')).toBeNull();
 
     await startAuthenticatedUser();
     await router.push('/');
@@ -485,7 +486,7 @@ describe('users browser surfaces', () => {
     await nextTick();
 
     expect(container.querySelector('a[href="/dashboard"]')?.textContent).toContain('Dashboard');
-    expect([...container.querySelectorAll('a[href="/dashboard"]')].some((link) => link.textContent?.includes('Open dashboard'))).toBe(true);
+    expect(container.querySelector('a[href="/login"]')).toBeNull();
   });
 
   it('logs out from the shell and protects account routes again', async () => {

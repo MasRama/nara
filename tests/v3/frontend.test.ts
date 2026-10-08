@@ -299,7 +299,8 @@ describe('Vue frontend shell', () => {
       }
       // Some test browser CSS engines return the unresolved token; its dark-mode
       // value is asserted above, and these checks confirm the correct consumers.
-      expect(['rgb(131, 221, 176)', 'var(--nara-signal)']).toContain(getComputedStyle(heroPrompt).color);
+      // The dark hero prompt shares the warm code-string tone of the review panel.
+      expect(getComputedStyle(heroPrompt).color).toBe('rgb(235, 222, 208)');
       expect(['rgb(131, 221, 176)', 'var(--nara-signal)']).toContain(getComputedStyle(featureIndex).color);
       // The test DOM does not always resolve custom-property backgrounds.
       // The compiled override and inherited token are both checked instead.

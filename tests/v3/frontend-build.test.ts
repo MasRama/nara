@@ -26,5 +26,5 @@ describe('Vue frontend production build', () => {
     expect(css).toContain('.gap-3\\.5');
     expect(css).toContain('.text-\\[13px\\]');
     expect(css).toContain('--nara-bg:#f6f5ef');
-  });
+  }, 30_000); // A real Vite build can exceed the 5s default while the suite runs in parallel.
 });
