@@ -164,6 +164,8 @@ const LEGACY_SCHEMA: Record<string, SchemaTableExpectation> = {
 export interface MigrationFile {
   id: string;
   name: string;
+  /** Owning Feature: the directory under the features root. */
+  feature: string;
   path: string;
   sql: string;
   checksum: string;
@@ -273,6 +275,7 @@ function readMigrationFiles(root: string): MigrationFile[] {
       migrations.push({
         id: match[1],
         name: file.name,
+        feature: feature.name,
         path: filePath,
         sql,
         checksum: checksum(sql),
@@ -647,6 +650,21 @@ export function migrateStatus(options: MigrationOptions = {}): MigrationStatus {
   }
 
   return { applied, pending };
+}
+
+/**
+ * Read-only: the given migrations not recorded in the ledger with a matching
+ * checksum. Unlike migrateStatus it never creates or bootstraps the ledger, so
+ * it is safe for frequent readiness probes. A missing ledger leaves every
+ * migration outstanding.
+ */
+export function outstandingMigrations(
+  database: Database.Database,
+  migrations: readonly MigrationFile[],
+): MigrationFile[] {
+  if (!tableExists(database, MIGRATION_LEDGER)) return [...migrations];
+  const applied = new Map(readLedger(database).map((row) => [row.id, row.checksum]));
+  return migrations.filter((migration) => applied.get(migration.id) !== migration.checksum);
 }
 
 function dropApplicationSchema(database: Database.Database): void {

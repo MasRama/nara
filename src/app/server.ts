@@ -23,7 +23,14 @@ import {
   resetLoginThrottle,
   SESSION_COOKIE_NAME,
 } from '../features/auth';
-import { getDatabase, migrate, optimizeDatabase } from '../shared/database';
+import {
+  discoverMigrations,
+  getDatabase,
+  migrate,
+  optimizeDatabase,
+  outstandingMigrations,
+  type MigrationFile,
+} from '../shared/database';
 import { pruneActivityBefore } from '../features/activity';
 import composeUsersServer from './bindings/users.server';
 import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
@@ -171,20 +178,39 @@ app.use('/api/*', async (context, next) => {
 app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: UPLOAD.MAX_FILE_SIZE + 256 * 1024 }));
 
 app.route('/health', healthRoutes);
+// Feature migration files do not change while the process runs, so they are
+// discovered once; each probe is then a single read-only ledger query.
+let expectedMigrations: MigrationFile[] | undefined;
+let lastReadinessProblem: string | undefined;
+
+function reportReadiness(problem: string | undefined, data?: Record<string, unknown>): void {
+  // Probes repeat every few seconds; log only when the reason changes.
+  if (problem !== undefined && problem !== lastReadinessProblem) Logger.warn('Database not ready', data);
+  lastReadinessProblem = problem;
+}
+
+/**
+ * Ready when every Feature's migrations are recorded with matching checksums.
+ * A connection-level SELECT 1 can succeed on an unmigrated database; the
+ * expected set comes from the Feature migration directories, so a new Feature
+ * or migration is covered without editing this file.
+ */
 export function databaseReady(database: ReturnType<typeof getDatabase> = getDatabase()): boolean {
   try {
-    // A connection-level SELECT 1 can succeed even when migrations were not
-    // applied or the application schema was damaged. Touch the core tables
-    // the running reference app requires so readiness reflects usable state.
-    database.prepare('SELECT id FROM users LIMIT 1').get();
-    database.prepare('SELECT id FROM sessions LIMIT 1').get();
-    database.prepare('SELECT id FROM two_factor_challenges LIMIT 1').get();
-    database.prepare('SELECT id FROM roles LIMIT 1').get();
-    database.prepare('SELECT id FROM permissions LIMIT 1').get();
-    database.prepare('SELECT id FROM activity_events LIMIT 1').get();
-    database.prepare('SELECT id FROM _nara_migrations LIMIT 1').get();
-    return true;
-  } catch {
+    expectedMigrations ??= discoverMigrations();
+    const outstanding = outstandingMigrations(database, expectedMigrations).map((migration) => ({
+      feature: migration.feature,
+      migration: migration.name,
+    }));
+    if (outstanding.length === 0) {
+      reportReadiness(undefined);
+      return true;
+    }
+    reportReadiness(JSON.stringify(outstanding), { outstanding });
+    return false;
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    reportReadiness(`error:${err.message}`, { err });
     return false;
   }
 }
