@@ -4,6 +4,8 @@ import { confirmPasswordInputSchema, twoFactorCodeInputSchema, type SessionData,
 import { encodeQr, qrSvgPath } from '../qr';
 import { createSecurityClient } from '../security-client';
 import { useAuthSession } from '../session';
+import { formatDate, formatRelativeTime } from '../../../../shared/i18n';
+import { error as errorText, issue as issueText, t } from '../locales';
 
 type PasswordAction = 'setup' | 'regenerate' | 'disable';
 
@@ -36,26 +38,31 @@ const qr = computed(() => {
 });
 const groupedSecret = computed(() => setup.value?.secret.match(/.{1,4}/g)?.join(' ') ?? '');
 const otherSessions = computed(() => sessions.value.filter((session) => !session.current).length);
-const passwordActionLabel: Record<PasswordAction, { title: string; submit: string; busy: string }> = {
-  setup: { title: 'Confirm your password to start setup.', submit: 'Continue', busy: 'Checking…' },
-  regenerate: { title: 'Confirm your password to replace your recovery codes. Old codes stop working.', submit: 'Generate new codes', busy: 'Generating…' },
-  disable: { title: 'Confirm your password to turn off two-factor authentication.', submit: 'Turn off', busy: 'Turning off…' },
-};
+const passwordActionLabel = computed<Record<PasswordAction, { title: string; submit: string; busy: string }>>(() => ({
+  setup: { title: t('security.confirm.setup.title'), submit: t('security.confirm.setup.submit'), busy: t('security.confirm.setup.busy') },
+  regenerate: {
+    title: t('security.confirm.regenerate.title'),
+    submit: t('security.confirm.regenerate.submit'),
+    busy: t('security.confirm.regenerate.busy'),
+  },
+  disable: { title: t('security.confirm.disable.title'), submit: t('security.confirm.disable.submit'), busy: t('security.confirm.disable.busy') },
+}));
 
-const dateFormat = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-const relativeFormat = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+function shortDate(timestamp: number): string {
+  return formatDate(timestamp, { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 function relativeTime(timestamp: number): string {
   const seconds = Math.round((timestamp - Date.now()) / 1000);
-  if (Math.abs(seconds) < 60) return 'just now';
+  if (Math.abs(seconds) < 60) return t('security.sessions.justNow');
   const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [['day', 86_400], ['hour', 3_600], ['minute', 60]];
   const [unit, size] = units.find(([, unitSeconds]) => Math.abs(seconds) >= unitSeconds)!;
-  return relativeFormat.format(Math.round(seconds / size), unit);
+  return formatRelativeTime(Math.round(seconds / size), unit);
 }
 
 /** Readable "Browser on OS" label from a user agent; falls back to the raw string. */
 function deviceLabel(userAgent: string | null): string {
-  if (!userAgent) return 'Unknown device';
+  if (!userAgent) return t('security.sessions.unknownDevice');
   const browser =
     /Edg\//.test(userAgent) ? 'Edge'
     : /OPR\//.test(userAgent) ? 'Opera'
@@ -70,7 +77,7 @@ function deviceLabel(userAgent: string | null): string {
     : /Windows/.test(userAgent) ? 'Windows'
     : /Linux/.test(userAgent) ? 'Linux'
     : null;
-  if (browser && os) return `${browser} on ${os}`;
+  if (browser && os) return t('security.sessions.device', { browser, os });
   return browser ?? os ?? userAgent.slice(0, 60);
 }
 
@@ -79,12 +86,12 @@ async function load(): Promise<void> {
   loadError.value = '';
   try {
     const [status, list] = await Promise.all([client.twoFactorStatus(), client.listSessions()]);
-    if (!status.success) throw new Error(status.message);
-    if (!list.success) throw new Error(list.message);
+    if (!status.success) throw new Error(errorText(status));
+    if (!list.success) throw new Error(errorText(list));
     twoFactor.value = status.data!.twoFactor;
     sessions.value = list.data!.sessions;
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : 'Unable to load security settings';
+    loadError.value = error instanceof Error ? error.message : t('security.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -118,7 +125,7 @@ async function submitPassword(): Promise<void> {
   fieldError.value = '';
   const parsed = confirmPasswordInputSchema.safeParse({ password: password.value });
   if (!parsed.success) {
-    fieldError.value = parsed.error.issues[0]!.message;
+    fieldError.value = issueText(parsed.error.issues[0]!);
     return;
   }
 
@@ -126,25 +133,25 @@ async function submitPassword(): Promise<void> {
   try {
     if (action === 'setup') {
       const response = await client.startTwoFactorSetup(parsed.data);
-      if (!response.success) throw new Error(response.message);
+      if (!response.success) throw new Error(errorText(response));
       setup.value = response.data!;
       passwordAction.value = null;
       password.value = '';
     } else if (action === 'regenerate') {
       const response = await client.regenerateRecoveryCodes(parsed.data);
-      if (!response.success) throw new Error(response.message);
+      if (!response.success) throw new Error(errorText(response));
       resetTwoFactorForm();
       recoveryCodes.value = response.data!.recoveryCodes;
       await refreshStatus();
     } else {
       const response = await client.disableTwoFactor(parsed.data);
-      if (!response.success) throw new Error(response.message);
+      if (!response.success) throw new Error(errorText(response));
       resetTwoFactorForm();
-      twoFactorNotice.value = 'Two-factor authentication is off.';
+      twoFactorNotice.value = t('security.twoFactor.turnedOff');
       await refreshStatus();
     }
   } catch (error) {
-    twoFactorError.value = error instanceof Error ? error.message : 'Something went wrong';
+    twoFactorError.value = error instanceof Error ? error.message : t('security.failed');
   } finally {
     twoFactorBusy.value = false;
   }
@@ -156,7 +163,7 @@ async function submitCode(): Promise<void> {
   fieldError.value = '';
   const parsed = twoFactorCodeInputSchema.safeParse({ code: code.value });
   if (!parsed.success) {
-    fieldError.value = parsed.error.issues[0]!.message;
+    fieldError.value = issueText(parsed.error.issues[0]!);
     return;
   }
 
@@ -164,15 +171,16 @@ async function submitCode(): Promise<void> {
   try {
     const response = await client.enableTwoFactor(parsed.data);
     if (!response.success) {
-      fieldError.value = response.errors?.code?.[0] ?? '';
-      if (!fieldError.value) twoFactorError.value = response.message;
+      // The code was already checked against the same schema here, so a server-side code error is a mismatch.
+      fieldError.value = response.errors?.code?.length ? t('security.setup.codeMismatch') : '';
+      if (!fieldError.value) twoFactorError.value = errorText(response);
       return;
     }
     resetTwoFactorForm();
     recoveryCodes.value = response.data!.recoveryCodes;
     await refreshStatus();
   } catch (error) {
-    twoFactorError.value = error instanceof Error ? error.message : 'Unable to enable two-factor authentication';
+    twoFactorError.value = error instanceof Error ? error.message : t('security.setup.failed');
   } finally {
     twoFactorBusy.value = false;
   }
@@ -181,15 +189,15 @@ async function submitCode(): Promise<void> {
 async function copyRecoveryCodes(): Promise<void> {
   try {
     await navigator.clipboard.writeText(recoveryCodes.value.join('\n'));
-    twoFactorNotice.value = 'Recovery codes copied.';
+    twoFactorNotice.value = t('security.codes.copied');
   } catch {
-    twoFactorError.value = 'Copy failed. Select the codes and copy them manually.';
+    twoFactorError.value = t('security.codes.copyFailed');
   }
 }
 
 function downloadRecoveryCodes(): void {
-  const account = authSession.user.value?.email ?? 'account';
-  const body = `Recovery codes for ${account}\nEach code works once.\n\n${recoveryCodes.value.join('\n')}\n`;
+  const account = authSession.user.value?.email ?? t('security.codes.fileAccount');
+  const body = `${t('security.codes.fileHeading', { account })}\n${t('security.codes.fileNote')}\n\n${recoveryCodes.value.join('\n')}\n`;
   const url = URL.createObjectURL(new Blob([body], { type: 'text/plain' }));
   const link = document.createElement('a');
   link.href = url;
@@ -205,11 +213,11 @@ async function revokeSession(id: string): Promise<void> {
   sessionNotice.value = '';
   try {
     const response = await client.revokeSession(id);
-    if (!response.success) throw new Error(response.message);
+    if (!response.success) throw new Error(errorText(response));
     sessions.value = sessions.value.filter((session) => session.id !== id);
-    sessionNotice.value = 'Session signed out.';
+    sessionNotice.value = t('security.sessions.revoked');
   } catch (error) {
-    sessionError.value = error instanceof Error ? error.message : 'Unable to sign out that session';
+    sessionError.value = error instanceof Error ? error.message : t('security.sessions.revokeFailed');
   } finally {
     sessionBusy.value = null;
   }
@@ -222,12 +230,12 @@ async function revokeOthers(): Promise<void> {
   sessionNotice.value = '';
   try {
     const response = await client.revokeOtherSessions();
-    if (!response.success) throw new Error(response.message);
+    if (!response.success) throw new Error(errorText(response));
     sessions.value = sessions.value.filter((session) => session.current);
     const revoked = response.data!.revoked;
-    sessionNotice.value = `Signed out ${revoked} other session${revoked === 1 ? '' : 's'}.`;
+    sessionNotice.value = t('security.sessions.revokedOthers', { count: revoked });
   } catch (error) {
-    sessionError.value = error instanceof Error ? error.message : 'Unable to sign out other sessions';
+    sessionError.value = error instanceof Error ? error.message : t('security.sessions.revokeOthersFailed');
   } finally {
     sessionBusy.value = null;
   }
@@ -242,40 +250,40 @@ onMounted(() => {
   <main class="nara-page">
     <section class="nara-page-inner">
       <header>
-        <h1 class="nara-page-title">Security<span class="nara-page-title-accent">.</span></h1>
-        <p class="nara-page-lede">Add a second sign-in step and see every device that can open your account.</p>
+        <h1 class="nara-page-title">{{ t('security.title') }}<span class="nara-page-title-accent">.</span></h1>
+        <p class="nara-page-lede">{{ t('security.lede') }}</p>
       </header>
 
-      <p v-if="loading" role="status" class="sec-alert sec-alert--muted nara-page-body">Loading security settings…</p>
+      <p v-if="loading" role="status" class="sec-alert sec-alert--muted nara-page-body">{{ t('security.loading') }}</p>
       <p v-else-if="loadError" role="alert" class="sec-alert sec-alert--error nara-page-body">{{ loadError }}</p>
 
       <div v-else class="sec-settings nara-page-body">
         <section class="sec-row" aria-labelledby="two-factor-title">
           <div class="sec-row-intro">
-            <h2 id="two-factor-title" class="sec-row-title">Two-factor authentication</h2>
-            <p class="sec-row-desc">After your password, sign-in also asks for a code from an authenticator app such as 1Password, Google Authenticator, or Authy.</p>
+            <h2 id="two-factor-title" class="sec-row-title">{{ t('security.twoFactor.title') }}</h2>
+            <p class="sec-row-desc">{{ t('security.twoFactor.description') }}</p>
           </div>
 
           <div class="sec-row-body" data-testid="two-factor-panel">
             <div class="sec-status">
-              <span :class="['sec-badge', twoFactor?.enabled ? 'sec-badge--on' : 'sec-badge--off']">{{ twoFactor?.enabled ? 'On' : 'Off' }}</span>
+              <span :class="['sec-badge', twoFactor?.enabled ? 'sec-badge--on' : 'sec-badge--off']">{{ twoFactor?.enabled ? t('security.twoFactor.on') : t('security.twoFactor.off') }}</span>
               <p v-if="twoFactor?.enabled" class="sec-status-text">
-                Enabled {{ dateFormat.format(twoFactor.enabledAt!) }} ·
-                <span :class="{ 'sec-warn': twoFactor.recoveryCodesRemaining <= 2 }">{{ twoFactor.recoveryCodesRemaining }} recovery code{{ twoFactor.recoveryCodesRemaining === 1 ? '' : 's' }} left</span>
+                {{ t('security.twoFactor.enabledOn', { date: shortDate(twoFactor.enabledAt!) }) }} ·
+                <span :class="{ 'sec-warn': twoFactor.recoveryCodesRemaining <= 2 }">{{ t('security.twoFactor.codesLeft', { count: twoFactor.recoveryCodesRemaining }) }}</span>
               </p>
-              <p v-else class="sec-status-text">Your account is protected by your password only.</p>
+              <p v-else class="sec-status-text">{{ t('security.twoFactor.passwordOnly') }}</p>
             </div>
 
             <div v-if="recoveryCodes.length" class="sec-codes" data-testid="recovery-codes">
-              <p class="sec-codes-title">Save your recovery codes</p>
-              <p class="sec-codes-desc">Each code signs you in once if you lose your authenticator. They are shown only now.</p>
+              <p class="sec-codes-title">{{ t('security.codes.title') }}</p>
+              <p class="sec-codes-desc">{{ t('security.codes.description') }}</p>
               <ol class="sec-codes-grid">
                 <li v-for="recoveryCode in recoveryCodes" :key="recoveryCode">{{ recoveryCode }}</li>
               </ol>
               <div class="sec-actions sec-actions--flush">
-                <button type="button" class="sec-btn" @click="copyRecoveryCodes">Copy</button>
-                <button type="button" class="sec-btn" @click="downloadRecoveryCodes">Download .txt</button>
-                <button type="button" class="sec-primary" @click="recoveryCodes = []; twoFactorNotice = ''">I saved them</button>
+                <button type="button" class="sec-btn" @click="copyRecoveryCodes">{{ t('security.codes.copy') }}</button>
+                <button type="button" class="sec-btn" @click="downloadRecoveryCodes">{{ t('security.codes.download') }}</button>
+                <button type="button" class="sec-primary" @click="recoveryCodes = []; twoFactorNotice = ''">{{ t('security.codes.done') }}</button>
               </div>
             </div>
 
@@ -287,7 +295,7 @@ onMounted(() => {
               </div>
               <div class="sec-actions">
                 <p v-if="twoFactorError" role="alert" class="sec-msg sec-msg--error">{{ twoFactorError }}</p>
-                <button type="button" class="sec-btn" @click="resetTwoFactorForm">Cancel</button>
+                <button type="button" class="sec-btn" @click="resetTwoFactorForm">{{ t('common.cancel') }}</button>
                 <button type="submit" :disabled="twoFactorBusy" :class="passwordAction === 'disable' ? 'sec-danger' : 'sec-primary'">
                   {{ twoFactorBusy ? passwordActionLabel[passwordAction].busy : passwordActionLabel[passwordAction].submit }}
                 </button>
@@ -296,16 +304,16 @@ onMounted(() => {
 
             <form v-else-if="setup && qr" class="sec-form" data-testid="two-factor-setup" @submit.prevent="submitCode">
               <div class="sec-enroll">
-                <svg class="sec-qr" :viewBox="`0 0 ${qr.size} ${qr.size}`" role="img" aria-label="QR code for your authenticator app" shape-rendering="crispEdges">
+                <svg class="sec-qr" :viewBox="`0 0 ${qr.size} ${qr.size}`" role="img" :aria-label="t('security.setup.qrLabel')" shape-rendering="crispEdges">
                   <rect :width="qr.size" :height="qr.size" fill="#fff" />
                   <path :d="qr.path" fill="#111" />
                 </svg>
                 <div class="sec-enroll-steps">
-                  <p><strong>1.</strong> Scan the QR code with your authenticator app.</p>
-                  <p class="sec-secret-hint">Can't scan? Enter this key manually:</p>
+                  <p><strong>1.</strong> {{ t('security.setup.scan') }}</p>
+                  <p class="sec-secret-hint">{{ t('security.setup.manual') }}</p>
                   <code class="sec-secret" data-testid="two-factor-secret">{{ groupedSecret }}</code>
                   <div class="sec-field">
-                    <label for="two-factor-enable-code"><strong>2.</strong> Enter the 6-digit code it shows.</label>
+                    <label for="two-factor-enable-code"><strong>2.</strong> {{ t('security.setup.enterCode') }}</label>
                     <input id="two-factor-enable-code" v-model="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" class="sec-input sec-input--code" :aria-invalid="Boolean(fieldError)" />
                     <p v-if="fieldError" class="sec-error">{{ fieldError }}</p>
                   </div>
@@ -313,26 +321,26 @@ onMounted(() => {
               </div>
               <div class="sec-actions">
                 <p v-if="twoFactorError" role="alert" class="sec-msg sec-msg--error">{{ twoFactorError }}</p>
-                <button type="button" class="sec-btn" @click="resetTwoFactorForm">Cancel</button>
-                <button type="submit" :disabled="twoFactorBusy" class="sec-primary">{{ twoFactorBusy ? 'Verifying…' : 'Turn on' }}</button>
+                <button type="button" class="sec-btn" @click="resetTwoFactorForm">{{ t('common.cancel') }}</button>
+                <button type="submit" :disabled="twoFactorBusy" class="sec-primary">{{ twoFactorBusy ? t('security.setup.submitting') : t('security.setup.submit') }}</button>
               </div>
             </form>
 
             <div v-else class="sec-actions">
               <p v-if="twoFactorNotice" role="status" class="sec-msg sec-msg--ok"><span class="sec-dot"></span>{{ twoFactorNotice }}</p>
               <template v-if="twoFactor?.enabled">
-                <button type="button" class="sec-btn" @click="askPassword('regenerate')">New recovery codes</button>
-                <button type="button" class="sec-btn sec-btn--danger" @click="askPassword('disable')">Turn off</button>
+                <button type="button" class="sec-btn" @click="askPassword('regenerate')">{{ t('security.twoFactor.newCodes') }}</button>
+                <button type="button" class="sec-btn sec-btn--danger" @click="askPassword('disable')">{{ t('security.twoFactor.turnOff') }}</button>
               </template>
-              <button v-else type="button" class="sec-primary" @click="askPassword('setup')">Set up two-factor</button>
+              <button v-else type="button" class="sec-primary" @click="askPassword('setup')">{{ t('security.twoFactor.setUp') }}</button>
             </div>
           </div>
         </section>
 
         <section class="sec-row" aria-labelledby="sessions-title">
           <div class="sec-row-intro">
-            <h2 id="sessions-title" class="sec-row-title">Active sessions</h2>
-            <p class="sec-row-desc">Devices currently signed in to your account. Sign out anything you don't recognise, then change your password.</p>
+            <h2 id="sessions-title" class="sec-row-title">{{ t('security.sessions.title') }}</h2>
+            <p class="sec-row-desc">{{ t('security.sessions.description') }}</p>
           </div>
 
           <div class="sec-row-body" data-testid="sessions-panel">
@@ -344,24 +352,24 @@ onMounted(() => {
                 <span class="sec-session-main">
                   <span class="sec-session-name">
                     {{ deviceLabel(session.userAgent) }}
-                    <span v-if="session.current" class="sec-badge sec-badge--on">This device</span>
+                    <span v-if="session.current" class="sec-badge sec-badge--on">{{ t('security.sessions.thisDevice') }}</span>
                   </span>
                   <span class="sec-session-meta">
                     <span v-if="session.ipAddress">{{ session.ipAddress }} · </span>
-                    Active {{ relativeTime(session.lastSeenAt ?? session.createdAt) }} · Signed in {{ dateFormat.format(session.createdAt) }}
+                    {{ t('security.sessions.active', { time: relativeTime(session.lastSeenAt ?? session.createdAt) }) }} · {{ t('security.sessions.signedIn', { date: shortDate(session.createdAt) }) }}
                   </span>
                 </span>
                 <button v-if="!session.current" type="button" class="sec-btn" :disabled="sessionBusy !== null" @click="revokeSession(session.id)">
-                  {{ sessionBusy === session.id ? 'Signing out…' : 'Sign out' }}
+                  {{ sessionBusy === session.id ? t('security.sessions.signingOut') : t('security.sessions.signOut') }}
                 </button>
               </li>
             </ul>
             <div class="sec-actions">
               <p v-if="sessionError" role="alert" class="sec-msg sec-msg--error">{{ sessionError }}</p>
               <p v-else-if="sessionNotice" role="status" class="sec-msg sec-msg--ok"><span class="sec-dot"></span>{{ sessionNotice }}</p>
-              <p v-else-if="otherSessions === 0" class="sec-msg sec-msg--muted">Only this device is signed in.</p>
+              <p v-else-if="otherSessions === 0" class="sec-msg sec-msg--muted">{{ t('security.sessions.onlyThisDevice') }}</p>
               <button type="button" class="sec-btn sec-btn--danger" :disabled="otherSessions === 0 || sessionBusy !== null" @click="revokeOthers">
-                {{ sessionBusy === 'others' ? 'Signing out…' : 'Sign out other sessions' }}
+                {{ sessionBusy === 'others' ? t('security.sessions.signingOut') : t('security.sessions.signOutOthers') }}
               </button>
             </div>
           </div>

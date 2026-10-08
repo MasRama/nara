@@ -5,6 +5,8 @@ import { registerInputSchema, type RegisterInput } from '../../contract';
 import { createAuthClient } from '../client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
+import type { ValidationIssue } from '../../../../shared/i18n';
+import { error as errorText, issue as issueText, t } from '../locales';
 
 const name = ref('');
 const email = ref('');
@@ -21,12 +23,12 @@ const authSession = useAuthSession();
 const route = useRoute();
 const router = useRouter();
 
-function mapIssues(issues: Array<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
+function mapIssues(issues: ValidationIssue[]): Record<string, string[]> {
   const mapped: Record<string, string[]> = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issue.message);
+    mapped[key].push(issueText(issue));
   }
   return mapped;
 }
@@ -48,12 +50,12 @@ function validate(): RegisterInput | undefined {
   const nextErrors = parsed.success ? {} : mapIssues(parsed.error.issues);
 
   if (password.value !== passwordConfirmation.value) {
-    nextErrors.password_confirmation = ['Passwords do not match'];
+    nextErrors.password_confirmation = [t('common.passwordsMismatch')];
   }
 
   fieldErrors.value = nextErrors;
   if (Object.keys(nextErrors).length > 0 || !parsed.success) {
-    formError.value = 'Please correct the highlighted fields.';
+    formError.value = t('common.correctFields');
     return undefined;
   }
 
@@ -72,7 +74,7 @@ async function submitRegistration(): Promise<void> {
   try {
     const response = await authClient.register(input);
     if (!response.success) {
-      formError.value = response.message;
+      formError.value = errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
@@ -80,13 +82,13 @@ async function submitRegistration(): Promise<void> {
     if (response.data?.user) {
       authSession.setAuthenticated(response.data.user);
     } else if (!(await authSession.refresh())) {
-      formError.value = 'Registration succeeded, but the session could not be loaded.';
+      formError.value = t('register.sessionFailed');
       return;
     }
 
     await router.replace(redirectTarget());
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Unable to create account';
+    formError.value = error instanceof Error ? error.message : t('register.failed');
   } finally {
     isSubmitting.value = false;
   }
@@ -94,10 +96,10 @@ async function submitRegistration(): Promise<void> {
 </script>
 
 <template>
-  <AuthPageFrame heading="Create your" highlight="account.">
+  <AuthPageFrame :heading="t('register.heading')" :highlight="t('register.highlight')">
       <form class="nara-auth-form" @submit.prevent="submitRegistration">
         <label class="nara-auth-field" for="name">
-          Name
+          {{ t('register.name') }}
           <input
             id="name"
             v-model="name"
@@ -107,14 +109,14 @@ async function submitRegistration(): Promise<void> {
             required
             :aria-invalid="Boolean(fieldErrors.name)"
             :aria-describedby="fieldErrors.name ? 'name-error' : undefined"
-            placeholder="Your full name"
+            :placeholder="t('register.namePlaceholder')"
             class="nara-auth-input"
           />
           <span v-if="fieldErrors.name" id="name-error" class="nara-auth-error">{{ fieldErrors.name[0] }}</span>
         </label>
 
         <label class="nara-auth-field" for="email">
-          Email
+          {{ t('common.email') }}
           <input
             id="email"
             v-model="email"
@@ -124,14 +126,14 @@ async function submitRegistration(): Promise<void> {
             required
             :aria-invalid="Boolean(fieldErrors.email)"
             :aria-describedby="fieldErrors.email ? 'email-error' : undefined"
-            placeholder="you@example.com"
+            :placeholder="t('common.emailPlaceholder')"
             class="nara-auth-input"
           />
           <span v-if="fieldErrors.email" id="email-error" class="nara-auth-error">{{ fieldErrors.email[0] }}</span>
         </label>
 
         <label class="nara-auth-field" for="password">
-          Password
+          {{ t('common.password') }}
           <span class="nara-auth-password-wrap">
             <input
               id="password"
@@ -144,13 +146,13 @@ async function submitRegistration(): Promise<void> {
               :aria-describedby="fieldErrors.password ? 'password-error' : undefined"
               class="nara-auth-input nara-auth-input-password"
             />
-            <button type="button" class="nara-auth-show" :aria-label="showPassword ? 'Hide password' : 'Show password'" @click="showPassword = !showPassword">{{ showPassword ? 'Hide' : 'Show' }}</button>
+            <button type="button" class="nara-auth-show" :aria-label="showPassword ? t('common.hidePassword') : t('common.showPassword')" @click="showPassword = !showPassword">{{ showPassword ? t('common.hide') : t('common.show') }}</button>
           </span>
           <span v-if="fieldErrors.password" id="password-error" class="nara-auth-error">{{ fieldErrors.password[0] }}</span>
         </label>
 
         <label class="nara-auth-field" for="password-confirmation">
-          Confirm password
+          {{ t('register.confirmPassword') }}
           <span class="nara-auth-password-wrap">
             <input
               id="password-confirmation"
@@ -163,7 +165,7 @@ async function submitRegistration(): Promise<void> {
               :aria-describedby="fieldErrors.password_confirmation ? 'password-confirmation-error' : undefined"
               class="nara-auth-input nara-auth-input-password"
             />
-            <button type="button" class="nara-auth-show" :aria-label="showConfirmation ? 'Hide confirmation' : 'Show confirmation'" @click="showConfirmation = !showConfirmation">{{ showConfirmation ? 'Hide' : 'Show' }}</button>
+            <button type="button" class="nara-auth-show" :aria-label="showConfirmation ? t('common.hideConfirmation') : t('common.showConfirmation')" @click="showConfirmation = !showConfirmation">{{ showConfirmation ? t('common.hide') : t('common.show') }}</button>
           </span>
           <span v-if="fieldErrors.password_confirmation" id="password-confirmation-error" class="nara-auth-error">{{ fieldErrors.password_confirmation[0] }}</span>
         </label>
@@ -177,13 +179,13 @@ async function submitRegistration(): Promise<void> {
           :disabled="isSubmitting"
           class="nara-auth-submit"
         >
-          {{ isSubmitting ? 'Creating account…' : 'Create account' }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
+          {{ isSubmitting ? t('register.submitting') : t('register.submit') }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
         </button>
       </form>
 
       <p class="nara-auth-alt">
-        Already have an account?
-        <RouterLink :to="{ name: 'login', query: route.query.redirect ? { redirect: route.query.redirect } : {} }">Sign in <span aria-hidden="true">↗</span></RouterLink>
+        {{ t('register.haveAccount') }}
+        <RouterLink :to="{ name: 'login', query: route.query.redirect ? { redirect: route.query.redirect } : {} }">{{ t('register.signIn') }} <span aria-hidden="true">↗</span></RouterLink>
       </p>
   </AuthPageFrame>
 </template>

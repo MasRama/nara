@@ -2,7 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
+import { formatDate } from '../../shared/i18n';
 import SiteHeader from '../layouts/SiteHeader.vue';
+import { t } from '../locales';
 
 type Tone = 'cm' | 'str' | 'kw' | 'ty' | 'num' | 'fn';
 type StageId = 'compose' | 'own' | 'understand' | 'evolve' | 'protect';
@@ -49,8 +51,8 @@ const reviewTimers: ReturnType<typeof setTimeout>[] = [];
 const authSession = useAuthSession();
 const authLink = computed(() =>
   authSession.isAuthenticated.value
-    ? { label: 'Dashboard', to: '/dashboard' }
-    : { label: 'Sign in', to: '/login' },
+    ? { label: t('home.nav.dashboard'), to: '/dashboard' }
+    : { label: t('home.nav.signIn'), to: '/login' },
 );
 
 const tokenPattern = /(\/\/.*)|('[^']*')|\b(import|from|export|default|const|function|return|type|new|async|await|if|void|undefined)\b|\b([A-Z]\w*)\b|\b(\d+)\b|([a-z_$][\w$]*)(?=\()/g;
@@ -90,57 +92,57 @@ const heroCodeLines: CodeLine[] = [
 
 const heroCode = computed(() => heroCodeLines.filter((row) => row.mark !== (reviewPhase.value === 'detect' ? 'add' : 'del')));
 
-const proofs = [
-  { title: 'Deterministic', copy: 'Same source. Same answer. No model required.' },
-  { title: 'Scriptable', copy: 'JSON output for CI, scripts, and agents.' },
-  { title: 'Fail-closed', copy: 'Changes land completely, or not at all.' },
-  { title: 'Unwrapped', copy: 'Hono, Vue, and SQLite remain themselves.' },
-] as const;
+const proofs = computed(() => [
+  { title: t('home.proofs.deterministic.title'), copy: t('home.proofs.deterministic.copy') },
+  { title: t('home.proofs.scriptable.title'), copy: t('home.proofs.scriptable.copy') },
+  { title: t('home.proofs.failClosed.title'), copy: t('home.proofs.failClosed.copy') },
+  { title: t('home.proofs.unwrapped.title'), copy: t('home.proofs.unwrapped.copy') },
+]);
 
-const stages: Stage[] = [
+const stages = computed<Stage[]>(() => [
   {
     id: 'compose',
-    name: 'Compose',
-    hint: 'Give it a home',
-    title: 'A place for every idea.',
-    copy: 'Start with a feature, not another folder of unrelated layers. Nara gives the capability a clear home in your repository.',
-    outcome: 'A feature you can open and grow.',
+    name: t('home.workflow.compose.name'),
+    hint: t('home.workflow.compose.hint'),
+    title: t('home.workflow.compose.title'),
+    copy: t('home.workflow.compose.copy'),
+    outcome: t('home.workflow.compose.outcome'),
   },
   {
     id: 'own',
-    name: 'Own',
-    hint: 'Stay in control',
-    title: 'The wiring belongs to you.',
-    copy: 'Connect features through application-owned bindings. No invisible container decides how your application works.',
-    outcome: 'Your integrations, your decisions.',
+    name: t('home.workflow.own.name'),
+    hint: t('home.workflow.own.hint'),
+    title: t('home.workflow.own.title'),
+    copy: t('home.workflow.own.copy'),
+    outcome: t('home.workflow.own.outcome'),
   },
   {
     id: 'understand',
-    name: 'Understand',
-    hint: 'See what connects',
-    title: 'Know before you change.',
-    copy: 'Follow feature boundaries and real dependencies straight from source. See what a change might touch before you make it.',
-    outcome: 'No guessing where things lead.',
+    name: t('home.workflow.understand.name'),
+    hint: t('home.workflow.understand.hint'),
+    title: t('home.workflow.understand.title'),
+    copy: t('home.workflow.understand.copy'),
+    outcome: t('home.workflow.understand.outcome'),
   },
   {
     id: 'evolve',
-    name: 'Evolve',
-    hint: 'Keep your changes',
-    title: 'Move forward, without starting over.',
-    copy: 'Bring in upstream improvements while keeping the edits you own. A dry run makes the outcome visible before anything is applied.',
-    outcome: 'Your changes stay in the picture.',
+    name: t('home.workflow.evolve.name'),
+    hint: t('home.workflow.evolve.hint'),
+    title: t('home.workflow.evolve.title'),
+    copy: t('home.workflow.evolve.copy'),
+    outcome: t('home.workflow.evolve.outcome'),
   },
   {
     id: 'protect',
-    name: 'Protect',
-    hint: 'Guard the shape',
-    title: 'Keep good boundaries intact.',
-    copy: 'Check the architecture as it grows. Guard catches new violations without making old technical debt everyone’s problem.',
-    outcome: 'New problems stop before they land.',
+    name: t('home.workflow.protect.name'),
+    hint: t('home.workflow.protect.hint'),
+    title: t('home.workflow.protect.title'),
+    copy: t('home.workflow.protect.copy'),
+    outcome: t('home.workflow.protect.outcome'),
   },
-];
+]);
 
-const activeStage = computed(() => stages.find((stage) => stage.id === activeStageId.value) ?? stages[0]);
+const activeStage = computed(() => stages.value.find((stage) => stage.id === activeStageId.value) ?? stages.value[0]);
 
 const permissions = ['users.view', 'users.create', 'users.edit', 'users.delete', 'roles.view', 'roles.edit', 'activity.view'] as const;
 
@@ -151,89 +153,93 @@ const migrations = [
   { file: '202610050001_create_activity_events.sql', owner: 'activity' },
 ] as const;
 
-const endpoints = [
+const endpoints = computed(() => [
   { path: '/', detail: 'Vue SPA' },
   { path: '/api/*', detail: 'Hono API' },
-  { path: '/health', detail: 'Liveness' },
-  { path: '/ready', detail: 'Schema-aware' },
-] as const;
+  { path: '/health', detail: t('home.inside.runtime.liveness') },
+  { path: '/ready', detail: t('home.inside.runtime.schemaAware') },
+]);
 
 const officialFeatures = ['health', 'audit', 'users'] as const;
 
-const foundationLanes = [
+const foundationLanes = computed(() => [
   {
-    label: 'runtime',
+    label: t('home.inside.lane.runtime.label'),
     title: 'Node · Hono · Vue',
-    chips: ['request id', 'secure headers', 'rate limit', 'structured logs'],
-    status: '200 · one process',
-    caption: 'A request crosses the minimum surface.',
+    chips: [t('home.inside.chip.requestId'), t('home.inside.chip.secureHeaders'), t('home.inside.chip.rateLimit'), t('home.inside.chip.structuredLogs')],
+    status: t('home.inside.lane.runtime.status'),
+    caption: t('home.inside.lane.runtime.caption'),
   },
   {
-    label: 'server gate',
-    title: 'session → permission',
-    chips: ['session', 'csrf', 'throttle', 'users.view'],
-    status: 'users.view · allowed',
-    caption: 'Identity stays a server-side decision.',
+    label: t('home.inside.lane.gate.label'),
+    title: t('home.inside.lane.gate.title'),
+    chips: [t('home.inside.chip.session'), 'csrf', t('home.inside.chip.throttle'), 'users.view'],
+    status: t('home.inside.lane.gate.status'),
+    caption: t('home.inside.lane.gate.caption'),
   },
   {
-    label: 'owned data',
+    label: t('home.inside.lane.data.label'),
     title: 'users → SQLite',
-    chips: ['server/migrations/', 'WAL', 'checksums', 'backups'],
-    status: 'owner · users',
-    caption: 'Data remains attached to its owner.',
+    chips: ['server/migrations/', 'WAL', t('home.inside.chip.checksums'), t('home.inside.chip.backups')],
+    status: t('home.inside.lane.data.status'),
+    caption: t('home.inside.lane.data.caption'),
   },
   {
-    label: 'product surface',
+    label: t('home.inside.lane.product.label'),
     title: 'src/features/*',
-    chips: ['users', 'activity', 'assets', '+ your feature'],
+    chips: ['users', 'activity', 'assets', t('home.inside.chip.yourFeature')],
     status: 'nara add audit',
-    caption: 'The product grows by adding visible source.',
+    caption: t('home.inside.lane.product.caption'),
   },
-] as const;
+]);
 
-const activeLane = computed(() => foundationLanes[activeFoundationStep.value]);
+const activeLane = computed(() => foundationLanes.value[activeFoundationStep.value]);
 
-const stack = [
-  { name: 'TypeScript', role: 'App and CLI', logos: ['typescript'] },
-  { name: 'Node.js 22+', role: 'Runtime', logos: ['nodedotjs'] },
-  { name: 'Hono', role: 'HTTP, no wrapper', logos: ['hono'] },
-  { name: 'Vue 3 + Vite', role: 'Browser app', logos: ['vuedotjs', 'vite'] },
-  { name: 'SQLite', role: 'Raw SQL', logos: ['sqlite'] },
-  { name: 'Zod', role: 'Feature schemas', logos: ['zodfull'] },
-  { name: 'Vitest', role: 'Tests', logos: ['vitest'] },
-  { name: 'Tailwind CSS', role: 'Styling', logos: ['tailwindcss'] },
-] as const;
+const stack = computed(() => [
+  { name: 'TypeScript', role: t('home.ecosystem.role.appCli'), logos: ['typescript'] },
+  { name: 'Node.js 22+', role: t('home.ecosystem.role.runtime'), logos: ['nodedotjs'] },
+  { name: 'Hono', role: t('home.ecosystem.role.http'), logos: ['hono'] },
+  { name: 'Vue 3 + Vite', role: t('home.ecosystem.role.browser'), logos: ['vuedotjs', 'vite'] },
+  { name: 'SQLite', role: t('home.ecosystem.role.sql'), logos: ['sqlite'] },
+  { name: 'Zod', role: t('home.ecosystem.role.schemas'), logos: ['zodfull'] },
+  { name: 'Vitest', role: t('home.ecosystem.role.tests'), logos: ['vitest'] },
+  { name: 'Tailwind CSS', role: t('home.ecosystem.role.styling'), logos: ['tailwindcss'] },
+]);
 
-const principles = [
+const principles = computed(() => [
   {
-    label: 'Ownership',
-    title: 'Own the source.',
-    copy: 'Installed features land as ordinary files in your repository. Wiring lives in bindings you can read, edit, and delete.',
+    label: t('home.principles.ownership.label'),
+    title: t('home.principles.ownership.title'),
+    copy: t('home.principles.ownership.copy'),
     uses: ['src/features/*', 'src/app/bindings/'],
-    rejects: ['Plugin registry'],
+    rejects: [t('home.principles.ownership.pluginRegistry')],
   },
   {
-    label: 'Ecosystem',
-    title: 'Use the ecosystem directly.',
-    copy: 'Hono serves HTTP, Vue renders the browser, Node runs both. Their documentation stays your documentation.',
+    label: t('home.principles.ecosystem.label'),
+    title: t('home.principles.ecosystem.title'),
+    copy: t('home.principles.ecosystem.copy'),
     uses: ['hono', 'vue', 'node'],
-    rejects: ['Custom runtime', 'HTTP framework'],
+    rejects: [t('home.principles.ecosystem.customRuntime'), t('home.principles.ecosystem.httpFramework')],
   },
   {
-    label: 'Clarity',
-    title: 'Stay explicit.',
-    copy: 'Raw SQL in prepared statements, Zod at the route boundary, typed host contracts between features.',
+    label: t('home.principles.clarity.label'),
+    title: t('home.principles.clarity.title'),
+    copy: t('home.principles.clarity.copy'),
     uses: ['better-sqlite3', 'zod', 'index.ts'],
-    rejects: ['ORM', 'DI container', 'RPC system'],
+    rejects: ['ORM', t('home.principles.clarity.diContainer'), t('home.principles.clarity.rpcSystem')],
   },
   {
-    label: 'Verification',
-    title: 'Derive, don’t guess.',
-    copy: 'Architecture facts are parsed from source — the same answer for you, your CI, and your coding agents.',
+    label: t('home.principles.verification.label'),
+    title: t('home.principles.verification.title'),
+    copy: t('home.principles.verification.copy'),
     uses: ['nara doctor', '--json'],
-    rejects: ['AI wrapper'],
+    rejects: [t('home.principles.verification.aiWrapper')],
   },
-] as const;
+]);
+
+// Dates on the illustrative invoice, formatted for the current locale.
+const receiptMonth = new Date(2026, 8, 1);
+const receiptPaidOn = new Date(2026, 8, 24);
 
 const featureIdeas = ['billing', 'bookings', 'invoices', 'inventory'] as const;
 const ideaIndex = ref(0);
@@ -305,11 +311,11 @@ function setupHeroReview(): void {
 }
 
 function moveStage(event: KeyboardEvent, index: number): void {
-  const targets: Record<string, number> = { ArrowDown: index + 1, ArrowUp: index - 1, ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: stages.length - 1 };
+  const targets: Record<string, number> = { ArrowDown: index + 1, ArrowUp: index - 1, ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: stages.value.length - 1 };
   const target = targets[event.key];
   if (target === undefined) return;
   event.preventDefault();
-  const stage = stages[(target + stages.length) % stages.length];
+  const stage = stages.value[(target + stages.value.length) % stages.value.length];
   activeStageId.value = stage.id;
   document.getElementById(`stage-tab-${stage.id}`)?.focus();
 }
@@ -346,15 +352,15 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="landing-page min-h-[100dvh] antialiased" :class="{ 'landing-page--motion': motionReady }">
-    <SiteHeader variant="landing" nav-label="Primary navigation">
+    <SiteHeader variant="landing" :nav-label="t('home.nav.label')">
       <template #nav>
-        <a href="#why" class="site-header-link">Why Nara</a>
-        <a href="#workflow" class="site-header-link">Workflow</a>
-        <a href="#inside" class="site-header-link">Inside</a>
-        <a :href="docsUrl" target="_blank" rel="noreferrer" class="site-header-link">Docs</a>
+        <a href="#why" class="site-header-link">{{ t('home.nav.why') }}</a>
+        <a href="#workflow" class="site-header-link">{{ t('home.nav.workflow') }}</a>
+        <a href="#inside" class="site-header-link">{{ t('home.nav.inside') }}</a>
+        <a :href="docsUrl" target="_blank" rel="noreferrer" class="site-header-link">{{ t('home.nav.docs') }}</a>
       </template>
       <template #actions-start>
-        <a :href="repositoryUrl" target="_blank" rel="noreferrer" class="site-header-icon" aria-label="View source on GitHub">
+        <a :href="repositoryUrl" target="_blank" rel="noreferrer" class="site-header-icon" :aria-label="t('home.nav.source')">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.86c-2.78.6-3.37-1.18-3.37-1.18-.45-1.15-1.11-1.46-1.11-1.46-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.64-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.03a9.6 9.6 0 0 1 5 0c1.91-1.3 2.75-1.03 2.75-1.03.55 1.38.2 2.4.1 2.65.64.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" /></svg>
         </a>
       </template>
@@ -367,69 +373,69 @@ onBeforeUnmount(() => {
       <section class="hero" aria-labelledby="hero-title">
         <div class="lp-container">
           <div class="hero-copy">
-            <h1 id="hero-title" class="hero-title landing-display">Build by feature.<br /><span class="hero-title-accent">Prove every boundary.</span></h1>
-            <p class="hero-description">Nara is an architecture-aware TypeScript application kit. Each capability lives in one feature folder, and a deterministic CLI checks its boundaries on every change — for you, your CI, and your coding agents.</p>
+            <h1 id="hero-title" class="hero-title landing-display">{{ t('home.hero.title') }}<br /><span class="hero-title-accent">{{ t('home.hero.titleAccent') }}</span></h1>
+            <p class="hero-description">{{ t('home.hero.description') }}</p>
             <div class="hero-actions">
-              <button type="button" class="hero-command" aria-label="Copy clone command" @click="copyCommand">
+              <button type="button" class="hero-command" :aria-label="t('home.hero.copyLabel')" @click="copyCommand">
                 <span class="hero-command-prompt" aria-hidden="true">$</span>
                 <span class="hero-command-text">{{ cloneCommand }}</span>
-                <span class="hero-command-copy">{{ copied ? 'Copied' : 'Copy' }}</span>
+                <span class="hero-command-copy">{{ copied ? t('home.hero.copied') : t('home.hero.copy') }}</span>
               </button>
-              <a :href="docsUrl" target="_blank" rel="noreferrer" class="hero-docs">Read the docs <span aria-hidden="true">↗</span></a>
+              <a :href="docsUrl" target="_blank" rel="noreferrer" class="hero-docs">{{ t('home.hero.docs') }} <span aria-hidden="true">↗</span></a>
             </div>
-            <ul class="hero-stack" aria-label="Built with">
+            <ul class="hero-stack" :aria-label="t('home.hero.stackLabel')">
               <li v-for="item in heroStack" :key="item">{{ item }}</li>
             </ul>
           </div>
 
-          <figure class="window hero-window" aria-label="Interactive demonstration of nara doctor detecting and verifying a cross-feature import correction">
+          <figure class="window hero-window" :aria-label="t('home.review.label')">
             <div class="window-bar">
               <span class="window-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <span class="window-title">acme / billing</span>
-              <span class="hero-review-top-label">ARCHITECTURE / REVIEW</span>
+              <span class="window-title" translate="no">acme / billing</span>
+              <span class="hero-review-top-label">{{ t('home.review.top') }}</span>
             </div>
             <div class="hero-review-main">
               <div class="hero-review-editor">
-                <div class="pane-head"><span>src/features/billing/server/routes.ts</span><span :class="reviewPhase === 'detect' ? 'hero-review-file--issue' : 'hero-review-file--clear'">{{ reviewPhase === 'detect' ? '1 issue' : reviewPhase === 'fix' ? 'Modified' : 'Verified' }}</span></div>
-                <div class="code hero-review-code" aria-label="TypeScript import before and after correcting a feature boundary">
+                <div class="pane-head"><span translate="no">src/features/billing/server/routes.ts</span><span :class="reviewPhase === 'detect' ? 'hero-review-file--issue' : 'hero-review-file--clear'">{{ reviewPhase === 'detect' ? t('home.review.fileIssue') : reviewPhase === 'fix' ? t('home.review.fileModified') : t('home.review.fileVerified') }}</span></div>
+                <div class="code hero-review-code" :aria-label="t('home.review.codeLabel')">
                   <p v-for="(row, index) in heroCode" :key="`${row.number}-${row.mark ?? index}`" class="code-line" :class="row.mark && `code-line--${row.mark}`"><span class="code-number" aria-hidden="true">{{ row.number }}</span><span class="code-mark" aria-hidden="true">{{ row.mark === 'add' ? '+' : row.mark === 'del' ? '−' : '' }}</span><code><span v-for="(token, part) in row.tokens" :key="part" :class="token.tone && `tk-${token.tone}`">{{ token.text }}</span></code></p>
                 </div>
-                <div class="hero-review-editor-caption"><span>FEATURE / BILLING</span><span>IMPORT BOUNDARY ↗</span></div>
+                <div class="hero-review-editor-caption"><span>{{ t('home.review.caption') }}</span><span>{{ t('home.review.captionBoundary') }}</span></div>
               </div>
               <div class="hero-review-diagnostic" :class="`hero-review-diagnostic--${reviewPhase}`">
-                <div class="hero-review-diagnostic-head"><span>NARA / DOCTOR</span><span>{{ reviewPhase === 'detect' ? '01 / 03' : reviewPhase === 'fix' ? '02 / 03' : '03 / 03' }}</span></div>
+                <div class="hero-review-diagnostic-head"><span translate="no">NARA / DOCTOR</span><span>{{ reviewPhase === 'detect' ? '01 / 03' : reviewPhase === 'fix' ? '02 / 03' : '03 / 03' }}</span></div>
                 <Transition name="hero-diagnostic" mode="out-in">
                   <div :key="reviewPhase" class="hero-review-diagnostic-body" role="status">
                     <span class="hero-review-symbol" aria-hidden="true">{{ reviewPhase === 'pass' ? '✓' : reviewPhase === 'fix' ? '↗' : '!' }}</span>
-                    <p class="hero-review-state">{{ reviewPhase === 'detect' ? 'BOUNDARY VIOLATION' : reviewPhase === 'fix' ? 'THE CORRECTION' : 'CHECK COMPLETE' }}</p>
-                    <h3 class="hero-review-heading landing-display">{{ reviewPhase === 'detect' ? 'A feature crossed the line.' : reviewPhase === 'fix' ? 'Use the public boundary.' : 'Boundary restored.' }}</h3>
-                    <p class="hero-review-explanation">{{ reviewPhase === 'detect' ? 'Billing reaches into the private internals of Users instead of its public interface.' : reviewPhase === 'fix' ? 'The import now points to the public index. The feature stays independent of another feature’s internals.' : 'Nara checked the corrected import. The architecture is healthy again.' }}</p>
+                    <p class="hero-review-state">{{ reviewPhase === 'detect' ? t('home.review.detect.state') : reviewPhase === 'fix' ? t('home.review.fix.state') : t('home.review.pass.state') }}</p>
+                    <h3 class="hero-review-heading landing-display">{{ reviewPhase === 'detect' ? t('home.review.detect.heading') : reviewPhase === 'fix' ? t('home.review.fix.heading') : t('home.review.pass.heading') }}</h3>
+                    <p class="hero-review-explanation">{{ reviewPhase === 'detect' ? t('home.review.detect.explanation') : reviewPhase === 'fix' ? t('home.review.fix.explanation') : t('home.review.pass.explanation') }}</p>
                     <div class="hero-review-evidence">
-                      <span>{{ reviewPhase === 'detect' ? 'CROSS_FEATURE_INTERNAL_IMPORT' : reviewPhase === 'fix' ? 'PUBLIC FEATURE API' : 'NARA DOCTOR' }}</span>
-                      <strong>{{ reviewPhase === 'detect' ? '1 issue found' : reviewPhase === 'fix' ? '@/features/users' : 'Architecture looks healthy.' }}</strong>
+                      <span>{{ reviewPhase === 'detect' ? 'CROSS_FEATURE_INTERNAL_IMPORT' : reviewPhase === 'fix' ? t('home.review.fix.evidence') : 'NARA DOCTOR' }}</span>
+                      <strong>{{ reviewPhase === 'detect' ? t('home.review.detect.result') : reviewPhase === 'fix' ? '@/features/users' : t('home.review.pass.result') }}</strong>
                     </div>
                   </div>
                 </Transition>
-                <div class="hero-review-diagnostic-foot"><span class="hero-review-diagnostic-dot" aria-hidden="true"></span>{{ reviewPhase === 'detect' ? 'Action required' : reviewPhase === 'fix' ? 'Ready to verify' : 'Verified from source' }}</div>
+                <div class="hero-review-diagnostic-foot"><span class="hero-review-diagnostic-dot" aria-hidden="true"></span>{{ reviewPhase === 'detect' ? t('home.review.detect.foot') : reviewPhase === 'fix' ? t('home.review.fix.foot') : t('home.review.pass.foot') }}</div>
               </div>
             </div>
             <div class="hero-review-footer">
-              <span class="hero-review-footer-label">SEE WHAT CHANGES</span>
-              <div class="hero-review-steps" role="group" aria-label="Explore architecture diagnosis">
-                <button type="button" :aria-pressed="reviewPhase === 'detect'" :class="{ 'is-active': reviewPhase === 'detect' }" @click="selectReviewPhase('detect')"><span>01</span> Detect</button>
-                <button type="button" :aria-pressed="reviewPhase === 'fix'" :class="{ 'is-active': reviewPhase === 'fix' }" @click="selectReviewPhase('fix')"><span>02</span> Fix</button>
-                <button type="button" :aria-pressed="reviewPhase === 'pass'" :class="{ 'is-active': reviewPhase === 'pass' }" @click="selectReviewPhase('pass')"><span>03</span> Verify</button>
+              <span class="hero-review-footer-label">{{ t('home.review.footerLabel') }}</span>
+              <div class="hero-review-steps" role="group" :aria-label="t('home.review.stepsLabel')">
+                <button type="button" :aria-pressed="reviewPhase === 'detect'" :class="{ 'is-active': reviewPhase === 'detect' }" @click="selectReviewPhase('detect')"><span>01</span> {{ t('home.review.step.detect') }}</button>
+                <button type="button" :aria-pressed="reviewPhase === 'fix'" :class="{ 'is-active': reviewPhase === 'fix' }" @click="selectReviewPhase('fix')"><span>02</span> {{ t('home.review.step.fix') }}</button>
+                <button type="button" :aria-pressed="reviewPhase === 'pass'" :class="{ 'is-active': reviewPhase === 'pass' }" @click="selectReviewPhase('pass')"><span>03</span> {{ t('home.review.step.verify') }}</button>
               </div>
-              <span class="hero-review-footer-note">Your code. Nara checks.</span>
+              <span class="hero-review-footer-note">{{ t('home.review.note') }}</span>
             </div>
           </figure>
         </div>
       </section>
 
-      <section class="proof-strip" aria-label="What Nara guarantees">
+      <section class="proof-strip" :aria-label="t('home.proofs.label')">
         <div class="lp-container proof-grid" data-reveal-group>
           <div v-for="(proof, index) in proofs" :key="proof.title" class="proof-item" data-reveal>
-            <span class="proof-number">0{{ index + 1 }} / NARA</span>
+            <span class="proof-number" translate="no">0{{ index + 1 }} / NARA</span>
             <p class="proof-title landing-display">{{ proof.title }}</p>
             <p class="proof-copy">{{ proof.copy }}</p>
           </div>
@@ -440,87 +446,87 @@ onBeforeUnmount(() => {
         <div class="lp-container">
           <div class="section-head" data-reveal>
             <div>
-              <p class="eyebrow"><span>01</span>Feature model</p>
-              <h2 id="why-title" class="section-title landing-display">One feature.<br /><span class="section-title-accent">Everything it needs.</span></h2>
+              <p class="eyebrow"><span>01</span>{{ t('home.why.eyebrow') }}</p>
+              <h2 id="why-title" class="section-title landing-display">{{ t('home.why.title') }}<br /><span class="section-title-accent">{{ t('home.why.titleAccent') }}</span></h2>
             </div>
-            <p class="section-description">The experience is one thing. The code behind it should be, too. Nara keeps each part of a capability together, with clear ways to connect to the rest of your app.</p>
+            <p class="section-description">{{ t('home.why.description') }}</p>
           </div>
 
           <div class="feature-story" data-reveal>
             <div class="feature-story-topline">
-              <span>FEATURE / 001</span>
-              <span>AN EXAMPLE, NOT A BUNDLED MODULE</span>
+              <span>{{ t('home.why.storyIndex') }}</span>
+              <span>{{ t('home.why.storyNote') }}</span>
             </div>
 
             <div class="feature-story-body">
               <div class="feature-showcase">
                 <div class="feature-showcase-top">
-                  <span>WHAT SOMEONE USES</span>
+                  <span>{{ t('home.why.showcaseTop') }}</span>
                   <span class="feature-showcase-mark" aria-hidden="true">↗</span>
                 </div>
 
-                <div class="feature-receipt" aria-label="Illustrative billing interface showing a paid invoice">
-                  <div class="feature-receipt-head">
+                <div class="feature-receipt" :aria-label="t('home.why.receipt.label')">
+                  <div class="feature-receipt-head" translate="no">
                     <span class="feature-receipt-symbol" aria-hidden="true">a.</span>
                     <span class="feature-receipt-brand">acme <small>studio</small></span>
                     <span class="feature-receipt-number">#INV-024</span>
                   </div>
                   <div class="feature-receipt-details">
-                    <p class="feature-receipt-label">Invoice for</p>
-                    <h3 class="landing-display">Studio membership</h3>
-                    <p class="feature-receipt-subtitle">September 2026 · Monthly plan</p>
+                    <p class="feature-receipt-label">{{ t('home.why.receipt.for') }}</p>
+                    <h3 class="landing-display">{{ t('home.why.receipt.title') }}</h3>
+                    <p class="feature-receipt-subtitle">{{ formatDate(receiptMonth, { month: 'long', year: 'numeric' }) }} · {{ t('home.why.receipt.plan') }}</p>
                     <div class="feature-receipt-amount">
-                      <span>Total</span>
+                      <span>{{ t('home.why.receipt.total') }}</span>
                       <strong class="landing-display">$240<span>.00</span></strong>
                     </div>
-                    <div class="feature-receipt-item"><span>Membership</span><strong>$240.00</strong></div>
-                    <div class="feature-receipt-item"><span>Amount remaining</span><strong>$0.00</strong></div>
+                    <div class="feature-receipt-item"><span>{{ t('home.why.receipt.membership') }}</span><strong>$240.00</strong></div>
+                    <div class="feature-receipt-item"><span>{{ t('home.why.receipt.remaining') }}</span><strong>$0.00</strong></div>
                   </div>
-                  <div class="feature-receipt-paid"><span class="feature-receipt-paid-dot" aria-hidden="true"></span><strong>Paid in full</strong><span>Sep 24, 2026</span></div>
+                  <div class="feature-receipt-paid"><span class="feature-receipt-paid-dot" aria-hidden="true"></span><strong>{{ t('home.why.receipt.paid') }}</strong><span>{{ formatDate(receiptPaidOn, { dateStyle: 'medium' }) }}</span></div>
                 </div>
 
                 <div class="feature-showcase-bottom">
-                  <span class="feature-showcase-thread" aria-hidden="true"><span></span> ONE FEATURE, TWO SIDES</span>
-                  <p>A complete experience on the outside.<br /><strong>A complete feature on the inside.</strong></p>
+                  <span class="feature-showcase-thread" aria-hidden="true"><span></span> {{ t('home.why.showcaseThread') }}</span>
+                  <p>{{ t('home.why.showcaseOutside') }}<br /><strong>{{ t('home.why.showcaseInside') }}</strong></p>
                 </div>
               </div>
 
               <div class="feature-anatomy">
                 <div class="feature-anatomy-heading">
-                  <span>WHAT MAKES IT WORK</span>
-                  <h3 class="landing-display">The pieces belong <span class="feature-heading-accent">together.</span></h3>
-                  <p class="feature-anatomy-lead">The invoice on the left is the result. These are the pieces behind it.</p>
+                  <span>{{ t('home.why.anatomy.top') }}</span>
+                  <h3 class="landing-display">{{ t('home.why.anatomy.titleStart') }} <span class="feature-heading-accent">{{ t('home.why.anatomy.titleAccent') }}</span></h3>
+                  <p class="feature-anatomy-lead">{{ t('home.why.anatomy.lead') }}</p>
                 </div>
                 <ol class="feature-anatomy-list">
                   <li>
                     <span class="feature-anatomy-index">01</span>
-                    <div><h4 class="landing-display">Contract</h4><p>The shared rules and shapes everyone can count on.</p></div>
-                    <span class="feature-anatomy-side">promise</span>
+                    <div><h4 class="landing-display">{{ t('home.why.anatomy.contract.title') }}</h4><p>{{ t('home.why.anatomy.contract.copy') }}</p></div>
+                    <span class="feature-anatomy-side">{{ t('home.why.anatomy.contract.side') }}</span>
                   </li>
                   <li>
                     <span class="feature-anatomy-index">02</span>
-                    <div><h4 class="landing-display">Server</h4><p>The logic and data that make the feature work.</p></div>
-                    <span class="feature-anatomy-side">behavior</span>
+                    <div><h4 class="landing-display">{{ t('home.why.anatomy.server.title') }}</h4><p>{{ t('home.why.anatomy.server.copy') }}</p></div>
+                    <span class="feature-anatomy-side">{{ t('home.why.anatomy.server.side') }}</span>
                   </li>
                   <li>
                     <span class="feature-anatomy-index">03</span>
-                    <div><h4 class="landing-display">Web <span>(when needed)</span></h4><p>The screens people see and interact with.</p></div>
-                    <span class="feature-anatomy-side">experience</span>
+                    <div><h4 class="landing-display">{{ t('home.why.anatomy.web.title') }} <span>{{ t('home.why.anatomy.web.when') }}</span></h4><p>{{ t('home.why.anatomy.web.copy') }}</p></div>
+                    <span class="feature-anatomy-side">{{ t('home.why.anatomy.web.side') }}</span>
                   </li>
                   <li>
                     <span class="feature-anatomy-index">04</span>
-                    <div><h4 class="landing-display">Tests</h4><p>The checks that keep changes from breaking it.</p></div>
-                    <span class="feature-anatomy-side">confidence</span>
+                    <div><h4 class="landing-display">{{ t('home.why.anatomy.tests.title') }}</h4><p>{{ t('home.why.anatomy.tests.copy') }}</p></div>
+                    <span class="feature-anatomy-side">{{ t('home.why.anatomy.tests.side') }}</span>
                   </li>
                 </ol>
-                <div class="feature-anatomy-home"><span>ONE HOME FOR ALL OF IT</span><code>src/features/billing/</code></div>
+                <div class="feature-anatomy-home"><span>{{ t('home.why.anatomy.home') }}</span><code>src/features/billing/</code></div>
               </div>
             </div>
 
             <div class="feature-story-bottom">
-              <p class="feature-story-bottom-lead landing-display">Connected, without getting tangled.</p>
-              <div class="feature-access"><span class="feature-access-arrow" aria-hidden="true">↗</span><div><strong>Public boundary</strong><span>What other features can use</span><code>index.ts</code></div></div>
-              <div class="feature-access"><span class="feature-access-arrow" aria-hidden="true">↗</span><div><strong>Web boundary</strong><span>What the app can display</span><code>web/index.ts</code></div></div>
+              <p class="feature-story-bottom-lead landing-display">{{ t('home.why.bottom.lead') }}</p>
+              <div class="feature-access"><span class="feature-access-arrow" aria-hidden="true">↗</span><div><strong>{{ t('home.why.bottom.public') }}</strong><span>{{ t('home.why.bottom.publicHint') }}</span><code>index.ts</code></div></div>
+              <div class="feature-access"><span class="feature-access-arrow" aria-hidden="true">↗</span><div><strong>{{ t('home.why.bottom.web') }}</strong><span>{{ t('home.why.bottom.webHint') }}</span><code>web/index.ts</code></div></div>
             </div>
           </div>
         </div>
@@ -530,16 +536,16 @@ onBeforeUnmount(() => {
         <div class="lp-container">
           <div class="section-head" data-reveal>
             <div>
-              <p class="eyebrow"><span>02</span>Workflow</p>
-              <h2 id="workflow-title" class="section-title landing-display">Useful long after<br /><span class="section-title-accent">the first commit.</span></h2>
+              <p class="eyebrow"><span>02</span>{{ t('home.workflow.eyebrow') }}</p>
+              <h2 id="workflow-title" class="section-title landing-display">{{ t('home.workflow.title') }}<br /><span class="section-title-accent">{{ t('home.workflow.titleAccent') }}</span></h2>
             </div>
-            <p class="section-description">One project, five moments. From a new idea to the next change, see how Nara helps without taking over your codebase.</p>
+            <p class="section-description">{{ t('home.workflow.description') }}</p>
           </div>
 
           <div class="workflow-experience" data-reveal>
             <div class="workflow-navigation">
-              <div class="workflow-navigation-meta"><span>THE PROJECT LIFECYCLE</span><span>01 — 05</span></div>
-              <div class="workflow-stages" role="tablist" aria-label="Nara workflow" aria-orientation="vertical">
+              <div class="workflow-navigation-meta"><span>{{ t('home.workflow.meta') }}</span><span>01 — 05</span></div>
+              <div class="workflow-stages" role="tablist" :aria-label="t('home.workflow.tabsLabel')" aria-orientation="vertical">
                 <button
                   v-for="(stage, index) in stages"
                   :id="`stage-tab-${stage.id}`"
@@ -559,77 +565,77 @@ onBeforeUnmount(() => {
                   <span class="stage-tab-arrow" aria-hidden="true">↗</span>
                 </button>
               </div>
-              <p class="workflow-navigation-note">Choose a moment to explore how the same project moves forward.</p>
+              <p class="workflow-navigation-note">{{ t('home.workflow.note') }}</p>
             </div>
 
             <div id="stage-panel" :key="activeStage.id" class="workflow-stage-panel" role="tabpanel" :aria-labelledby="`stage-tab-${activeStage.id}`">
               <div class="workflow-stage-head">
-                <p class="workflow-stage-kicker"><span class="workflow-stage-dot" aria-hidden="true"></span>{{ activeStage.name }} / IN PRACTICE</p>
+                <p class="workflow-stage-kicker"><span class="workflow-stage-dot" aria-hidden="true"></span>{{ t('home.workflow.inPractice', { stage: activeStage.name }) }}</p>
                 <h3 class="stage-title landing-display">{{ activeStage.title }}</h3>
                 <p class="stage-copy">{{ activeStage.copy }}</p>
               </div>
 
               <div class="workflow-canvas" :class="`workflow-canvas--${activeStage.id}`">
-                <div class="workflow-canvas-top"><span>ACME / SOURCE OVERVIEW</span><span>ILLUSTRATIVE</span></div>
+                <div class="workflow-canvas-top"><span>{{ t('home.workflow.canvasTop') }}</span><span>{{ t('home.workflow.illustrative') }}</span></div>
 
                 <div v-if="activeStage.id === 'compose'" class="wf-compose">
                   <div class="wf-tree">
-                    <p class="wf-mini-label">PROJECT FILES</p>
-                    <div class="wf-tree-line"><span class="wf-folder" aria-hidden="true"></span><span>src</span></div>
-                    <div class="wf-tree-line wf-tree-line--nested"><span class="wf-folder" aria-hidden="true"></span><span>app</span></div>
-                    <div class="wf-tree-line wf-tree-line--nested wf-tree-line--dim"><span class="wf-folder" aria-hidden="true"></span><span>shared</span></div>
-                    <div class="wf-tree-line wf-tree-line--nested"><span class="wf-folder" aria-hidden="true"></span><span>features</span></div>
-                    <div class="wf-tree-line wf-tree-line--feature"><span class="wf-folder wf-folder--accent" aria-hidden="true"></span><strong>billing</strong><span class="wf-new-tag">NEW</span></div>
-                    <div class="wf-tree-line wf-tree-line--file"><span class="wf-file-symbol" aria-hidden="true"></span><span>contract.ts</span></div>
-                    <div class="wf-tree-line wf-tree-line--file"><span class="wf-file-symbol" aria-hidden="true"></span><span>index.ts</span></div>
+                    <p class="wf-mini-label">{{ t('home.workflow.composeScene.files') }}</p>
+                    <div class="wf-tree-line"><span class="wf-folder" aria-hidden="true"></span><span translate="no">src</span></div>
+                    <div class="wf-tree-line wf-tree-line--nested"><span class="wf-folder" aria-hidden="true"></span><span translate="no">app</span></div>
+                    <div class="wf-tree-line wf-tree-line--nested wf-tree-line--dim"><span class="wf-folder" aria-hidden="true"></span><span translate="no">shared</span></div>
+                    <div class="wf-tree-line wf-tree-line--nested"><span class="wf-folder" aria-hidden="true"></span><span translate="no">features</span></div>
+                    <div class="wf-tree-line wf-tree-line--feature"><span class="wf-folder wf-folder--accent" aria-hidden="true"></span><strong translate="no">billing</strong><span class="wf-new-tag">{{ t('home.workflow.composeScene.new') }}</span></div>
+                    <div class="wf-tree-line wf-tree-line--file"><span class="wf-file-symbol" aria-hidden="true"></span><span translate="no">contract.ts</span></div>
+                    <div class="wf-tree-line wf-tree-line--file"><span class="wf-file-symbol" aria-hidden="true"></span><span translate="no">index.ts</span></div>
                   </div>
                   <div class="wf-compose-side">
                     <span class="wf-status-mark" aria-hidden="true">↗</span>
-                    <p class="wf-mini-label">A NEW CAPABILITY</p>
-                    <strong class="landing-display">billing<span>.</span></strong>
-                    <p>Own files. Clear boundaries. Ready for the code that makes it yours.</p>
-                    <div class="wf-micro-result"><span class="wf-success-dot" aria-hidden="true"></span>Feature created</div>
+                    <p class="wf-mini-label">{{ t('home.workflow.composeScene.capability') }}</p>
+                    <strong class="landing-display" translate="no">billing<span>.</span></strong>
+                    <p>{{ t('home.workflow.composeScene.copy') }}</p>
+                    <div class="wf-micro-result"><span class="wf-success-dot" aria-hidden="true"></span>{{ t('home.workflow.composeScene.created') }}</div>
                   </div>
                 </div>
 
                 <div v-else-if="activeStage.id === 'own'" class="wf-own">
-                  <p class="wf-mini-label">EXPLICIT CONNECTIONS</p>
+                  <p class="wf-mini-label">{{ t('home.workflow.ownScene.label') }}</p>
                   <div class="wf-own-diagram">
-                    <div class="wf-own-node wf-own-node--feature"><span>FEATURE</span><strong class="landing-display">Activity</strong><small>Declares what it needs</small></div>
+                    <div class="wf-own-node wf-own-node--feature"><span>{{ t('home.workflow.ownScene.feature') }}</span><strong class="landing-display" translate="no">Activity</strong><small>{{ t('home.workflow.ownScene.featureHint') }}</small></div>
                     <div class="wf-own-connector" aria-hidden="true"><span></span><b>↔</b><span></span></div>
-                    <div class="wf-own-node wf-own-node--binding"><span>YOUR APP</span><strong class="landing-display">Binding</strong><small>Chooses how to provide it</small></div>
+                    <div class="wf-own-node wf-own-node--binding"><span>{{ t('home.workflow.ownScene.app') }}</span><strong class="landing-display">{{ t('home.workflow.ownScene.binding') }}</strong><small>{{ t('home.workflow.ownScene.bindingHint') }}</small></div>
                   </div>
-                  <div class="wf-own-footer"><span class="wf-success-dot" aria-hidden="true"></span><p>Auth, sessions, and permissions are connected by <strong>your application</strong>—not a hidden plugin runtime.</p></div>
+                  <div class="wf-own-footer"><span class="wf-success-dot" aria-hidden="true"></span><p>{{ t('home.workflow.ownScene.footerStart') }} <strong>{{ t('home.workflow.ownScene.footerEmphasis') }}</strong>{{ t('home.workflow.ownScene.footerEnd') }}</p></div>
                 </div>
 
                 <div v-else-if="activeStage.id === 'understand'" class="wf-understand">
-                  <div class="wf-understand-intro"><span class="wf-mini-label">FEATURE RELATIONSHIPS</span><span class="wf-understand-live"><span class="wf-success-dot" aria-hidden="true"></span> Derived from source</span></div>
+                  <div class="wf-understand-intro"><span class="wf-mini-label">{{ t('home.workflow.understandScene.label') }}</span><span class="wf-understand-live"><span class="wf-success-dot" aria-hidden="true"></span> {{ t('home.workflow.understandScene.live') }}</span></div>
                   <div class="wf-relations">
                     <div class="wf-relations-branches" aria-hidden="true"><span></span><span></span></div>
-                    <div class="wf-relation wf-relation--primary"><span>IN FOCUS</span><strong class="landing-display">Activity</strong><small>Public feature boundary</small></div>
-                    <div class="wf-relation wf-relation--link"><span class="wf-relation-line" aria-hidden="true"></span><span>USES PUBLIC API</span><strong class="landing-display">Auth</strong><small>Session &amp; permissions</small></div>
-                    <div class="wf-relation wf-relation--link"><span class="wf-relation-line" aria-hidden="true"></span><span>OWNED BY</span><strong class="landing-display">App</strong><small>Route composition</small></div>
+                    <div class="wf-relation wf-relation--primary"><span>{{ t('home.workflow.understandScene.focus') }}</span><strong class="landing-display" translate="no">Activity</strong><small>{{ t('home.workflow.understandScene.focusHint') }}</small></div>
+                    <div class="wf-relation wf-relation--link"><span class="wf-relation-line" aria-hidden="true"></span><span>{{ t('home.workflow.understandScene.uses') }}</span><strong class="landing-display" translate="no">Auth</strong><small>{{ t('home.workflow.understandScene.usesHint') }}</small></div>
+                    <div class="wf-relation wf-relation--link"><span class="wf-relation-line" aria-hidden="true"></span><span>{{ t('home.workflow.understandScene.owned') }}</span><strong class="landing-display" translate="no">App</strong><small>{{ t('home.workflow.understandScene.ownedHint') }}</small></div>
                   </div>
-                  <p class="wf-understand-caption">Follow who owns it, who it uses, and where changes can travel.</p>
+                  <p class="wf-understand-caption">{{ t('home.workflow.understandScene.caption') }}</p>
                 </div>
 
                 <div v-else-if="activeStage.id === 'evolve'" class="wf-evolve">
-                  <div class="wf-evolve-labels"><span>BASE</span><span>LOCAL</span><span>INCOMING</span></div>
+                  <div class="wf-evolve-labels"><span>{{ t('home.workflow.evolveScene.base') }}</span><span>{{ t('home.workflow.evolveScene.local') }}</span><span>{{ t('home.workflow.evolveScene.incoming') }}</span></div>
                   <div class="wf-evolve-columns">
-                    <div class="wf-evolve-version"><span class="wf-evolve-version-mark" aria-hidden="true">○</span><strong>Starting point</strong><small>Known upstream source</small></div>
-                    <div class="wf-evolve-version wf-evolve-version--local"><span class="wf-evolve-version-mark" aria-hidden="true">✳</span><strong>Your edits</strong><small>Keep what's yours</small></div>
-                    <div class="wf-evolve-version"><span class="wf-evolve-version-mark" aria-hidden="true">+</span><strong>Update</strong><small>Upstream improvements</small></div>
+                    <div class="wf-evolve-version"><span class="wf-evolve-version-mark" aria-hidden="true">○</span><strong>{{ t('home.workflow.evolveScene.start') }}</strong><small>{{ t('home.workflow.evolveScene.startHint') }}</small></div>
+                    <div class="wf-evolve-version wf-evolve-version--local"><span class="wf-evolve-version-mark" aria-hidden="true">✳</span><strong>{{ t('home.workflow.evolveScene.edits') }}</strong><small>{{ t('home.workflow.evolveScene.editsHint') }}</small></div>
+                    <div class="wf-evolve-version"><span class="wf-evolve-version-mark" aria-hidden="true">+</span><strong>{{ t('home.workflow.evolveScene.update') }}</strong><small>{{ t('home.workflow.evolveScene.updateHint') }}</small></div>
                   </div>
                   <div class="wf-evolve-join" aria-hidden="true"><span></span><b>↓</b><span></span></div>
-                  <div class="wf-evolve-output"><span class="wf-success-dot" aria-hidden="true"></span><div><strong>One considered change</strong><small>Preview first. Apply only when reconciliation passes.</small></div><span class="wf-evolve-output-arrow" aria-hidden="true">↗</span></div>
+                  <div class="wf-evolve-output"><span class="wf-success-dot" aria-hidden="true"></span><div><strong>{{ t('home.workflow.evolveScene.output') }}</strong><small>{{ t('home.workflow.evolveScene.outputHint') }}</small></div><span class="wf-evolve-output-arrow" aria-hidden="true">↗</span></div>
                 </div>
 
                 <div v-else class="wf-protect">
-                  <div class="wf-protect-verdict"><div class="wf-protect-check" aria-hidden="true">✓</div><p>EXAMPLE / GUARD REPORT</p><strong class="landing-display">No new<br />violations.</strong><span>Architecture guard passed</span></div>
-                  <div class="wf-protect-facts"><div><span>01</span><strong>Boundaries</strong><small>Checked at the source</small></div><div><span>02</span><strong>Dependencies</strong><small>New issues prevented</small></div><div><span>03</span><strong>Baseline</strong><small>Existing debt tracked</small></div></div>
+                  <div class="wf-protect-verdict"><div class="wf-protect-check" aria-hidden="true">✓</div><p>{{ t('home.workflow.protectScene.report') }}</p><strong class="landing-display">{{ t('home.workflow.protectScene.verdictStart') }}<br />{{ t('home.workflow.protectScene.verdictEnd') }}</strong><span>{{ t('home.workflow.protectScene.passed') }}</span></div>
+                  <div class="wf-protect-facts"><div><span>01</span><strong>{{ t('home.workflow.protectScene.boundaries') }}</strong><small>{{ t('home.workflow.protectScene.boundariesHint') }}</small></div><div><span>02</span><strong>{{ t('home.workflow.protectScene.dependencies') }}</strong><small>{{ t('home.workflow.protectScene.dependenciesHint') }}</small></div><div><span>03</span><strong>{{ t('home.workflow.protectScene.baseline') }}</strong><small>{{ t('home.workflow.protectScene.baselineHint') }}</small></div></div>
                 </div>
 
-                <div class="workflow-canvas-bottom"><span>NO HIDDEN RUNTIME</span><span>YOUR REPOSITORY ↗</span></div>
+                <div class="workflow-canvas-bottom"><span>{{ t('home.workflow.canvasBottom') }}</span><span>{{ t('home.workflow.canvasRepository') }}</span></div>
               </div>
               <p class="workflow-outcome"><span aria-hidden="true">↳</span>{{ activeStage.outcome }}</p>
             </div>
@@ -641,22 +647,22 @@ onBeforeUnmount(() => {
         <div class="lp-container">
           <div class="section-head" data-reveal>
             <div>
-              <p class="eyebrow"><span>03</span>Foundation</p>
-              <h2 id="inside-title" class="section-title landing-display">A real application<br /><span class="section-title-accent">from the first clone.</span></h2>
+              <p class="eyebrow"><span>03</span>{{ t('home.inside.eyebrow') }}</p>
+              <h2 id="inside-title" class="section-title landing-display">{{ t('home.inside.title') }}<br /><span class="section-title-accent">{{ t('home.inside.titleAccent') }}</span></h2>
             </div>
-            <p class="section-description">The reference app proves the substrate every product needs, so the first feature you write can be your actual product.</p>
+            <p class="section-description">{{ t('home.inside.description') }}</p>
           </div>
 
           <div class="foundation-story">
             <div class="foundation-visual" data-reveal>
-              <div class="foundation-scene" :aria-label="`Architecture view, step ${activeFoundationStep + 1} of 4`">
+              <div class="foundation-scene" :aria-label="t('home.inside.sceneLabel', { step: activeFoundationStep + 1 })">
                 <div class="foundation-map-meta">
-                  <span><i class="foundation-map-live" aria-hidden="true"></i>reference app · one node process</span>
+                  <span><i class="foundation-map-live" aria-hidden="true"></i>{{ t('home.inside.meta') }}</span>
                   <span>0{{ activeFoundationStep + 1 }} / 04</span>
                 </div>
 
                 <div class="foundation-request" aria-hidden="true">
-                  <span class="foundation-request-method">GET</span>
+                  <span class="foundation-request-method" translate="no">GET</span>
                   <code>/api/users</code>
                   <Transition name="foundation-swap" mode="out-in">
                     <span :key="activeFoundationStep" class="foundation-request-status">{{ activeLane.status }}</span>
@@ -686,42 +692,42 @@ onBeforeUnmount(() => {
 
             <div class="foundation-narrative">
               <article class="foundation-step" :class="{ 'foundation-step--active': activeFoundationStep === 0 }" data-foundation-step="0">
-                <p class="foundation-step-index">01 / runtime</p>
-                <h3 class="foundation-step-title landing-display">One deployable unit. No second architecture hiding behind it.</h3>
-                <p class="foundation-step-copy">Node serves the built Vue app and Hono API together. Request IDs, rate limits, security headers, and structured logs all live in the same production story.</p>
-                <ul class="foundation-step-facts" aria-label="Runtime surface">
+                <p class="foundation-step-index">{{ t('home.inside.runtime.index') }}</p>
+                <h3 class="foundation-step-title landing-display">{{ t('home.inside.runtime.title') }}</h3>
+                <p class="foundation-step-copy">{{ t('home.inside.runtime.copy') }}</p>
+                <ul class="foundation-step-facts" :aria-label="t('home.inside.runtime.factsLabel')">
                   <li v-for="endpoint in endpoints" :key="endpoint.path"><code>{{ endpoint.path }}</code><span>{{ endpoint.detail }}</span></li>
                 </ul>
               </article>
 
               <article class="foundation-step" :class="{ 'foundation-step--active': activeFoundationStep === 1 }" data-foundation-step="1">
-                <p class="foundation-step-index">02 / identity</p>
-                <h3 class="foundation-step-title landing-display">The browser can ask. The server decides.</h3>
-                <p class="foundation-step-copy">Sessions, CSRF protection, login throttling, roles, and <code>resource.action</code> permissions are enforced at the Hono boundary — never only in Vue.</p>
-                <ul class="foundation-permissions" aria-label="Seeded permissions">
-                  <li class="foundation-permission foundation-permission--admin">admin</li>
+                <p class="foundation-step-index">{{ t('home.inside.identity.index') }}</p>
+                <h3 class="foundation-step-title landing-display">{{ t('home.inside.identity.title') }}</h3>
+                <p class="foundation-step-copy">{{ t('home.inside.identity.copyStart') }} <code>resource.action</code> {{ t('home.inside.identity.copyEnd') }}</p>
+                <ul class="foundation-permissions" :aria-label="t('home.inside.identity.permissionsLabel')">
+                  <li class="foundation-permission foundation-permission--admin" translate="no">admin</li>
                   <li v-for="permission in permissions" :key="permission" class="foundation-permission">{{ permission }}</li>
                 </ul>
               </article>
 
               <article class="foundation-step" :class="{ 'foundation-step--active': activeFoundationStep === 2 }" data-foundation-step="2">
-                <p class="foundation-step-index">03 / persistence</p>
-                <h3 class="foundation-step-title landing-display">The data model has an owner, not a miscellaneous folder.</h3>
-                <p class="foundation-step-copy">Forward-only migrations stay with their feature. Checksums, WAL, backups, integrity checks, and bounded maintenance remain explicit and inspectable.</p>
-                <ul class="foundation-migrations" aria-label="Feature-owned migrations">
+                <p class="foundation-step-index">{{ t('home.inside.persistence.index') }}</p>
+                <h3 class="foundation-step-title landing-display">{{ t('home.inside.persistence.title') }}</h3>
+                <p class="foundation-step-copy">{{ t('home.inside.persistence.copy') }}</p>
+                <ul class="foundation-migrations" :aria-label="t('home.inside.persistence.migrationsLabel')">
                   <li v-for="migration in migrations" :key="migration.file"><code>{{ migration.file }}</code><span>{{ migration.owner }}</span></li>
                 </ul>
               </article>
 
               <article class="foundation-step" :class="{ 'foundation-step--active': activeFoundationStep === 3 }" data-foundation-step="3">
-                <p class="foundation-step-index">04 / product</p>
-                <h3 class="foundation-step-title landing-display">Start with product-shaped source, then keep adding source.</h3>
-                <p class="foundation-step-copy">Users, profiles, activity, and asset storage are already real application code. Official features arrive the same way: visible source, installed into the project you own.</p>
+                <p class="foundation-step-index">{{ t('home.inside.product.index') }}</p>
+                <h3 class="foundation-step-title landing-display">{{ t('home.inside.product.title') }}</h3>
+                <p class="foundation-step-copy">{{ t('home.inside.product.copy') }}</p>
                 <div class="foundation-product-list">
-                  <span>Users &amp; profiles</span><span>Activity trail</span><span>Asset storage</span>
+                  <span>{{ t('home.inside.product.users') }}</span><span>{{ t('home.inside.product.activity') }}</span><span>{{ t('home.inside.product.assets') }}</span>
                 </div>
-                <ul class="foundation-install-list" aria-label="Official features">
-                  <li v-for="feature in officialFeatures" :key="feature"><span aria-hidden="true">$</span> nara add {{ feature }}</li>
+                <ul class="foundation-install-list" :aria-label="t('home.inside.product.installLabel')">
+                  <li v-for="feature in officialFeatures" :key="feature" translate="no"><span aria-hidden="true">$</span> nara add {{ feature }}</li>
                 </ul>
               </article>
             </div>
@@ -733,17 +739,17 @@ onBeforeUnmount(() => {
         <div class="lp-container">
           <div class="principles-manifesto">
             <div class="principles-intro" data-reveal>
-              <p class="eyebrow"><span>04</span>Principles</p>
-              <h2 id="principles-title" class="principles-manifesto-title landing-display">Nara knows<br />when <em>to stop.</em></h2>
-              <p class="principles-manifesto-copy">Four convictions shape what belongs in the kit. The rest is yours to build, change, or leave out.</p>
+              <p class="eyebrow"><span>04</span>{{ t('home.principles.eyebrow') }}</p>
+              <h2 id="principles-title" class="principles-manifesto-title landing-display">{{ t('home.principles.titleStart') }}<br />{{ t('home.principles.titleMiddle') }} <em>{{ t('home.principles.titleEmphasis') }}</em></h2>
+              <p class="principles-manifesto-copy">{{ t('home.principles.copy') }}</p>
               <div class="principles-intro-foot">
                 <span class="principles-intro-rule" aria-hidden="true"></span>
-                <p>Less machinery between<br />you and your product.</p>
+                <p>{{ t('home.principles.footStart') }}<br />{{ t('home.principles.footEnd') }}</p>
               </div>
             </div>
 
             <div class="principles-reading">
-              <div class="principles-reading-head" aria-hidden="true"><span>The four rules</span><span>01 — 04</span></div>
+              <div class="principles-reading-head" aria-hidden="true"><span>{{ t('home.principles.readingHead') }}</span><span>01 — 04</span></div>
               <ol class="principles-ledger">
                 <li v-for="(principle, index) in principles" :key="principle.title" class="principle-row" data-reveal>
                   <div class="principle-row-head">
@@ -755,14 +761,14 @@ onBeforeUnmount(() => {
                   <p class="principle-copy">{{ principle.copy }}</p>
                   <div class="principle-details">
                     <div class="principle-detail">
-                      <span class="principle-detail-label">What stays</span>
-                      <ul class="principle-uses" aria-label="Nara uses">
+                      <span class="principle-detail-label">{{ t('home.principles.stays') }}</span>
+                      <ul class="principle-uses" :aria-label="t('home.principles.usesLabel')">
                         <li v-for="item in principle.uses" :key="item"><code>{{ item }}</code></li>
                       </ul>
                     </div>
                     <div class="principle-detail">
-                      <span class="principle-detail-label">What doesn't</span>
-                      <ul class="principle-rejects" aria-label="Not included">
+                      <span class="principle-detail-label">{{ t('home.principles.doesnt') }}</span>
+                      <ul class="principle-rejects" :aria-label="t('home.principles.rejectsLabel')">
                         <li v-for="item in principle.rejects" :key="item"><s>{{ item }}</s></li>
                       </ul>
                     </div>
@@ -774,15 +780,15 @@ onBeforeUnmount(() => {
 
           <div class="principles-ecosystem" data-reveal>
             <div class="ecosystem-intro">
-              <p class="ecosystem-kicker">The ecosystem, unwrapped <span aria-hidden="true">↗</span></p>
-              <h3 class="ecosystem-title landing-display">Keep the tools.<br /><span>Own the architecture.</span></h3>
-              <p class="ecosystem-description">Nara has opinions about where code belongs, not about replacing the tools you already trust. Every part stays recognizable, documented, and yours to change.</p>
-              <p class="ecosystem-signoff"><span aria-hidden="true">↳</span> Your codebase, not another framework to learn.</p>
+              <p class="ecosystem-kicker">{{ t('home.ecosystem.kicker') }} <span aria-hidden="true">↗</span></p>
+              <h3 class="ecosystem-title landing-display">{{ t('home.ecosystem.title') }}<br /><span>{{ t('home.ecosystem.titleAccent') }}</span></h3>
+              <p class="ecosystem-description">{{ t('home.ecosystem.description') }}</p>
+              <p class="ecosystem-signoff"><span aria-hidden="true">↳</span> {{ t('home.ecosystem.signoff') }}</p>
             </div>
 
             <div class="ecosystem-directory">
-              <div class="ecosystem-directory-head"><span>USED DIRECTLY</span><span>08 / THE STACK</span></div>
-              <ul class="ecosystem-logos" aria-label="Technologies used directly by Nara">
+              <div class="ecosystem-directory-head"><span>{{ t('home.ecosystem.directoryHead') }}</span><span>{{ t('home.ecosystem.directoryCount') }}</span></div>
+              <ul class="ecosystem-logos" :aria-label="t('home.ecosystem.logosLabel')">
                 <li v-for="item in stack" :key="item.name" class="ecosystem-logo-entry" :class="{ 'ecosystem-logo-entry--zod': item.name === 'Zod' }">
                   <span class="ecosystem-logo-mark" aria-hidden="true">
                     <img v-for="logo in item.logos" :key="logo" :src="`/landing/brands/${logo}.svg`" alt="" width="34" height="34" loading="lazy" />
@@ -792,10 +798,10 @@ onBeforeUnmount(() => {
               </ul>
             </div>
 
-            <div class="ecosystem-footnotes" aria-label="What ownership means in practice">
-              <div><span>01 / OWN</span><strong>Plain files, in your repo.</strong></div>
-              <div><span>02 / USE</span><strong>Familiar tools, as they are.</strong></div>
-              <div><span>03 / SKIP</span><strong>No hidden framework layer.</strong></div>
+            <div class="ecosystem-footnotes" :aria-label="t('home.ecosystem.footnotesLabel')">
+              <div><span>{{ t('home.ecosystem.own.label') }}</span><strong>{{ t('home.ecosystem.own.text') }}</strong></div>
+              <div><span>{{ t('home.ecosystem.use.label') }}</span><strong>{{ t('home.ecosystem.use.text') }}</strong></div>
+              <div><span>{{ t('home.ecosystem.skip.label') }}</span><strong>{{ t('home.ecosystem.skip.text') }}</strong></div>
             </div>
           </div>
         </div>
@@ -805,37 +811,37 @@ onBeforeUnmount(() => {
         <div class="lp-container">
           <div class="closing-panel" data-reveal>
             <div class="closing-copy">
-              <p class="closing-eyebrow">Your turn</p>
-              <h2 id="closing-title" class="closing-title landing-display">Make it yours.</h2>
-              <p class="closing-description">Start with a name. Give it a place in your codebase. Take it wherever you want.</p>
+              <p class="closing-eyebrow">{{ t('home.closing.eyebrow') }}</p>
+              <h2 id="closing-title" class="closing-title landing-display">{{ t('home.closing.title') }}</h2>
+              <p class="closing-description">{{ t('home.closing.description') }}</p>
               <div class="closing-links">
-                <button type="button" class="closing-action" aria-label="Copy clone command" @click="copyCommand"><span>{{ copied ? 'Command copied' : 'Clone Nara' }}</span><span aria-hidden="true">{{ copied ? '✓' : '→' }}</span></button>
-                <a :href="docsUrl" target="_blank" rel="noreferrer" class="closing-link">Getting started <span aria-hidden="true">↗</span></a>
+                <button type="button" class="closing-action" :aria-label="t('home.hero.copyLabel')" @click="copyCommand"><span>{{ copied ? t('home.closing.copied') : t('home.closing.clone') }}</span><span aria-hidden="true">{{ copied ? '✓' : '→' }}</span></button>
+                <a :href="docsUrl" target="_blank" rel="noreferrer" class="closing-link">{{ t('home.closing.gettingStarted') }} <span aria-hidden="true">↗</span></a>
               </div>
-              <span class="closing-feedback" role="status">{{ copied ? 'Clone command copied to clipboard.' : '' }}</span>
-              <p class="closing-aside">Open source. No black box. Just a starting point.</p>
+              <span class="closing-feedback" role="status">{{ copied ? t('home.closing.feedback') : '' }}</span>
+              <p class="closing-aside">{{ t('home.closing.aside') }}</p>
             </div>
 
-            <div class="closing-workshop" aria-label="From an idea to a Nara feature">
-              <div class="closing-workshop-head"><span>FROM IDEA TO SOURCE</span><span>NARA / 001</span></div>
+            <div class="closing-workshop" :aria-label="t('home.closing.workshopLabel')">
+              <div class="closing-workshop-head"><span>{{ t('home.closing.workshopHead') }}</span><span translate="no">NARA / 001</span></div>
 
               <div class="closing-concept">
-                <div class="closing-workshop-label"><span>01 / IMAGINE</span><span>Just give it a name.</span></div>
+                <div class="closing-workshop-label"><span>{{ t('home.closing.imagine') }}</span><span>{{ t('home.closing.imagineHint') }}</span></div>
                 <p class="closing-concept-name landing-display"><Transition name="closing-idea" mode="out-in"><span :key="activeIdea">{{ activeIdea }}</span></Transition><span class="closing-concept-asterisk" aria-hidden="true">✳</span></p>
               </div>
 
               <div class="closing-execution">
-                <div class="closing-workshop-label"><span>02 / MAKE</span><span>One command.</span></div>
-                <p class="closing-command"><span class="closing-command-prompt" aria-hidden="true">$</span><span>nara make feature </span><Transition name="closing-idea" mode="out-in"><span :key="activeIdea" class="closing-idea">{{ activeIdea }}</span></Transition></p>
+                <div class="closing-workshop-label"><span>{{ t('home.closing.make') }}</span><span>{{ t('home.closing.makeHint') }}</span></div>
+                <p class="closing-command"><span class="closing-command-prompt" aria-hidden="true">$</span><span translate="no">nara make feature </span><Transition name="closing-idea" mode="out-in"><span :key="activeIdea" class="closing-idea">{{ activeIdea }}</span></Transition></p>
               </div>
 
               <div class="closing-result">
-                <div class="closing-workshop-label"><span>03 / OWN</span><span class="closing-result-status"><span aria-hidden="true"></span>Ready to build</span></div>
+                <div class="closing-workshop-label"><span>{{ t('home.closing.own') }}</span><span class="closing-result-status"><span aria-hidden="true"></span>{{ t('home.closing.ready') }}</span></div>
                 <div class="closing-result-source">
-                  <div class="closing-result-folder"><span class="closing-folder-symbol" aria-hidden="true"></span><span>src / features / <Transition name="closing-idea" mode="out-in"><strong :key="activeIdea">{{ activeIdea }}</strong></Transition> /</span></div>
-                  <ul class="closing-result-files" aria-label="Files created by nara make feature"><li>index.ts <span>public boundary</span></li><li>contract.ts <span>shared contract</span></li></ul>
+                  <div class="closing-result-folder"><span class="closing-folder-symbol" aria-hidden="true"></span><span translate="no">src / features / <Transition name="closing-idea" mode="out-in"><strong :key="activeIdea">{{ activeIdea }}</strong></Transition> /</span></div>
+                  <ul class="closing-result-files" :aria-label="t('home.closing.filesLabel')"><li translate="no">index.ts <span>{{ t('home.closing.publicBoundary') }}</span></li><li translate="no">contract.ts <span>{{ t('home.closing.sharedContract') }}</span></li></ul>
                 </div>
-                <p class="closing-result-note">Not a plugin. Actual files you can open, edit, and own.</p>
+                <p class="closing-result-note">{{ t('home.closing.note') }}</p>
               </div>
             </div>
           </div>
@@ -847,15 +853,15 @@ onBeforeUnmount(() => {
       <div class="lp-container footer-inner">
         <div class="footer-brand">
           <img src="/nara.png" alt="" width="28" height="28" />
-          <span class="landing-display">Nara</span>
-          <span class="footer-tagline">Architecture-aware TypeScript application kit.</span>
+          <span class="landing-display" translate="no">Nara</span>
+          <span class="footer-tagline">{{ t('home.footer.tagline') }}</span>
         </div>
-        <nav class="footer-links" aria-label="Resources">
-          <a :href="repositoryUrl" target="_blank" rel="noreferrer">GitHub</a>
-          <a :href="docsUrl" target="_blank" rel="noreferrer">Docs</a>
-          <a :href="architectureUrl" target="_blank" rel="noreferrer">Architecture</a>
-          <a :href="cliUrl" target="_blank" rel="noreferrer">CLI</a>
-          <span>MIT · © {{ currentYear }}</span>
+        <nav class="footer-links" :aria-label="t('home.footer.label')">
+          <a :href="repositoryUrl" target="_blank" rel="noreferrer" translate="no">GitHub</a>
+          <a :href="docsUrl" target="_blank" rel="noreferrer">{{ t('home.footer.docs') }}</a>
+          <a :href="architectureUrl" target="_blank" rel="noreferrer">{{ t('home.footer.architecture') }}</a>
+          <a :href="cliUrl" target="_blank" rel="noreferrer" translate="no">CLI</a>
+          <span translate="no">MIT · © {{ currentYear }}</span>
         </nav>
       </div>
     </footer>

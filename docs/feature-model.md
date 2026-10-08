@@ -17,6 +17,7 @@ src/features/billing/
 │   ├── migrations/   # optional plain SQL schema evolution
 │   └── seeds/        # optional idempotent reference data
 ├── web/              # optional browser code and typed API client
+│   ├── locales/      # optional interface text: en.ts (source of truth) plus one file per locale
 │   └── index.ts      # optional browser-safe public boundary
 └── tests/            # feature behavior tests
 ```
@@ -220,7 +221,7 @@ application binding:
 - Requirements stay demand-driven and narrow: a small number of cohesive interfaces when responsibilities genuinely separate (for Users, `UsersIdentityHost` for account-directory behavior and `UsersAuthorizationHost` for roles and permissions), never a speculative universal service bag or a generic `execute()`/`services` catch-all.
 - The provider relationship belongs to application composition (`src/app/bindings/`), never to Feature-owned source. `inspect`/`context` therefore show no Feature dependency while the binding reading order shows the composition.
 - Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
-- Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment, `shared/storage` binary-object capability). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
+- Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment, `shared/storage` binary-object capability, `shared/i18n` browser translation runtime). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
 - Persistence ownership is single-writer per table: a Feature that needs another Feature's rows reaches them exclusively through a typed host requirement, never through direct SQL. The `users` table is Auth-owned; Users owns its workflow and its `assets` table with a provider-neutral owner reference.
 
 ## Configuration
@@ -255,6 +256,33 @@ The environment templates (`.env.example`, `.env.production.example`) are
 checked against the variables the running application actually reads, in both
 directions, so an undocumented or stale setting fails the test suite.
 
+## Interface language
+
+A Feature owns the words on its pages the same way it owns its routes.
+Interface text lives in `web/locales/`: `en.ts` is the source of truth and
+every other locale (`id.ts` today) must match it key for key, which the
+typecheck enforces. Application pages and the shell keep theirs in
+`src/app/locales/`.
+
+```ts
+// web/locales/index.ts
+import { defineMessages } from '../../../../shared/i18n';
+import en from './en';
+
+export const { t, find, issue, error } = defineMessages(en, { id: () => import('./id') });
+```
+
+- `t('invoice.due', { date })` checks the key and its `{placeholders}` at compile time; plural messages are `{ one, other }` and take a `count`.
+- API messages stay English. The interface translates a refusal by its `code` with `error(response)` (key `errors.<CODE>`) and shows the API message for codes it does not know.
+- `issue(zodIssue)` keeps the contract's English validation message in English and describes the issue from its code and the `field.<name>` label in other locales.
+- Dates and numbers go through `formatDate`, `formatRelativeTime`, and `formatNumber`, which follow the chosen locale.
+
+The chosen locale comes from the visitor's choice, then the browser language,
+then English. Only English ships in the main bundle; another locale's
+dictionaries load when it is chosen, and the switch waits for all of them so
+a page never mixes languages. Tests reject template text outside a dictionary
+and translations whose placeholders differ from English.
+
 ## Shared code
 
 `src/shared/` is intentionally small infrastructure for concepts owned by no business Feature:
@@ -278,8 +306,9 @@ installable Features can rely on it:
 - the Hono/Vue/Vue Router/TypeScript stack and canonical `src/app` roots,
 - the Feature structure itself (`src/features/<feature>/`),
 - `src/shared/database/` (SQLite persistence engine),
-- `src/shared/config/` (environment and constants it reads), and
-- `src/shared/storage/` (provider-neutral `AssetStorage` contract plus the local filesystem adapter).
+- `src/shared/config/` (environment and constants it reads),
+- `src/shared/storage/` (provider-neutral `AssetStorage` contract plus the local filesystem adapter), and
+- `src/shared/i18n/` (browser translation runtime, locale formatting, and the language picker).
 
 Only these `src/shared/` modules are guaranteed. `AssetStorage` keys are
 provider-neutral logical object identifiers; Features own asset metadata and

@@ -129,7 +129,7 @@ describe('Vue frontend shell', () => {
     expect(header?.querySelector('.site-header-cta')?.textContent).toContain('Sign in');
 
     const shell = readFileSync('src/app/layouts/AuthenticatedShell.vue', 'utf8');
-    expect(shell).toContain('<SiteHeader nav-label="Application navigation">');
+    expect(shell).toContain(`<SiteHeader :nav-label="t('shell.navLabel')">`);
     const css = parse(readFileSync('src/app/layouts/SiteHeader.vue', 'utf8')).descriptor.styles[0]!.content;
     // Narrow screens move the links to their own horizontally scrollable row.
     expect(css).toMatch(/@media \(max-width: 900px\) \{[^@]*\.site-header-nav \{[^}]*grid-row: 2;[^}]*overflow-x: auto;/);

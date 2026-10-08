@@ -6,6 +6,8 @@ import { createAuthClient } from '../client';
 import { createSecurityClient } from '../security-client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
+import type { ValidationIssue } from '../../../../shared/i18n';
+import { error as errorText, issue as issueText, t } from '../locales';
 
 const email = ref('');
 const password = ref('');
@@ -24,12 +26,12 @@ const authSession = useAuthSession();
 const route = useRoute();
 const router = useRouter();
 
-function mapIssues(issues: Array<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
+function mapIssues(issues: ValidationIssue[]): Record<string, string[]> {
   const mapped: Record<string, string[]> = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issue.message);
+    mapped[key].push(issueText(issue));
   }
   return mapped;
 }
@@ -53,13 +55,13 @@ function validate(): LoginInput | undefined {
   }
 
   fieldErrors.value = mapIssues(parsed.error.issues);
-  formError.value = 'Please correct the highlighted fields.';
+  formError.value = t('common.correctFields');
   return undefined;
 }
 
 async function finishSignIn(): Promise<void> {
   if (!(await authSession.refresh())) {
-    formError.value = 'Sign in succeeded, but the current session could not be loaded.';
+    formError.value = t('login.sessionFailed');
     return;
   }
   await router.replace(redirectTarget());
@@ -82,7 +84,9 @@ async function submitLogin(): Promise<void> {
   try {
     const response = await authClient.login(input);
     if (!response.success) {
-      formError.value = response.message;
+      // The attempt that locks the account answers INVALID_CREDENTIALS with the lockout wait; keep that text.
+      formError.value =
+        response.code === 'INVALID_CREDENTIALS' && response.message.startsWith('Too many attempts') ? response.message : errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
@@ -95,7 +99,7 @@ async function submitLogin(): Promise<void> {
     }
     await finishSignIn();
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Unable to sign in';
+    formError.value = error instanceof Error ? error.message : t('login.failed');
   } finally {
     isSubmitting.value = false;
   }
@@ -111,7 +115,7 @@ async function submitTwoFactor(): Promise<void> {
   );
   if (!parsed.success) {
     fieldErrors.value = mapIssues(parsed.error.issues);
-    formError.value = 'Please correct the highlighted fields.';
+    formError.value = t('common.correctFields');
     return;
   }
 
@@ -124,13 +128,13 @@ async function submitTwoFactor(): Promise<void> {
       } else {
         twoFactorCode.value = '';
       }
-      formError.value = response.message;
+      formError.value = errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
     await finishSignIn();
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Unable to verify the code';
+    formError.value = error instanceof Error ? error.message : t('login.twoFactor.failed');
   } finally {
     isSubmitting.value = false;
   }
@@ -156,13 +160,13 @@ function startOver(): void {
 <template>
   <AuthPageFrame
     v-if="step === 'two-factor'"
-    heading="Confirm it's"
-    highlight="you."
-    :description="useRecoveryCode ? 'Enter one of the recovery codes you saved when you turned on two-factor authentication.' : 'Open your authenticator app and enter the 6-digit code for this account.'"
+    :heading="t('login.twoFactor.heading')"
+    :highlight="t('login.twoFactor.highlight')"
+    :description="useRecoveryCode ? t('login.twoFactor.recoveryDescription') : t('login.twoFactor.appDescription')"
   >
       <form class="nara-auth-form" data-testid="two-factor-form" @submit.prevent="submitTwoFactor">
         <label class="nara-auth-field" for="two-factor-code">
-          {{ useRecoveryCode ? 'Recovery code' : 'Authentication code' }}
+          {{ useRecoveryCode ? t('login.twoFactor.recoveryLabel') : t('login.twoFactor.codeLabel') }}
           <input
             id="two-factor-code"
             ref="twoFactorInput"
@@ -184,23 +188,23 @@ function startOver(): void {
         <p v-if="formError" role="alert" class="nara-auth-alert">{{ formError }}</p>
 
         <button type="submit" :disabled="isSubmitting" class="nara-auth-submit">
-          {{ isSubmitting ? 'Verifying…' : 'Verify and sign in' }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
+          {{ isSubmitting ? t('login.twoFactor.submitting') : t('login.twoFactor.submit') }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
         </button>
         <button type="button" class="nara-auth-quiet-button" @click="toggleRecoveryCode">
-          {{ useRecoveryCode ? 'Use your authenticator app instead' : 'Use a recovery code' }}
+          {{ useRecoveryCode ? t('login.twoFactor.useApp') : t('login.twoFactor.useRecovery') }}
         </button>
       </form>
 
       <p class="nara-auth-alt">
-        Not you?
-        <button type="button" class="nara-auth-link-button" @click="startOver">Sign in with a different account</button>
+        {{ t('login.twoFactor.notYou') }}
+        <button type="button" class="nara-auth-link-button" @click="startOver">{{ t('login.twoFactor.switchAccount') }}</button>
       </p>
   </AuthPageFrame>
 
-  <AuthPageFrame v-else heading="Welcome" highlight="back.">
+  <AuthPageFrame v-else :heading="t('login.heading')" :highlight="t('login.highlight')">
       <form class="nara-auth-form" @submit.prevent="submitLogin">
         <label class="nara-auth-field" for="email">
-          Email
+          {{ t('common.email') }}
           <input
             id="email"
             v-model="email"
@@ -210,14 +214,14 @@ function startOver(): void {
             required
             :aria-invalid="Boolean(fieldErrors.email)"
             :aria-describedby="fieldErrors.email ? 'email-error' : undefined"
-            placeholder="you@example.com"
+            :placeholder="t('common.emailPlaceholder')"
             class="nara-auth-input"
           />
           <span v-if="fieldErrors.email" id="email-error" class="nara-auth-error">{{ fieldErrors.email[0] }}</span>
         </label>
 
         <label class="nara-auth-field" for="password">
-          Password
+          {{ t('common.password') }}
           <span class="nara-auth-password-wrap">
             <input
               id="password"
@@ -233,10 +237,10 @@ function startOver(): void {
             <button
               type="button"
               class="nara-auth-show"
-              :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              :aria-label="showPassword ? t('common.hidePassword') : t('common.showPassword')"
               @click="showPassword = !showPassword"
             >
-              {{ showPassword ? 'Hide' : 'Show' }}
+              {{ showPassword ? t('common.hide') : t('common.show') }}
             </button>
           </span>
           <span v-if="fieldErrors.password" id="password-error" class="nara-auth-error">{{ fieldErrors.password[0] }}</span>
@@ -251,13 +255,13 @@ function startOver(): void {
           :disabled="isSubmitting"
           class="nara-auth-submit"
         >
-          {{ isSubmitting ? 'Signing in…' : 'Sign in' }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
+          {{ isSubmitting ? t('login.submitting') : t('login.submit') }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
         </button>
       </form>
 
       <p class="nara-auth-alt">
-        New to Nara?
-        <RouterLink :to="{ name: 'register', query: route.query.redirect ? { redirect: route.query.redirect } : {} }">Create an account <span aria-hidden="true">↗</span></RouterLink>
+        {{ t('login.newHere') }}
+        <RouterLink :to="{ name: 'register', query: route.query.redirect ? { redirect: route.query.redirect } : {} }">{{ t('login.register') }} <span aria-hidden="true">↗</span></RouterLink>
       </p>
   </AuthPageFrame>
 </template>

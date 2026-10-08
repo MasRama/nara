@@ -3,8 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { createUserInputSchema, updateUserInputSchema } from '../../contract';
 import type { ManagedUser, UpdateUserInput } from '../../contract';
+import type { ValidationIssue } from '../../../../shared/i18n';
 import { createUsersClient } from '../client';
 import type { UsersWebHost, UsersWebRole } from '../host';
+import { error as errorText, issue as issueText, t } from '../locales';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -83,12 +85,12 @@ function canDeleteUser(user: ManagedUser): boolean {
 }
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
 
-function mapIssues(issues: Array<{ path: PropertyKey[]; message: string }>): FieldErrors {
+function mapIssues(issues: ReadonlyArray<ValidationIssue>): FieldErrors {
   const mapped: FieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issue.message);
+    mapped[key].push(issueText(issue));
   }
   return mapped;
 }
@@ -113,7 +115,7 @@ async function loadUsers(nextPage = page.value): Promise<void> {
     if (requestId !== usersLoadRequestId) return;
     if (!response.success || !response.data) {
       loadForbidden.value = !response.success && response.code === 'FORBIDDEN';
-      if (!loadForbidden.value) loadError.value = response.message;
+      if (!loadForbidden.value) loadError.value = errorText(response);
       users.value = [];
       return;
     }
@@ -124,7 +126,7 @@ async function loadUsers(nextPage = page.value): Promise<void> {
     limit.value = response.data.limit;
   } catch (error) {
     if (requestId !== usersLoadRequestId) return;
-    loadError.value = error instanceof Error ? error.message : 'Unable to load users';
+    loadError.value = error instanceof Error ? error.message : t('users.loadFailed');
     users.value = [];
   } finally {
     if (requestId === usersLoadRequestId) isLoading.value = false;
@@ -142,7 +144,7 @@ async function loadRoles(): Promise<void> {
     roles.value = await props.host.listRoles();
   } catch (error) {
     roles.value = [];
-    roleLoadError.value = error instanceof Error ? error.message : 'Unable to load roles';
+    roleLoadError.value = error instanceof Error ? error.message : t('users.rolesFailed');
   }
 }
 
@@ -214,7 +216,7 @@ function validateUser(): UpdateUserInput | undefined {
   }
 
   fieldErrors.value = mapIssues(parsed.error.issues);
-  formError.value = 'Please correct the highlighted fields.';
+  formError.value = t('users.form.invalid');
   return undefined;
 }
 
@@ -225,8 +227,8 @@ async function resetManagedPassword(): Promise<void> {
   formError.value = '';
   notice.value = '';
   if (userPassword.value.length < 8) {
-    fieldErrors.value = { password: ['Password must be at least 8 characters'] };
-    formError.value = 'Please correct the highlighted fields.';
+    fieldErrors.value = { password: [t('users.form.passwordTooShort')] };
+    formError.value = t('users.form.invalid');
     return;
   }
 
@@ -234,14 +236,15 @@ async function resetManagedPassword(): Promise<void> {
   try {
     const response = await usersClient.resetPassword(editingUser.value.id, { password: userPassword.value });
     if (!response.success) {
-      formError.value = response.message;
+      formError.value =
+        response.code === 'PROTECTED_ADMIN' ? t('users.form.protectedAdminReset') : errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
     userPassword.value = '';
-    notice.value = response.message;
+    notice.value = t('users.form.passwordReset');
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Unable to reset password';
+    formError.value = error instanceof Error ? error.message : t('users.form.resetFailed');
   } finally {
     isResettingPassword.value = false;
   }
@@ -269,7 +272,7 @@ async function submitUser(): Promise<void> {
     const parsed = createUserInputSchema.safeParse(payload);
     if (!parsed.success) {
       fieldErrors.value = mapIssues(parsed.error.issues);
-      formError.value = 'Please correct the highlighted fields.';
+      formError.value = t('users.form.invalid');
       return;
     }
 
@@ -277,16 +280,16 @@ async function submitUser(): Promise<void> {
     try {
       const response = await usersClient.createUser(parsed.data);
       if (!response.success) {
-        formError.value = response.message;
+        formError.value = errorText(response);
         fieldErrors.value = response.errors ?? {};
         return;
       }
       isFormOpen.value = false;
       resetForm();
-      notice.value = response.message;
+      notice.value = t('users.form.created');
       await loadUsers(1);
     } catch (error) {
-      formError.value = error instanceof Error ? error.message : 'Unable to create user';
+      formError.value = error instanceof Error ? error.message : t('users.form.createFailed');
     } finally {
       isSubmitting.value = false;
     }
@@ -298,16 +301,16 @@ async function submitUser(): Promise<void> {
   try {
     const response = await usersClient.updateUser(editingUser.value.id, payload);
     if (!response.success) {
-      formError.value = response.message;
+      formError.value = errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
     isFormOpen.value = false;
     resetForm();
-    notice.value = response.message;
+    notice.value = t('users.form.updated');
     await loadUsers(page.value);
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : 'Unable to update user';
+    formError.value = error instanceof Error ? error.message : t('users.form.updateFailed');
   } finally {
     isSubmitting.value = false;
   }
@@ -333,16 +336,16 @@ async function confirmDelete(): Promise<void> {
   try {
     const response = await usersClient.deleteUsers({ ids: [pendingDelete.value.id] });
     if (!response.success) {
-      actionError.value = response.message;
+      actionError.value = errorText(response);
       return;
     }
-    notice.value = response.message;
+    notice.value = t('users.delete.done');
     pendingDelete.value = null;
     const remainingTotal = Math.max(0, total.value - response.data.deleted);
     const remainingPages = Math.max(1, Math.ceil(remainingTotal / limit.value));
     await loadUsers(Math.min(page.value, remainingPages));
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : 'Unable to delete user';
+    actionError.value = error instanceof Error ? error.message : t('users.delete.failed');
   } finally {
     isDeleting.value = false;
   }
@@ -359,12 +362,12 @@ onMounted(() => {
       <header class="users-hero">
         <div class="min-w-0">
           <h1 class="nara-page-title">
-            Users<span class="nara-page-title-accent">.</span>
+            {{ t('users.title') }}<span class="nara-page-title-accent">.</span>
           </h1>
-          <p class="nara-page-lede">Search accounts, manage access, and keep user records current.</p>
+          <p class="nara-page-lede">{{ t('users.lede') }}</p>
         </div>
         <div class="flex items-center gap-3">
-          <RouterLink to="/dashboard" class="users-ghost">Dashboard</RouterLink>
+          <RouterLink to="/dashboard" class="users-ghost">{{ t('users.dashboard') }}</RouterLink>
           <button
             v-if="canCreate"
             type="button"
@@ -374,13 +377,13 @@ onMounted(() => {
             @click="openCreate"
           >
             <span class="users-primary-plus" aria-hidden="true">+</span>
-            New user
+            {{ t('users.new') }}
           </button>
         </div>
       </header>
 
       <div class="users-stack nara-page-body">
-        <p v-if="loadForbidden" role="alert" class="users-alert users-alert--error">You do not have permission to view users.</p>
+        <p v-if="loadForbidden" role="alert" class="users-alert users-alert--error">{{ t('users.forbidden') }}</p>
         <p v-if="loadError" role="alert" class="users-alert users-alert--error">{{ loadError }}</p>
         <p v-if="actionError" role="alert" class="users-alert users-alert--error">{{ actionError }}</p>
         <p v-if="roleLoadError" role="alert" class="users-alert users-alert--error">{{ roleLoadError }}</p>
@@ -388,30 +391,30 @@ onMounted(() => {
 
         <section v-if="pendingDelete" class="users-danger" role="dialog" aria-labelledby="delete-user-title">
           <div class="min-w-0">
-            <h2 id="delete-user-title" class="font-heading text-lg font-extrabold tracking-[-0.03em]">Delete {{ pendingDelete.name }}?</h2>
-            <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">This action cannot be undone. Server protection rules still apply to self-delete and the last administrator.</p>
+            <h2 id="delete-user-title" class="font-heading text-lg font-extrabold tracking-[-0.03em]">{{ t('users.delete.title', { name: pendingDelete.name }) }}</h2>
+            <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">{{ t('users.delete.lede') }}</p>
           </div>
           <div class="flex shrink-0 gap-2">
-            <button type="button" data-testid="cancel-delete" :disabled="isDeleting" class="users-btn" @click="cancelDelete">Cancel</button>
-            <button type="button" data-testid="confirm-delete" :disabled="isDeleting" class="users-btn users-btn--danger-solid" @click="confirmDelete">{{ isDeleting ? 'Deleting…' : 'Delete user' }}</button>
+            <button type="button" data-testid="cancel-delete" :disabled="isDeleting" class="users-btn" @click="cancelDelete">{{ t('users.delete.cancel') }}</button>
+            <button type="button" data-testid="confirm-delete" :disabled="isDeleting" class="users-btn users-btn--danger-solid" @click="confirmDelete">{{ isDeleting ? t('users.delete.deleting') : t('users.delete.confirm') }}</button>
           </div>
         </section>
 
         <template v-if="!loadForbidden">
-          <form class="users-search" data-testid="user-search-form" aria-label="Find users" @submit.prevent="submitSearch">
+          <form class="users-search" data-testid="user-search-form" :aria-label="t('users.search.label')" @submit.prevent="submitSearch">
             <label class="users-search-field" for="user-search">
-              <span class="sr-only">Search by name or email</span>
+              <span class="sr-only">{{ t('users.search.field') }}</span>
               <svg class="users-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.8" /><path d="m13.5 13.5 3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
               <input
                 id="user-search"
                 v-model="search"
                 type="search"
                 :disabled="Boolean(pendingDelete) || isDeleting"
-                placeholder="Search by name or email"
+                :placeholder="t('users.search.field')"
               />
             </label>
             <label class="users-search-limit" for="user-page-size">
-              <span>Per page</span>
+              <span>{{ t('users.search.perPage') }}</span>
               <select
                 id="user-page-size"
                 v-model.number="limit"
@@ -424,7 +427,7 @@ onMounted(() => {
                 <option :value="25">25</option>
               </select>
             </label>
-            <button type="submit" :disabled="Boolean(pendingDelete) || isDeleting" class="users-search-submit">Search</button>
+            <button type="submit" :disabled="Boolean(pendingDelete) || isDeleting" class="users-search-submit">{{ t('users.search.submit') }}</button>
           </form>
 
           <section v-if="isFormOpen" class="users-form" aria-labelledby="user-form-title">
@@ -432,44 +435,44 @@ onMounted(() => {
               <div class="flex items-center gap-4">
                 <span class="users-avatar users-avatar--lg" aria-hidden="true">{{ isCreating ? '+' : (editingUser?.name ?? '').slice(0, 2).toUpperCase() }}</span>
                 <div class="min-w-0">
-                  <h2 id="user-form-title" class="font-heading text-xl font-extrabold tracking-[-0.04em]">{{ isCreating ? 'Create user' : canEditCurrentForm ? 'Edit user' : 'Reset password' }}</h2>
+                  <h2 id="user-form-title" class="font-heading text-xl font-extrabold tracking-[-0.04em]">{{ isCreating ? t('users.form.create') : canEditCurrentForm ? t('users.form.edit') : t('users.form.resetPassword') }}</h2>
                   <p v-if="editingUser" class="mt-0.5 truncate text-sm text-muted-foreground">{{ editingUser.email }}</p>
                 </div>
               </div>
-              <button type="button" class="users-close" aria-label="Close" :disabled="isSubmitting || isResettingPassword" @click="closeForm">×</button>
+              <button type="button" class="users-close" :aria-label="t('users.form.close')" :disabled="isSubmitting || isResettingPassword" @click="closeForm">×</button>
             </div>
 
             <p v-if="formError" role="alert" class="users-alert users-alert--error mt-6">{{ formError }}</p>
             <form class="mt-6 grid gap-5 md:grid-cols-2" data-testid="user-form" @submit.prevent="submitUser">
               <label class="users-field" for="user-name">
-                Name
+                {{ t('users.form.name') }}
                 <input id="user-name" v-model="userName" type="text" autocomplete="name" :disabled="!canEditCurrentForm" class="users-input" />
                 <span v-if="fieldError('name')" class="users-error">{{ fieldError('name') }}</span>
               </label>
               <label class="users-field" for="user-email">
-                Email
+                {{ t('users.form.email') }}
                 <input id="user-email" v-model="userEmail" type="email" autocomplete="email" :disabled="!canEditCurrentForm" class="users-input" />
                 <span v-if="fieldError('email')" class="users-error">{{ fieldError('email') }}</span>
               </label>
               <label v-if="isCreating" class="users-field" for="user-password">
-                Password
+                {{ t('users.form.password') }}
                 <input id="user-password" v-model="userPassword" type="password" autocomplete="new-password" :required="isCreating" class="users-input" />
-                <span class="users-hint">Required; use at least 8 characters.</span>
+                <span class="users-hint">{{ t('users.form.passwordHint') }}</span>
                 <span v-if="fieldError('password')" class="users-error">{{ fieldError('password') }}</span>
               </label>
               <p v-else-if="editingSelf" class="self-end text-xs leading-relaxed text-muted-foreground">
-                Change your own password from Profile so the current password can be verified.
+                {{ t('users.form.selfPassword') }}
               </p>
 
               <div v-else-if="canResetEditingPassword" class="users-field users-reset md:col-span-2">
-                <label for="user-password">Reset password</label>
+                <label for="user-password">{{ t('users.form.resetPassword') }}</label>
                 <div class="flex flex-col gap-2 sm:flex-row">
                   <input
                     id="user-password"
                     v-model="userPassword"
                     type="password"
                     autocomplete="new-password"
-                    placeholder="New password"
+                    :placeholder="t('users.form.newPassword')"
                     class="users-input min-w-0 flex-1"
                     @keydown.enter.prevent="resetManagedPassword"
                   />
@@ -480,29 +483,29 @@ onMounted(() => {
                     class="users-btn"
                     @click="resetManagedPassword"
                   >
-                    {{ isResettingPassword ? 'Resetting…' : 'Reset password' }}
+                    {{ isResettingPassword ? t('users.form.resetting') : t('users.form.resetPassword') }}
                   </button>
                 </div>
-                <span class="users-hint">Resetting revokes all active sessions for this account.</span>
+                <span class="users-hint">{{ t('users.form.resetHint') }}</span>
                 <span v-if="fieldError('password')" class="users-error">{{ fieldError('password') }}</span>
               </div>
 
               <fieldset v-if="canAssignRoles && canEditCurrentForm" class="users-field md:col-span-2">
-                <legend class="mb-2">Roles</legend>
+                <legend class="mb-2">{{ t('users.form.roles') }}</legend>
                 <div class="flex flex-wrap gap-2">
                   <label v-for="role in roles" :key="role.id" class="users-role-option">
                     <input v-model="selectedRoles" type="checkbox" :value="role.slug" :data-role-slug="role.slug" />
                     <span>{{ role.name }} <span class="users-role-slug">{{ role.slug }}</span></span>
                   </label>
                 </div>
-                <span class="users-hint">Role assignment is limited by the server to administrators.</span>
+                <span class="users-hint">{{ t('users.form.rolesHint') }}</span>
               </fieldset>
 
               <div v-if="canEditCurrentForm" class="flex items-center gap-3 border-t border-border pt-5 md:col-span-2">
                 <button type="submit" :disabled="isSubmitting || isResettingPassword" class="users-primary">
-                  {{ isSubmitting ? 'Saving…' : isCreating ? 'Create user' : 'Save changes' }}
+                  {{ isSubmitting ? t('users.form.saving') : isCreating ? t('users.form.create') : t('users.form.save') }}
                 </button>
-                <button type="button" :disabled="isSubmitting || isResettingPassword" class="users-ghost" @click="closeForm">Cancel</button>
+                <button type="button" :disabled="isSubmitting || isResettingPassword" class="users-ghost" @click="closeForm">{{ t('users.form.cancel') }}</button>
               </div>
             </form>
           </section>
@@ -510,21 +513,21 @@ onMounted(() => {
           <section class="users-window" aria-labelledby="user-list-title">
             <div class="users-window-bar">
               <span class="users-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <h2 id="user-list-title" class="users-window-title">User accounts</h2>
-              <span class="users-count">{{ total }} total user{{ total === 1 ? '' : 's' }}</span>
+              <h2 id="user-list-title" class="users-window-title">{{ t('users.list.title') }}</h2>
+              <span class="users-count">{{ t('users.list.total', { count: total }) }}</span>
             </div>
 
-            <p v-if="isLoading" role="status" class="users-empty">Loading users…</p>
-            <p v-else-if="users.length === 0" class="users-empty">No users match this search.</p>
+            <p v-if="isLoading" role="status" class="users-empty">{{ t('users.list.loading') }}</p>
+            <p v-else-if="users.length === 0" class="users-empty">{{ t('users.list.empty') }}</p>
 
             <template v-else>
               <div class="overflow-x-auto">
                 <table class="users-table" data-testid="user-list">
                   <thead>
                     <tr>
-                      <th scope="col">User</th>
-                      <th scope="col">Roles</th>
-                      <th scope="col" class="text-right">Actions</th>
+                      <th scope="col">{{ t('users.list.user') }}</th>
+                      <th scope="col">{{ t('users.list.roles') }}</th>
+                      <th scope="col" class="text-right">{{ t('users.list.actions') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -532,7 +535,7 @@ onMounted(() => {
                       <td>
                         <div class="flex items-center gap-3.5">
                           <span class="users-avatar">
-                            <img v-if="user.avatar" :src="user.avatar" :alt="`${user.name} avatar`" class="h-full w-full object-cover" />
+                            <img v-if="user.avatar" :src="user.avatar" :alt="t('users.list.avatarAlt', { name: user.name })" class="h-full w-full object-cover" />
                             <span v-else>{{ user.name.slice(0, 2).toUpperCase() }}</span>
                           </span>
                           <span class="min-w-0">
@@ -544,13 +547,13 @@ onMounted(() => {
                       <td>
                         <div class="flex flex-wrap gap-1.5">
                           <span v-for="role in user.roles" :key="role" :class="['users-chip', { 'users-chip--admin': role === 'admin' }]">{{ roleLabel(role) }}</span>
-                          <span v-if="user.roles.length === 0" class="text-[13px] text-muted-foreground">No roles</span>
+                          <span v-if="user.roles.length === 0" class="text-[13px] text-muted-foreground">{{ t('users.list.noRoles') }}</span>
                         </div>
                       </td>
                       <td class="text-right">
                         <div class="users-row-actions">
-                          <button v-if="canEditUser(user) || canResetUser(user)" type="button" :disabled="isResettingPassword || isSubmitting || Boolean(pendingDelete)" :data-testid="`edit-user-${user.id}`" class="users-btn users-btn--sm" @click="openEdit(user)">{{ canEditUser(user) ? 'Edit' : 'Reset password' }}</button>
-                          <button v-if="canDeleteUser(user)" type="button" :disabled="isResettingPassword || isSubmitting || Boolean(pendingDelete)" :data-testid="`delete-user-${user.id}`" class="users-btn users-btn--sm users-btn--danger" @click="requestDelete(user)">Delete</button>
+                          <button v-if="canEditUser(user) || canResetUser(user)" type="button" :disabled="isResettingPassword || isSubmitting || Boolean(pendingDelete)" :data-testid="`edit-user-${user.id}`" class="users-btn users-btn--sm" @click="openEdit(user)">{{ canEditUser(user) ? t('users.list.edit') : t('users.form.resetPassword') }}</button>
+                          <button v-if="canDeleteUser(user)" type="button" :disabled="isResettingPassword || isSubmitting || Boolean(pendingDelete)" :data-testid="`delete-user-${user.id}`" class="users-btn users-btn--sm users-btn--danger" @click="requestDelete(user)">{{ t('users.list.delete') }}</button>
                         </div>
                       </td>
                     </tr>
@@ -559,9 +562,9 @@ onMounted(() => {
               </div>
 
               <div class="users-pager">
-                <button type="button" data-testid="user-previous" :disabled="page <= 1 || isLoading || Boolean(pendingDelete) || isDeleting" class="users-btn users-btn--sm" @click="goToPage(page - 1)">← Previous</button>
-                <span aria-live="polite" class="users-pager-label">Page {{ page }} of {{ totalPages }}</span>
-                <button type="button" data-testid="user-next" :disabled="page >= totalPages || isLoading || Boolean(pendingDelete) || isDeleting" class="users-btn users-btn--sm" @click="goToPage(page + 1)">Next →</button>
+                <button type="button" data-testid="user-previous" :disabled="page <= 1 || isLoading || Boolean(pendingDelete) || isDeleting" class="users-btn users-btn--sm" @click="goToPage(page - 1)">{{ t('users.list.previous') }}</button>
+                <span aria-live="polite" class="users-pager-label">{{ t('users.list.page', { page, pages: totalPages }) }}</span>
+                <button type="button" data-testid="user-next" :disabled="page >= totalPages || isLoading || Boolean(pendingDelete) || isDeleting" class="users-btn users-btn--sm" @click="goToPage(page + 1)">{{ t('users.list.next') }}</button>
               </div>
             </template>
           </section>

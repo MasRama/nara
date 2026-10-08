@@ -2,10 +2,11 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
+import { t } from '../locales';
 
 const authSession = useAuthSession();
 const user = authSession.user;
-const firstName = computed(() => user.value?.name.split(' ')[0] || 'there');
+const firstName = computed(() => user.value?.name.split(' ')[0] || t('dashboard.greetingFallback'));
 const initials = computed(() =>
   (user.value?.name ?? '')
     .split(' ')
@@ -15,10 +16,10 @@ const initials = computed(() =>
     .join('') || '?',
 );
 
-const actions = [
-  { to: '/profile', icon: 'Aa', title: 'Edit profile', description: 'Update your name, email, and avatar.' },
-  { to: '/profile#security', icon: '•••', title: 'Change password', description: 'Rotate your credentials and keep the account secure.' },
-];
+const actions = computed(() => [
+  { to: '/profile', icon: 'Aa', title: t('dashboard.editProfile'), description: t('dashboard.editProfileHint') },
+  { to: '/profile#security', icon: '•••', title: t('dashboard.changePassword'), description: t('dashboard.changePasswordHint') },
+]);
 </script>
 
 <template>
@@ -26,17 +27,17 @@ const actions = [
     <div class="nara-page-inner">
       <header>
         <h1 class="nara-page-title">
-          Hi, <span class="nara-page-title-accent">{{ firstName }}.</span>
+          {{ t('dashboard.greeting') }} <span class="nara-page-title-accent">{{ firstName }}.</span>
         </h1>
-        <p class="nara-page-lede">Manage your account details and security from here.</p>
+        <p class="nara-page-lede">{{ t('dashboard.lede') }}</p>
       </header>
 
       <div class="dash-grid nara-page-body">
         <section class="dash-window" aria-labelledby="dashboard-account-title">
           <div class="dash-window-bar">
             <span class="dash-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-            <span class="dash-window-path">account / session</span>
-            <span class="dash-window-live"><span class="dash-live-dot"></span>active</span>
+            <span class="dash-window-path">{{ t('dashboard.windowPath') }}</span>
+            <span class="dash-window-live"><span class="dash-live-dot"></span>{{ t('dashboard.live') }}</span>
           </div>
 
           <div class="dash-identity">
@@ -49,18 +50,18 @@ const actions = [
 
           <dl class="dash-facts">
             <div>
-              <dt>Session</dt>
-              <dd><span class="dash-live-dot"></span>Signed in</dd>
+              <dt>{{ t('dashboard.session') }}</dt>
+              <dd><span class="dash-live-dot"></span>{{ t('dashboard.signedIn') }}</dd>
             </div>
             <div>
-              <dt>Sign-in method</dt>
-              <dd>Email &amp; password</dd>
+              <dt>{{ t('dashboard.method') }}</dt>
+              <dd>{{ t('dashboard.methodValue') }}</dd>
             </div>
           </dl>
         </section>
 
         <section class="dash-actions" aria-labelledby="dashboard-actions-title">
-          <h2 id="dashboard-actions-title" class="dash-actions-title">Account</h2>
+          <h2 id="dashboard-actions-title" class="dash-actions-title">{{ t('dashboard.actionsTitle') }}</h2>
           <RouterLink v-for="action in actions" :key="action.to" :to="action.to" class="dash-action">
             <span class="dash-action-icon" aria-hidden="true">{{ action.icon }}</span>
             <span class="min-w-0 flex-1">

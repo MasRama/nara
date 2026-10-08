@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
+import LocaleSwitcher from '../../../../shared/i18n/LocaleSwitcher.vue';
+import { t } from '../locales';
 
 defineProps<{
   heading: string;
@@ -10,7 +12,7 @@ defineProps<{
 }>();
 
 const isDark = ref(false);
-const themeLabel = computed(() => (isDark.value ? 'Use light mode' : 'Use dark mode'));
+const themeLabel = computed(() => (isDark.value ? t('frame.lightMode') : t('frame.darkMode')));
 
 onMounted(() => {
   isDark.value = document.documentElement.classList.contains('dark');
@@ -31,28 +33,29 @@ function toggleTheme(): void {
   <main class="nara-auth">
     <div class="nara-auth-shell">
       <header class="nara-auth-header">
-        <RouterLink v-if="!locked" to="/" class="nara-auth-brand" aria-label="Nara home">
+        <RouterLink v-if="!locked" to="/" class="nara-auth-brand" :aria-label="t('frame.home')">
           <img src="/nara.png" width="30" height="30" alt="" />
-          <span>nara<b>.</b></span>
+          <span translate="no">nara<b>.</b></span>
         </RouterLink>
         <div v-else class="nara-auth-brand">
           <img src="/nara.png" width="30" height="30" alt="" />
-          <span>nara<b>.</b></span>
+          <span translate="no">nara<b>.</b></span>
         </div>
         <div class="nara-auth-header-actions">
+          <LocaleSwitcher />
           <button class="nara-auth-theme" type="button" :aria-label="themeLabel" @click="toggleTheme">
             <svg v-if="isDark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm0-19a1 1 0 0 1-1-1V1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1ZM3 13H2a1 1 0 1 1 0-2h1a1 1 0 1 1 0 2Zm19 0h-1a1 1 0 1 1 0-2h1a1 1 0 1 1 0 2Z" /></svg>
             <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 14.2A8.5 8.5 0 0 1 9.8 3a8.5 8.5 0 1 0 11.2 11.2Z" /></svg>
           </button>
-          <RouterLink v-if="!locked" to="/" class="nara-auth-home">Back to site <span aria-hidden="true">↗</span></RouterLink>
+          <RouterLink v-if="!locked" to="/" class="nara-auth-home">{{ t('frame.backToSite') }} <span aria-hidden="true">↗</span></RouterLink>
         </div>
       </header>
 
       <div class="nara-auth-content">
         <aside class="nara-auth-story">
-          <p class="nara-auth-story-title">Build by feature.<br /><em>Keep it yours.</em></p>
+          <p class="nara-auth-story-title">{{ t('frame.storyTitle') }}<br /><em>{{ t('frame.storyEmphasis') }}</em></p>
           <span class="nara-auth-story-rule" aria-hidden="true"></span>
-          <p class="nara-auth-story-description">Code you can understand. Architecture you own.</p>
+          <p class="nara-auth-story-description">{{ t('frame.storyDescription') }}</p>
         </aside>
 
         <section class="nara-auth-form-panel">
@@ -65,8 +68,8 @@ function toggleTheme(): void {
       </div>
 
       <footer class="nara-auth-footer">
-        <span>© {{ new Date().getFullYear() }} Nara</span>
-        <span>Build what's yours.</span>
+        <span translate="no">© {{ new Date().getFullYear() }} Nara</span>
+        <span>{{ t('frame.tagline') }}</span>
       </footer>
     </div>
   </main>
@@ -89,6 +92,8 @@ function toggleTheme(): void {
 .nara-auth-header-actions { display: inline-flex; align-items: center; gap: 14px; }
 .nara-auth-theme { display: flex; width: 40px; height: 40px; align-items: center; justify-content: center; border: 1px solid var(--nara-line); border-radius: 12px; color: var(--nara-muted); transition: color .2s, border-color .2s; }
 .nara-auth-theme svg { width: 18px; height: 18px; }
+.nara-auth-header-actions .locale-switcher.locale-switcher { width: 40px; height: 40px; border: 1px solid var(--nara-line); border-radius: 12px; color: var(--nara-muted); transition: color .2s, border-color .2s; }
+.nara-auth-header-actions .locale-switcher.locale-switcher:hover { color: var(--nara-fg); border-color: var(--nara-accent-strong); }
 .nara-auth-theme:hover, .nara-auth-home:hover { color: var(--nara-fg); border-color: var(--nara-accent-strong); }
 .nara-auth-home { display: inline-flex; align-items: center; gap: 8px; color: var(--nara-muted); font-size: 12px; font-weight: 700; text-decoration: none; transition: color .2s; }
 .nara-auth-home span { color: var(--nara-accent-strong); font-size: 17px; }
