@@ -3,12 +3,10 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { createUserInputSchema, updateUserInputSchema } from '../../contract';
 import type { ManagedUser, UpdateUserInput } from '../../contract';
-import type { ValidationIssue } from '../../../../shared/i18n';
+import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { createUsersClient } from '../client';
 import type { UsersWebHost, UsersWebRole } from '../host';
 import { error as errorText, issue as issueText, t } from '../locales';
-
-type FieldErrors = Record<string, string[]>;
 
 const props = defineProps<{ host: UsersWebHost }>();
 
@@ -20,11 +18,11 @@ const total = ref(0);
 const page = ref(1);
 const limit = ref(10);
 const isLoading = ref(false);
-const loadError = ref('');
+const loadError = useLocalText();
 const loadForbidden = ref(false);
-const actionError = ref('');
-const roleLoadError = ref('');
-const notice = ref('');
+const actionError = useLocalText();
+const roleLoadError = useLocalText();
+const notice = useLocalText();
 
 const isFormOpen = ref(false);
 const isCreating = ref(false);
@@ -33,8 +31,8 @@ const userName = ref('');
 const userEmail = ref('');
 const userPassword = ref('');
 const selectedRoles = ref<string[]>([]);
-const formError = ref('');
-const fieldErrors = ref<FieldErrors>({});
+const formError = useLocalText();
+const fieldErrors = useLocalFieldErrors();
 const isSubmitting = ref(false);
 const isResettingPassword = ref(false);
 
@@ -85,12 +83,12 @@ function canDeleteUser(user: ManagedUser): boolean {
 }
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
 
-function mapIssues(issues: ReadonlyArray<ValidationIssue>): FieldErrors {
-  const mapped: FieldErrors = {};
+function mapIssues(issues: ReadonlyArray<ValidationIssue>): LocalFieldErrors {
+  const mapped: LocalFieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issueText(issue));
+    mapped[key].push(() => issueText(issue));
   }
   return mapped;
 }
@@ -115,7 +113,7 @@ async function loadUsers(nextPage = page.value): Promise<void> {
     if (requestId !== usersLoadRequestId) return;
     if (!response.success || !response.data) {
       loadForbidden.value = !response.success && response.code === 'FORBIDDEN';
-      if (!loadForbidden.value) loadError.value = errorText(response);
+      if (!loadForbidden.value) loadError.value = () => errorText(response);
       users.value = [];
       return;
     }
@@ -126,7 +124,8 @@ async function loadUsers(nextPage = page.value): Promise<void> {
     limit.value = response.data.limit;
   } catch (error) {
     if (requestId !== usersLoadRequestId) return;
-    loadError.value = error instanceof Error ? error.message : t('users.loadFailed');
+    console.error(error);
+    loadError.value = () => t('users.loadFailed');
     users.value = [];
   } finally {
     if (requestId === usersLoadRequestId) isLoading.value = false;
@@ -144,7 +143,8 @@ async function loadRoles(): Promise<void> {
     roles.value = await props.host.listRoles();
   } catch (error) {
     roles.value = [];
-    roleLoadError.value = error instanceof Error ? error.message : t('users.rolesFailed');
+    console.error(error);
+    roleLoadError.value = () => t('users.rolesFailed');
   }
 }
 
@@ -216,7 +216,7 @@ function validateUser(): UpdateUserInput | undefined {
   }
 
   fieldErrors.value = mapIssues(parsed.error.issues);
-  formError.value = t('users.form.invalid');
+  formError.value = () => t('users.form.invalid');
   return undefined;
 }
 
@@ -227,8 +227,8 @@ async function resetManagedPassword(): Promise<void> {
   formError.value = '';
   notice.value = '';
   if (userPassword.value.length < 8) {
-    fieldErrors.value = { password: [t('users.form.passwordTooShort')] };
-    formError.value = t('users.form.invalid');
+    fieldErrors.value = { password: [() => t('users.form.passwordTooShort')] };
+    formError.value = () => t('users.form.invalid');
     return;
   }
 
@@ -236,15 +236,16 @@ async function resetManagedPassword(): Promise<void> {
   try {
     const response = await usersClient.resetPassword(editingUser.value.id, { password: userPassword.value });
     if (!response.success) {
-      formError.value =
+      formError.value = () =>
         response.code === 'PROTECTED_ADMIN' ? t('users.form.protectedAdminReset') : errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
     userPassword.value = '';
-    notice.value = t('users.form.passwordReset');
+    notice.value = () => t('users.form.passwordReset');
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('users.form.resetFailed');
+    console.error(error);
+    formError.value = () => t('users.form.resetFailed');
   } finally {
     isResettingPassword.value = false;
   }
@@ -272,7 +273,7 @@ async function submitUser(): Promise<void> {
     const parsed = createUserInputSchema.safeParse(payload);
     if (!parsed.success) {
       fieldErrors.value = mapIssues(parsed.error.issues);
-      formError.value = t('users.form.invalid');
+      formError.value = () => t('users.form.invalid');
       return;
     }
 
@@ -280,16 +281,17 @@ async function submitUser(): Promise<void> {
     try {
       const response = await usersClient.createUser(parsed.data);
       if (!response.success) {
-        formError.value = errorText(response);
+        formError.value = () => errorText(response);
         fieldErrors.value = response.errors ?? {};
         return;
       }
       isFormOpen.value = false;
       resetForm();
-      notice.value = t('users.form.created');
+      notice.value = () => t('users.form.created');
       await loadUsers(1);
     } catch (error) {
-      formError.value = error instanceof Error ? error.message : t('users.form.createFailed');
+      console.error(error);
+      formError.value = () => t('users.form.createFailed');
     } finally {
       isSubmitting.value = false;
     }
@@ -301,16 +303,17 @@ async function submitUser(): Promise<void> {
   try {
     const response = await usersClient.updateUser(editingUser.value.id, payload);
     if (!response.success) {
-      formError.value = errorText(response);
+      formError.value = () => errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
     isFormOpen.value = false;
     resetForm();
-    notice.value = t('users.form.updated');
+    notice.value = () => t('users.form.updated');
     await loadUsers(page.value);
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('users.form.updateFailed');
+    console.error(error);
+    formError.value = () => t('users.form.updateFailed');
   } finally {
     isSubmitting.value = false;
   }
@@ -336,16 +339,17 @@ async function confirmDelete(): Promise<void> {
   try {
     const response = await usersClient.deleteUsers({ ids: [pendingDelete.value.id] });
     if (!response.success) {
-      actionError.value = errorText(response);
+      actionError.value = () => errorText(response);
       return;
     }
-    notice.value = t('users.delete.done');
+    notice.value = () => t('users.delete.done');
     pendingDelete.value = null;
     const remainingTotal = Math.max(0, total.value - response.data.deleted);
     const remainingPages = Math.max(1, Math.ceil(remainingTotal / limit.value));
     await loadUsers(Math.min(page.value, remainingPages));
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : t('users.delete.failed');
+    console.error(error);
+    actionError.value = () => t('users.delete.failed');
   } finally {
     isDeleting.value = false;
   }

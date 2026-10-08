@@ -99,6 +99,20 @@ const registerHandler = async (context: Context, activity?: AuthActivitySink) =>
   }
 };
 
+// The attempt that trips the lockout and every attempt during it answer the
+// same way, whether or not the account exists.
+function loginLocked(context: Context, lockoutMs: number) {
+  context.header('Retry-After', String(Math.max(1, Math.ceil(lockoutMs / 1000))));
+  return context.json(
+    {
+      success: false as const,
+      message: `Too many attempts. Try again in ${Math.max(1, Math.ceil(lockoutMs / 60_000))} minutes.`,
+      code: 'LOGIN_LOCKED',
+    },
+    429,
+  );
+}
+
 const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
   const parsed = loginInputSchema.safeParse(await requestBody(context));
   if (!parsed.success) {
@@ -118,16 +132,8 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
   const ip = clientIp(context);
 
   if (isLockedOut(identifier, ip)) {
-    const minutes = Math.max(1, Math.ceil(remainingLockoutMs(identifier, ip) / 60_000));
     Logger.logSecurity('login_blocked_locked', { email: parsed.data.email });
-    return context.json(
-      {
-        success: false as const,
-        message: `Too many attempts. Try again in ${minutes} minutes.`,
-        code: 'RATE_LIMITED',
-      },
-      429,
-    );
+    return loginLocked(context, remainingLockoutMs(identifier, ip));
   }
 
   const user = findUserByEmail(parsed.data.email);
@@ -136,14 +142,9 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
   if (!(await checkPassword(parsed.data.password, user))) {
     const result = recordFailedAttempt(identifier, ip);
     Logger.logSecurity('login_failed', { email: parsed.data.email });
+    if (result.isLocked) return loginLocked(context, result.lockoutMs);
     return context.json(
-      {
-        success: false as const,
-        message: result.isLocked
-          ? `Too many attempts. Try again in ${Math.max(1, Math.ceil(result.lockoutMs / 60_000))} minutes.`
-          : 'Invalid email or password',
-        code: 'INVALID_CREDENTIALS',
-      },
+      { success: false as const, message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
       401,
     );
   }

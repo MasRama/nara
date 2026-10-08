@@ -97,6 +97,23 @@ describe('translation runtime', () => {
     );
   });
 
+  it('re-renders messages left on screen in the locale switched to, and keeps API field text as sent', async () => {
+    const { defineMessages, setLocale, useLocalFieldErrors, useLocalText } = await freshRuntime();
+    const { t, error } = defineMessages(en, { id: async () => ({ default: id }) });
+    const notice = useLocalText();
+    const fields = useLocalFieldErrors();
+    notice.value = () => error({ code: 'INVALID_PASSWORD', message: 'Password is incorrect' });
+    fields.value = { password: [() => t('field.password'), 'Sent by the API'] };
+    expect(notice.value).toBe('Password is incorrect');
+
+    await setLocale('id');
+    expect(notice.value).toBe('Kata sandi salah.');
+    expect(fields.value).toEqual({ password: ['Kata sandi', 'Sent by the API'] });
+
+    notice.value = '';
+    expect(notice.value).toBe('');
+  });
+
   it('formats dates in the current locale', async () => {
     const { formatDate, setLocale } = await freshRuntime();
     const day = new Date(2026, 0, 5);

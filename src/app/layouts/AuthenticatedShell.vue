@@ -2,13 +2,14 @@
 import { computed, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
+import { useLocalText } from '../../shared/i18n';
 import { error as errorText, t } from '../locales';
 import SiteHeader from './SiteHeader.vue';
 
 const authSession = useAuthSession();
 const router = useRouter();
 const isLoggingOut = ref(false);
-const logoutError = ref('');
+const logoutError = useLocalText();
 const user = computed(() => authSession.user.value);
 const canViewUsers = computed(() => authSession.can('users.view'));
 const canViewRoles = computed(() => authSession.can('roles.view'));
@@ -31,12 +32,13 @@ async function logout(): Promise<void> {
   try {
     const response = await authSession.logout();
     if (!response.success) {
-      logoutError.value = errorText(response);
+      logoutError.value = () => errorText(response);
       return;
     }
     await router.replace({ name: 'login' });
   } catch (error) {
-    logoutError.value = error instanceof Error ? error.message : t('shell.signOutFailed');
+    console.error(error);
+    logoutError.value = () => t('shell.signOutFailed');
   } finally {
     isLoggingOut.value = false;
   }

@@ -6,15 +6,15 @@ import { createAuthClient } from '../client';
 import { createSecurityClient } from '../security-client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
-import type { ValidationIssue } from '../../../../shared/i18n';
+import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { error as errorText, issue as issueText, t } from '../locales';
 
 const email = ref('');
 const password = ref('');
 const showPassword = ref(false);
 const isSubmitting = ref(false);
-const formError = ref('');
-const fieldErrors = ref<Record<string, string[]>>({});
+const formError = useLocalText();
+const fieldErrors = useLocalFieldErrors();
 const step = ref<'password' | 'two-factor'>('password');
 const useRecoveryCode = ref(false);
 const twoFactorCode = ref('');
@@ -26,12 +26,12 @@ const authSession = useAuthSession();
 const route = useRoute();
 const router = useRouter();
 
-function mapIssues(issues: ValidationIssue[]): Record<string, string[]> {
-  const mapped: Record<string, string[]> = {};
+function mapIssues(issues: ValidationIssue[]): LocalFieldErrors {
+  const mapped: LocalFieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issueText(issue));
+    mapped[key].push(() => issueText(issue));
   }
   return mapped;
 }
@@ -55,13 +55,13 @@ function validate(): LoginInput | undefined {
   }
 
   fieldErrors.value = mapIssues(parsed.error.issues);
-  formError.value = t('common.correctFields');
+  formError.value = () => t('common.correctFields');
   return undefined;
 }
 
 async function finishSignIn(): Promise<void> {
   if (!(await authSession.refresh())) {
-    formError.value = t('login.sessionFailed');
+    formError.value = () => t('login.sessionFailed');
     return;
   }
   await router.replace(redirectTarget());
@@ -84,9 +84,7 @@ async function submitLogin(): Promise<void> {
   try {
     const response = await authClient.login(input);
     if (!response.success) {
-      // The attempt that locks the account answers INVALID_CREDENTIALS with the lockout wait; keep that text.
-      formError.value =
-        response.code === 'INVALID_CREDENTIALS' && response.message.startsWith('Too many attempts') ? response.message : errorText(response);
+      formError.value = () => errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
@@ -99,7 +97,8 @@ async function submitLogin(): Promise<void> {
     }
     await finishSignIn();
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('login.failed');
+    console.error(error);
+    formError.value = () => t('login.failed');
   } finally {
     isSubmitting.value = false;
   }
@@ -115,7 +114,7 @@ async function submitTwoFactor(): Promise<void> {
   );
   if (!parsed.success) {
     fieldErrors.value = mapIssues(parsed.error.issues);
-    formError.value = t('common.correctFields');
+    formError.value = () => t('common.correctFields');
     return;
   }
 
@@ -128,13 +127,14 @@ async function submitTwoFactor(): Promise<void> {
       } else {
         twoFactorCode.value = '';
       }
-      formError.value = errorText(response);
+      formError.value = () => errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
     await finishSignIn();
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('login.twoFactor.failed');
+    console.error(error);
+    formError.value = () => t('login.twoFactor.failed');
   } finally {
     isSubmitting.value = false;
   }

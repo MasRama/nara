@@ -276,6 +276,8 @@ export const { t, find, issue, error } = defineMessages(en, { id: () => import('
 - API messages stay English. The interface translates a refusal by its `code` with `error(response)` (key `errors.<CODE>`) and shows the API message for codes it does not know.
 - `issue(zodIssue)` keeps the contract's English validation message in English and describes the issue from its code and the `field.<name>` label in other locales.
 - Dates and numbers go through `formatDate`, `formatRelativeTime`, and `formatNumber`, which follow the chosen locale.
+- A message that stays on screen (an error, a notice) lives in `useLocalText()` and is assigned as a function, `formError.value = () => error(response)`, so it follows a locale switch; per-field errors use `useLocalFieldErrors()`. Assigning a plain string is a type error.
+- Data the server stores in English, such as the permission catalog, is shown as stored in English; other locales translate the entries the dictionary knows.
 
 The chosen locale comes from the visitor's choice, then the browser language,
 then English. Only English ships in the main bundle; another locale's

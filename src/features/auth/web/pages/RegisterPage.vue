@@ -5,7 +5,7 @@ import { registerInputSchema, type RegisterInput } from '../../contract';
 import { createAuthClient } from '../client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
-import type { ValidationIssue } from '../../../../shared/i18n';
+import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { error as errorText, issue as issueText, t } from '../locales';
 
 const name = ref('');
@@ -15,20 +15,20 @@ const passwordConfirmation = ref('');
 const showPassword = ref(false);
 const showConfirmation = ref(false);
 const isSubmitting = ref(false);
-const formError = ref('');
-const fieldErrors = ref<Record<string, string[]>>({});
+const formError = useLocalText();
+const fieldErrors = useLocalFieldErrors();
 
 const authClient = createAuthClient();
 const authSession = useAuthSession();
 const route = useRoute();
 const router = useRouter();
 
-function mapIssues(issues: ValidationIssue[]): Record<string, string[]> {
-  const mapped: Record<string, string[]> = {};
+function mapIssues(issues: ValidationIssue[]): LocalFieldErrors {
+  const mapped: LocalFieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issueText(issue));
+    mapped[key].push(() => issueText(issue));
   }
   return mapped;
 }
@@ -50,12 +50,12 @@ function validate(): RegisterInput | undefined {
   const nextErrors = parsed.success ? {} : mapIssues(parsed.error.issues);
 
   if (password.value !== passwordConfirmation.value) {
-    nextErrors.password_confirmation = [t('common.passwordsMismatch')];
+    nextErrors.password_confirmation = [() => t('common.passwordsMismatch')];
   }
 
   fieldErrors.value = nextErrors;
   if (Object.keys(nextErrors).length > 0 || !parsed.success) {
-    formError.value = t('common.correctFields');
+    formError.value = () => t('common.correctFields');
     return undefined;
   }
 
@@ -74,7 +74,7 @@ async function submitRegistration(): Promise<void> {
   try {
     const response = await authClient.register(input);
     if (!response.success) {
-      formError.value = errorText(response);
+      formError.value = () => errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
@@ -82,13 +82,14 @@ async function submitRegistration(): Promise<void> {
     if (response.data?.user) {
       authSession.setAuthenticated(response.data.user);
     } else if (!(await authSession.refresh())) {
-      formError.value = t('register.sessionFailed');
+      formError.value = () => t('register.sessionFailed');
       return;
     }
 
     await router.replace(redirectTarget());
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('register.failed');
+    console.error(error);
+    formError.value = () => t('register.failed');
   } finally {
     isSubmitting.value = false;
   }

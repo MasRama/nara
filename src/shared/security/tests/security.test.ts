@@ -361,14 +361,16 @@ describe('login identifier/IP lockout', () => {
       const response = await failedLogin(existing, ip);
       existingStatuses.push(response.status);
     }
-    expect(existingStatuses).toEqual([401, 401, 401, 401, 401]);
+    // The fifth failure trips the lockout and says so instead of reporting bad credentials.
+    expect(existingStatuses).toEqual([401, 401, 401, 401, 429]);
     const locked = await app.request('/api/auth/login', {
       method: 'POST',
       headers: { ...csrfHeaders(await issueCsrf(app)), 'Content-Type': 'application/json', ...ip },
       body: JSON.stringify({ email: existing, password: TEST_PASSWORD }),
     });
     expect(locked.status).toBe(429);
-    await expect(locked.json()).resolves.toMatchObject({ success: false, code: 'RATE_LIMITED' });
+    expect(locked.headers.get('Retry-After')).toMatch(/^\d+$/);
+    await expect(locked.json()).resolves.toMatchObject({ success: false, code: 'LOGIN_LOCKED' });
 
     const missingStatuses: number[] = [];
     const missingIp = testIp();
@@ -379,14 +381,14 @@ describe('login identifier/IP lockout', () => {
     expect(missingStatuses).toEqual(existingStatuses);
     const missingLocked = await failedLogin(missing, missingIp);
     expect(missingLocked.status).toBe(429);
-    await expect(missingLocked.json()).resolves.toMatchObject({ success: false, code: 'RATE_LIMITED' });
+    await expect(missingLocked.json()).resolves.toMatchObject({ success: false, code: 'LOGIN_LOCKED' });
   });
 
   it('locks the identifier across IPs and the IP across identifiers', async () => {
     const email = uniqueEmail();
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const response = await failedLogin(email, { 'x-test-ip': `198.51.100.${attempt + 1}` });
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(attempt < 4 ? 401 : 429);
     }
     const freshIp = await failedLogin(email, { 'x-test-ip': '198.51.100.99' });
     expect(freshIp.status).toBe(429);
@@ -394,7 +396,7 @@ describe('login identifier/IP lockout', () => {
     const sharedIp = { 'x-test-ip': `203.0.113.${randomUUID().slice(0, 4).replace(/-/g, '1')}` };
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const response = await failedLogin(uniqueEmail(), sharedIp);
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(attempt < 4 ? 401 : 429);
     }
     const sharedLocked = await failedLogin(uniqueEmail(), sharedIp);
     expect(sharedLocked.status).toBe(429);
@@ -411,7 +413,7 @@ describe('login identifier/IP lockout', () => {
     // Two failures under different spellings complete the five-attempt
     // budget, proving normalization merges the buckets.
     expect((await failedLogin(`  ${email.toUpperCase()}  `, ip)).status).toBe(401);
-    expect((await failedLogin(`  ${email.toUpperCase()}  `, ip)).status).toBe(401);
+    expect((await failedLogin(`  ${email.toUpperCase()}  `, ip)).status).toBe(429);
     const locked = await failedLogin(email, ip);
     expect(locked.status).toBe(429);
   });
@@ -463,12 +465,13 @@ describe('login identifier/IP lockout', () => {
     expect(success.status).toBe(200);
 
     // The fifth failure on the same IP still consumes the preserved spray
-    // counter; the following request is locked even though the intervening
-    // authentication succeeded for a different identifier.
-    expect((await failedLogin(uniqueEmail(), ip)).status).toBe(401);
+    // counter and trips the lockout, and the following request stays locked,
+    // even though the intervening authentication succeeded for a different
+    // identifier.
+    expect((await failedLogin(uniqueEmail(), ip)).status).toBe(429);
     const locked = await failedLogin(uniqueEmail(), ip);
     expect(locked.status).toBe(429);
-    await expect(locked.json()).resolves.toMatchObject({ code: 'RATE_LIMITED' });
+    await expect(locked.json()).resolves.toMatchObject({ code: 'LOGIN_LOCKED' });
   });
 });
 

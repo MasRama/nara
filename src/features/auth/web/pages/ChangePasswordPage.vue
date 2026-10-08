@@ -5,10 +5,8 @@ import { changePasswordInputSchema } from '../../contract';
 import { createAuthClient } from '../client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
-import type { ValidationIssue } from '../../../../shared/i18n';
+import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { error as errorText, issue as issueText, t } from '../locales';
-
-type FieldErrors = Record<string, string[]>;
 
 const currentPassword = ref('');
 const newPassword = ref('');
@@ -17,19 +15,19 @@ const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isSubmitting = ref(false);
-const formError = ref('');
-const fieldErrors = ref<FieldErrors>({});
+const formError = useLocalText();
+const fieldErrors = useLocalFieldErrors();
 
 const authClient = createAuthClient();
 const authSession = useAuthSession();
 const router = useRouter();
 
-function mapIssues(issues: ReadonlyArray<ValidationIssue>): FieldErrors {
-  const mapped: FieldErrors = {};
+function mapIssues(issues: ReadonlyArray<ValidationIssue>): LocalFieldErrors {
+  const mapped: LocalFieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.map(String).join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issueText(issue));
+    mapped[key].push(() => issueText(issue));
   }
   return mapped;
 }
@@ -45,12 +43,12 @@ async function submit(): Promise<void> {
   });
   if (!parsed.success) {
     fieldErrors.value = mapIssues(parsed.error.issues);
-    formError.value = t('common.correctFields');
+    formError.value = () => t('common.correctFields');
     return;
   }
   if (newPassword.value !== confirmPassword.value) {
-    fieldErrors.value.confirmPassword = [t('common.passwordsMismatch')];
-    formError.value = t('common.correctFields');
+    fieldErrors.value = { confirmPassword: [() => t('common.passwordsMismatch')] };
+    formError.value = () => t('common.correctFields');
     return;
   }
 
@@ -60,13 +58,14 @@ async function submit(): Promise<void> {
     if (!response.success) {
       fieldErrors.value = response.errors ?? {};
       // This route's INVALID_PASSWORD names the current password, unlike Security's confirmation.
-      formError.value = response.code === 'INVALID_PASSWORD' ? t('changePassword.invalidPassword') : errorText(response);
+      formError.value = () => response.code === 'INVALID_PASSWORD' ? t('changePassword.invalidPassword') : errorText(response);
       return;
     }
     await authSession.refresh();
     await router.replace({ name: 'dashboard' });
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('changePassword.failed');
+    console.error(error);
+    formError.value = () => t('changePassword.failed');
   } finally {
     isSubmitting.value = false;
   }

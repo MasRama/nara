@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { formatDate } from '../../../../shared/i18n';
+import { formatDate, useLocalText } from '../../../../shared/i18n';
 import type { ActivityRecord } from '../../contract';
 import { createActivityClient } from '../client';
 import { error as errorText, find, t } from '../locales';
@@ -11,7 +11,7 @@ const total = ref(0);
 const page = ref(1);
 const limit = 20;
 const isLoading = ref(false);
-const errorMessage = ref('');
+const errorMessage = useLocalText();
 const actionFilter = ref('');
 const actorFilter = ref('');
 const fromDate = ref('');
@@ -111,14 +111,15 @@ async function load(nextPage = page.value): Promise<void> {
       to: dateBoundary(toDate.value, true),
     });
     if (!response.success) {
-      errorMessage.value = errorText(response);
+      errorMessage.value = () => errorText(response);
       return;
     }
     activities.value = response.data.activities;
     total.value = response.data.total;
     page.value = response.data.page;
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : t('feed.loadFailed');
+    console.error(error);
+    errorMessage.value = () => t('feed.loadFailed');
   } finally {
     isLoading.value = false;
   }

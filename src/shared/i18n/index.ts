@@ -1,4 +1,4 @@
-import { readonly, ref } from 'vue';
+import { computed, readonly, ref, shallowRef, type WritableComputedRef } from 'vue';
 
 /**
  * Browser-safe, business-neutral translation runtime. Each Feature owns its
@@ -109,7 +109,10 @@ export async function setLocale(next: Locale): Promise<void> {
 
 /** Call once before mounting: loads the detected locale's dictionaries. */
 export function initializeLocale(): Promise<void> {
-  return setLocale(current.value).catch(() => setLocale('en'));
+  return setLocale(current.value).catch((error: unknown) => {
+    console.error(`Could not load the "${current.value}" dictionaries; showing English instead.`, error);
+    return setLocale('en');
+  });
 }
 
 function interpolate(template: string, params: Record<string, string | number> | undefined): string {
@@ -156,7 +159,11 @@ export function defineMessages<const En extends Dictionary>(
   };
   loaders.add(load);
   // A Feature registered after start-up still catches up with the current locale.
-  if (current.value !== 'en') void load(current.value).catch(() => undefined);
+  if (current.value !== 'en') {
+    void load(current.value).catch((error: unknown) => {
+      console.error(`Could not load the "${current.value}" dictionary; this part of the interface stays in English.`, error);
+    });
+  }
 
   const dictionary = (): Dictionary => {
     void revision.value;
@@ -191,6 +198,45 @@ export function defineMessages<const En extends Dictionary>(
       });
     },
   };
+}
+
+/** Text resolved when it renders, so a message left on screen follows a locale switch. */
+export type LocalText = () => string;
+
+/**
+ * Holds a message that stays on screen, such as an error or a notice. Assign
+ * `() => t(...)` (or '' to clear); reading `.value` gives the text in the
+ * current locale. A plain string is a type error, so text cannot freeze in
+ * the locale it was produced in.
+ */
+export function useLocalText(): WritableComputedRef<string, LocalText | ''> {
+  const source = shallowRef<LocalText | ''>('');
+  return computed({
+    get: () => (source.value ? source.value() : ''),
+    set: (next) => {
+      source.value = next;
+    },
+  });
+}
+
+/** Field errors whose interface-made entries re-render in the current locale; API entries stay as sent. */
+export type LocalFieldErrors = Record<string, (string | LocalText)[]>;
+
+/** Like `useLocalText`, for per-field errors: reading `.value` gives plain strings in the current locale. */
+export function useLocalFieldErrors(): WritableComputedRef<Record<string, string[]>, LocalFieldErrors> {
+  const source = shallowRef<LocalFieldErrors>({});
+  return computed({
+    get: () =>
+      Object.fromEntries(
+        Object.entries(source.value).map(([field, messages]) => [
+          field,
+          messages.map((message) => (typeof message === 'string' ? message : message())),
+        ]),
+      ),
+    set: (next) => {
+      source.value = next;
+    },
+  });
 }
 
 /** Dates and numbers in the current locale. */

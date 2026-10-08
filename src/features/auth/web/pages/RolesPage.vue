@@ -4,22 +4,20 @@ import { createRoleInputSchema } from '../../contract';
 import type { PermissionData, RoleData } from '../../contract';
 import { createAccessClient } from '../access-client';
 import { useAuthSession } from '../session';
-import type { ValidationIssue } from '../../../../shared/i18n';
-import { error as errorText, issue as issueText, t } from '../locales';
+import { locale, useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
+import { error as errorText, find, issue as issueText, t } from '../locales';
 
 // Keep the page on the auth Feature boundary while reusing its own contracts and client.
 const authSession = useAuthSession();
 const accessClient = createAccessClient();
 
-type FieldErrors = Record<string, string[]>;
-
 const roles = ref<RoleData[]>([]);
 const permissionsByResource = ref<Record<string, PermissionData[]>>({});
 const isLoading = ref(false);
-const loadError = ref('');
+const loadError = useLocalText();
 const loadForbidden = ref(false);
-const actionError = ref('');
-const notice = ref('');
+const actionError = useLocalText();
+const notice = useLocalText();
 
 const isFormOpen = ref(false);
 const isCreating = ref(false);
@@ -28,8 +26,8 @@ const roleName = ref('');
 const roleSlug = ref('');
 const roleDescription = ref('');
 const selectedPermissions = ref<string[]>([]);
-const formError = ref('');
-const fieldErrors = ref<FieldErrors>({});
+const formError = useLocalText();
+const fieldErrors = useLocalFieldErrors();
 const isSubmitting = ref(false);
 
 const pendingDelete = ref<RoleData | null>(null);
@@ -40,12 +38,12 @@ const canEdit = computed(() => authSession.can('roles.edit'));
 const canDelete = computed(() => authSession.can('roles.delete'));
 const permissionGroups = computed(() => Object.entries(permissionsByResource.value).sort(([left], [right]) => left.localeCompare(right)));
 
-function mapIssues(issues: ValidationIssue[]): FieldErrors {
-  const mapped: FieldErrors = {};
+function mapIssues(issues: ValidationIssue[]): LocalFieldErrors {
+  const mapped: LocalFieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(issueText(issue));
+    mapped[key].push(() => issueText(issue));
   }
   return mapped;
 }
@@ -57,6 +55,24 @@ function fieldError(name: string): string {
 function humanize(value: string): string {
   const words = value.replace(/[-_.]+/g, ' ').trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+// Permission rows are English catalog data. Other locales translate the
+// slugs the dictionary knows and keep the stored text for any other one.
+function catalogText(key: string, stored: string): string {
+  return (locale.value === 'en' ? undefined : find(key)) ?? stored;
+}
+
+function resourceLabel(resource: string): string {
+  return find(`permissionGroup.${resource}`) ?? humanize(resource);
+}
+
+function permissionName(permission: PermissionData): string {
+  return catalogText(`permission.${permission.slug}`, permission.name);
+}
+
+function permissionDescription(permission: PermissionData): string {
+  return permission.description ? catalogText(`permissionDescription.${permission.slug}`, permission.description) : '';
 }
 
 interface RolePermissionGroup {
@@ -82,8 +98,11 @@ function rolePermissionGroups(role: RoleData): RolePermissionGroup[] {
       const rank = (slug: string) => (catalog.includes(slug) ? catalog.indexOf(slug) : catalog.length);
       const actions = [...slugs]
         .sort((left, right) => rank(left) - rank(right))
-        .map((slug) => humanize(slug.slice(slug.indexOf('.') + 1)));
-      return { resource, label: humanize(resource), actions, full: catalog.length > 0 && catalog.every((slug) => slugs.includes(slug)) };
+        .map((slug) => {
+          const action = slug.slice(slug.indexOf('.') + 1);
+          return find(`permissionAction.${action}`) ?? humanize(action);
+        });
+      return { resource, label: resourceLabel(resource), actions, full: catalog.length > 0 && catalog.every((slug) => slugs.includes(slug)) };
     });
 }
 
@@ -99,7 +118,7 @@ async function loadAccess(): Promise<void> {
 
     if (!rolesResponse.success || !rolesResponse.data) {
       loadForbidden.value = !rolesResponse.success && rolesResponse.code === 'FORBIDDEN';
-      if (!loadForbidden.value) loadError.value = errorText(rolesResponse);
+      if (!loadForbidden.value) loadError.value = () => errorText(rolesResponse);
       roles.value = [];
     } else {
       roles.value = rolesResponse.data.roles;
@@ -108,10 +127,11 @@ async function loadAccess(): Promise<void> {
     if (permissionsResponse.success && permissionsResponse.data) {
       permissionsByResource.value = permissionsResponse.data;
     } else if (!permissionsResponse.success && permissionsResponse.code !== 'FORBIDDEN') {
-      loadError.value ||= errorText(permissionsResponse);
+      if (!loadError.value) loadError.value = () => errorText(permissionsResponse);
     }
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : t('roles.loadFailed');
+    console.error(error);
+    loadError.value = () => t('roles.loadFailed');
   } finally {
     isLoading.value = false;
   }
@@ -167,7 +187,7 @@ async function submitRole(): Promise<void> {
   const parsed = createRoleInputSchema.safeParse(payload);
   if (!parsed.success) {
     fieldErrors.value = mapIssues(parsed.error.issues);
-    formError.value = t('common.correctFields');
+    formError.value = () => t('common.correctFields');
     return;
   }
 
@@ -178,17 +198,18 @@ async function submitRole(): Promise<void> {
       ? await accessClient.createRole(parsed.data)
       : await accessClient.updateRole(editingRole.value?.id ?? '', parsed.data);
     if (!response.success) {
-      formError.value = errorText(response);
+      formError.value = () => errorText(response);
       fieldErrors.value = response.errors ?? {};
       return;
     }
 
     isFormOpen.value = false;
     resetForm();
-    notice.value = creating ? t('roles.created') : t('roles.updated');
+    notice.value = () => (creating ? t('roles.created') : t('roles.updated'));
     await loadAccess();
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : t('roles.form.failed');
+    console.error(error);
+    formError.value = () => t('roles.form.failed');
   } finally {
     isSubmitting.value = false;
   }
@@ -214,14 +235,15 @@ async function confirmDelete(): Promise<void> {
     const response = await accessClient.deleteRoles({ ids: [pendingDelete.value.id] });
     if (!response.success) {
       // PROTECTED_ROLE also answers role edits; this is the delete wording.
-      actionError.value = response.code === 'PROTECTED_ROLE' ? t('roles.delete.protected') : errorText(response);
+      actionError.value = () => (response.code === 'PROTECTED_ROLE' ? t('roles.delete.protected') : errorText(response));
       return;
     }
-    notice.value = t('roles.deleted');
+    notice.value = () => t('roles.deleted');
     pendingDelete.value = null;
     await loadAccess();
   } catch (error) {
-    actionError.value = error instanceof Error ? error.message : t('roles.delete.failed');
+    console.error(error);
+    actionError.value = () => t('roles.delete.failed');
   } finally {
     isDeleting.value = false;
   }
@@ -301,16 +323,16 @@ onMounted(() => {
                 <p class="roles-hint mt-1">{{ t('roles.form.permissionsHint') }}</p>
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <fieldset v-for="[resource, resourcePermissions] in permissionGroups" :key="resource" class="roles-group">
-                    <legend class="sr-only">{{ humanize(resource) }}</legend>
+                    <legend class="sr-only">{{ resourceLabel(resource) }}</legend>
                     <div class="roles-group-head" aria-hidden="true">
-                      <span>{{ humanize(resource) }}</span>
+                      <span>{{ resourceLabel(resource) }}</span>
                       <span class="roles-group-count">{{ resourcePermissions.filter((p) => selectedPermissions.includes(p.slug)).length }}/{{ resourcePermissions.length }}</span>
                     </div>
                     <label v-for="permission in resourcePermissions" :key="permission.id" class="roles-perm">
                       <input v-model="selectedPermissions" type="checkbox" :value="permission.slug" :data-permission-slug="permission.slug" />
                       <span class="min-w-0">
-                        <span class="block font-semibold">{{ permission.name }}</span>
-                        <span v-if="permission.description" class="block text-[12px] font-normal leading-snug text-muted-foreground">{{ permission.description }}</span>
+                        <span class="block font-semibold">{{ permissionName(permission) }}</span>
+                        <span v-if="permission.description" class="block text-[12px] font-normal leading-snug text-muted-foreground">{{ permissionDescription(permission) }}</span>
                       </span>
                     </label>
                   </fieldset>

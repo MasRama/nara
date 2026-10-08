@@ -563,13 +563,17 @@ describe('users administration browser surfaces', () => {
       return delegatedFetch(input, init);
     });
 
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     await mountAt('/users');
     await settle();
 
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Role directory unavailable');
+    // The page shows its own translated failure; the host's reason goes to the console.
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Unable to load roles');
+    expect(logged).toHaveBeenCalledWith(expect.objectContaining({ message: 'Role directory unavailable' }));
     await click('[data-testid="create-user"]');
-    expect(container.textContent).toContain('Role directory unavailable');
+    expect(container.textContent).toContain('Unable to load roles');
     expect(container.querySelector('[data-role-slug]')).toBeNull();
+    logged.mockRestore();
   });
 
   it('uses server search and pagination responses for the users list', async () => {

@@ -302,9 +302,14 @@ describe('browser authentication lifecycle', () => {
     submitForm();
     await settle();
 
-    const alert = container.querySelector('[role="alert"]')?.textContent ?? '';
-    expect(alert).toContain('Email atau kata sandi salah');
-    expect(alert).not.toContain('Invalid email or password');
+    const alert = () => container.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alert()).toContain('Email atau kata sandi salah');
+    expect(alert()).not.toContain('Invalid email or password');
+
+    // A refusal already on screen follows the next switch.
+    await setLocale('en');
+    await nextTick();
+    expect(alert()).toContain('Invalid email or password');
   });
 
   it('bootstraps an existing session once and resolves missing or expired sessions as guests', async () => {

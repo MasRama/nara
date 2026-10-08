@@ -9,12 +9,10 @@ import {
   profileInputSchema,
 } from '../../contract';
 import type { UserProfile } from '../../contract';
-import type { ValidationIssue } from '../../../../shared/i18n';
+import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { createUsersClient } from '../client';
 import type { UsersWebHost } from '../host';
 import { error as errorText, issue as issueText, t } from '../locales';
-
-type FieldErrors = Record<string, string[]>;
 
 const passwordChangeInputSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -37,15 +35,15 @@ const profileLoading = ref(true);
 const profileSaving = ref(false);
 const passwordSaving = ref(false);
 const avatarSaving = ref(false);
-const profileLoadError = ref('');
-const profileError = ref('');
-const profileNotice = ref('');
-const passwordError = ref('');
-const passwordNotice = ref('');
-const avatarError = ref('');
-const avatarNotice = ref('');
-const profileErrors = ref<FieldErrors>({});
-const passwordErrors = ref<FieldErrors>({});
+const profileLoadError = useLocalText();
+const profileError = useLocalText();
+const profileNotice = useLocalText();
+const passwordError = useLocalText();
+const passwordNotice = useLocalText();
+const avatarError = useLocalText();
+const avatarNotice = useLocalText();
+const profileErrors = useLocalFieldErrors();
+const passwordErrors = useLocalFieldErrors();
 
 const displayName = computed(() => profile.value?.name || props.host.currentSessionUser()?.name || t('profile.fallbackName'));
 const initials = computed(() => {
@@ -59,12 +57,12 @@ const initials = computed(() => {
 });
 const avatarUrl = computed(() => profile.value?.avatar || props.host.currentSessionUser()?.avatar || '');
 
-function errorsFromIssues(issues: ReadonlyArray<ValidationIssue>): FieldErrors {
-  const errors: FieldErrors = {};
+function errorsFromIssues(issues: ReadonlyArray<ValidationIssue>): LocalFieldErrors {
+  const errors: LocalFieldErrors = {};
   for (const issue of issues) {
     const key = issue.path.map(String).join('.') || '_root';
     errors[key] ??= [];
-    errors[key].push(issueText(issue));
+    errors[key].push(() => issueText(issue));
   }
   return errors;
 }
@@ -98,9 +96,10 @@ async function loadProfile(): Promise<void> {
         return;
       }
     }
-    profileLoadError.value = errorText(response);
+    profileLoadError.value = () => errorText(response);
   } catch (error) {
-    profileLoadError.value = error instanceof Error ? error.message : t('profile.loadFailed');
+    console.error(error);
+    profileLoadError.value = () => t('profile.loadFailed');
   } finally {
     profileLoading.value = false;
   }
@@ -114,7 +113,7 @@ async function saveProfile(): Promise<void> {
   const parsed = profileInputSchema.safeParse({ name: name.value.trim(), email: email.value.trim() });
   if (!parsed.success) {
     profileErrors.value = errorsFromIssues(parsed.error.issues);
-    profileError.value = t('profile.details.invalid');
+    profileError.value = () => t('profile.details.invalid');
     return;
   }
 
@@ -123,14 +122,15 @@ async function saveProfile(): Promise<void> {
     const response = await usersClient.updateProfile(parsed.data);
     if (!response.success) {
       profileErrors.value = response.errors ?? {};
-      profileError.value = errorText(response);
+      profileError.value = () => errorText(response);
       return;
     }
 
     setSessionUser(response.data.user);
-    profileNotice.value = t('profile.details.saved');
+    profileNotice.value = () => t('profile.details.saved');
   } catch (error) {
-    profileError.value = error instanceof Error ? error.message : t('profile.details.failed');
+    console.error(error);
+    profileError.value = () => t('profile.details.failed');
   } finally {
     profileSaving.value = false;
   }
@@ -147,12 +147,12 @@ async function changePassword(): Promise<void> {
   });
   if (!parsed.success) {
     passwordErrors.value = errorsFromIssues(parsed.error.issues);
-    passwordError.value = t('profile.password.invalid');
+    passwordError.value = () => t('profile.password.invalid');
     return;
   }
   if (newPassword.value !== confirmPassword.value) {
-    passwordErrors.value = { confirmPassword: [t('profile.password.mismatch')] };
-    passwordError.value = t('profile.password.invalid');
+    passwordErrors.value = { confirmPassword: [() => t('profile.password.mismatch')] };
+    passwordError.value = () => t('profile.password.invalid');
     return;
   }
 
@@ -164,16 +164,17 @@ async function changePassword(): Promise<void> {
     });
     if (!response.success) {
       passwordErrors.value = response.errors ?? {};
-      passwordError.value = errorText(response);
+      passwordError.value = () => errorText(response);
       return;
     }
 
     currentPassword.value = '';
     newPassword.value = '';
     confirmPassword.value = '';
-    passwordNotice.value = t('profile.password.updated');
+    passwordNotice.value = () => t('profile.password.updated');
   } catch (error) {
-    passwordError.value = error instanceof Error ? error.message : t('profile.password.failed');
+    console.error(error);
+    passwordError.value = () => t('profile.password.failed');
   } finally {
     passwordSaving.value = false;
   }
@@ -188,12 +189,12 @@ async function handleAvatarChange(event: Event): Promise<void> {
   avatarError.value = '';
   avatarNotice.value = '';
   if (!AVATAR_ALLOWED_MIME_TYPES.some((type) => type === file.type)) {
-    avatarError.value = t('profile.photo.wrongType');
+    avatarError.value = () => t('profile.photo.wrongType');
     input.value = '';
     return;
   }
   if (file.size > AVATAR_MAX_FILE_SIZE_BYTES) {
-    avatarError.value = t('profile.photo.tooLarge', { size: AVATAR_MAX_FILE_SIZE_MB });
+    avatarError.value = () => t('profile.photo.tooLarge', { size: AVATAR_MAX_FILE_SIZE_MB });
     input.value = '';
     return;
   }
@@ -202,7 +203,7 @@ async function handleAvatarChange(event: Event): Promise<void> {
   try {
     const response = await usersClient.uploadAvatar(file);
     if (!response.success) {
-      avatarError.value =
+      avatarError.value = () =>
         response.code === 'FILE_TOO_LARGE'
           ? t('profile.photo.serverTooLarge', { size: AVATAR_MAX_FILE_SIZE_MB })
           : errorText(response);
@@ -213,9 +214,10 @@ async function handleAvatarChange(event: Event): Promise<void> {
     if (currentUser) {
       setSessionUser({ ...currentUser, avatar: response.data.url });
     }
-    avatarNotice.value = t('profile.photo.updated');
+    avatarNotice.value = () => t('profile.photo.updated');
   } catch (error) {
-    avatarError.value = error instanceof Error ? error.message : t('profile.photo.failed');
+    console.error(error);
+    avatarError.value = () => t('profile.photo.failed');
   } finally {
     avatarSaving.value = false;
     input.value = '';

@@ -4,7 +4,7 @@ import { confirmPasswordInputSchema, twoFactorCodeInputSchema, type SessionData,
 import { encodeQr, qrSvgPath } from '../qr';
 import { createSecurityClient } from '../security-client';
 import { useAuthSession } from '../session';
-import { formatDate, formatRelativeTime } from '../../../../shared/i18n';
+import { formatDate, formatRelativeTime, useLocalText } from '../../../../shared/i18n';
 import { error as errorText, issue as issueText, t } from '../locales';
 
 type PasswordAction = 'setup' | 'regenerate' | 'disable';
@@ -15,7 +15,7 @@ const authSession = useAuthSession();
 const twoFactor = ref<TwoFactorStatus | null>(null);
 const sessions = ref<SessionData[]>([]);
 const loading = ref(true);
-const loadError = ref('');
+const loadError = useLocalText();
 
 const passwordAction = ref<PasswordAction | null>(null);
 const password = ref('');
@@ -23,13 +23,13 @@ const setup = ref<TwoFactorSetup | null>(null);
 const code = ref('');
 const recoveryCodes = ref<string[]>([]);
 const twoFactorBusy = ref(false);
-const twoFactorError = ref('');
-const twoFactorNotice = ref('');
-const fieldError = ref('');
+const twoFactorError = useLocalText();
+const twoFactorNotice = useLocalText();
+const fieldError = useLocalText();
 
 const sessionBusy = ref<string | null>(null);
-const sessionError = ref('');
-const sessionNotice = ref('');
+const sessionError = useLocalText();
+const sessionNotice = useLocalText();
 
 const qr = computed(() => {
   if (!setup.value) return null;
@@ -91,7 +91,8 @@ async function load(): Promise<void> {
     twoFactor.value = status.data!.twoFactor;
     sessions.value = list.data!.sessions;
   } catch (error) {
-    loadError.value = error instanceof Error ? error.message : t('security.loadFailed');
+    console.error(error);
+    loadError.value = () => t('security.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -125,7 +126,7 @@ async function submitPassword(): Promise<void> {
   fieldError.value = '';
   const parsed = confirmPasswordInputSchema.safeParse({ password: password.value });
   if (!parsed.success) {
-    fieldError.value = issueText(parsed.error.issues[0]!);
+    fieldError.value = () => issueText(parsed.error.issues[0]!);
     return;
   }
 
@@ -147,11 +148,12 @@ async function submitPassword(): Promise<void> {
       const response = await client.disableTwoFactor(parsed.data);
       if (!response.success) throw new Error(errorText(response));
       resetTwoFactorForm();
-      twoFactorNotice.value = t('security.twoFactor.turnedOff');
+      twoFactorNotice.value = () => t('security.twoFactor.turnedOff');
       await refreshStatus();
     }
   } catch (error) {
-    twoFactorError.value = error instanceof Error ? error.message : t('security.failed');
+    console.error(error);
+    twoFactorError.value = () => t('security.failed');
   } finally {
     twoFactorBusy.value = false;
   }
@@ -163,7 +165,7 @@ async function submitCode(): Promise<void> {
   fieldError.value = '';
   const parsed = twoFactorCodeInputSchema.safeParse({ code: code.value });
   if (!parsed.success) {
-    fieldError.value = issueText(parsed.error.issues[0]!);
+    fieldError.value = () => issueText(parsed.error.issues[0]!);
     return;
   }
 
@@ -172,15 +174,16 @@ async function submitCode(): Promise<void> {
     const response = await client.enableTwoFactor(parsed.data);
     if (!response.success) {
       // The code was already checked against the same schema here, so a server-side code error is a mismatch.
-      fieldError.value = response.errors?.code?.length ? t('security.setup.codeMismatch') : '';
-      if (!fieldError.value) twoFactorError.value = errorText(response);
+      fieldError.value = response.errors?.code?.length ? () => t('security.setup.codeMismatch') : '';
+      if (!fieldError.value) twoFactorError.value = () => errorText(response);
       return;
     }
     resetTwoFactorForm();
     recoveryCodes.value = response.data!.recoveryCodes;
     await refreshStatus();
   } catch (error) {
-    twoFactorError.value = error instanceof Error ? error.message : t('security.setup.failed');
+    console.error(error);
+    twoFactorError.value = () => t('security.setup.failed');
   } finally {
     twoFactorBusy.value = false;
   }
@@ -189,9 +192,9 @@ async function submitCode(): Promise<void> {
 async function copyRecoveryCodes(): Promise<void> {
   try {
     await navigator.clipboard.writeText(recoveryCodes.value.join('\n'));
-    twoFactorNotice.value = t('security.codes.copied');
+    twoFactorNotice.value = () => t('security.codes.copied');
   } catch {
-    twoFactorError.value = t('security.codes.copyFailed');
+    twoFactorError.value = () => t('security.codes.copyFailed');
   }
 }
 
@@ -215,9 +218,10 @@ async function revokeSession(id: string): Promise<void> {
     const response = await client.revokeSession(id);
     if (!response.success) throw new Error(errorText(response));
     sessions.value = sessions.value.filter((session) => session.id !== id);
-    sessionNotice.value = t('security.sessions.revoked');
+    sessionNotice.value = () => t('security.sessions.revoked');
   } catch (error) {
-    sessionError.value = error instanceof Error ? error.message : t('security.sessions.revokeFailed');
+    console.error(error);
+    sessionError.value = () => t('security.sessions.revokeFailed');
   } finally {
     sessionBusy.value = null;
   }
@@ -233,9 +237,10 @@ async function revokeOthers(): Promise<void> {
     if (!response.success) throw new Error(errorText(response));
     sessions.value = sessions.value.filter((session) => session.current);
     const revoked = response.data!.revoked;
-    sessionNotice.value = t('security.sessions.revokedOthers', { count: revoked });
+    sessionNotice.value = () => t('security.sessions.revokedOthers', { count: revoked });
   } catch (error) {
-    sessionError.value = error instanceof Error ? error.message : t('security.sessions.revokeOthersFailed');
+    console.error(error);
+    sessionError.value = () => t('security.sessions.revokeOthersFailed');
   } finally {
     sessionBusy.value = null;
   }
