@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { parseEnv } from '../../src/shared/config';
+import { z } from 'zod';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { environmentVariables, parseEnv, readFeatureEnv } from '../../src/shared/config';
 
 describe('v3 configuration', () => {
   it('preserves development defaults', () => {
@@ -36,12 +37,45 @@ describe('v3 configuration', () => {
     expect(() => parseEnv({ ...base, TRUST_PROXY_HOPS: '11' })).toThrow(/TRUST_PROXY_HOPS/);
     expect(() => parseEnv({ ...base, MAX_JSON_BODY_BYTES: '-1' })).toThrow(/MAX_JSON_BODY_BYTES/);
     expect(() => parseEnv({ ...base, AUTH_RATE_LIMIT_MAX: '0' })).toThrow(/AUTH_RATE_LIMIT_MAX/);
-    expect(parseEnv({ ...base, ACTIVITY_RETENTION_DAYS: '0' }).ACTIVITY_RETENTION_DAYS).toBe(0);
-    expect(parseEnv({ ...base, ACTIVITY_RETENTION_DAYS: '730' }).ACTIVITY_RETENTION_DAYS).toBe(730);
-    expect(() => parseEnv({ ...base, ACTIVITY_RETENTION_DAYS: '-1' })).toThrow(/ACTIVITY_RETENTION_DAYS/);
   });
 
   it('reports malformed values with their field names', () => {
     expect(() => parseEnv({ PORT: 'not-a-port' })).toThrow(/PORT/);
+  });
+});
+
+describe('feature-owned environment', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('parses the variables a Feature owns and records the owner', () => {
+    vi.stubEnv('DEMO_LIMIT', '7');
+    const config = readFeatureEnv('demo', {
+      DEMO_LIMIT: z.coerce.number().int().positive(),
+      DEMO_LABEL: z.string().default('fallback'),
+    });
+
+    expect(config).toEqual({ DEMO_LIMIT: 7, DEMO_LABEL: 'fallback' });
+    expect(environmentVariables().get('DEMO_LIMIT')).toBe('demo');
+    expect(environmentVariables().get('PORT')).toBe('core');
+  });
+
+  it('names the owning Feature when a value is invalid', () => {
+    vi.stubEnv('BROKEN_LIMIT', '0');
+    expect(() => readFeatureEnv('broken', { BROKEN_LIMIT: z.coerce.number().int().positive() })).toThrow(
+      /validation failed for the broken feature:\n  - BROKEN_LIMIT:/,
+    );
+    expect(environmentVariables().has('BROKEN_LIMIT')).toBe(false);
+  });
+
+  it('gives every variable exactly one owner', () => {
+    expect(() => readFeatureEnv('demo', { PORT: z.string().optional() })).toThrow(
+      'Environment variable PORT is read by both core and the demo feature',
+    );
+    readFeatureEnv('first', { SHARED_SETTING: z.string().optional() });
+    expect(() => readFeatureEnv('second', { SHARED_SETTING: z.string().optional() })).toThrow(
+      'Environment variable SHARED_SETTING is read by both first and the second feature',
+    );
   });
 });

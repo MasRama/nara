@@ -1,4 +1,5 @@
 export {
+  AVATAR_MAX_FILE_SIZE_BYTES,
   createUserInputSchema,
   deleteUsersInputSchema,
   profileInputSchema,

@@ -4,7 +4,7 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { compress } from 'hono/compress';
 import { Hono } from 'hono';
-import { AUTH, MAINTENANCE, UPLOAD, env } from '../shared/config';
+import { MAINTENANCE, env } from '../shared/config';
 import {
   apiBodyLimit,
   createRateLimiter,
@@ -20,6 +20,7 @@ import {
   cleanupExpiredSessions,
   passwordChangeGate,
   resetLoginThrottle,
+  SESSION_CLEANUP_INTERVAL_MS,
 } from '../features/auth';
 import {
   discoverMigrations,
@@ -29,7 +30,8 @@ import {
   outstandingMigrations,
   type MigrationFile,
 } from '../shared/database';
-import { pruneActivityBefore } from '../features/activity';
+import { pruneExpiredActivity } from '../features/activity';
+import { AVATAR_MAX_FILE_SIZE_BYTES } from '../features/users';
 import composeUsersServer from './bindings/users.server';
 import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
 import { healthRoutes } from '../../official-features/health';
@@ -151,8 +153,8 @@ app.use('/api/*', passwordChangeGate('/api/auth'));
 // Route-owned body budgets: every state-changing /api/* request is bounded
 // by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
 // POST /api/assets/avatar owns the narrowly larger upload request budget
-// (5 MB file + 256 KiB framing) with the Feature file check authoritative.
-app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: UPLOAD.MAX_FILE_SIZE + 256 * 1024 }));
+// (the Users avatar limit + 256 KiB framing) with the Feature file check authoritative.
+app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: AVATAR_MAX_FILE_SIZE_BYTES + 256 * 1024 }));
 
 app.route('/health', healthRoutes);
 // Feature migration files do not change while the process runs, so they are
@@ -270,7 +272,7 @@ export function startSessionCleanup(options?: { intervalMs?: number; now?: numbe
         Logger.error('Expired session cleanup failed', error instanceof Error ? error : new Error(String(error)));
       }
     },
-    options?.intervalMs ?? AUTH.SESSION_CLEANUP_INTERVAL_MS,
+    options?.intervalMs ?? SESSION_CLEANUP_INTERVAL_MS,
   );
   if (typeof timer.unref === 'function') timer.unref();
   sessionCleanupTimer = timer;
@@ -284,19 +286,10 @@ export function stopSessionCleanup(): void {
   }
 }
 
-function pruneExpiredActivity(now = Date.now()): number {
-  if (env.ACTIVITY_RETENTION_DAYS === 0) return 0;
-  const cutoff = now - env.ACTIVITY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-  return pruneActivityBefore(cutoff, MAINTENANCE.ACTIVITY_PRUNE_LIMIT);
-}
-
 function pruneExpiredActivityAndLog(now = Date.now()): void {
-  const removed = pruneExpiredActivity(now);
+  const { removed, retentionDays } = pruneExpiredActivity(now);
   if (removed > 0) {
-    Logger.info('Expired activity events removed', {
-      removed,
-      retentionDays: env.ACTIVITY_RETENTION_DAYS,
-    });
+    Logger.info('Expired activity events removed', { removed, retentionDays });
   }
 }
 

@@ -36,7 +36,7 @@ The primary unit is a **feature**: one business capability kept together.
 src/features/billing/
 ├── contract.ts       # feature-owned types, input schemas, and response schemas
 ├── index.ts          # general/server-facing public boundary
-├── server/           # routes, services, repositories (+ migrations/, seeds/)
+├── server/           # routes, services, repositories (+ config.ts, migrations/, seeds/)
 ├── web/              # optional browser code (+ index.ts browser-safe boundary)
 └── tests/            # feature behavior tests
 ```
@@ -55,7 +55,7 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 ## Application and shared layers
 
 - `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `bindings/` (application-owned Feature assembly bindings: ordinary Hono/Vue Router code activated explicitly from the canonical roots), `App.vue`, `pages/`, `layouts/`. The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
-- `src/shared/` is small business-neutral infrastructure only: `config/`, `database/` (connection, migration/seed engines — features own their SQL), `storage/` (provider-neutral binary-object contract plus the local default), `logging/`, `security/`. Never a second global services/repositories layer. The canonical reference application guarantees the stack, canonical roots, Feature structure, plus `src/shared/database/`, `src/shared/config/`, and `src/shared/storage/`; official Features may rely on that baseline, while nothing else under `src/shared/` is guaranteed.
+- `src/shared/` is small business-neutral infrastructure only: `config/` (business-neutral settings plus `readFeatureEnv`, through which each feature's `server/config.ts` reads and validates the environment variables it owns), `database/` (connection, migration/seed engines — features own their SQL), `storage/` (provider-neutral binary-object contract plus the local default), `logging/`, `security/`. Never a second global services/repositories layer. The canonical reference application guarantees the stack, canonical roots, Feature structure, plus `src/shared/database/`, `src/shared/config/`, and `src/shared/storage/`; official Features may rely on that baseline, while nothing else under `src/shared/` is guaranteed.
 - `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`, `users`, each optionally with assembly templates and a distribution-only `.nara/requirements.json` describing provider and npm prerequisites).
 
 ## HTTP and contracts

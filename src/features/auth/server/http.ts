@@ -1,7 +1,8 @@
 import type { Context } from 'hono';
 import { setCookie } from 'hono/cookie';
 import type { z } from 'zod';
-import { AUTH, env } from '../../../shared/config';
+import { env } from '../../../shared/config';
+import { AUTH } from './config';
 import { SESSION_COOKIE_NAME } from './service';
 
 export function validationErrors(error: z.ZodError): Record<string, string[]> {

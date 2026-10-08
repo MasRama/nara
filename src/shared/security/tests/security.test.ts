@@ -2,7 +2,8 @@
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { afterEach, describe, expect, it } from 'vitest';
-import { UPLOAD, env } from '../../config';
+import { env } from '../../config';
+import { AVATAR_MAX_FILE_SIZE_BYTES } from '../../../features/users';
 import { app } from '../../../app/server';
 import { apiBodyLimit } from '../body-limit';
 import {
@@ -778,7 +779,7 @@ describe('multipart early bound', () => {
     const registered = await registerWithCsrf(email);
     expect(registered.response.status).toBe(201);
     const session = await issueCsrf(app, registered.cookie);
-    const requestCap = UPLOAD.MAX_FILE_SIZE + 256 * 1024;
+    const requestCap = AVATAR_MAX_FILE_SIZE_BYTES + 256 * 1024;
     // Declared-length fast path: lies about size without allocating it.
     const declared = await app.request('/api/assets/avatar', {
       method: 'POST',

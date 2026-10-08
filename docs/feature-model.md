@@ -13,6 +13,7 @@ src/features/billing/
 ├── contract.ts       # feature-owned types, input schemas, and response schemas
 ├── index.ts          # general/server-facing public boundary
 ├── server/           # routes, services, repositories, adapters
+│   ├── config.ts     # optional environment variables and settings this feature owns
 │   ├── migrations/   # optional plain SQL schema evolution
 │   └── seeds/        # optional idempotent reference data
 ├── web/              # optional browser code and typed API client
@@ -222,13 +223,45 @@ application binding:
 - Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment, `shared/storage` binary-object capability). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
 - Persistence ownership is single-writer per table: a Feature that needs another Feature's rows reaches them exclusively through a typed host requirement, never through direct SQL. The `users` table is Auth-owned; Users owns its workflow and its `assets` table with a provider-neutral owner reference.
 
+## Configuration
+
+A Feature owns the settings its behavior depends on. Fixed settings and the
+environment variables it reads live in its private `server/config.ts`:
+
+```ts
+import { z } from 'zod';
+import { readFeatureEnv } from '../../../shared/config';
+
+const environment = readFeatureEnv('billing', {
+  BILLING_GRACE_DAYS: z.coerce.number().int().min(0).default(7),
+});
+
+export const BILLING = {
+  GRACE_DAYS: environment.BILLING_GRACE_DAYS,
+  INVOICE_PREFIX: 'INV',
+} as const;
+```
+
+`readFeatureEnv` validates when the module loads, so a bad value stops the
+application at boot with the owning Feature named in the error. Each variable
+has exactly one owner: reading a variable that core configuration or another
+Feature already reads is an error. `src/shared/config/` keeps only
+business-neutral settings (port, logging, database file, proxy trust, request
+limits). When the application needs a Feature's setting, the Feature exports
+it, or the operation that applies it, from `index.ts`; the application never
+reads another owner's variables.
+
+The environment templates (`.env.example`, `.env.production.example`) are
+checked against the variables the running application actually reads, in both
+directions, so an undocumented or stale setting fails the test suite.
+
 ## Shared code
 
 `src/shared/` is intentionally small infrastructure for concepts owned by no business Feature:
 
 ```text
 src/shared/
-├── config/       Environment and application constants
+├── config/       Business-neutral environment and constants, plus readFeatureEnv
 ├── database/     SQLite connection, migration, and seed engines
 └── logging/      Structured logger
 ```

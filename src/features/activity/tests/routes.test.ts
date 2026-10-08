@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
-import { pruneActivityBefore, recordActivity } from '../index';
+import { pruneExpiredActivity, recordActivity } from '../index';
+import { pruneActivityBefore } from '../server/repository';
 import { getDatabase } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 
@@ -56,6 +57,20 @@ describe('activity capability', () => {
 
     expect(pruneActivityBefore(cutoff, 10)).toBeGreaterThanOrEqual(1);
     expect(getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(recent)).toBeDefined();
+  });
+
+  it('applies its retention period, and keeps everything when retention is 0 days', () => {
+    const now = Date.now();
+    const old = recordActivity({ action: 'test.expired', resource: 'test', actorId: null, occurredAt: now - 31 * 86_400_000 });
+    const recent = recordActivity({ action: 'test.kept', resource: 'test', actorId: null, occurredAt: now - 29 * 86_400_000 });
+    const exists = (id: string) => getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(id) !== undefined;
+
+    expect(pruneExpiredActivity(now, 0)).toEqual({ removed: 0, retentionDays: 0 });
+    expect(exists(old.id)).toBe(true);
+
+    expect(pruneExpiredActivity(now, 30).removed).toBeGreaterThanOrEqual(1);
+    expect(exists(old.id)).toBe(false);
+    expect(exists(recent.id)).toBe(true);
   });
 
   it('keeps the feed server-authoritative and records Auth/Role events', async () => {

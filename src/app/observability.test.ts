@@ -375,22 +375,4 @@ describe('application maintenance', () => {
     expect(() => handle.stop()).not.toThrow();
     expect(() => stopApplicationMaintenance()).not.toThrow();
   });
-
-  it('preserves old activity when retention is disabled', () => {
-    const originalRetention = env.ACTIVITY_RETENTION_DAYS;
-    env.ACTIVITY_RETENTION_DAYS = 0;
-    const old = recordActivity({
-      action: 'maintenance.retained',
-      resource: 'test',
-      actorId: null,
-      occurredAt: Date.now() - 10 * 365 * 86_400_000,
-    });
-    try {
-      const handle = startApplicationMaintenance({ intervalMs: 60_000 });
-      handle.stop();
-      expect(getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(old.id)).toBeDefined();
-    } finally {
-      env.ACTIVITY_RETENTION_DAYS = originalRetention;
-    }
-  });
 });

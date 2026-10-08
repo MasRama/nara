@@ -1,5 +1,5 @@
 import { pbkdf2, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { AUTH } from '../../../shared/config';
+import { AUTH } from './config';
 import {
   createSession,
   deleteSession,

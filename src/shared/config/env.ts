@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-import { LOGGING, MAINTENANCE, RATE_LIMIT, SECURITY, SERVER } from './constants';
+import { LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -16,9 +16,6 @@ const EnvSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.WINDOW_MS),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(RATE_LIMIT.AUTH_MAX_REQUESTS),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.AUTH_WINDOW_MS),
-  AUTH_LOCKOUT_ATTEMPTS: z.coerce.number().int().positive().default(RATE_LIMIT.MAX_LOGIN_ATTEMPTS),
-  AUTH_LOCKOUT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.LOGIN_LOCKOUT_MS),
-  ACTIVITY_RETENTION_DAYS: z.coerce.number().int().min(0).max(36_500).default(MAINTENANCE.ACTIVITY_RETENTION_DAYS),
   MAX_JSON_BODY_BYTES: z.coerce.number().int().positive().default(SECURITY.MAX_JSON_BODY_BYTES),
   TRUST_PROXY: z.enum(['true', 'false']).default('false'),
   TRUST_PROXY_HOPS: z.coerce.number().int().min(1).max(10).default(1),
@@ -72,3 +69,37 @@ function loadEnvFile(): void {
 loadEnvFile();
 
 export const env = parseEnv(process.env);
+
+/** Who reads each environment variable: `core` for the schema above, otherwise the owning Feature. */
+const environmentOwners = new Map<string, string>(Object.keys(EnvSchema.shape).map((key) => [key, 'core']));
+
+/**
+ * Validates the environment variables one Feature owns. Feature server
+ * modules call this at import time, so a bad value stops the application at
+ * boot with the owning Feature named. Two owners reading the same variable is
+ * an error as well: each variable has exactly one owner.
+ */
+export function readFeatureEnv<Shape extends z.ZodRawShape>(
+  feature: string,
+  shape: Shape,
+): z.infer<z.ZodObject<Shape>> {
+  for (const key of Object.keys(shape)) {
+    const owner = environmentOwners.get(key);
+    if (owner !== undefined && owner !== feature) {
+      throw new Error(`Environment variable ${key} is read by both ${owner} and the ${feature} feature`);
+    }
+  }
+
+  const parsed = z.object(shape).safeParse(process.env);
+  if (!parsed.success) {
+    throw new Error(`Environment validation failed for the ${feature} feature:\n${formatIssues(parsed.error)}`);
+  }
+
+  for (const key of Object.keys(shape)) environmentOwners.set(key, feature);
+  return parsed.data;
+}
+
+/** Every environment variable read so far, with its owner. */
+export function environmentVariables(): ReadonlyMap<string, string> {
+  return new Map(environmentOwners);
+}

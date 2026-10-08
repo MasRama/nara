@@ -14,10 +14,11 @@ import {
   type TwoFactorSetupSuccess,
   type TwoFactorStatusSuccess,
 } from '../contract';
-import { AUTH, env } from '../../../shared/config';
+import { env } from '../../../shared/config';
 import { clientIp, createGuard } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
+import { AUTH } from './config';
 import { requestBody, setSessionCookie, validationFailed } from './http';
 import {
   consumeRecoveryCode,

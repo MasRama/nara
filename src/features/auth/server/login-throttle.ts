@@ -1,5 +1,5 @@
-import { env } from '../../../shared/config';
 import { Logger } from '../../../shared/logging';
+import { AUTH } from './config';
 
 interface ThrottleEntry {
   attempts: number;
@@ -40,9 +40,9 @@ export function setThrottleMaxKeysForTests(value: number): void {
 
 function config(now: () => number = Date.now): ThrottleConfig {
   return {
-    maxAttempts: env.AUTH_LOCKOUT_ATTEMPTS,
-    lockoutMs: env.AUTH_LOCKOUT_WINDOW_MS,
-    windowMs: env.AUTH_LOCKOUT_WINDOW_MS,
+    maxAttempts: AUTH.LOCKOUT_ATTEMPTS,
+    lockoutMs: AUTH.LOCKOUT_WINDOW_MS,
+    windowMs: AUTH.LOCKOUT_WINDOW_MS,
     now,
   };
 }
