@@ -6,7 +6,12 @@ import {
   changePasswordInputSchema,
   loginInputSchema,
   registerInputSchema,
+  type AuthSuccess,
+  type CsrfTokenSuccess,
   type CurrentUser,
+  type CurrentUserSuccess,
+  type LoginSuccess,
+  type RegisterSuccess,
 } from '../contract';
 import { getUserPermissions, getUserRoles } from './access';
 import { clientIp, requestCsrfToken } from '../../../shared/security';
@@ -80,7 +85,7 @@ const registerHandler = async (context: Context, activity?: AuthActivitySink) =>
         success: true as const,
         message: 'Registration successful',
         data: { user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar } },
-      },
+      } satisfies RegisterSuccess,
       201,
     );
   } catch (error) {
@@ -150,7 +155,7 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
       success: true as const,
       message: 'Two-factor code required',
       data: { twoFactorRequired: true },
-    });
+    } satisfies LoginSuccess);
   }
   // Re-signing in on this browser replaces its old session instead of orphaning it.
   endSession(getCookie(context, SESSION_COOKIE_NAME));
@@ -164,9 +169,12 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
     targetId: user!.id,
     targetLabel: user!.name,
   });
-  return context.json({ success: true as const, message: 'Login successful', data: { twoFactorRequired: false } });
+  return context.json({
+    success: true as const,
+    message: 'Login successful',
+    data: { twoFactorRequired: false },
+  } satisfies LoginSuccess);
 };
-
 
 const changePasswordHandler = async (context: Context, activity?: AuthActivitySink) => {
   const user = findUserById(sessionGuard.actor(context).id);
@@ -207,7 +215,7 @@ const changePasswordHandler = async (context: Context, activity?: AuthActivitySi
     targetId: user.id,
     targetLabel: user.name,
   });
-  return context.json({ success: true as const, message: 'Password updated' });
+  return context.json({ success: true as const, message: 'Password updated' } satisfies AuthSuccess);
 };
 
 function currentUserPayload(user: SessionUser): CurrentUser {
@@ -224,14 +232,22 @@ function currentUserPayload(user: SessionUser): CurrentUser {
 
 const currentUserHandler = (context: Context) => {
   const { user } = sessionGuard.actor(context);
-  return context.json({ success: true as const, message: 'OK', data: { user: currentUserPayload(user) } });
+  return context.json({
+    success: true as const,
+    message: 'OK',
+    data: { user: currentUserPayload(user) },
+  } satisfies CurrentUserSuccess);
 };
 
 const csrfHandler = (context: Context) => {
   // The CSRF middleware already ensured the cookie on this safe request;
   // echo the token so browser clients can bootstrap without parsing cookies.
   const token = requestCsrfToken(context) ?? '';
-  return context.json({ success: true as const, message: 'CSRF token issued', data: { csrfToken: token } });
+  return context.json({
+    success: true as const,
+    message: 'CSRF token issued',
+    data: { csrfToken: token },
+  } satisfies CsrfTokenSuccess);
 };
 
 const logoutHandler = (context: Context, activity?: AuthActivitySink) => {
@@ -248,7 +264,7 @@ const logoutHandler = (context: Context, activity?: AuthActivitySink) => {
       targetLabel: user.name,
     });
   }
-  return context.json({ success: true as const, message: 'Logout successful' });
+  return context.json({ success: true as const, message: 'Logout successful' } satisfies AuthSuccess);
 };
 
 export function createAuthRoutes(activity?: AuthActivitySink) {

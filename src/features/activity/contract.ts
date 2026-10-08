@@ -30,33 +30,46 @@ export interface ActivityRecordInput {
   occurredAt?: number;
 }
 
-export interface ActivityRecord {
-  id: string;
-  action: string;
-  resource: string;
-  actorId: string | null;
-  targetId: string | null;
-  targetLabel: string | null;
-  metadata: ActivityMetadata;
-  occurredAt: number;
-}
-
-export interface ActivityListSuccess {
-  success: true;
-  message: string;
-  data: {
-    activities: ActivityRecord[];
-    total: number;
-    page: number;
-    limit: number;
+/**
+ * Response schemas, built on demand. Routes type their responses against them
+ * and contract tests parse real responses with them; they are strict, so an
+ * undeclared field fails. Being a function keeps them out of browser bundles,
+ * which only need the inferred types.
+ */
+export function activityResponseSchemas() {
+  const record = z.strictObject({
+    id: z.string(),
+    action: z.string(),
+    resource: z.string(),
+    actorId: z.string().nullable(),
+    targetId: z.string().nullable(),
+    targetLabel: z.string().nullable(),
+    metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
+    occurredAt: z.number(),
+  });
+  return {
+    record,
+    listSuccess: z.strictObject({
+      success: z.literal(true),
+      message: z.string(),
+      data: z.strictObject({
+        activities: z.array(record),
+        total: z.number(),
+        page: z.number(),
+        limit: z.number(),
+      }),
+    }),
+    error: z.strictObject({
+      success: z.literal(false),
+      message: z.string(),
+      code: z.string(),
+      errors: z.record(z.string(), z.array(z.string())).optional(),
+    }),
   };
 }
 
-export interface ActivityError {
-  success: false;
-  message: string;
-  code: string;
-  errors?: Record<string, string[]>;
-}
-
+type ActivityResponseSchemas = ReturnType<typeof activityResponseSchemas>;
+export type ActivityRecord = z.infer<ActivityResponseSchemas['record']>;
+export type ActivityListSuccess = z.infer<ActivityResponseSchemas['listSuccess']>;
+export type ActivityError = z.infer<ActivityResponseSchemas['error']>;
 export type ActivityListResponse = ActivityListSuccess | ActivityError;

@@ -10,7 +10,7 @@ Features live under `src/features/<feature>/`. Names are lowercase kebab-case bu
 
 ```text
 src/features/billing/
-├── contract.ts       # feature-owned types and runtime input schemas
+├── contract.ts       # feature-owned types, input schemas, and response schemas
 ├── index.ts          # general/server-facing public boundary
 ├── server/           # routes, services, repositories, adapters
 │   ├── migrations/   # optional plain SQL schema evolution
@@ -133,6 +133,19 @@ export type ProfileInput = z.infer<typeof profileInputSchema>;
 ```
 
 Server routes validate requests with the schema. Web code can reuse contract types and safe response shapes without importing server code. A contract is Feature-owned; it should not become an application-wide types directory.
+
+Responses are declared the same way, as strict schemas returned from one function so browser bundles keep only the inferred types:
+
+```ts
+export function profileResponseSchemas() {
+  const profile = z.strictObject({ id: z.string(), name: z.string() });
+  return { profile, saved: z.strictObject({ success: z.literal(true), message: z.string(), data: profile }) };
+}
+
+export type ProfileSaved = z.infer<ReturnType<typeof profileResponseSchemas>['saved']>;
+```
+
+Routes type each response with `satisfies ProfileSaved`, and copy fields explicitly instead of spreading rows or provider objects. A contract test in the Feature's `tests/` runs every `web/` client method against the real app (`installBrowser(app)` from `src/shared/security/tests/browser.ts`) and parses each answer, refusals included, with these schemas, so a renamed path, a renamed field, or an undeclared field fails.
 
 ## Server and web relationship
 

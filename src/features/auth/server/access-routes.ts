@@ -6,6 +6,12 @@ import {
   createRoleInputSchema,
   deleteRolesInputSchema,
   updateRoleInputSchema,
+  type DeleteRolesResponseSuccess,
+  type PermissionData,
+  type PermissionsResponseSuccess,
+  type RoleData,
+  type RoleResponseSuccess,
+  type RolesResponseSuccess,
 } from '../contract';
 import {
   createRoleWithPermissions,
@@ -17,6 +23,8 @@ import {
   getUserCountsForRoles,
   isAdmin,
   updateRoleWithPermissions,
+  type Permission,
+  type Role,
 } from './access';
 import { forbidden } from '../../../shared/security';
 import { requirePermission, sessionGuard } from './guard';
@@ -45,15 +53,31 @@ function uniqueConstraint(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
 }
 
-
-function roleResponse(roleId: string) {
-  const role = findRoleById(roleId);
-  if (!role) return undefined;
+// Responses map rows field by field so storage columns never reach the API by accident.
+function toRoleData(role: Role, userCount: number): RoleData {
   return {
-    ...role,
+    id: role.id,
+    name: role.name,
+    slug: role.slug,
+    description: role.description,
     permissions: getRolePermissions(role.id).map((permission) => permission.slug),
-    userCount: getUserCountsForRoles([role.id]).get(role.id) ?? 0,
+    userCount,
   };
+}
+
+function toPermissionData(permission: Permission): PermissionData {
+  return {
+    id: permission.id,
+    name: permission.name,
+    slug: permission.slug,
+    resource: permission.resource,
+    action: permission.action,
+    description: permission.description,
+  };
+}
+
+function countedRoleData(role: Role): RoleData {
+  return toRoleData(role, getUserCountsForRoles([role.id]).get(role.id) ?? 0);
 }
 
 function resolvePermissionIds(slugs: string[]): { ids: string[]; unknown: string[] } {
@@ -82,30 +106,24 @@ function unknownPermissions(context: Context, slugs: string[]): Response {
 }
 
 const listRolesHandler = (context: Context) => {
-
   const roles = findAllRoles();
   const counts = getUserCountsForRoles(roles.map((role) => role.id));
   return context.json({
     success: true as const,
     message: 'OK',
     data: {
-      roles: roles.map((role) => ({
-        ...role,
-        permissions: getRolePermissions(role.id).map((permission) => permission.slug),
-        userCount: counts.get(role.id) ?? 0,
-      })),
+      roles: roles.map((role) => toRoleData(role, counts.get(role.id) ?? 0)),
     },
-  });
+  } satisfies RolesResponseSuccess);
 };
 
 const listPermissionsHandler = (context: Context) => {
-
-  const grouped: Record<string, ReturnType<typeof findAllPermissions>> = {};
+  const grouped: Record<string, PermissionData[]> = {};
   for (const permission of findAllPermissions()) {
     grouped[permission.resource] ??= [];
-    grouped[permission.resource].push(permission);
+    grouped[permission.resource].push(toPermissionData(permission));
   }
-  return context.json({ success: true as const, message: 'OK', data: grouped });
+  return context.json({ success: true as const, message: 'OK', data: grouped } satisfies PermissionsResponseSuccess);
 };
 
 const createRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
@@ -146,7 +164,10 @@ const createRoleHandler = async (context: Context, activity?: AuthActivitySink) 
       targetLabel: role.name,
       metadata: { permissionCount: permissions.ids.length },
     });
-    return context.json({ success: true as const, message: 'Role created', data: { role: roleResponse(role.id)! } }, 201);
+    return context.json(
+      { success: true as const, message: 'Role created', data: { role: toRoleData(role, 0) } } satisfies RoleResponseSuccess,
+      201,
+    );
   } catch (error) {
     if (uniqueConstraint(error)) {
       return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 409);
@@ -200,7 +221,11 @@ const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) 
         permissionsChanged: permissionSelection !== undefined,
       },
     });
-    return context.json({ success: true as const, message: 'Role updated', data: { role: roleResponse(roleId)! } });
+    return context.json({
+      success: true as const,
+      message: 'Role updated',
+      data: { role: countedRoleData(role) },
+    } satisfies RoleResponseSuccess);
   } catch (error) {
     if (uniqueConstraint(error)) {
       return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 409);
@@ -244,7 +269,7 @@ const deleteRolesHandler = async (context: Context, activity?: AuthActivitySink)
       targetLabel: target.name,
     });
   }
-  return context.json({ success: true as const, message: 'Roles deleted', data: { deleted } });
+  return context.json({ success: true as const, message: 'Roles deleted', data: { deleted } } satisfies DeleteRolesResponseSuccess);
 };
 
 export function createAccessRoutes(activity?: AuthActivitySink) {

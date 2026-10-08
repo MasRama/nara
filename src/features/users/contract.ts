@@ -79,74 +79,76 @@ export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;
 export type ResetUserPasswordInput = z.infer<typeof resetUserPasswordInputSchema>;
 export type DeleteUsersInput = z.infer<typeof deleteUsersInputSchema>;
 
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string | null;
-}
+/**
+ * Response schemas, built on demand. Routes type their responses against them
+ * and contract tests parse real responses with them; they are strict, so an
+ * undeclared field fails. Being a function keeps them out of browser bundles,
+ * which only need the inferred types.
+ */
+export function usersResponseSchemas() {
+  const success = <T extends z.ZodType>(data: T) =>
+    z.strictObject({ success: z.literal(true), message: z.string(), data });
 
-export interface ManagedUser extends UserProfile {
-  roles: string[];
-}
+  const profile = z.strictObject({
+    id: z.string(),
+    name: z.string(),
+    email: z.string(),
+    avatar: z.string().nullable(),
+  });
+  const managedUser = z.strictObject({ ...profile.shape, roles: z.array(z.string()) });
+  const asset = z.strictObject({
+    id: z.string(),
+    name: z.string().nullable(),
+    type: z.string(),
+    url: z.string(),
+    mime_type: z.string().nullable(),
+    size: z.number().nullable(),
+    storage_key: z.string().nullable(),
+    user_id: z.string().nullable(),
+    created_at: z.number(),
+    updated_at: z.number(),
+  });
 
-export interface UserProfileSuccess {
-  success: true;
-  message: string;
-  data: { user: UserProfile };
-}
-
-export interface ManagedUserResponseSuccess {
-  success: true;
-  message: string;
-  data: { user: ManagedUser };
-}
-
-export interface UsersResponseSuccess {
-  success: true;
-  message: string;
-  data: {
-    users: ManagedUser[];
-    total: number;
-    page: number;
-    limit: number;
+  return {
+    profile,
+    managedUser,
+    asset,
+    error: z.strictObject({
+      success: z.literal(false),
+      message: z.string(),
+      code: z.string(),
+      errors: z.record(z.string(), z.array(z.string())).optional(),
+    }),
+    profileSaved: success(z.strictObject({ user: profile })),
+    userSaved: success(z.strictObject({ user: managedUser })),
+    users: success(
+      z.strictObject({
+        users: z.array(managedUser),
+        total: z.number(),
+        page: z.number(),
+        limit: z.number(),
+      }),
+    ),
+    usersDeleted: success(z.strictObject({ deleted: z.number() })),
+    avatarUploaded: success(z.strictObject({ asset, url: z.string() })),
   };
 }
 
-export interface DeleteUsersResponseSuccess {
-  success: true;
-  message: string;
-  data: { deleted: number };
-}
+type UsersResponseSchemas = ReturnType<typeof usersResponseSchemas>;
+type Infer<K extends keyof UsersResponseSchemas> = z.infer<UsersResponseSchemas[K]>;
 
-export interface UserAsset {
-  id: string;
-  name: string | null;
-  type: string;
-  url: string;
-  mime_type: string | null;
-  size: number | null;
-  storage_key: string | null;
-  user_id: string | null;
-  created_at: number;
-  updated_at: number;
-}
-
-export interface UserProfileError {
-  success: false;
-  message: string;
-  code: string;
-  errors?: Record<string, string[]>;
-}
+export type UserProfile = Infer<'profile'>;
+export type ManagedUser = Infer<'managedUser'>;
+export type UserAsset = Infer<'asset'>;
+export type UserProfileError = Infer<'error'>;
+export type UserProfileSuccess = Infer<'profileSaved'>;
+export type ManagedUserResponseSuccess = Infer<'userSaved'>;
+export type UsersResponseSuccess = Infer<'users'>;
+export type DeleteUsersResponseSuccess = Infer<'usersDeleted'>;
+export type AvatarUploadSuccess = Infer<'avatarUploaded'>;
 
 export type UserProfileResponse = UserProfileSuccess | UserProfileError;
 export type ManagedUserResponse = ManagedUserResponseSuccess | UserProfileError;
 export type UsersResponse = UsersResponseSuccess | UserProfileError;
 export type DeleteUsersResponse = DeleteUsersResponseSuccess | UserProfileError;
-export interface AvatarUploadSuccess {
-  success: true;
-  message: string;
-  data: { asset: UserAsset; url: string };
-}
-
 export type AvatarUploadResponse = AvatarUploadSuccess | UserProfileError;

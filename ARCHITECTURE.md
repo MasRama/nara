@@ -34,7 +34,7 @@ The primary unit is a **feature**: one business capability kept together.
 
 ```text
 src/features/billing/
-├── contract.ts       # feature-owned types and runtime input schemas
+├── contract.ts       # feature-owned types, input schemas, and response schemas
 ├── index.ts          # general/server-facing public boundary
 ├── server/           # routes, services, repositories (+ migrations/, seeds/)
 ├── web/              # optional browser code (+ index.ts browser-safe boundary)
@@ -62,7 +62,7 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 
 - Features expose Hono sub-applications; `src/app/server.ts` mounts them (`/api/auth`, `/api/users`, …) plus `/health` and `/ready`. Public-boundary consumers are architecture facts, while route mounts require the statically provable Hono import → Hono instance → `.route()` chain; they are not runtime health checks.
 - JSON shape: `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`. English messages. Zod `safeParse` at the route boundary; `src/app/error-handler.ts` maps domain errors.
-- Contracts live in the owning feature's `contract.ts`; browser code consumes them through the feature's `web/` typed client. No global RPC abstraction.
+- Contracts live in the owning feature's `contract.ts`, including strict response schemas that routes type their responses against (`satisfies`); browser code consumes them through the feature's `web/` typed client. Per-feature contract tests run each web client method against the real app and parse every answer with those schemas. No global RPC abstraction.
 
 ## CLI
 

@@ -7,6 +7,7 @@ import {
   AVATAR_ALLOWED_MIME_TYPES,
   AVATAR_MAX_FILE_SIZE_BYTES,
   AVATAR_MAX_FILE_SIZE_MB,
+  type AvatarUploadSuccess,
 } from '../contract';
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
 import type { UsersServerHost } from './host';
@@ -160,7 +161,7 @@ const uploadAvatarHandlerFor = (host: UsersServerHost, guard: Guard<NonNullable<
     // asset here is unsafe under concurrent uploads: another request may have
     // created its file before committing it as the account avatar.
     await cleanupPreviousUserAvatar(host, sessionUser.id, sessionUser.avatar);
-    return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } });
+    return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } } satisfies AvatarUploadSuccess);
   } catch (error) {
     return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' }, 400);
   }

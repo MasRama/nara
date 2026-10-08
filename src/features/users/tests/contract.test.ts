@@ -1,0 +1,110 @@
+import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { app } from '../../../app/server';
+import { usersWebHost } from '../../../app/bindings/users.web';
+import { getDatabase } from '../../../shared/database';
+import { installBrowser, type TestBrowser } from '../../../shared/security/tests/browser';
+import { usersResponseSchemas } from '../contract';
+import { createUsersClient } from '../web/client';
+
+/**
+ * Every Users web client method runs against the real server, with the
+ * application's own CSRF adapter, and its answer must match the declared
+ * contract exactly, refusals included.
+ */
+const ONE_PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
+
+function makeAdmin(userId: string): void {
+  const database = getDatabase();
+  const existing = database.prepare("SELECT id FROM roles WHERE slug = 'admin'").get() as { id: string } | undefined;
+  const roleId = existing?.id ?? randomUUID();
+  if (!existing) {
+    database
+      .prepare(
+        `INSERT INTO roles (id, name, slug, description, created_at, updated_at)
+         VALUES (?, 'Administrator', 'admin', NULL, ?, ?)`,
+      )
+      .run(roleId, Date.now(), Date.now());
+  }
+  database
+    .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
+    .run(randomUUID(), userId, roleId, Date.now());
+}
+
+const schemas = usersResponseSchemas();
+
+describe('users web client contract', () => {
+  let browser: TestBrowser;
+  const client = createUsersClient({ csrf: usersWebHost.csrf });
+
+  beforeEach(() => {
+    browser = installBrowser(app);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('reads and edits the signed-in profile in the declared shapes', async () => {
+    expect(schemas.error.parse(await client.me())).toMatchObject({ code: 'UNAUTHORIZED' });
+
+    const account = await browser.signUp('Profile Owner');
+    expect(schemas.profileSaved.parse(await client.me()).data.user.email).toBe(account.email);
+    expect(schemas.profileSaved.parse(await client.updateProfile({ name: 'Profile Renamed', email: account.email })).data.user.name).toBe(
+      'Profile Renamed',
+    );
+    expect(schemas.error.parse(await client.updateProfile({ name: '', email: account.email }))).toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('uploads an avatar in the declared shape', async () => {
+    await browser.signUp('Avatar Owner');
+    const uploaded = schemas.avatarUploaded.parse(
+      await client.uploadAvatar(new File([ONE_PIXEL_PNG], 'avatar.png', { type: 'image/png' })),
+    );
+    await rm(resolve(process.cwd(), 'storage', 'avatars', uploaded.data.url.split('/').pop()!), { force: true });
+
+    expect(
+      schemas.error.parse(await client.uploadAvatar(new File(['not an image'], 'note.txt', { type: 'text/plain' }))),
+    ).toMatchObject({ success: false });
+  });
+
+  it('manages accounts in the declared shapes', async () => {
+    const admin = await browser.signUp('Users Administrator');
+    expect(schemas.error.parse(await client.listUsers())).toMatchObject({ code: 'FORBIDDEN' });
+
+    makeAdmin(admin.id);
+    schemas.users.parse(await client.listUsers({ page: 1, limit: 5, search: 'Administrator' }));
+
+    const email = `${randomUUID()}@example.com`;
+    const created = schemas.userSaved.parse(
+      await client.createUser({ name: 'Managed Account', email, password: 'correct horse battery staple' }),
+    );
+    expect(
+      schemas.error.parse(
+        await client.createUser({ name: 'Managed Account', email, password: 'correct horse battery staple' }),
+      ),
+    ).toMatchObject({ code: 'DUPLICATE_EMAIL' });
+
+    const id = created.data.user.id;
+    schemas.userSaved.parse(await client.updateUser(id, { name: 'Managed Renamed' }));
+    expect(schemas.error.parse(await client.updateUser(randomUUID(), { name: 'Missing' }))).toMatchObject({
+      code: 'NOT_FOUND',
+    });
+    schemas.userSaved.parse(await client.resetPassword(id, { password: 'a brand new passphrase' }));
+    expect(schemas.error.parse(await client.resetPassword(admin.id, { password: 'a brand new passphrase' }))).toMatchObject({
+      code: 'CURRENT_PASSWORD_REQUIRED',
+    });
+
+    expect(schemas.usersDeleted.parse(await client.deleteUsers({ ids: [id] })).data.deleted).toBe(1);
+    expect(schemas.error.parse(await client.deleteUsers({ ids: [] }))).toMatchObject({
+      code: 'VALIDATION_ERROR',
+    });
+  });
+});

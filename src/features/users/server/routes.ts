@@ -9,8 +9,12 @@ import {
   profileInputSchema,
   resetUserPasswordInputSchema,
   updateUserInputSchema,
+  type DeleteUsersResponseSuccess,
   type ManagedUser,
+  type ManagedUserResponseSuccess,
   type UserProfile,
+  type UserProfileSuccess,
+  type UsersResponseSuccess,
 } from '../contract';
 import { createGuard, forbidden } from './guard';
 import { cleanupUserAvatarAssets } from './assets-routes';
@@ -79,9 +83,14 @@ function normalizedQueryInteger(raw: string | undefined, fallback: number, maxim
  * Auth-owned account rows with SQL.
  */
 export function createUserRoutes(host: UsersServerHost) {
-  function userWithRoles(user: UserProfile | undefined): ManagedUser | undefined {
-    if (!user) return undefined;
-    return { ...user, roles: host.rolesForUser(user.id) };
+  // The account provider is application-chosen; copy only declared fields so
+  // provider-specific columns never reach the API.
+  function toProfile(user: UserProfile): UserProfile {
+    return { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
+  }
+
+  function withRoles(user: UserProfile): ManagedUser {
+    return { ...toProfile(user), roles: host.rolesForUser(user.id) };
   }
 
   const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
@@ -93,7 +102,7 @@ export function createUserRoutes(host: UsersServerHost) {
 
     const user = host.findAccountById(sessionUser.id);
     if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
-    return context.json({ success: true as const, message: 'OK', data: { user } });
+    return context.json({ success: true as const, message: 'OK', data: { user: toProfile(user) } } satisfies UserProfileSuccess);
   };
 
   const updateProfileHandler = async (context: Context) => {
@@ -122,7 +131,11 @@ export function createUserRoutes(host: UsersServerHost) {
         targetId: user.id,
         targetLabel: user.name,
       });
-      return context.json({ success: true as const, message: 'Profile updated', data: { user } });
+      return context.json({
+        success: true as const,
+        message: 'Profile updated',
+        data: { user: toProfile(user) },
+      } satisfies UserProfileSuccess);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
@@ -140,12 +153,12 @@ export function createUserRoutes(host: UsersServerHost) {
       success: true as const,
       message: 'OK',
       data: {
-        users: result.data.map((user) => userWithRoles(user)!),
+        users: result.data.map(withRoles),
         total: result.total,
         page,
         limit,
       },
-    });
+    } satisfies UsersResponseSuccess);
   };
 
   const createUserHandler = async (context: Context) => {
@@ -193,7 +206,10 @@ export function createUserRoutes(host: UsersServerHost) {
         targetLabel: user.name,
         metadata: { rolesAssigned: roleSelection?.ids.length ?? 0 },
       });
-      return context.json({ success: true as const, message: 'User created', data: { user: userWithRoles(user)! } }, 201);
+      return context.json(
+        { success: true as const, message: 'User created', data: { user: withRoles(user) } } satisfies ManagedUserResponseSuccess,
+        201,
+      );
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
@@ -277,7 +293,11 @@ export function createUserRoutes(host: UsersServerHost) {
           emailChanged: profile.email !== undefined,
         },
       });
-      return context.json({ success: true as const, message: 'User updated', data: { user: userWithRoles(user)! } });
+      return context.json({
+        success: true as const,
+        message: 'User updated',
+        data: { user: withRoles(user) },
+      } satisfies ManagedUserResponseSuccess);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
         return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
@@ -328,7 +348,11 @@ export function createUserRoutes(host: UsersServerHost) {
       targetId: user.id,
       targetLabel: user.name,
     });
-    return context.json({ success: true as const, message: 'Password reset', data: { user: userWithRoles(user)! } });
+    return context.json({
+      success: true as const,
+      message: 'Password reset',
+      data: { user: withRoles(user) },
+    } satisfies ManagedUserResponseSuccess);
   };
 
   const deleteUsersHandler = async (context: Context) => {
@@ -373,7 +397,7 @@ export function createUserRoutes(host: UsersServerHost) {
         targetLabel: target.name,
       });
     }
-    return context.json({ success: true as const, message: 'Users deleted', data: { deleted } });
+    return context.json({ success: true as const, message: 'Users deleted', data: { deleted } } satisfies DeleteUsersResponseSuccess);
   };
 
   return new Hono()

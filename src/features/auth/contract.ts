@@ -76,63 +76,6 @@ export type TwoFactorChallengeInput = z.infer<typeof twoFactorChallengeInputSche
 export type TwoFactorCodeInput = z.infer<typeof twoFactorCodeInputSchema>;
 export type ConfirmPasswordInput = z.infer<typeof confirmPasswordInputSchema>;
 
-export interface SessionData {
-  /** Public session handle; never the cookie token. */
-  id: string;
-  userAgent: string | null;
-  ipAddress: string | null;
-  createdAt: number;
-  lastSeenAt: number | null;
-  current: boolean;
-}
-
-export interface TwoFactorStatus {
-  enabled: boolean;
-  enabledAt: number | null;
-  recoveryCodesRemaining: number;
-}
-
-export interface TwoFactorSetup {
-  secret: string;
-  otpauthUrl: string;
-}
-
-export interface PublicUser {
-  id: string;
-  name: string;
-  email: string;
-  avatar: string | null;
-}
-
-export interface CurrentUser extends PublicUser {
-  roles: readonly string[];
-  permissions: readonly string[];
-  mustChangePassword: boolean;
-}
-
-export interface AuthSuccess<T = undefined> {
-  success: true;
-  message: string;
-  data?: T;
-}
-
-export interface AuthError {
-  success: false;
-  message: string;
-  code: string;
-  errors?: Record<string, string[]>;
-}
-
-export type RegisterResponse = AuthSuccess<{ user: PublicUser }> | AuthError;
-export type LoginResponse = AuthSuccess<{ twoFactorRequired: boolean }> | AuthError;
-export type TwoFactorChallengeResponse = AuthSuccess | AuthError;
-export type ChangePasswordResponse = AuthSuccess | AuthError;
-export type SessionsResponse = AuthSuccess<{ sessions: SessionData[] }> | AuthError;
-export type RevokeSessionsResponse = AuthSuccess<{ revoked: number }> | AuthError;
-export type TwoFactorStatusResponse = AuthSuccess<{ twoFactor: TwoFactorStatus }> | AuthError;
-export type TwoFactorSetupResponse = AuthSuccess<TwoFactorSetup> | AuthError;
-export type RecoveryCodesResponse = AuthSuccess<{ recoveryCodes: string[] }> | AuthError;
-
 export const createRoleInputSchema = z.object({
   name: roleNameSchema,
   slug: roleSlugSchema,
@@ -163,30 +106,133 @@ export type CreateRoleInput = z.infer<typeof createRoleInputSchema>;
 export type UpdateRoleInput = z.infer<typeof updateRoleInputSchema>;
 export type DeleteRolesInput = z.infer<typeof deleteRolesInputSchema>;
 
-export interface RoleData {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  permissions: string[];
-  userCount: number;
+/**
+ * Response schemas, built on demand. Routes type their responses against them
+ * and contract tests parse real responses with them; they are strict, so an
+ * undeclared field fails. Being a function keeps them out of browser bundles,
+ * which only need the inferred types.
+ */
+export function authResponseSchemas() {
+  const success = <T extends z.ZodType>(data: T) =>
+    z.strictObject({ success: z.literal(true), message: z.string(), data });
+
+  const publicUser = z.strictObject({
+    id: z.string(),
+    name: z.string(),
+    email: z.string(),
+    avatar: z.string().nullable(),
+  });
+  const currentUser = z.strictObject({
+    ...publicUser.shape,
+    roles: z.array(z.string()).readonly(),
+    permissions: z.array(z.string()).readonly(),
+    mustChangePassword: z.boolean(),
+  });
+  const session = z.strictObject({
+    /** Public session handle; never the cookie token. */
+    id: z.string(),
+    userAgent: z.string().nullable(),
+    ipAddress: z.string().nullable(),
+    createdAt: z.number(),
+    lastSeenAt: z.number().nullable(),
+    current: z.boolean(),
+  });
+  const twoFactorStatus = z.strictObject({
+    enabled: z.boolean(),
+    enabledAt: z.number().nullable(),
+    recoveryCodesRemaining: z.number(),
+  });
+  const twoFactorSetup = z.strictObject({ secret: z.string(), otpauthUrl: z.string() });
+  const role = z.strictObject({
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    description: z.string().nullable(),
+    permissions: z.array(z.string()),
+    userCount: z.number(),
+  });
+  const permission = z.strictObject({
+    id: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    resource: z.string(),
+    action: z.string(),
+    description: z.string().nullable(),
+  });
+
+  return {
+    publicUser,
+    currentUser,
+    session,
+    twoFactorStatus,
+    twoFactorSetup,
+    role,
+    permission,
+    error: z.strictObject({
+      success: z.literal(false),
+      message: z.string(),
+      code: z.string(),
+      errors: z.record(z.string(), z.array(z.string())).optional(),
+    }),
+    /** A success that only carries a message. */
+    message: z.strictObject({ success: z.literal(true), message: z.string() }),
+    csrfToken: success(z.strictObject({ csrfToken: z.string() })),
+    register: success(z.strictObject({ user: publicUser })),
+    login: success(z.strictObject({ twoFactorRequired: z.boolean() })),
+    me: success(z.strictObject({ user: currentUser })),
+    sessions: success(z.strictObject({ sessions: z.array(session) })),
+    revokeSessions: success(z.strictObject({ revoked: z.number() })),
+    twoFactor: success(z.strictObject({ twoFactor: twoFactorStatus })),
+    twoFactorSetupStarted: success(twoFactorSetup),
+    recoveryCodes: success(z.strictObject({ recoveryCodes: z.array(z.string()) })),
+    roles: success(z.strictObject({ roles: z.array(role) })),
+    roleSaved: success(z.strictObject({ role })),
+    rolesDeleted: success(z.strictObject({ deleted: z.number() })),
+    permissions: success(z.record(z.string(), z.array(permission))),
+  };
 }
 
-export interface PermissionData {
-  id: string;
-  name: string;
-  slug: string;
-  resource: string;
-  action: string;
-  description: string | null;
-}
+type AuthResponseSchemas = ReturnType<typeof authResponseSchemas>;
+type Infer<K extends keyof AuthResponseSchemas> = z.infer<AuthResponseSchemas[K]>;
 
-export type RolesResponseSuccess = AuthSuccess<{ roles: RoleData[] }>;
-export type RoleResponseSuccess = AuthSuccess<{ role: RoleData }>;
-export type DeleteRolesResponseSuccess = AuthSuccess<{ deleted: number }>;
-export type PermissionsResponseSuccess = AuthSuccess<Record<string, PermissionData[]>>;
+export type PublicUser = Infer<'publicUser'>;
+export type CurrentUser = Infer<'currentUser'>;
+export type SessionData = Infer<'session'>;
+export type TwoFactorStatus = Infer<'twoFactorStatus'>;
+export type TwoFactorSetup = Infer<'twoFactorSetup'>;
+export type RoleData = Infer<'role'>;
+export type PermissionData = Infer<'permission'>;
+export type AuthError = Infer<'error'>;
+/** `AuthSuccess` carries only a message; `AuthSuccess<T>` always carries `data`. */
+export type AuthSuccess<T = undefined> = [T] extends [undefined]
+  ? Infer<'message'>
+  : { success: true; message: string; data: T };
+
+export type CsrfTokenSuccess = Infer<'csrfToken'>;
+export type RegisterSuccess = Infer<'register'>;
+export type LoginSuccess = Infer<'login'>;
+export type CurrentUserSuccess = Infer<'me'>;
+export type SessionsSuccess = Infer<'sessions'>;
+export type RevokeSessionsSuccess = Infer<'revokeSessions'>;
+export type TwoFactorStatusSuccess = Infer<'twoFactor'>;
+export type TwoFactorSetupSuccess = Infer<'twoFactorSetupStarted'>;
+export type RecoveryCodesSuccess = Infer<'recoveryCodes'>;
+export type RolesResponseSuccess = Infer<'roles'>;
+export type RoleResponseSuccess = Infer<'roleSaved'>;
+export type DeleteRolesResponseSuccess = Infer<'rolesDeleted'>;
+export type PermissionsResponseSuccess = Infer<'permissions'>;
+
+export type RegisterResponse = RegisterSuccess | AuthError;
+export type LoginResponse = LoginSuccess | AuthError;
+export type TwoFactorChallengeResponse = AuthSuccess | AuthError;
+export type ChangePasswordResponse = AuthSuccess | AuthError;
+export type CurrentUserResponse = CurrentUserSuccess | AuthError;
+export type SessionsResponse = SessionsSuccess | AuthError;
+export type RevokeSessionsResponse = RevokeSessionsSuccess | AuthError;
+export type TwoFactorStatusResponse = TwoFactorStatusSuccess | AuthError;
+export type TwoFactorSetupResponse = TwoFactorSetupSuccess | AuthError;
+export type RecoveryCodesResponse = RecoveryCodesSuccess | AuthError;
 export type RolesResponse = RolesResponseSuccess | AuthError;
 export type PermissionsResponse = PermissionsResponseSuccess | AuthError;
 export type RoleResponse = RoleResponseSuccess | AuthError;
 export type DeleteRolesResponse = DeleteRolesResponseSuccess | AuthError;
-export type CurrentUserResponse = AuthSuccess<{ user: CurrentUser }> | AuthError;
