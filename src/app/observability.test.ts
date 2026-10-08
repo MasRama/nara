@@ -210,6 +210,12 @@ describe('request lifecycle logging', () => {
   });
 });
 
+function withStack(message: string, ...frames: string[]): Error {
+  const error = new Error(message);
+  error.stack = [`Error: ${message}`, ...frames].join('\n');
+  return error;
+}
+
 describe('error correlation', () => {
   it('matches the error log request ID with the 500 response header', async () => {
     const probe = new Hono();
@@ -232,6 +238,29 @@ describe('error correlation', () => {
     const failures = logged.filter(([message]) => message === 'Unhandled application error');
     expect(failures).toHaveLength(1);
     expect((failures[0]![1] as Record<string, unknown>).requestId).toBe(headerId);
+  });
+
+  it('logs the owning Feature of an unhandled error without exposing it publicly', async () => {
+    const probe = new Hono();
+    probe.use('*', requestId());
+    probe.onError(handleError);
+    probe.get('/boom', () => {
+      throw withStack(
+        'database is locked',
+        '    at Statement.run (/srv/app/node_modules/better-sqlite3/lib/methods/wrappers.js:5:10)',
+        '    at createSession (/srv/app/build/src/features/auth/server/repository.js:84:7)',
+      );
+    });
+    const logged: unknown[][] = [];
+    vi.spyOn(Logger, 'error').mockImplementation(((...args: unknown[]) => {
+      logged.push(args);
+    }) as typeof Logger.error);
+
+    const body = await (await probe.request('/boom')).text();
+
+    const failures = logged.filter(([message]) => message === 'Unhandled application error');
+    expect((failures[0]![1] as Record<string, unknown>).feature).toBe('auth');
+    expect(body).not.toContain('auth');
   });
 
   it('never exposes stack traces or internals in production error bodies', async () => {

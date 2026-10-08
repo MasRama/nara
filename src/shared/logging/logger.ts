@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pino from 'pino';
 import { env, LOGGING } from '../config';
+import { errorOriginFeature, featureFromStack } from './feature-origin';
 
 type LogData = Record<string, unknown>;
 type LogError = Error | LogData;
@@ -83,26 +84,38 @@ function createLogger() {
 
 const logger = createLogger();
 
+/**
+ * Warn and above carry the owning Feature: an explicit `feature` key wins
+ * (even when undefined), then the logged error's origin, then the innermost
+ * Feature on the call stack. Info stays untagged so the hot path never
+ * captures a stack.
+ */
+function withFeature(data: LogData | undefined, loggedError?: unknown): LogData {
+  if (data && 'feature' in data) return data;
+  const feature = errorOriginFeature(loggedError) ?? featureFromStack(new Error().stack);
+  return feature ? { ...data, feature } : { ...data };
+}
+
+function errorData(data: LogError | undefined): LogData {
+  if (data instanceof Error) return withFeature({ err: data }, data);
+  return withFeature(data, data?.err);
+}
+
 const info = (message: string, data?: LogData): void => {
   if (data) logger.info(data, message);
   else logger.info(message);
 };
 
 const warn = (message: string, data?: LogData): void => {
-  if (data) logger.warn(data, message);
-  else logger.warn(message);
+  logger.warn(withFeature(data), message);
 };
 
 const error = (message: string, data?: LogError): void => {
-  if (data instanceof Error) logger.error({ err: data }, message);
-  else if (data) logger.error(data, message);
-  else logger.error(message);
+  logger.error(errorData(data), message);
 };
 
 const fatal = (message: string, data?: LogError): void => {
-  if (data instanceof Error) logger.fatal({ err: data }, message);
-  else if (data) logger.fatal(data, message);
-  else logger.fatal(message);
+  logger.fatal(errorData(data), message);
 };
 
 const logAuth = (event: string, data: LogData): void => {

@@ -1,7 +1,7 @@
 import type { ErrorHandler } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { env } from '../shared/config';
-import { Logger } from '../shared/logging';
+import { errorOriginFeature, Logger } from '../shared/logging';
 import { getRequestId } from './observability';
 export const handleError: ErrorHandler = (error, context) => {
   // Thrown errors bypass middleware unwinding, so stamp the request ID here
@@ -23,6 +23,8 @@ export const handleError: ErrorHandler = (error, context) => {
     requestId,
     method: context.req.method,
     path: new URL(context.req.url).pathname,
+    // Log-only: the owning Feature never appears in the public response.
+    feature: errorOriginFeature(error),
     ...(error instanceof Error ? { err: error } : { error: String(error) }),
   });
 
