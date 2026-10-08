@@ -120,6 +120,7 @@ function toggleTheme(): void {
 .nara-auth-show { position: absolute; top: 9px; right: 7px; display: flex; min-width: 64px; height: 49px; align-items: center; justify-content: center; border-radius: 8px; color: var(--nara-muted); font-size: 11px; font-weight: 800; transition: color .2s; }
 .nara-auth-show:hover { color: var(--nara-accent-strong); }
 .nara-auth-error { display: block; margin-top: 8px; color: var(--nara-danger); font-size: 11px; font-weight: 600; line-height: 1.5; }
+.nara-auth-notice { padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--nara-accent-strong) 35%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--nara-accent-strong) 8%, transparent); color: var(--nara-fg); font-size: 12px; line-height: 1.65; }
 .nara-auth-alert { padding: 13px 15px; border: 1px solid color-mix(in srgb, var(--nara-danger) 35%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--nara-danger) 8%, transparent); color: var(--nara-danger); font-size: 12px; line-height: 1.65; }
 .nara-auth-submit { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: center; gap: 12px; padding: 12px 16px; border: 1px solid transparent; border-radius: 10px; background: var(--nara-fg); color: var(--nara-bg); font-family: 'Manrope', system-ui, sans-serif; font-size: 13px; font-weight: 800; transition: background-color .2s, color .2s, transform .2s; }
 .nara-auth-submit:hover:not(:disabled) { background: var(--nara-accent-strong); color: var(--nara-bg); }

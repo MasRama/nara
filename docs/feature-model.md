@@ -285,6 +285,22 @@ dictionaries load when it is chosen, and the switch waits for all of them so
 a page never mixes languages. Tests reject template text outside a dictionary
 and translations whose placeholders differ from English.
 
+## Live updates
+
+An open tab hears about changes over one Server-Sent Events stream,
+`GET /api/events`, which the application mounts with Auth deciding who is
+listening. Events are signals, not data: a topic such as `activity.recorded`
+tells the page to refetch through its Feature's own client, so every
+permission check stays in the route that already makes it.
+
+- A Feature names its topics in `contract.ts` and publishes from its own server code with `publish(topic, listener => …)` from `src/shared/realtime`, choosing the recipients; Activity announces only to accounts that may read Activity.
+- Ending a session calls `revalidate`; a stream whose session no longer resolves gets `stream.ended` and closes. Each heartbeat (25 s) re-resolves the session too, so an expired session is noticed without a mutation.
+- In the browser, `onServerEvent(topic, handler)` from `src/shared/realtime/browser` subscribes and returns the unsubscribe function. After a dropped connection comes back, every handler runs again with `resumed: true`, because events sent meanwhile are lost.
+- `src/app/live-updates.ts` opens the stream while someone is signed in, sends the tab to the login page with a notice when its session ends elsewhere, and re-reads the account when `auth.account-changed` arrives, leaving a page whose permission is gone.
+
+The hub lives in one process. Running several server processes behind a load
+balancer would need a shared broadcast channel, which Nara does not ship.
+
 ## Shared code
 
 `src/shared/` is intentionally small infrastructure for concepts owned by no business Feature:

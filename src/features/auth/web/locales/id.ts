@@ -31,6 +31,7 @@ export default {
   'login.newHere': 'Baru di Nara?',
   'login.register': 'Buat akun',
   'login.sessionFailed': 'Berhasil masuk, tapi sesi saat ini tidak bisa dimuat.',
+  'login.sessionEnded': 'Sesi kamu telah diakhiri. Masuk lagi untuk melanjutkan.',
   'login.failed': 'Gagal masuk',
   'login.twoFactor.heading': 'Pastikan ini',
   'login.twoFactor.highlight': 'kamu.',

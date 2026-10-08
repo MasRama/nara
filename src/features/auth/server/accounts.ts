@@ -1,5 +1,6 @@
 import { getDatabase } from '../../../shared/database';
 import { syncUserRoles } from './access';
+import { accountsChanged, sessionsChanged } from './live';
 
 /**
  * Auth-owned account directory. Auth owns account identity data
@@ -128,17 +129,19 @@ export function updateAccountWithRoles(
   options: AccountManagedUpdateOptions = {},
 ): AccountRecord | undefined {
   const database = getDatabase();
-  return database.transaction(() => {
-    const account = updateAccount(userId, data);
-    if (!account) return undefined;
+  const account = database.transaction(() => {
+    const updated = updateAccount(userId, data);
+    if (!updated) return undefined;
     if (options.roleIds !== undefined) syncUserRoles(userId, options.roleIds);
     return findAccountById(userId);
   })();
+  if (account) accountsChanged([userId]);
+  return account;
 }
 
 export function resetAccountPassword(userId: string, passwordHash: string): AccountRecord | undefined {
   const database = getDatabase();
-  return database.transaction(() => {
+  const account = database.transaction(() => {
     const result = database
       .prepare('UPDATE users SET password = ?, must_change_password = 1, updated_at = ? WHERE id = ?')
       .run(passwordHash, Date.now(), userId);
@@ -146,10 +149,14 @@ export function resetAccountPassword(userId: string, passwordHash: string): Acco
     database.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId);
     return findAccountById(userId);
   })();
+  if (account) sessionsChanged([userId]);
+  return account;
 }
 
 export function deleteAccounts(userIds: string[]): number {
   if (userIds.length === 0) return 0;
   const placeholders = userIds.map(() => '?').join(', ');
-  return getDatabase().prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...userIds).changes;
+  const deleted = getDatabase().prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...userIds).changes;
+  sessionsChanged(userIds);
+  return deleted;
 }

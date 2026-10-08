@@ -4,7 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { loginInputSchema, twoFactorChallengeInputSchema, type LoginInput } from '../../contract';
 import { createAuthClient } from '../client';
 import { createSecurityClient } from '../security-client';
-import { useAuthSession } from '../session';
+import { SESSION_ENDED_REASON, useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
 import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { error as errorText, issue as issueText, t } from '../locales';
@@ -203,6 +203,7 @@ function startOver(): void {
 
   <AuthPageFrame v-else :heading="t('login.heading')" :highlight="t('login.highlight')">
       <form class="nara-auth-form" @submit.prevent="submitLogin">
+        <p v-if="route.query.reason === SESSION_ENDED_REASON" role="status" class="nara-auth-notice">{{ t('login.sessionEnded') }}</p>
         <label class="nara-auth-field" for="email">
           {{ t('common.email') }}
           <input

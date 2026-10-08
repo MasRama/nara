@@ -67,6 +67,7 @@ export default defineConfig({
             'tests/v3/removed-stack.test.ts',
             'tests/v3/vite-topology.test.ts',
             'src/app/router.test.ts',
+            'src/app/tests/live-browser.test.ts',
             'src/shared/i18n/tests/runtime.test.ts',
             'src/features/activity/tests/browser.test.ts',
             'src/features/auth/tests/browser.test.ts',
@@ -89,6 +90,7 @@ export default defineConfig({
           include: [
             'tests/v3/frontend.test.ts',
             'src/app/router.test.ts',
+            'src/app/tests/live-browser.test.ts',
             'src/features/auth/tests/browser.test.ts',
             'src/features/auth/tests/client.test.ts',
             'src/features/auth/tests/rbac-browser.test.ts',

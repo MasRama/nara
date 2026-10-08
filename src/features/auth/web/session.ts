@@ -4,6 +4,9 @@ import { createAuthClient, type AuthClient } from './client';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
+/** Login page query `reason` for a browser whose session was ended elsewhere. */
+export const SESSION_ENDED_REASON = 'session-ended';
+
 export interface AuthSession {
   readonly status: Readonly<Ref<AuthStatus>>;
   readonly user: Readonly<Ref<CurrentUser | null>>;

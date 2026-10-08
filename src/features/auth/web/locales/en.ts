@@ -29,6 +29,7 @@ export default {
   'login.register': 'Create an account',
   'login.sessionFailed': 'Sign in succeeded, but the current session could not be loaded.',
   'login.failed': 'Unable to sign in',
+  'login.sessionEnded': 'Your session was ended. Sign in again to continue.',
   'login.twoFactor.heading': "Confirm it's",
   'login.twoFactor.highlight': 'you.',
   'login.twoFactor.appDescription': 'Open your authenticator app and enter the 6-digit code for this account.',

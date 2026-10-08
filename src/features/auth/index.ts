@@ -7,7 +7,7 @@ export {
   resetAccountPassword,
   updateAccountWithRoles,
 } from './server/accounts';
-export { currentUser as getCurrentUser, hashPassword, SESSION_COOKIE_NAME } from './server/service';
+export { currentUser as getCurrentUser, hashPassword, liveListener, SESSION_COOKIE_NAME } from './server/service';
 export { resetLoginThrottle } from './server/login-throttle';
 export { SESSION_CLEANUP_INTERVAL_MS } from './server/config';
 export { cleanupExpiredSessions } from './server/repository';

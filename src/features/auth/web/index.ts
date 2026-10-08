@@ -1,7 +1,7 @@
-export { changePasswordInputSchema } from '../contract';
+export { AUTH_ACCOUNT_CHANGED_EVENT, changePasswordInputSchema } from '../contract';
 export type { ChangePasswordInput } from '../contract';
 export { createAuthClient, type AuthClient } from './client';
-export { createAuthSession, useAuthSession } from './session';
+export { createAuthSession, SESSION_ENDED_REASON, useAuthSession } from './session';
 export {
   CSRF_BOOTSTRAP_PATH,
   CSRF_COOKIE_NAME,

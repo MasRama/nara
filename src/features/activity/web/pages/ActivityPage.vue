@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { formatDate, useLocalText } from '../../../../shared/i18n';
-import type { ActivityRecord } from '../../contract';
+import { onServerEvent } from '../../../../shared/realtime/browser';
+import { ACTIVITY_RECORDED_EVENT, type ActivityRecord } from '../../contract';
 import { createActivityClient } from '../client';
 import { error as errorText, find, t } from '../locales';
 
@@ -122,7 +123,20 @@ async function load(nextPage = page.value): Promise<void> {
     errorMessage.value = () => t('feed.loadFailed');
   } finally {
     isLoading.value = false;
+    if (refreshQueued && page.value === 1) {
+      refreshQueued = false;
+      void load(1);
+    }
   }
+}
+
+// The first page follows new events as they are recorded; older pages stay
+// put so what the reader is looking at does not shift under them.
+let refreshQueued = false;
+function followLiveActivity(): void {
+  if (page.value !== 1) return;
+  if (isLoading.value) refreshQueued = true;
+  else void load(1);
 }
 
 async function applyFilters(): Promise<void> {
@@ -138,6 +152,7 @@ async function clearFilters(): Promise<void> {
 }
 
 onMounted(() => load());
+onUnmounted(onServerEvent(ACTIVITY_RECORDED_EVENT, followLiveActivity));
 </script>
 
 <template>

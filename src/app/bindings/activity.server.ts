@@ -1,5 +1,6 @@
 import type { Hono } from 'hono';
 import {
+  announceActivity,
   createActivityRoutes,
   recordActivity,
   type ActivityRecordInput,
@@ -19,6 +20,7 @@ import { Logger } from '../../shared/logging';
 export function recordApplicationActivity(input: ActivityRecordInput): void {
   try {
     recordActivity(input);
+    announceActivity(activityServerHost);
   } catch (error) {
     Logger.error(
       'Failed to record application activity',

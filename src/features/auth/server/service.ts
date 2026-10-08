@@ -1,4 +1,7 @@
 import { pbkdf2, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import type { Context } from 'hono';
+import { getCookie } from 'hono/cookie';
+import type { Listener } from '../../../shared/realtime';
 import { AUTH } from './config';
 import {
   createSession,
@@ -8,6 +11,7 @@ import {
   type SessionUser,
   type StoredUser,
 } from './repository';
+import { sessionEnded, sessionsChanged } from './live';
 
 const ITERATIONS = 100_000;
 const KEY_LENGTH = 64;
@@ -61,6 +65,8 @@ export function startSession(user: StoredUser, userAgent: string | undefined, ip
     expiresAt: Date.now() + AUTH.SESSION_EXPIRY_MS,
     maxPerUser: AUTH.MAX_SESSIONS_PER_USER,
   });
+  // Also ends live streams of sessions the per-account cap (or a caller) removed.
+  sessionsChanged([user.id]);
   return token;
 }
 
@@ -75,8 +81,17 @@ export function currentUser(sessionId: string | undefined): SessionUser | undefi
   return user;
 }
 
+/** Who a live update stream belongs to: the signed-in account and this browser's session. */
+export function liveListener(context: Context): Listener | undefined {
+  const sessionId = getCookie(context, SESSION_COOKIE_NAME);
+  const user = currentUser(sessionId);
+  return user && sessionId ? { userId: user.id, sessionId } : undefined;
+}
+
 export function endSession(sessionId: string | undefined): void {
-  if (sessionId) deleteSession(sessionId);
+  if (!sessionId) return;
+  deleteSession(sessionId);
+  sessionEnded(sessionId);
 }
 
 export { SESSION_COOKIE_NAME };

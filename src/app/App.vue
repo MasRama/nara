@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { RouterView, useRoute } from 'vue-router';
+import { onUnmounted } from 'vue';
+import { RouterView, useRoute, useRouter } from 'vue-router';
 import AuthenticatedShell from './layouts/AuthenticatedShell.vue';
+import { startLiveUpdates } from './live-updates';
 
 const route = useRoute();
+onUnmounted(startLiveUpdates(useRouter()));
 
 function initializeTheme(): void {
   let savedTheme: string | null = null;

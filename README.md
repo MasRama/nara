@@ -184,6 +184,11 @@ SQLite files, WAL files, and backups must live on storage local to the
 application host; the default architecture is not intended for shared
 multi-host network filesystems.
 
+Live updates stream from `GET /api/events` in the same process. The response
+sends `X-Accel-Buffering: no` for nginx; other reverse proxies must not buffer
+`text/event-stream` responses, and their read timeout must exceed the 25-second
+heartbeat.
+
 The reference app also performs bounded SQLite maintenance: planner statistics
 are optimized at connection/migration boundaries and periodically at runtime,
 while Activity events older than `ACTIVITY_RETENTION_DAYS` (default `365`) are

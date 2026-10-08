@@ -40,6 +40,7 @@ import {
   type StoredUser,
 } from './repository';
 import { checkPassword, currentUser, endSession, SESSION_COOKIE_NAME, startSession } from './service';
+import { sessionsChanged } from './live';
 import { generateRecoveryCodes, generateTotpSecret, hashRecoveryCode, otpauthUrl, verifyTotp } from './totp';
 
 /** HttpOnly cookie carrying a pending two-factor challenge id, scoped to its one endpoint. */
@@ -204,6 +205,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
     .post('/sessions/revoke-others', accountGuard.signedIn, (context) => {
       const auth = accountGuard.actor(context);
       const revoked = deleteOtherSessions(auth.user.id, auth.token);
+      sessionsChanged([auth.user.id]);
       if (revoked > 0) record(auth.user, 'auth.sessions-revoked', { revoked });
       return context.json({
         success: true as const,
@@ -225,6 +227,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
         );
       }
       deleteSessionByHandle(auth.user.id, handle);
+      sessionsChanged([auth.user.id]);
       record(auth.user, 'auth.session-revoked');
       return context.json({
         success: true as const,

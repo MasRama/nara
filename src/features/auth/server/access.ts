@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getDatabase } from '../../../shared/database';
+import { accountsChanged } from './live';
 
 export interface Role {
   id: string;
@@ -104,8 +105,10 @@ export function updateRole(
 
 export function deleteRoles(roleIds: string[]): number {
   if (roleIds.length === 0) return 0;
+  const members = roleIds.flatMap((roleId) => getUsersWithRole(roleId).map((user) => user.id));
   const placeholders = roleIds.map(() => '?').join(', ');
   const result = getDatabase().prepare(`DELETE FROM roles WHERE id IN (${placeholders})`).run(...roleIds);
+  accountsChanged(members);
   return result.changes;
 }
 
@@ -203,12 +206,14 @@ export function updateRoleWithPermissions(
   permissionIds?: string[],
 ): Role | undefined {
   const database = getDatabase();
-  return database.transaction(() => {
-    const role = updateRole(roleId, data);
-    if (!role) return undefined;
+  const role = database.transaction(() => {
+    const updated = updateRole(roleId, data);
+    if (!updated) return undefined;
     if (permissionIds !== undefined) replaceRolePermissions(database, roleId, permissionIds);
-    return role;
+    return updated;
   })();
+  if (role) accountsChanged(getUsersWithRole(roleId).map((user) => user.id));
+  return role;
 }
 
 export function syncUserRoles(userId: string, roleIds: string[]): void {

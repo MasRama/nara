@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { CONTROL_MESSAGE, emailSchema, hasNoControlChars, personNameSchema } from '../../shared/security/input';
 
+/** Live update topic: the signed-in account's profile, roles, or permissions changed; refetch it. */
+export const AUTH_ACCOUNT_CHANGED_EVENT = 'auth.account-changed';
+
 /**
  * Auth/RBAC domain validation. Role name/slug/description semantics are owned
  * here, not by feature-neutral security infrastructure: shared code provides

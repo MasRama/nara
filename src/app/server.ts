@@ -12,12 +12,14 @@ import {
   securityHeaders,
 } from '../shared/security';
 import { Logger } from '../shared/logging';
+import { closeEventStreams, createEventStream, EVENTS_PATH } from '../shared/realtime';
 import { handleError } from './error-handler';
 import { requestId, requestLifecycleLog } from './observability';
 import {
   createAuthRoutes,
   createAccessRoutes,
   cleanupExpiredSessions,
+  liveListener,
   passwordChangeGate,
   resetLoginThrottle,
   SESSION_CLEANUP_INTERVAL_MS,
@@ -217,6 +219,8 @@ app.route('/api/auth', createAuthRoutes(authActivitySink));
 app.route('/api/roles', createAccessRoutes(authActivitySink));
 composeUsersServer(app, { recordActivity: recordApplicationActivity });
 composeActivityServer(app);
+// Live updates for signed-in browsers; Auth decides who is listening.
+app.get(EVENTS_PATH, createEventStream({ resolve: liveListener }));
 
 app.get('*', async (context, next) => {
   const requested = requestPath(context);
@@ -335,6 +339,7 @@ export function stopApplicationMaintenance(): void {
 export function stopApplicationRuntime(): void {
   stopSessionCleanup();
   stopApplicationMaintenance();
+  closeEventStreams();
 }
 
 export function initializeApplicationRuntime(): RuntimeHandle {

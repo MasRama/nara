@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Live update topic: an activity event was recorded; viewers refetch the feed. */
+export const ACTIVITY_RECORDED_EVENT = 'activity.recorded';
+
 const activityFilterSchema = z
   .string()
   .trim()
