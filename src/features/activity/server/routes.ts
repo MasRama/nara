@@ -4,6 +4,7 @@ import type { Context } from 'hono';
 import { activityQuerySchema } from '../contract';
 import type { ActivityServerHost } from './host';
 import { listActivity } from './repository';
+import { createGuard } from '../../../shared/security';
 
 function validationErrors(error: { issues: Array<{ path: PropertyKey[]; message: string }> }): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
@@ -16,14 +17,8 @@ function validationErrors(error: { issues: Array<{ path: PropertyKey[]; message:
 }
 
 export function createActivityRoutes(host: ActivityServerHost): Hono {
-  return new Hono().get('/', (context: Context) => {
-    const actor = host.resolveActor(getCookie(context, host.sessionCookieName));
-    if (!actor) {
-      return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
-    }
-    if (!host.canViewActivity(actor.id)) {
-      return context.json({ success: false as const, message: 'Forbidden', code: 'FORBIDDEN' }, 403);
-    }
+  const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
+  return new Hono().get('/', guard.allow((actor) => host.canViewActivity(actor.id)), (context: Context) => {
 
     const parsed = activityQuerySchema.safeParse({
       page: context.req.query('page') ?? '1',

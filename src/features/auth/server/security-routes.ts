@@ -9,10 +9,10 @@ import {
   type SessionData,
 } from '../contract';
 import { AUTH, env } from '../../../shared/config';
-import { clientIp } from '../../../shared/security';
+import { clientIp, createGuard } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
-import { requestBody, setSessionCookie, unauthorized, validationFailed } from './http';
+import { requestBody, setSessionCookie, validationFailed } from './http';
 import {
   consumeRecoveryCode,
   countUnusedRecoveryCodes,
@@ -140,16 +140,17 @@ const challengeHandler = async (context: Context, activity?: AuthActivitySink) =
 };
 
 interface Authenticated {
+  id: string;
   token: string;
   user: StoredUser;
 }
 
-function authenticate(context: Context): Authenticated | undefined {
+const accountGuard = createGuard((context): Authenticated | undefined => {
   const token = getCookie(context, SESSION_COOKIE_NAME);
   const sessionUser = currentUser(token);
   const user = sessionUser ? findUserById(sessionUser.id) : undefined;
-  return token && user ? { token, user } : undefined;
-}
+  return token && user ? { id: user.id, token, user } : undefined;
+});
 
 const invalidPassword = (context: Context) =>
   context.json({ success: false as const, message: 'Password is incorrect', code: 'INVALID_PASSWORD' }, 400);
@@ -181,9 +182,8 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
 
   return new Hono()
     .post('/two-factor/challenge', (context) => challengeHandler(context, activity))
-    .get('/sessions', (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .get('/sessions', accountGuard.signedIn, (context) => {
+      const auth = accountGuard.actor(context);
       const sessions: SessionData[] = listActiveSessions(auth.user.id).map((session) => ({
         id: session.handle,
         userAgent: session.user_agent,
@@ -194,16 +194,14 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       }));
       return context.json({ success: true as const, message: 'OK', data: { sessions } });
     })
-    .post('/sessions/revoke-others', (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .post('/sessions/revoke-others', accountGuard.signedIn, (context) => {
+      const auth = accountGuard.actor(context);
       const revoked = deleteOtherSessions(auth.user.id, auth.token);
       if (revoked > 0) record(auth.user, 'auth.sessions-revoked', { revoked });
       return context.json({ success: true as const, message: 'Other sessions signed out', data: { revoked } });
     })
-    .delete('/sessions/:id', (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .delete('/sessions/:id', accountGuard.signedIn, (context) => {
+      const auth = accountGuard.actor(context);
       const handle = context.req.param('id');
       const target = listActiveSessions(auth.user.id).find((session) => session.handle === handle);
       if (!target) {
@@ -219,14 +217,12 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       record(auth.user, 'auth.session-revoked');
       return context.json({ success: true as const, message: 'Session signed out', data: { revoked: 1 } });
     })
-    .get('/two-factor', (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .get('/two-factor', accountGuard.signedIn, (context) => {
+      const auth = accountGuard.actor(context);
       return context.json({ success: true as const, message: 'OK', data: { twoFactor: twoFactorStatus(auth.user.id) } });
     })
-    .post('/two-factor/setup', async (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .post('/two-factor/setup', accountGuard.signedIn, async (context) => {
+      const auth = accountGuard.actor(context);
       if (twoFactorStatus(auth.user.id).enabled) {
         return context.json(
           { success: false as const, message: 'Two-factor authentication is already enabled', code: 'TWO_FACTOR_ENABLED' },
@@ -243,9 +239,8 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
         data: { secret, otpauthUrl: otpauthUrl({ issuer: AUTH.TWO_FACTOR_ISSUER, account: auth.user.email, secret }) },
       });
     })
-    .post('/two-factor/enable', async (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .post('/two-factor/enable', accountGuard.signedIn, async (context) => {
+      const auth = accountGuard.actor(context);
       const state = findTwoFactorState(auth.user.id);
       if (state?.two_factor_enabled_at != null) {
         return context.json(
@@ -279,9 +274,8 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       record(auth.user, 'auth.two-factor-enabled');
       return context.json({ success: true as const, message: 'Two-factor authentication enabled', data: { recoveryCodes } });
     })
-    .post('/two-factor/disable', async (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .post('/two-factor/disable', accountGuard.signedIn, async (context) => {
+      const auth = accountGuard.actor(context);
       if (!twoFactorStatus(auth.user.id).enabled) {
         return context.json(
           { success: false as const, message: 'Two-factor authentication is not enabled', code: 'TWO_FACTOR_DISABLED' },
@@ -295,9 +289,8 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       record(auth.user, 'auth.two-factor-disabled');
       return context.json({ success: true as const, message: 'Two-factor authentication disabled' });
     })
-    .post('/two-factor/recovery-codes', async (context) => {
-      const auth = authenticate(context);
-      if (!auth) return unauthorized(context);
+    .post('/two-factor/recovery-codes', accountGuard.signedIn, async (context) => {
+      const auth = accountGuard.actor(context);
       if (!twoFactorStatus(auth.user.id).enabled) {
         return context.json(
           { success: false as const, message: 'Two-factor authentication is not enabled', code: 'TWO_FACTOR_DISABLED' },

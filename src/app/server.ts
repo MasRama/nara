@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { getCookie } from 'hono/cookie';
 import { compress } from 'hono/compress';
 import { Hono } from 'hono';
 import { AUTH, MAINTENANCE, UPLOAD, env } from '../shared/config';
@@ -19,9 +18,8 @@ import {
   createAuthRoutes,
   createAccessRoutes,
   cleanupExpiredSessions,
-  getCurrentUser,
+  passwordChangeGate,
   resetLoginThrottle,
-  SESSION_COOKIE_NAME,
 } from '../features/auth';
 import {
   discoverMigrations,
@@ -99,12 +97,6 @@ const spaHandler = frontendBuildAvailable
 export const app = new Hono();
 
 const isProductionServer = env.NODE_ENV === 'production';
-const TEMPORARY_PASSWORD_ALLOWED_API_PATHS = new Set([
-  '/api/auth/csrf',
-  '/api/auth/me',
-  '/api/auth/change-password',
-  '/api/auth/logout',
-]);
 
 function isApiRequest(context: { req: { url: string } }): boolean {
   return new URL(context.req.url).pathname.startsWith('/api/');
@@ -154,23 +146,8 @@ app.use('/api/auth/logout', authRateLimiter.middleware);
 app.use('/api/auth/two-factor/*', authRateLimiter.middleware);
 app.use('/api/assets/avatar', authRateLimiter.middleware);
 app.use('*', csrfProtection({ isProduction: isProductionServer }));
-app.use('/api/*', async (context, next) => {
-  const pathname = new URL(context.req.url).pathname;
-  if (TEMPORARY_PASSWORD_ALLOWED_API_PATHS.has(pathname)) return next();
-
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (user?.must_change_password === 1) {
-    return context.json(
-      {
-        success: false as const,
-        message: 'Change your temporary password before continuing',
-        code: 'PASSWORD_CHANGE_REQUIRED',
-      },
-      403,
-    );
-  }
-  return next();
-});
+// Auth decides which of its own routes stay reachable; the prefix matches its mount below.
+app.use('/api/*', passwordChangeGate('/api/auth'));
 // Route-owned body budgets: every state-changing /api/* request is bounded
 // by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
 // POST /api/assets/avatar owns the narrowly larger upload request budget

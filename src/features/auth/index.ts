@@ -46,4 +46,5 @@ export {
   isAdmin,
 } from './server/access';
 export { createAccessRoutes } from './server/access-routes';
+export { passwordChangeGate } from './server/password-change-gate';
 export type { AuthActivitySink } from './server/activity';

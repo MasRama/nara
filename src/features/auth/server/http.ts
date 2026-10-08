@@ -21,10 +21,6 @@ export function validationFailed(context: Context, error: z.ZodError) {
   );
 }
 
-export function unauthorized(context: Context) {
-  return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
-}
-
 export async function requestBody(context: Context): Promise<unknown> {
   try {
     return await context.req.json();

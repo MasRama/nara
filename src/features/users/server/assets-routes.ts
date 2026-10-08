@@ -10,6 +10,7 @@ import {
 } from '../contract';
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
 import type { UsersServerHost } from './host';
+import { createGuard, type Guard } from './guard';
 
 const AVATAR_STORAGE_PREFIX = 'avatars';
 
@@ -41,10 +42,6 @@ function uploadedFile(value: unknown): File | undefined {
     return undefined;
   }
   return value as File;
-}
-
-function unauthorized(context: Context): Response {
-  return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
 }
 
 function invalidFile(context: Context, message: string, code: string, status = 400): Response {
@@ -101,9 +98,8 @@ export async function cleanupUserAvatarAssets(host: UsersServerHost, userIds: st
   }
 }
 
-const uploadAvatarHandlerFor = (host: UsersServerHost) => async (context: Context) => {
-  const sessionUser = host.resolveActor(getCookie(context, host.sessionCookieName));
-  if (!sessionUser) return unauthorized(context);
+const uploadAvatarHandlerFor = (host: UsersServerHost, guard: Guard<NonNullable<ReturnType<UsersServerHost['resolveActor']>>>) => async (context: Context) => {
+  const sessionUser = guard.actor(context);
 
   let body: Record<string, string | File | (string | File)[]>;
   try {
@@ -202,5 +198,8 @@ const serveAvatarHandlerFor = (host: UsersServerHost) => async (context: Context
  * provider-owned; only the `assets` rows are written here.
  */
 export function createAssetRoutes(host: UsersServerHost) {
-  return new Hono().post('/avatar', uploadAvatarHandlerFor(host)).get('/avatar/:filename', serveAvatarHandlerFor(host));
+  const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
+  return new Hono()
+    .post('/avatar', guard.signedIn, uploadAvatarHandlerFor(host, guard))
+    .get('/avatar/:filename', serveAvatarHandlerFor(host));
 }

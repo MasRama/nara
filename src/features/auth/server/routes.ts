@@ -36,6 +36,7 @@ import {
 import type { AuthActivitySink } from './activity';
 import { requestBody, setSessionCookie, validationErrors } from './http';
 import { beginTwoFactorChallenge, createSecurityRoutes } from './security-routes';
+import { sessionGuard } from './guard';
 
 function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
@@ -168,12 +169,7 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
 
 
 const changePasswordHandler = async (context: Context, activity?: AuthActivitySink) => {
-  const sessionUser = currentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!sessionUser) {
-    return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
-  }
-
-  const user = findUserById(sessionUser.id);
+  const user = findUserById(sessionGuard.actor(context).id);
   if (!user) {
     return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
   }
@@ -227,10 +223,7 @@ function currentUserPayload(user: SessionUser): CurrentUser {
 }
 
 const currentUserHandler = (context: Context) => {
-  const user = currentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!user) {
-    return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
-  }
+  const { user } = sessionGuard.actor(context);
   return context.json({ success: true as const, message: 'OK', data: { user: currentUserPayload(user) } });
 };
 
@@ -263,8 +256,8 @@ export function createAuthRoutes(activity?: AuthActivitySink) {
     .get('/csrf', csrfHandler)
     .post('/register', (context) => registerHandler(context, activity))
     .post('/login', (context) => loginHandler(context, activity))
-    .post('/change-password', (context) => changePasswordHandler(context, activity))
-    .get('/me', currentUserHandler)
+    .post('/change-password', sessionGuard.signedIn, (context) => changePasswordHandler(context, activity))
+    .get('/me', sessionGuard.signedIn, currentUserHandler)
     .post('/logout', (context) => logoutHandler(context, activity))
     .route('/', createSecurityRoutes(activity));
 }

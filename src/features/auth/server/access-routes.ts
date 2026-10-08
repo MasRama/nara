@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { z } from 'zod';
@@ -16,11 +15,11 @@ import {
   findRoleById,
   getRolePermissions,
   getUserCountsForRoles,
-  hasPermission,
   isAdmin,
   updateRoleWithPermissions,
 } from './access';
-import { currentUser as getCurrentUser, SESSION_COOKIE_NAME } from './service';
+import { forbidden } from '../../../shared/security';
+import { requirePermission, sessionGuard } from './guard';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
 
@@ -46,18 +45,6 @@ function uniqueConstraint(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
 }
 
-function unauthorized(context: Context): Response {
-  return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
-}
-
-function forbidden(context: Context): Response {
-  return context.json({ success: false as const, message: 'Forbidden', code: 'FORBIDDEN' }, 403);
-}
-
-function canAccess(context: Context, permission: string): boolean {
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  return user !== undefined && (isAdmin(user.id) || hasPermission(user.id, permission));
-}
 
 function roleResponse(roleId: string) {
   const role = findRoleById(roleId);
@@ -95,9 +82,6 @@ function unknownPermissions(context: Context, slugs: string[]): Response {
 }
 
 const listRolesHandler = (context: Context) => {
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!user) return unauthorized(context);
-  if (!isAdmin(user.id) && !hasPermission(user.id, 'roles.view')) return forbidden(context);
 
   const roles = findAllRoles();
   const counts = getUserCountsForRoles(roles.map((role) => role.id));
@@ -115,9 +99,6 @@ const listRolesHandler = (context: Context) => {
 };
 
 const listPermissionsHandler = (context: Context) => {
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!user) return unauthorized(context);
-  if (!isAdmin(user.id) && !hasPermission(user.id, 'roles.view')) return forbidden(context);
 
   const grouped: Record<string, ReturnType<typeof findAllPermissions>> = {};
   for (const permission of findAllPermissions()) {
@@ -128,9 +109,7 @@ const listPermissionsHandler = (context: Context) => {
 };
 
 const createRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!user) return unauthorized(context);
-  if (!canAccess(context, 'roles.create')) return forbidden(context);
+  const user = sessionGuard.actor(context);
 
   const parsed = createRoleInputSchema.safeParse(await requestBody(context));
   if (!parsed.success) {
@@ -178,9 +157,7 @@ const createRoleHandler = async (context: Context, activity?: AuthActivitySink) 
 };
 
 const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!user) return unauthorized(context);
-  if (!canAccess(context, 'roles.edit')) return forbidden(context);
+  const user = sessionGuard.actor(context);
 
   const roleId = context.req.param('id');
   if (!roleId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
@@ -234,9 +211,7 @@ const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) 
 };
 
 const deleteRolesHandler = async (context: Context, activity?: AuthActivitySink) => {
-  const user = getCurrentUser(getCookie(context, SESSION_COOKIE_NAME));
-  if (!user) return unauthorized(context);
-  if (!canAccess(context, 'roles.delete')) return forbidden(context);
+  const user = sessionGuard.actor(context);
 
   const parsed = deleteRolesInputSchema.safeParse(await requestBody(context));
   if (!parsed.success) {
@@ -274,9 +249,9 @@ const deleteRolesHandler = async (context: Context, activity?: AuthActivitySink)
 
 export function createAccessRoutes(activity?: AuthActivitySink) {
   return new Hono()
-    .get('/', listRolesHandler)
-    .get('/permissions', listPermissionsHandler)
-    .post('/', (context) => createRoleHandler(context, activity))
-    .put('/:id', (context) => updateRoleHandler(context, activity))
-    .delete('/', (context) => deleteRolesHandler(context, activity));
+    .get('/', requirePermission('roles.view'), listRolesHandler)
+    .get('/permissions', requirePermission('roles.view'), listPermissionsHandler)
+    .post('/', requirePermission('roles.create'), (context) => createRoleHandler(context, activity))
+    .put('/:id', requirePermission('roles.edit'), (context) => updateRoleHandler(context, activity))
+    .delete('/', requirePermission('roles.delete'), (context) => deleteRolesHandler(context, activity));
 }

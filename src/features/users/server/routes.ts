@@ -12,6 +12,7 @@ import {
   type ManagedUser,
   type UserProfile,
 } from '../contract';
+import { createGuard, forbidden } from './guard';
 import { cleanupUserAvatarAssets } from './assets-routes';
 import type { UsersServerHost } from './host';
 
@@ -38,14 +39,6 @@ async function requestBody(context: Context): Promise<unknown> {
 
 function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
-}
-
-function unauthorized(context: Context): Response {
-  return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
-}
-
-function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN'): Response {
-  return context.json({ success: false as const, message, code }, 403);
 }
 
 function validationFailure(context: Context, field: string, messages: string[]): Response {
@@ -91,13 +84,12 @@ export function createUserRoutes(host: UsersServerHost) {
     return { ...user, roles: host.rolesForUser(user.id) };
   }
 
-  function currentActor(context: Context) {
-    return host.resolveActor(getCookie(context, host.sessionCookieName));
-  }
+  const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
+  const canManage = (action: Parameters<UsersServerHost['canManageUsers']>[1]) =>
+    guard.allow((actor) => host.canManageUsers(actor.id, action));
 
   const currentProfileHandler = (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
+    const sessionUser = guard.actor(context);
 
     const user = host.findAccountById(sessionUser.id);
     if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
@@ -105,8 +97,7 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const updateProfileHandler = async (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
+    const sessionUser = guard.actor(context);
 
     const parsed = profileInputSchema.safeParse(await requestBody(context));
     if (!parsed.success) {
@@ -141,10 +132,6 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const listUsersHandler = (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
-    if (!host.canManageUsers(sessionUser.id, 'view')) return forbidden(context);
-
     const page = normalizedQueryInteger(context.req.query('page'), 1, MAX_PAGE);
     const limit = normalizedQueryInteger(context.req.query('limit'), 10, MAX_PAGE_SIZE);
     const search = context.req.query('search') ?? '';
@@ -162,9 +149,7 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const createUserHandler = async (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
-    if (!host.canManageUsers(sessionUser.id, 'create')) return forbidden(context);
+    const sessionUser = guard.actor(context);
 
     const parsed = createUserInputSchema.safeParse(await requestBody(context));
     if (!parsed.success) {
@@ -218,12 +203,12 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const updateUserHandler = async (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
+    const sessionUser = guard.actor(context);
 
     const userId = context.req.param('id');
     if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
     const self = sessionUser.id === userId;
+    if (!self && !host.canManageUsers(sessionUser.id, 'edit')) return forbidden(context);
 
     const parsed = updateUserInputSchema.safeParse(await requestBody(context));
     if (!parsed.success) {
@@ -240,8 +225,6 @@ export function createUserRoutes(host: UsersServerHost) {
 
     const { roles, password, ...profile } = parsed.data;
     const actorIsAdmin = host.canAssignRoles(sessionUser.id);
-
-    if (!self && !host.canManageUsers(sessionUser.id, 'edit')) return forbidden(context);
 
     const target = host.findAccountById(userId);
     if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
@@ -304,8 +287,7 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const resetPasswordHandler = async (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
+    const sessionUser = guard.actor(context);
 
     const userId = context.req.param('id');
     if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
@@ -316,7 +298,6 @@ export function createUserRoutes(host: UsersServerHost) {
         'CURRENT_PASSWORD_REQUIRED',
       );
     }
-    if (!host.canResetPasswords(sessionUser.id)) return forbidden(context);
 
     const target = host.findAccountById(userId);
     if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
@@ -351,9 +332,7 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const deleteUsersHandler = async (context: Context) => {
-    const sessionUser = currentActor(context);
-    if (!sessionUser) return unauthorized(context);
-    if (!host.canManageUsers(sessionUser.id, 'delete')) return forbidden(context);
+    const sessionUser = guard.actor(context);
 
     const parsed = deleteUsersInputSchema.safeParse(await requestBody(context));
     if (!parsed.success) {
@@ -398,11 +377,12 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   return new Hono()
-    .get('/me', currentProfileHandler)
-    .patch('/me', updateProfileHandler)
-    .get('/', listUsersHandler)
-    .post('/', createUserHandler)
-    .put('/:id', updateUserHandler)
-    .post('/:id/reset-password', resetPasswordHandler)
-    .delete('/', deleteUsersHandler);
+    .get('/me', guard.signedIn, currentProfileHandler)
+    .patch('/me', guard.signedIn, updateProfileHandler)
+    .get('/', canManage('view'), listUsersHandler)
+    .post('/', canManage('create'), createUserHandler)
+    // Accounts may edit themselves; users.edit is checked in the handler.
+    .put('/:id', guard.signedIn, updateUserHandler)
+    .post('/:id/reset-password', guard.allow((actor) => host.canResetPasswords(actor.id)), resetPasswordHandler)
+    .delete('/', canManage('delete'), deleteUsersHandler);
 }
