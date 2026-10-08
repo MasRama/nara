@@ -3,8 +3,8 @@ import { AUTH } from '../../../shared/config';
 import {
   createSession,
   deleteSession,
-  deleteSessionsByUserId,
   findUserBySessionId,
+  touchSession,
   type SessionUser,
   type StoredUser,
 } from './repository';
@@ -45,20 +45,34 @@ export function checkPassword(password: string, user: StoredUser | undefined): P
   return comparePassword(password, user?.password ?? DUMMY_HASH);
 }
 
-export function startSession(user: StoredUser, userAgent: string | undefined): string {
-  deleteSessionsByUserId(user.id);
+/**
+ * Opens a new device session. Other devices stay signed in (bounded by
+ * AUTH.MAX_SESSIONS_PER_USER); callers that must invalidate them — password
+ * changes — revoke explicitly.
+ */
+export function startSession(user: StoredUser, userAgent: string | undefined, ipAddress?: string): string {
   const token = randomUUID();
   createSession({
     id: token,
+    handle: randomBytes(16).toString('hex'),
     userId: user.id,
     userAgent,
+    ipAddress,
     expiresAt: Date.now() + AUTH.SESSION_EXPIRY_MS,
+    maxPerUser: AUTH.MAX_SESSIONS_PER_USER,
   });
   return token;
 }
 
 export function currentUser(sessionId: string | undefined): SessionUser | undefined {
-  return sessionId ? findUserBySessionId(sessionId) : undefined;
+  if (!sessionId) return undefined;
+  const found = findUserBySessionId(sessionId);
+  if (!found) return undefined;
+  const { session_last_seen_at: lastSeenAt, ...user } = found;
+  const now = Date.now();
+  // Throttled so authenticated reads do not turn into a write per request.
+  if (lastSeenAt === null || now - lastSeenAt >= AUTH.SESSION_TOUCH_INTERVAL_MS) touchSession(sessionId, now);
+  return user;
 }
 
 export function endSession(sessionId: string | undefined): void {

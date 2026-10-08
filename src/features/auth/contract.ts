@@ -52,6 +52,51 @@ export type RegisterInput = z.infer<typeof registerInputSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordInputSchema>;
 
+/** Second sign-in step: exactly one of a 6-digit authenticator code or a recovery code. */
+export const twoFactorChallengeInputSchema = z
+  .object({
+    code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app').optional(),
+    recovery_code: z.string().trim().min(1, 'Recovery code is required').max(32).optional(),
+  })
+  .refine((value) => (value.code === undefined) !== (value.recovery_code === undefined), {
+    message: 'Provide an authenticator code or a recovery code',
+    path: ['_root'],
+  });
+
+export const twoFactorCodeInputSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit code from your authenticator app'),
+});
+
+/** Sensitive security changes re-confirm the current password. */
+export const confirmPasswordInputSchema = z.object({
+  password: z.string().min(1, 'Password is required'),
+});
+
+export type TwoFactorChallengeInput = z.infer<typeof twoFactorChallengeInputSchema>;
+export type TwoFactorCodeInput = z.infer<typeof twoFactorCodeInputSchema>;
+export type ConfirmPasswordInput = z.infer<typeof confirmPasswordInputSchema>;
+
+export interface SessionData {
+  /** Public session handle; never the cookie token. */
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: number;
+  lastSeenAt: number | null;
+  current: boolean;
+}
+
+export interface TwoFactorStatus {
+  enabled: boolean;
+  enabledAt: number | null;
+  recoveryCodesRemaining: number;
+}
+
+export interface TwoFactorSetup {
+  secret: string;
+  otpauthUrl: string;
+}
+
 export interface PublicUser {
   id: string;
   name: string;
@@ -79,8 +124,14 @@ export interface AuthError {
 }
 
 export type RegisterResponse = AuthSuccess<{ user: PublicUser }> | AuthError;
-export type LoginResponse = AuthSuccess | AuthError;
+export type LoginResponse = AuthSuccess<{ twoFactorRequired: boolean }> | AuthError;
+export type TwoFactorChallengeResponse = AuthSuccess | AuthError;
 export type ChangePasswordResponse = AuthSuccess | AuthError;
+export type SessionsResponse = AuthSuccess<{ sessions: SessionData[] }> | AuthError;
+export type RevokeSessionsResponse = AuthSuccess<{ revoked: number }> | AuthError;
+export type TwoFactorStatusResponse = AuthSuccess<{ twoFactor: TwoFactorStatus }> | AuthError;
+export type TwoFactorSetupResponse = AuthSuccess<TwoFactorSetup> | AuthError;
+export type RecoveryCodesResponse = AuthSuccess<{ recoveryCodes: string[] }> | AuthError;
 
 export const createRoleInputSchema = z.object({
   name: roleNameSchema,

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouterScrollBehavior } from 'vue-router';
-import { ChangePasswordPage, LoginPage, RegisterPage, RolesPage, useAuthSession } from '../features/auth/web';
+import { ChangePasswordPage, LoginPage, RegisterPage, RolesPage, SecurityPage, useAuthSession } from '../features/auth/web';
 import { ActivityPage } from '../features/activity/web';
 import usersWebRoutes from './bindings/users.web';
 import DashboardPage from './pages/DashboardPage.vue';
@@ -35,6 +35,12 @@ export const appRoutes = [
     name: 'change-password',
     component: ChangePasswordPage,
     meta: { requiresAuth: true, standaloneAuth: true },
+  },
+  {
+    path: '/security',
+    name: 'security',
+    component: SecurityPage,
+    meta: { requiresAuth: true },
   },
   ...usersWebRoutes,
   {

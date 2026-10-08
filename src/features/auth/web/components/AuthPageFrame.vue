@@ -110,6 +110,7 @@ function toggleTheme(): void {
 .nara-auth-input:focus { border-color: var(--nara-accent-strong); }
 .nara-auth-input[aria-invalid='true'] { border-color: var(--nara-danger); }
 .nara-auth-input-password { padding-right: 78px; }
+.nara-auth-input-code { font-family: var(--nara-mono); font-size: 18px; font-weight: 600; letter-spacing: .28em; }
 .nara-auth-password-wrap { position: relative; display: block; }
 .nara-auth-show { position: absolute; top: 9px; right: 7px; display: flex; min-width: 64px; height: 49px; align-items: center; justify-content: center; border-radius: 8px; color: var(--nara-muted); font-size: 11px; font-weight: 800; transition: color .2s; }
 .nara-auth-show:hover { color: var(--nara-accent-strong); }
@@ -123,6 +124,8 @@ function toggleTheme(): void {
 .nara-auth-alt { margin-top: 25px; padding-top: 21px; border-top: 1px solid var(--nara-line); color: var(--nara-muted); font-size: 12px; line-height: 1.7; text-align: center; }
 .nara-auth-alt a { margin-left: 4px; color: var(--nara-accent-strong); font-weight: 800; text-decoration: none; }
 .nara-auth-alt a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.nara-auth-link-button { margin-left: 4px; color: var(--nara-accent-strong); font-weight: 800; }
+.nara-auth-link-button:hover { text-decoration: underline; text-underline-offset: 3px; }
 .nara-auth-quiet-button { display: flex; width: 100%; min-height: 42px; align-items: center; justify-content: center; color: var(--nara-muted); font-size: 12px; font-weight: 700; }
 .nara-auth-quiet-button:hover { color: var(--nara-accent-strong); }
 .nara-auth-footer { display: flex; justify-content: space-between; gap: 12px; padding-top: 20px; border-top: 1px solid var(--nara-line); color: var(--nara-faint); font-size: 11px; }

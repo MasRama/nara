@@ -51,6 +51,7 @@ async function logout(): Promise<void> {
         <RouterLink v-if="canViewRoles" to="/roles" class="site-header-link" active-class="site-header-link--active">Roles</RouterLink>
         <RouterLink v-if="canViewActivity" to="/activity" class="site-header-link" active-class="site-header-link--active">Activity</RouterLink>
         <RouterLink to="/profile" class="site-header-link" active-class="site-header-link--active">Profile</RouterLink>
+        <RouterLink to="/security" class="site-header-link" active-class="site-header-link--active">Security</RouterLink>
       </template>
       <template #actions>
         <RouterLink to="/profile" class="site-header-avatar" :aria-label="`Open profile for ${user?.name ?? 'your account'}`">

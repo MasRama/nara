@@ -51,7 +51,8 @@ The application requires that temporary password to be changed before normal
 authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 `NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
 
-The repository root proves Auth/RBAC, Users, Activity, assets, storage, and the
+The repository root proves Auth/RBAC (including per-device sessions and TOTP
+two-factor sign-in at `/security`), Users, Activity, assets, storage, and the
 SQLite lifecycle. Additional official capabilities are installed explicitly
 with `nara add`.
 

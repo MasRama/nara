@@ -143,6 +143,8 @@ app.use('/api/auth/login', authRateLimiter.middleware);
 app.use('/api/auth/register', authRateLimiter.middleware);
 app.use('/api/auth/change-password', authRateLimiter.middleware);
 app.use('/api/auth/logout', authRateLimiter.middleware);
+// Covers the sign-in code step and password-confirmed two-factor management.
+app.use('/api/auth/two-factor/*', authRateLimiter.middleware);
 app.use('/api/assets/avatar', authRateLimiter.middleware);
 app.use('*', csrfProtection({ isProduction: isProductionServer }));
 app.use('/api/*', async (context, next) => {
@@ -176,6 +178,7 @@ export function databaseReady(database: ReturnType<typeof getDatabase> = getData
     // the running reference app requires so readiness reflects usable state.
     database.prepare('SELECT id FROM users LIMIT 1').get();
     database.prepare('SELECT id FROM sessions LIMIT 1').get();
+    database.prepare('SELECT id FROM two_factor_challenges LIMIT 1').get();
     database.prepare('SELECT id FROM roles LIMIT 1').get();
     database.prepare('SELECT id FROM permissions LIMIT 1').get();
     database.prepare('SELECT id FROM activity_events LIMIT 1').get();

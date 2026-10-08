@@ -3,6 +3,11 @@ export type AuthActivityAction =
   | 'auth.login'
   | 'auth.logout'
   | 'auth.password-changed'
+  | 'auth.session-revoked'
+  | 'auth.sessions-revoked'
+  | 'auth.two-factor-enabled'
+  | 'auth.two-factor-disabled'
+  | 'auth.recovery-codes-regenerated'
   | 'roles.created'
   | 'roles.updated'
   | 'roles.deleted';

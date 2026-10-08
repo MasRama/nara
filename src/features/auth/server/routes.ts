@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { getCookie, deleteCookie, setCookie } from 'hono/cookie';
+import { getCookie, deleteCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { z } from 'zod';
 import {
   changePasswordInputSchema,
   loginInputSchema,
@@ -10,10 +9,16 @@ import {
   type CurrentUser,
 } from '../contract';
 import { getUserPermissions, getUserRoles } from './access';
-import { AUTH, env } from '../../../shared/config';
 import { clientIp, requestCsrfToken } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
-import { createUser, findUserByEmail, findUserById, updatePassword, type SessionUser } from './repository';
+import {
+  createUser,
+  deleteSessionsByUserId,
+  findUserByEmail,
+  findUserById,
+  updatePassword,
+  type SessionUser,
+} from './repository';
 import {
   clearLoginAttempts,
   isLockedOut,
@@ -29,34 +34,8 @@ import {
   startSession,
 } from './service';
 import type { AuthActivitySink } from './activity';
-
-function validationErrors(error: z.ZodError): Record<string, string[]> {
-  const errors: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.join('.') || '_root';
-    errors[key] ??= [];
-    errors[key].push(issue.message);
-  }
-  return errors;
-}
-
-async function requestBody(context: Context): Promise<unknown> {
-  try {
-    return await context.req.json();
-  } catch {
-    return {};
-  }
-}
-
-function setSessionCookie(context: Context, token: string): void {
-  setCookie(context, SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'Lax',
-    path: '/',
-    maxAge: AUTH.SESSION_EXPIRY_MS / 1000,
-  });
-}
+import { requestBody, setSessionCookie, validationErrors } from './http';
+import { beginTwoFactorChallenge, createSecurityRoutes } from './security-routes';
 
 function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
@@ -84,7 +63,7 @@ const registerHandler = async (context: Context, activity?: AuthActivitySink) =>
       email: parsed.data.email,
       password: await hashPassword(parsed.data.password),
     });
-    const token = startSession(user, context.req.header('user-agent'));
+    const token = startSession(user, context.req.header('user-agent'), clientIp(context));
     setSessionCookie(context, token);
     Logger.logAuth('registration_success', { userId: user.id });
     activity?.({
@@ -164,7 +143,17 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
   }
 
   clearLoginAttempts(identifier, ip);
-  const token = startSession(user!, context.req.header('user-agent'));
+  if (beginTwoFactorChallenge(context, user!.id)) {
+    Logger.logAuth('login_two_factor_required', { userId: user!.id });
+    return context.json({
+      success: true as const,
+      message: 'Two-factor code required',
+      data: { twoFactorRequired: true },
+    });
+  }
+  // Re-signing in on this browser replaces its old session instead of orphaning it.
+  endSession(getCookie(context, SESSION_COOKIE_NAME));
+  const token = startSession(user!, context.req.header('user-agent'), ip);
   setSessionCookie(context, token);
   Logger.logAuth('login_success', { userId: user!.id });
   activity?.({
@@ -174,7 +163,7 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
     targetId: user!.id,
     targetLabel: user!.name,
   });
-  return context.json({ success: true as const, message: 'Login successful' });
+  return context.json({ success: true as const, message: 'Login successful', data: { twoFactorRequired: false } });
 };
 
 
@@ -210,7 +199,9 @@ const changePasswordHandler = async (context: Context, activity?: AuthActivitySi
   }
 
   updatePassword(user.id, await hashPassword(parsed.data.new_password));
-  const token = startSession(user, context.req.header('user-agent'));
+  // A credential change signs out every other device; this browser gets a fresh session.
+  deleteSessionsByUserId(user.id);
+  const token = startSession(user, context.req.header('user-agent'), clientIp(context));
   setSessionCookie(context, token);
   Logger.logAuth('password_changed', { userId: user.id });
   activity?.({
@@ -274,7 +265,8 @@ export function createAuthRoutes(activity?: AuthActivitySink) {
     .post('/login', (context) => loginHandler(context, activity))
     .post('/change-password', (context) => changePasswordHandler(context, activity))
     .get('/me', currentUserHandler)
-    .post('/logout', (context) => logoutHandler(context, activity));
+    .post('/logout', (context) => logoutHandler(context, activity))
+    .route('/', createSecurityRoutes(activity));
 }
 
 export const authRoutes = createAuthRoutes();

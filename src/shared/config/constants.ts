@@ -4,6 +4,13 @@ export const SERVER = {
 export const AUTH = {
   SESSION_EXPIRY_MS: 60 * 24 * 60 * 60 * 1000,
   SESSION_CLEANUP_INTERVAL_MS: 60 * 60 * 1000,
+  /** Oldest sessions beyond this per-account cap are revoked on sign-in. */
+  MAX_SESSIONS_PER_USER: 10,
+  /** last_seen_at is written at most once per interval per session. */
+  SESSION_TOUCH_INTERVAL_MS: 5 * 60 * 1000,
+  TWO_FACTOR_ISSUER: 'Nara',
+  TWO_FACTOR_CHALLENGE_TTL_MS: 5 * 60 * 1000,
+  TWO_FACTOR_MAX_ATTEMPTS: 5,
 } as const;
 
 export const MAINTENANCE = {

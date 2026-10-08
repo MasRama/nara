@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { nextTick, ref } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
-import { loginInputSchema, type LoginInput } from '../../contract';
+import { loginInputSchema, twoFactorChallengeInputSchema, type LoginInput } from '../../contract';
 import { createAuthClient } from '../client';
+import { createSecurityClient } from '../security-client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
 
@@ -12,8 +13,13 @@ const showPassword = ref(false);
 const isSubmitting = ref(false);
 const formError = ref('');
 const fieldErrors = ref<Record<string, string[]>>({});
+const step = ref<'password' | 'two-factor'>('password');
+const useRecoveryCode = ref(false);
+const twoFactorCode = ref('');
+const twoFactorInput = ref<HTMLInputElement | null>(null);
 
 const authClient = createAuthClient();
+const securityClient = createSecurityClient();
 const authSession = useAuthSession();
 const route = useRoute();
 const router = useRouter();
@@ -51,6 +57,19 @@ function validate(): LoginInput | undefined {
   return undefined;
 }
 
+async function finishSignIn(): Promise<void> {
+  if (!(await authSession.refresh())) {
+    formError.value = 'Sign in succeeded, but the current session could not be loaded.';
+    return;
+  }
+  await router.replace(redirectTarget());
+}
+
+async function focusTwoFactor(): Promise<void> {
+  await nextTick();
+  twoFactorInput.value?.focus();
+}
+
 async function submitLogin(): Promise<void> {
   if (isSubmitting.value) return;
 
@@ -68,22 +87,117 @@ async function submitLogin(): Promise<void> {
       return;
     }
 
-    if (!(await authSession.refresh())) {
-      formError.value = 'Sign in succeeded, but the current session could not be loaded.';
+    if (response.data?.twoFactorRequired) {
+      password.value = '';
+      step.value = 'two-factor';
+      await focusTwoFactor();
       return;
     }
-
-    await router.replace(redirectTarget());
+    await finishSignIn();
   } catch (error) {
     formError.value = error instanceof Error ? error.message : 'Unable to sign in';
   } finally {
     isSubmitting.value = false;
   }
 }
+
+async function submitTwoFactor(): Promise<void> {
+  if (isSubmitting.value) return;
+
+  formError.value = '';
+  fieldErrors.value = {};
+  const parsed = twoFactorChallengeInputSchema.safeParse(
+    useRecoveryCode.value ? { recovery_code: twoFactorCode.value } : { code: twoFactorCode.value },
+  );
+  if (!parsed.success) {
+    fieldErrors.value = mapIssues(parsed.error.issues);
+    formError.value = 'Please correct the highlighted fields.';
+    return;
+  }
+
+  isSubmitting.value = true;
+  try {
+    const response = await securityClient.completeTwoFactor(parsed.data);
+    if (!response.success) {
+      if (response.code === 'TWO_FACTOR_CHALLENGE_EXPIRED' || response.code === 'TWO_FACTOR_LOCKED') {
+        startOver();
+      } else {
+        twoFactorCode.value = '';
+      }
+      formError.value = response.message;
+      fieldErrors.value = response.errors ?? {};
+      return;
+    }
+    await finishSignIn();
+  } catch (error) {
+    formError.value = error instanceof Error ? error.message : 'Unable to verify the code';
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function toggleRecoveryCode(): Promise<void> {
+  useRecoveryCode.value = !useRecoveryCode.value;
+  twoFactorCode.value = '';
+  formError.value = '';
+  fieldErrors.value = {};
+  await focusTwoFactor();
+}
+
+function startOver(): void {
+  step.value = 'password';
+  useRecoveryCode.value = false;
+  twoFactorCode.value = '';
+  formError.value = '';
+  fieldErrors.value = {};
+}
 </script>
 
 <template>
-  <AuthPageFrame heading="Welcome" highlight="back.">
+  <AuthPageFrame
+    v-if="step === 'two-factor'"
+    heading="Confirm it's"
+    highlight="you."
+    :description="useRecoveryCode ? 'Enter one of the recovery codes you saved when you turned on two-factor authentication.' : 'Open your authenticator app and enter the 6-digit code for this account.'"
+  >
+      <form class="nara-auth-form" data-testid="two-factor-form" @submit.prevent="submitTwoFactor">
+        <label class="nara-auth-field" for="two-factor-code">
+          {{ useRecoveryCode ? 'Recovery code' : 'Authentication code' }}
+          <input
+            id="two-factor-code"
+            ref="twoFactorInput"
+            v-model="twoFactorCode"
+            type="text"
+            name="code"
+            :inputmode="useRecoveryCode ? 'text' : 'numeric'"
+            :autocomplete="useRecoveryCode ? 'off' : 'one-time-code'"
+            :maxlength="useRecoveryCode ? 32 : 6"
+            :placeholder="useRecoveryCode ? 'xxxxx-xxxxx' : '123456'"
+            spellcheck="false"
+            required
+            :aria-invalid="Boolean(fieldErrors.code || fieldErrors.recovery_code)"
+            class="nara-auth-input nara-auth-input-code"
+          />
+          <span v-if="fieldErrors.code || fieldErrors.recovery_code" class="nara-auth-error">{{ (fieldErrors.code ?? fieldErrors.recovery_code)![0] }}</span>
+        </label>
+
+        <p v-if="formError" role="alert" class="nara-auth-alert">{{ formError }}</p>
+
+        <button type="submit" :disabled="isSubmitting" class="nara-auth-submit">
+          {{ isSubmitting ? 'Verifying…' : 'Verify and sign in' }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
+        </button>
+        <button type="button" class="nara-auth-quiet-button" @click="toggleRecoveryCode">
+          {{ useRecoveryCode ? 'Use your authenticator app instead' : 'Use a recovery code' }}
+        </button>
+      </form>
+
+      <p class="nara-auth-alt">
+        Not you?
+        <button type="button" class="nara-auth-link-button" @click="startOver">Sign in with a different account</button>
+      </p>
+  </AuthPageFrame>
+
+  <AuthPageFrame v-else heading="Welcome" highlight="back.">
       <form class="nara-auth-form" @submit.prevent="submitLogin">
         <label class="nara-auth-field" for="email">
           Email

@@ -8,6 +8,8 @@ import { app as serverApp } from '../../../app/server';
 import { getDatabase } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { createAuthSession, useAuthSession, type AuthClient, type CurrentUser } from '../web';
+import { createSecurityClient } from '../web/security-client';
+import { totpCode, totpStep } from '../server/totp';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 
@@ -369,6 +371,65 @@ describe('browser authentication lifecycle', () => {
     expect(container.querySelector('h1')?.textContent).toContain('Hi, Existing.');
     expect(useAuthSession().isAuthenticated.value).toBe(true);
     expect(document.documentElement).toBe(documentElement);
+  });
+
+  it('asks for an authenticator code after the password when two-factor is on', async () => {
+    const email = `two-factor-${Date.now()}@example.com`;
+    await registerDirect(email);
+    const security = createSecurityClient();
+    const setup = await security.startTwoFactorSetup({ password: TEST_PASSWORD });
+    const secret = setup.success ? setup.data!.secret : '';
+    expect((await security.enableTwoFactor({ code: totpCode(secret, totpStep()) })).success).toBe(true);
+    await useAuthSession().logout();
+
+    await mountAt('/login');
+    setInput('#email', email);
+    setInput('#password', TEST_PASSWORD);
+    submitForm();
+    await settle();
+    expect(container.querySelector('[data-testid="two-factor-form"]')).not.toBeNull();
+    expect(useAuthSession().isAuthenticated.value).toBe(false);
+
+    setInput('#two-factor-code', '000000');
+    submitForm();
+    await settle();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Invalid authentication code');
+
+    const navigation = waitForNavigation();
+    setInput('#two-factor-code', totpCode(secret, totpStep() + 1));
+    submitForm();
+    await navigation;
+    expect(router.currentRoute.value.name).toBe('dashboard');
+    expect(useAuthSession().isAuthenticated.value).toBe(true);
+  });
+
+  it('enrolls two-factor from the security page and shows the current device', async () => {
+    const email = `security-page-${Date.now()}@example.com`;
+    await registerDirect(email);
+    await useAuthSession().refresh();
+    await mountAt('/security');
+    await settle();
+
+    const sessionRows = container.querySelectorAll('[data-testid="session-row"]');
+    expect(sessionRows).toHaveLength(1);
+    expect(sessionRows[0]?.textContent).toContain('This device');
+
+    [...container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Set up two-factor'))!.click();
+    await nextTick();
+    setInput('#security-password', TEST_PASSWORD);
+    container.querySelector<HTMLFormElement>('[data-testid="confirm-password-form"]')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await settle();
+
+    expect(container.querySelector('[data-testid="two-factor-setup"] svg path')?.getAttribute('d')).toMatch(/^M\d/);
+    const secret = container.querySelector('[data-testid="two-factor-secret"]')!.textContent!.replace(/\s/g, '');
+    setInput('#two-factor-enable-code', totpCode(secret, totpStep()));
+    container.querySelector<HTMLFormElement>('[data-testid="two-factor-setup"]')!
+      .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await settle();
+
+    expect(container.querySelectorAll('[data-testid="recovery-codes"] li')).toHaveLength(10);
+    expect(container.querySelector('[data-testid="two-factor-panel"]')?.textContent).toContain('10 recovery codes left');
   });
 
   it('forces temporary-password users through password change before dashboard access', async () => {
