@@ -22,7 +22,9 @@ describe('Vue frontend production build', () => {
     const css = typeof stylesheet.source === 'string'
       ? stylesheet.source
       : new TextDecoder().decode(stylesheet.source);
-    expect(css).toContain('.space-y-5');
-    expect(css).toContain('.pr-24');
+    // Utilities that only Feature pages use prove Tailwind scans src/features.
+    expect(css).toContain('.gap-3\\.5');
+    expect(css).toContain('.text-\\[13px\\]');
+    expect(css).toContain('--nara-bg:#f6f5ef');
   });
 });

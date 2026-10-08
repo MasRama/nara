@@ -20,7 +20,7 @@ initializeTheme();
 
 <template>
   <RouterView v-slot="{ Component }">
-    <AuthenticatedShell v-if="route.meta.requiresAuth">
+    <AuthenticatedShell v-if="route.meta.requiresAuth && !route.meta.standaloneAuth">
       <component :is="Component" />
     </AuthenticatedShell>
     <component v-else :is="Component" />

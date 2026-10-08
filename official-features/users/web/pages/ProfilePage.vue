@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import { z } from 'zod';
 import {
   AVATAR_ALLOWED_MIME_TYPES,
@@ -223,116 +223,145 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="relative overflow-hidden px-6 py-12 sm:px-10 lg:px-16 lg:py-16">
-    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(currentColor_1px,transparent_1px)] text-foreground opacity-[0.03] [background-size:22px_22px] dark:opacity-[0.05]"></div>
+  <main class="nara-page">
+    <section class="nara-page-inner">
+      <header>
+        <h1 class="nara-page-title">Your profile<span class="nara-page-title-accent">.</span></h1>
+        <p class="nara-page-lede">Keep your personal details, profile photo, and sign-in access up to date.</p>
+      </header>
 
-    <section class="relative mx-auto max-w-[1100px]">
-      <div class="flex flex-col gap-8">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p class="font-heading text-xs uppercase tracking-[0.25em] text-primary">Account</p>
-            <h1 class="mt-3 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">Your profile</h1>
-            <p class="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Keep your personal details, profile photo, and sign-in access up to date.
-            </p>
-          </div>
-          <RouterLink to="/dashboard" class="text-sm text-muted-foreground transition-colors hover:text-foreground">Back to dashboard</RouterLink>
-        </div>
+      <p v-if="profileLoading" role="status" class="prof-alert prof-alert--muted nara-page-body">Loading profile…</p>
+      <p v-if="profileLoadError" role="alert" class="prof-alert prof-alert--error nara-page-body">{{ profileLoadError }}</p>
 
-        <p v-if="profileLoading" role="status" class="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">Loading profile…</p>
-        <p v-if="profileLoadError" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{{ profileLoadError }}</p>
-
-        <template v-if="profile">
-          <section class="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]" aria-labelledby="identity-title">
-            <article class="rounded-2xl border border-border bg-card p-6 shadow-soft">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-4">
-                  <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-muted font-heading text-xl font-semibold">
-                    <img v-if="avatarUrl" data-testid="profile-avatar" :src="avatarUrl" :alt="`${displayName} avatar`" class="h-full w-full object-cover" />
-                    <span v-else data-testid="profile-avatar-fallback">{{ initials }}</span>
-                  </div>
-                  <div class="min-w-0">
-                    <h2 id="identity-title" class="truncate font-heading text-lg font-semibold tracking-tight">{{ displayName }}</h2>
-                    <p class="mt-1 truncate text-sm text-muted-foreground">{{ profile.email }}</p>
-                  </div>
+      <template v-if="profile">
+        <div class="prof-settings nara-page-body">
+          <section class="prof-row" aria-labelledby="photo-title">
+            <div class="prof-row-intro">
+              <h2 id="photo-title" class="prof-row-title">Profile photo</h2>
+              <p class="prof-row-desc">JPEG, PNG, GIF, or WebP up to {{ AVATAR_MAX_FILE_SIZE_MB }}MB.</p>
+            </div>
+            <div class="prof-row-body">
+              <div class="prof-photo">
+                <label for="avatar-file" :class="['prof-avatar', { 'prof-avatar--busy': avatarSaving }]" :title="avatarSaving ? 'Uploading…' : 'Change profile photo'">
+                  <img v-if="avatarUrl" data-testid="profile-avatar" :src="avatarUrl" :alt="`${displayName} avatar`" />
+                  <span v-else data-testid="profile-avatar-fallback">{{ initials }}</span>
+                  <span class="prof-avatar-overlay" aria-hidden="true">{{ avatarSaving ? '…' : 'Change' }}</span>
+                </label>
+                <div class="min-w-0 flex-1">
+                  <p class="prof-name font-heading">{{ displayName }}</p>
+                  <p class="prof-email">{{ profile.email }}</p>
                 </div>
-                <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">Account</span>
+                <label for="avatar-file" :class="['prof-btn', { 'pointer-events-none opacity-60': avatarSaving }]">
+                  {{ avatarSaving ? 'Uploading…' : 'Change profile photo' }}
+                </label>
+                <input id="avatar-file" type="file" :accept="AVATAR_ALLOWED_MIME_TYPES.join(',')" class="sr-only" :disabled="avatarSaving" @change="handleAvatarChange" />
               </div>
-
-              <label for="avatar-file" class="mt-6 inline-flex cursor-pointer items-center rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground" :class="avatarSaving ? 'pointer-events-none opacity-60' : ''">
-                {{ avatarSaving ? 'Uploading…' : 'Change profile photo' }}
-              </label>
-              <input id="avatar-file" type="file" :accept="AVATAR_ALLOWED_MIME_TYPES.join(',')" class="sr-only" :disabled="avatarSaving" @change="handleAvatarChange" />
-              <p class="mt-2 text-xs text-muted-foreground">JPEG, PNG, GIF, or WebP up to {{ AVATAR_MAX_FILE_SIZE_MB }}MB.</p>
-              <p v-if="avatarError" role="alert" class="mt-3 text-sm text-destructive">{{ avatarError }}</p>
-              <p v-if="avatarNotice" role="status" class="mt-3 text-sm text-primary">{{ avatarNotice }}</p>
-            </article>
-
-            <article class="rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-8" aria-labelledby="personal-title">
-              <div>
-                <p class="font-heading text-xs uppercase tracking-[0.2em] text-muted-foreground">Personal information</p>
-                <h2 id="personal-title" class="mt-2 font-heading text-2xl font-semibold tracking-tight">Make it yours</h2>
-                <p class="mt-2 text-sm leading-relaxed text-muted-foreground">Use a name and email address that make it easy to recognize your account.</p>
-              </div>
-
-              <form class="mt-6 flex flex-col gap-5" data-testid="profile-form" @submit.prevent="saveProfile">
-                <div>
-                  <label for="name" class="mb-2 block text-sm font-medium">Full name</label>
-                  <input id="name" v-model="name" name="name" type="text" autocomplete="name" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(profileErrors.name)" :aria-describedby="profileErrors.name ? 'name-error' : undefined" />
-                  <p v-if="profileErrors.name" id="name-error" class="mt-1 text-sm text-destructive">{{ profileErrors.name[0] }}</p>
-                </div>
-                <div>
-                  <label for="email" class="mb-2 block text-sm font-medium">Email address</label>
-                  <input id="email" v-model="email" name="email" type="email" autocomplete="email" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(profileErrors.email)" :aria-describedby="profileErrors.email ? 'email-error' : undefined" />
-                  <p v-if="profileErrors.email" id="email-error" class="mt-1 text-sm text-destructive">{{ profileErrors.email[0] }}</p>
-                </div>
-                <p v-if="profileError" role="alert" class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ profileError }}</p>
-                <p v-if="profileNotice" role="status" class="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">{{ profileNotice }}</p>
-                <div class="flex justify-end border-t border-border pt-5">
-                  <button type="submit" :disabled="profileSaving" class="rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
-                    {{ profileSaving ? 'Saving…' : 'Save profile' }}
-                  </button>
-                </div>
-              </form>
-            </article>
+              <p v-if="avatarError" role="alert" class="prof-msg prof-msg--error">{{ avatarError }}</p>
+              <p v-if="avatarNotice" role="status" class="prof-msg prof-msg--ok"><span class="prof-dot"></span>{{ avatarNotice }}</p>
+            </div>
           </section>
 
-          <section id="security" class="rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-8" aria-labelledby="security-title">
-            <div>
-              <p class="font-heading text-xs uppercase tracking-[0.2em] text-muted-foreground">Security</p>
-              <h2 id="security-title" class="mt-2 font-heading text-2xl font-semibold tracking-tight">Change password</h2>
-              <p class="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">Confirm your current password before choosing a new one. Your session stays active after the change.</p>
+          <section class="prof-row" aria-labelledby="personal-title">
+            <div class="prof-row-intro">
+              <h2 id="personal-title" class="prof-row-title">Personal information</h2>
+              <p class="prof-row-desc">How your name and email appear across the app.</p>
             </div>
-
-            <form class="mt-6 grid gap-5 sm:grid-cols-3" data-testid="password-form" @submit.prevent="changePassword">
-              <div class="sm:col-span-3">
-                <label for="current_password" class="mb-2 block text-sm font-medium">Current password</label>
-                <input id="current_password" v-model="currentPassword" name="current_password" type="password" autocomplete="current-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.currentPassword)" />
-                <p v-if="passwordErrors.currentPassword" class="mt-1 text-sm text-destructive">{{ passwordErrors.currentPassword[0] }}</p>
+            <form class="prof-row-body" data-testid="profile-form" @submit.prevent="saveProfile">
+              <div class="prof-field">
+                <label for="name">Full name</label>
+                <input id="name" v-model="name" name="name" type="text" autocomplete="name" class="prof-input" :aria-invalid="Boolean(profileErrors.name)" :aria-describedby="profileErrors.name ? 'name-error' : undefined" />
+                <p v-if="profileErrors.name" id="name-error" class="prof-error">{{ profileErrors.name[0] }}</p>
               </div>
-              <div>
-                <label for="new_password" class="mb-2 block text-sm font-medium">New password</label>
-                <input id="new_password" v-model="newPassword" name="new_password" type="password" autocomplete="new-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.newPassword)" />
-                <p v-if="passwordErrors.newPassword" class="mt-1 text-sm text-destructive">{{ passwordErrors.newPassword[0] }}</p>
+              <div class="prof-field">
+                <label for="email">Email address</label>
+                <input id="email" v-model="email" name="email" type="email" autocomplete="email" class="prof-input" :aria-invalid="Boolean(profileErrors.email)" :aria-describedby="profileErrors.email ? 'email-error' : undefined" />
+                <p v-if="profileErrors.email" id="email-error" class="prof-error">{{ profileErrors.email[0] }}</p>
               </div>
-              <div>
-                <label for="confirm_password" class="mb-2 block text-sm font-medium">Confirm new password</label>
-                <input id="confirm_password" v-model="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="w-full rounded-md border border-input bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20" :aria-invalid="Boolean(passwordErrors.confirmPassword)" />
-                <p v-if="passwordErrors.confirmPassword" class="mt-1 text-sm text-destructive">{{ passwordErrors.confirmPassword[0] }}</p>
-              </div>
-              <div class="flex flex-col gap-3 sm:col-span-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p v-if="passwordError" role="alert" class="text-sm text-destructive">{{ passwordError }}</p>
-                  <p v-if="passwordNotice" role="status" class="text-sm text-primary">{{ passwordNotice }}</p>
-                </div>
-                <button type="submit" :disabled="passwordSaving" class="rounded-md border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60">
-                  {{ passwordSaving ? 'Updating…' : 'Update password' }}
-                </button>
+              <div class="prof-actions">
+                <p v-if="profileError" role="alert" class="prof-msg prof-msg--error">{{ profileError }}</p>
+                <p v-if="profileNotice" role="status" class="prof-msg prof-msg--ok"><span class="prof-dot"></span>{{ profileNotice }}</p>
+                <button type="submit" :disabled="profileSaving" class="prof-primary">{{ profileSaving ? 'Saving…' : 'Save profile' }}</button>
               </div>
             </form>
           </section>
-        </template>
-      </div>
+
+          <section id="security" class="prof-row" aria-labelledby="security-title">
+            <div class="prof-row-intro">
+              <h2 id="security-title" class="prof-row-title">Change password</h2>
+              <p class="prof-row-desc">Confirm your current password before choosing a new one. Your session stays active after the change.</p>
+            </div>
+            <form class="prof-row-body" data-testid="password-form" @submit.prevent="changePassword">
+              <div class="prof-field">
+                <label for="current_password">Current password</label>
+                <input id="current_password" v-model="currentPassword" name="current_password" type="password" autocomplete="current-password" class="prof-input" :aria-invalid="Boolean(passwordErrors.currentPassword)" />
+                <p v-if="passwordErrors.currentPassword" class="prof-error">{{ passwordErrors.currentPassword[0] }}</p>
+              </div>
+              <div class="grid gap-5 sm:grid-cols-2">
+                <div class="prof-field">
+                  <label for="new_password">New password</label>
+                  <input id="new_password" v-model="newPassword" name="new_password" type="password" autocomplete="new-password" class="prof-input" :aria-invalid="Boolean(passwordErrors.newPassword)" />
+                  <p v-if="passwordErrors.newPassword" class="prof-error">{{ passwordErrors.newPassword[0] }}</p>
+                </div>
+                <div class="prof-field">
+                  <label for="confirm_password">Confirm new password</label>
+                  <input id="confirm_password" v-model="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="prof-input" :aria-invalid="Boolean(passwordErrors.confirmPassword)" />
+                  <p v-if="passwordErrors.confirmPassword" class="prof-error">{{ passwordErrors.confirmPassword[0] }}</p>
+                </div>
+              </div>
+              <div class="prof-actions">
+                <p v-if="passwordError" role="alert" class="prof-msg prof-msg--error">{{ passwordError }}</p>
+                <p v-if="passwordNotice" role="status" class="prof-msg prof-msg--ok"><span class="prof-dot"></span>{{ passwordNotice }}</p>
+                <button type="submit" :disabled="passwordSaving" class="prof-primary">{{ passwordSaving ? 'Updating…' : 'Update password' }}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </template>
     </section>
   </main>
 </template>
+
+<style scoped>
+.prof-alert { padding: 12px 16px; border: 1px solid; border-radius: 14px; font-size: 14px; }
+.prof-alert--muted { border-color: var(--border); background: var(--card); color: var(--muted-foreground); }
+.prof-alert--error { border-color: color-mix(in srgb, var(--destructive) 30%, transparent); background: color-mix(in srgb, var(--destructive) 8%, transparent); color: var(--nara-danger); }
+
+/* Settings rows */
+.prof-settings { border-top: 1px solid var(--border); }
+.prof-row { display: grid; gap: 20px; padding: 32px 0; border-bottom: 1px solid var(--border); scroll-margin-top: 96px; }
+.prof-row:last-child { border-bottom: 0; }
+@media (min-width: 900px) { .prof-row { grid-template-columns: 260px minmax(0, 1fr); gap: 48px; padding: 36px 0; } }
+.prof-row-title { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.035em; }
+.prof-row-desc { margin-top: 6px; max-width: 260px; color: var(--muted-foreground); font-size: 13.5px; line-height: 1.7; }
+.prof-row-body { display: flex; flex-direction: column; gap: 18px; padding: 24px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); box-shadow: var(--nara-shadow); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.prof-row:target .prof-row-body { border-color: color-mix(in srgb, var(--primary) 45%, transparent); box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 8%, transparent), var(--nara-shadow); }
+
+.prof-photo { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; }
+.prof-avatar { position: relative; display: grid; width: 72px; height: 72px; flex: none; place-items: center; overflow: hidden; border-radius: 20px; background: var(--nara-avatar); color: var(--nara-avatar-fg); font-size: 24px; font-weight: 800; letter-spacing: -0.06em; box-shadow: inset 0 1px 0 color-mix(in srgb, var(--nara-avatar-fg) 18%, transparent), 0 0 0 5px color-mix(in srgb, var(--primary) 8%, transparent); cursor: pointer; }
+.prof-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.prof-avatar-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--nara-ink) 62%, transparent); color: var(--nara-ink-fg); font-size: 12px; font-weight: 700; letter-spacing: 0; opacity: 0; transition: opacity 0.15s ease; }
+.prof-avatar:hover .prof-avatar-overlay, .prof-avatar--busy .prof-avatar-overlay { opacity: 1; }
+.prof-avatar--busy { pointer-events: none; }
+.prof-name { font-size: 1.15rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.035em; overflow-wrap: anywhere; }
+.prof-email { margin-top: 3px; color: var(--muted-foreground); font-size: 13.5px; word-break: break-all; }
+.prof-btn { display: inline-flex; height: 40px; align-items: center; padding: 0 16px; border: 1px solid var(--border); border-radius: 11px; background: var(--background); font-size: 13.5px; font-weight: 600; cursor: pointer; transition: border-color 0.15s ease, color 0.15s ease; }
+.prof-btn:hover { border-color: color-mix(in srgb, var(--primary) 50%, transparent); color: var(--primary); }
+
+.prof-field { display: grid; gap: 8px; }
+.prof-field label { font-size: 13.5px; font-weight: 600; }
+.prof-input { width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--input); border-radius: 12px; background: var(--background); font-size: 14px; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.prof-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent); }
+.prof-input[aria-invalid='true'] { border-color: color-mix(in srgb, var(--destructive) 60%, transparent); }
+.prof-error { color: var(--nara-danger); font-size: 12.5px; }
+
+.prof-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 18px; border-top: 1px solid var(--border); }
+.prof-msg { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+.prof-actions .prof-msg { margin-right: auto; }
+.prof-msg--error { color: var(--nara-danger); }
+.prof-msg--ok { color: var(--primary); }
+.prof-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent); }
+.prof-primary { height: 42px; padding: 0 20px; border-radius: 12px; background: var(--nara-ink-raised); color: var(--nara-ink-fg); font-size: 14px; font-weight: 700; box-shadow: inset 0 0 0 1px var(--nara-ink-raised-line), var(--nara-shadow); transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease; }
+.prof-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 60%, transparent), var(--nara-shadow); }
+.prof-primary:disabled { cursor: not-allowed; opacity: 0.6; }
+
+</style>

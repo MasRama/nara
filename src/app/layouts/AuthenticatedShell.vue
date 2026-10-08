@@ -2,12 +2,12 @@
 import { computed, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
+import SiteHeader from './SiteHeader.vue';
 
 const authSession = useAuthSession();
 const router = useRouter();
 const isLoggingOut = ref(false);
 const logoutError = ref('');
-
 const user = computed(() => authSession.user.value);
 const canViewUsers = computed(() => authSession.can('users.view'));
 const canViewRoles = computed(() => authSession.can('roles.view'));
@@ -44,84 +44,27 @@ async function logout(): Promise<void> {
 
 <template>
   <div class="min-h-[100dvh] bg-background font-body text-foreground antialiased selection:bg-primary/20 selection:text-primary">
-    <header class="border-b border-border bg-background/95 backdrop-blur-md">
-      <nav
-        class="mx-auto flex min-h-16 max-w-[1400px] flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 sm:px-10 lg:flex-nowrap lg:px-16 lg:py-0"
-        aria-label="Application navigation"
-      >
-        <RouterLink to="/" class="group flex shrink-0 items-center gap-2" aria-label="Nara home">
-          <span class="inline-block h-2.5 w-2.5 rounded-full bg-primary transition-transform duration-300 group-hover:scale-125"></span>
-          <span class="font-heading text-lg font-semibold tracking-tight">Nara</span>
+    <SiteHeader nav-label="Application navigation">
+      <template v-if="authSession.isAuthenticated.value" #nav>
+        <RouterLink to="/dashboard" class="site-header-link" active-class="site-header-link--active">Dashboard</RouterLink>
+        <RouterLink v-if="canViewUsers" to="/users" class="site-header-link" active-class="site-header-link--active">Users</RouterLink>
+        <RouterLink v-if="canViewRoles" to="/roles" class="site-header-link" active-class="site-header-link--active">Roles</RouterLink>
+        <RouterLink v-if="canViewActivity" to="/activity" class="site-header-link" active-class="site-header-link--active">Activity</RouterLink>
+        <RouterLink to="/profile" class="site-header-link" active-class="site-header-link--active">Profile</RouterLink>
+      </template>
+      <template #actions>
+        <RouterLink to="/profile" class="site-header-avatar" :aria-label="`Open profile for ${user?.name ?? 'your account'}`">
+          <img v-if="user?.avatar" :src="user.avatar" :alt="`${user.name} avatar`" />
+          <span v-else>{{ initials }}</span>
         </RouterLink>
-
-        <div
-          v-if="authSession.isAuthenticated.value"
-          data-testid="authenticated-nav-links"
-          class="order-3 flex w-full min-w-0 items-center gap-1 overflow-x-auto pb-1 lg:order-none lg:w-auto lg:flex-1 lg:overflow-visible lg:pb-0"
-        >
-          <RouterLink
-            to="/dashboard"
-            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            active-class="bg-muted text-foreground"
-          >
-            Dashboard
-          </RouterLink>
-          <RouterLink
-            v-if="canViewUsers"
-            to="/users"
-            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            active-class="bg-muted text-foreground"
-          >
-            Users
-          </RouterLink>
-          <RouterLink
-            v-if="canViewRoles"
-            to="/roles"
-            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            active-class="bg-muted text-foreground"
-          >
-            Roles
-          </RouterLink>
-          <RouterLink
-            v-if="canViewActivity"
-            to="/activity"
-            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            active-class="bg-muted text-foreground"
-          >
-            Activity
-          </RouterLink>
-          <RouterLink
-            to="/profile"
-            class="shrink-0 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-            active-class="bg-muted text-foreground"
-          >
-            Profile
-          </RouterLink>
-        </div>
-
-        <div class="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-          <RouterLink
-            to="/profile"
-            class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-medium transition-colors hover:border-primary/50"
-            :aria-label="`Open profile for ${user?.name ?? 'your account'}`"
-          >
-            <img v-if="user?.avatar" :src="user.avatar" :alt="`${user.name} avatar`" class="h-full w-full object-cover" />
-            <span v-else>{{ initials }}</span>
-          </RouterLink>
-          <button
-            type="button"
-            :disabled="isLoggingOut"
-            class="whitespace-nowrap rounded-md px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60 sm:px-3"
-            @click="logout"
-          >
-            {{ isLoggingOut ? 'Signing out…' : 'Sign out' }}
-          </button>
-        </div>
-      </nav>
-      <p v-if="logoutError" role="alert" class="mx-auto max-w-[1400px] px-6 pb-3 text-sm text-destructive sm:px-10 lg:px-16">
+        <button type="button" :disabled="isLoggingOut" class="site-header-link" @click="logout">
+          {{ isLoggingOut ? 'Signing out…' : 'Sign out' }}
+        </button>
+      </template>
+      <p v-if="logoutError" role="alert" class="mx-auto max-w-[1112px] px-4 pt-3 text-sm text-destructive">
         {{ logoutError }}
       </p>
-    </header>
+    </SiteHeader>
 
     <slot />
   </div>

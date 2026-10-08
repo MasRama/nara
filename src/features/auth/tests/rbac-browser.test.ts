@@ -221,7 +221,7 @@ describe('roles and permissions browser surfaces', () => {
     const createdRow = tableRowContaining(roleSlug);
     const roleId = createdRow.dataset.roleId;
     if (!roleId) throw new Error('Created role row did not expose its id');
-    expect(createdRow.textContent).toContain('users.view');
+    expect(createdRow.textContent).toContain('UsersView');
 
     await click(`[data-testid="edit-role-${roleId}"]`);
     setInput('#role-name', 'Updated Browser Billing');
@@ -231,7 +231,7 @@ describe('roles and permissions browser surfaces', () => {
 
     const updatedRow = tableRowContaining(roleSlug);
     expect(updatedRow.textContent).toContain('Updated Browser Billing');
-    expect(updatedRow.textContent).toContain('users.edit');
+    expect(updatedRow.textContent).toContain('UsersEdit, View');
 
     const rolesResponse = await serverApp.request('/api/roles', { headers: { Cookie: cookieHeader()! } });
     const rolesPayload = (await rolesResponse.json()) as {

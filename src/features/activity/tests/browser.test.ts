@@ -52,11 +52,11 @@ describe('activity browser surface', () => {
     await flush();
 
     expect(container.textContent).toContain('Activity');
-    expect(container.textContent).toContain('users · updated');
+    expect(container.textContent).toContain('User updated');
     expect(container.textContent).toContain('Ada Lovelace');
-    expect(container.textContent).toContain('self=false');
+    expect(container.textContent).toContain('SelfNo');
 
-    const action = container.querySelector('input[placeholder="users.updated"]') as HTMLInputElement | null;
+    const action = container.querySelector('#activity-action') as HTMLInputElement | null;
     if (!action) throw new Error('Missing action filter');
     action.value = 'auth.login';
     action.dispatchEvent(new Event('input', { bubbles: true }));

@@ -363,11 +363,10 @@ describe('users browser surfaces', () => {
     const documentElement = document.documentElement;
 
     expect(router.currentRoute.value.name).toBe('dashboard');
-    expect(container.querySelector('h1')?.textContent).toContain('Welcome, Existing User.');
-    expect(container.querySelector('nav[aria-label="Application navigation"]')).not.toBeNull();
-    const responsiveLinks = container.querySelector<HTMLElement>('[data-testid="authenticated-nav-links"]');
-    expect(responsiveLinks?.classList.contains('w-full')).toBe(true);
-    expect(responsiveLinks?.classList.contains('overflow-x-auto')).toBe(true);
+    expect(container.querySelector('h1')?.textContent).toContain('Hi, Existing.');
+    const appNavigation = container.querySelector<HTMLElement>('nav[aria-label="Application navigation"]');
+    expect(appNavigation?.classList.contains('site-header-nav')).toBe(true);
+    expect(appNavigation?.closest('.site-header')?.classList.contains('site-header--app')).toBe(true);
     expect(container.querySelector('a[href="/dashboard"]')?.textContent).toContain('Dashboard');
     expect(container.querySelector('a[href="/profile"]')?.textContent).toContain('Profile');
 
@@ -494,7 +493,7 @@ describe('users browser surfaces', () => {
     await mountAt('/dashboard');
 
     const navigation = waitForNavigation();
-    container.querySelector<HTMLButtonElement>('button')?.click();
+    [...container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Sign out'))?.click();
     await navigation;
 
     expect(router.currentRoute.value.name).toBe('login');

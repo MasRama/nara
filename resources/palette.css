@@ -1,0 +1,99 @@
+/*
+ * Nara palette: the single source of truth for every surface (landing, auth, app pages, header).
+ * Components read --nara-* directly or through the semantic aliases below that Tailwind utilities use.
+ */
+:root {
+  --nara-bg: #f6f5ef;
+  --nara-surface: #fffef9;
+  --nara-surface-soft: #efeee6;
+  --nara-fg: #132a22;
+  --nara-muted: #5c6e65;
+  --nara-faint: #8b988f;
+  --nara-line: #dfe0d5;
+  --nara-line-strong: #c8ccbe;
+  --nara-input: #fffef9;
+  --nara-accent: #3fbf8a;
+  --nara-accent-strong: #1f7a55;
+  --nara-accent-soft: #e2f1e6;
+  --nara-on-accent: #f3fbf6;
+  --nara-signal: var(--nara-accent-strong);
+  --nara-signal-soft: var(--nara-accent-soft);
+  --nara-signal-on-light: #176d4c;
+  --nara-danger: #a33135;
+  --nara-danger-solid: #c2373b;
+  --nara-grid: rgba(19, 42, 34, 0.06);
+  --nara-shadow: 0 1px 2px rgba(19, 42, 34, 0.04), 0 18px 40px -24px rgba(19, 42, 34, 0.28);
+  --nara-shadow-lift: 0 40px 90px -40px rgba(8, 16, 32, 0.6);
+
+  /* Ink: the dark "terminal/window" surface used on light and dark themes. */
+  --nara-ink: #0a1426;
+  --nara-ink-bar: #0e1a2f;
+  --nara-ink-line: #1b2a42;
+  --nara-ink-fg: #dce7e3;
+  --nara-ink-muted: #7b8ca3;
+  --nara-ink-accent: #6ee0ad;
+  --nara-ink-danger: #ff8f8f;
+  --nara-ink-warn: #f2c870;
+  --nara-ink-dot: #26354d;
+  /* Raised ink: buttons and badges that sit on page surfaces. */
+  --nara-ink-raised: var(--nara-ink);
+  --nara-ink-raised-line: var(--nara-ink-line);
+
+  --nara-avatar: linear-gradient(145deg, #2a8f66, #1e5540);
+  --nara-avatar-fg: #f3fbf6;
+
+  --nara-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --background: var(--nara-bg);
+  --foreground: var(--nara-fg);
+  --card: var(--nara-surface);
+  --card-foreground: var(--nara-fg);
+  --popover: var(--nara-surface);
+  --popover-foreground: var(--nara-fg);
+  --primary: var(--nara-accent-strong);
+  --primary-foreground: var(--nara-on-accent);
+  --secondary: var(--nara-surface-soft);
+  --secondary-foreground: var(--nara-fg);
+  --muted: var(--nara-surface-soft);
+  --muted-foreground: var(--nara-muted);
+  --accent: var(--nara-accent-soft);
+  --accent-foreground: var(--nara-accent-strong);
+  --destructive: var(--nara-danger-solid);
+  --destructive-foreground: #ffffff;
+  --border: var(--nara-line);
+  --input: var(--nara-line);
+  --ring: var(--nara-accent-strong);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --nara-bg: #0d141d;
+  --nara-surface: #202b37;
+  --nara-surface-soft: #2a3643;
+  --nara-fg: #f5f6f4;
+  --nara-muted: #b9c1c8;
+  --nara-faint: #93a0ac;
+  --nara-line: #384550;
+  --nara-line-strong: #52606d;
+  --nara-input: #17212c;
+  --nara-accent: #58b98b;
+  --nara-accent-strong: #83ddb0;
+  --nara-accent-soft: rgba(131, 221, 176, 0.11);
+  --nara-on-accent: #0d141d;
+  --nara-signal: #83ddb0;
+  --nara-signal-soft: rgba(131, 221, 176, 0.13);
+  --nara-danger: #ffb0b3;
+  --nara-danger-solid: #d9534f;
+  --nara-grid: rgba(245, 246, 244, 0.045);
+  --nara-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 24px 50px -32px rgba(0, 0, 0, 0.55);
+
+  --nara-ink: #1d2834;
+  --nara-ink-bar: #293644;
+  --nara-ink-line: #485664;
+  --nara-ink-fg: #f2f4f5;
+  --nara-ink-muted: #b6c0c9;
+  --nara-ink-accent: #a4e7c4;
+  --nara-ink-dot: #577084;
+  --nara-ink-raised: #34414e;
+  --nara-ink-raised-line: rgba(245, 246, 244, 0.26);
+}

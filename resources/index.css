@@ -1,6 +1,7 @@
 @import url('https://rsms.me/inter/inter.css');
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
+@import "./palette.css";
 @source "../src/app";
 @source "../src/features";
 
@@ -8,29 +9,29 @@
 
 @theme {
   --font-sans: 'Inter var', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-heading: 'Space Grotesk', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Manrope', system-ui, sans-serif;
   --font-mono-accent: 'JetBrains Mono', monospace;
 
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
 
   --color-primary-50: #ecfdf5;
   --color-primary-100: #d1fae5;
@@ -118,53 +119,8 @@
 
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 160.1 84.1% 39.4%;
-    --primary-foreground: 151 81% 96%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 271.5 81.3% 55.9%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 160.1 84.1% 39.4%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 220 18% 8%;
-    --foreground: 210 20% 96%;
-    --card: 220 18% 11%;
-    --card-foreground: 210 20% 96%;
-    --popover: 220 18% 11%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 160.1 84.1% 39.4%;
-    --primary-foreground: 151 81% 96%;
-    --secondary: 220 18% 16%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 220 18% 16%;
-    --muted-foreground: 215 16% 55%;
-    --accent: 271.5 81.3% 55.9%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 220 18% 18%;
-    --input: 220 18% 18%;
-    --ring: 160.1 84.1% 39.4%;
-  }
-
   html {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Manrope', system-ui, sans-serif;
   }
 
   body::-webkit-scrollbar {
@@ -176,8 +132,42 @@
   }
 
   body::-webkit-scrollbar-thumb {
-    background-color: var(--color-primary-500);
+    background-color: var(--nara-accent);
     border-radius: 3px;
   }
 }
 
+/* Shared shell for authenticated app pages: same width, rhythm, and backdrop everywhere. */
+@layer components {
+  .nara-page { position: relative; isolation: isolate; overflow: hidden; padding: 36px 20px 96px; }
+  .nara-page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background-image: linear-gradient(var(--nara-grid) 1px, transparent 1px), linear-gradient(90deg, var(--nara-grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-position: 50% -1px;
+    mask-image: radial-gradient(ellipse 70% 50% at 50% 0%, #000 30%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 0%, #000 30%, transparent 78%);
+    pointer-events: none;
+  }
+  .nara-page::after {
+    content: '';
+    position: absolute;
+    top: 300px;
+    left: 50%;
+    z-index: -1;
+    width: min(1100px, 120%);
+    height: 560px;
+    transform: translateX(-50%);
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--nara-accent) 18%, transparent), transparent);
+    pointer-events: none;
+  }
+  @media (min-width: 640px) { .nara-page { padding: 48px 40px 120px; } }
+  .nara-page-inner { max-width: 1100px; margin: 0 auto; }
+  .nara-page-title { font-family: var(--font-heading); font-size: clamp(2.4rem, 5.6vw, 4.4rem); font-weight: 800; line-height: 1.02; letter-spacing: -0.058em; overflow-wrap: anywhere; }
+  .nara-page-title-accent { color: var(--nara-accent-strong); }
+  .nara-page-lede { margin-top: 16px; max-width: 520px; color: var(--nara-muted); font-size: 15.5px; line-height: 1.8; }
+  .nara-page-body { margin-top: 40px; }
+}

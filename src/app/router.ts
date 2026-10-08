@@ -34,7 +34,7 @@ export const appRoutes = [
     path: '/change-password',
     name: 'change-password',
     component: ChangePasswordPage,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, standaloneAuth: true },
   },
   ...usersWebRoutes,
   {

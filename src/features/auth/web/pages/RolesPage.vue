@@ -52,8 +52,37 @@ function fieldError(name: string): string {
   return fieldErrors.value[name]?.join('; ') ?? '';
 }
 
-function permissionLabel(slug: string): string {
-  return slug;
+function humanize(value: string): string {
+  const words = value.replace(/[-_.]+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+interface RolePermissionGroup {
+  resource: string;
+  label: string;
+  actions: string[];
+  full: boolean;
+}
+
+function rolePermissionGroups(role: RoleData): RolePermissionGroup[] {
+  const grouped = new Map<string, string[]>();
+  for (const slug of role.permissions) {
+    const dot = slug.indexOf('.');
+    const resource = dot === -1 ? slug : slug.slice(0, dot);
+    const slugs = grouped.get(resource) ?? [];
+    slugs.push(slug);
+    grouped.set(resource, slugs);
+  }
+  return [...grouped.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([resource, slugs]) => {
+      const catalog = (permissionsByResource.value[resource] ?? []).map((permission) => permission.slug);
+      const rank = (slug: string) => (catalog.includes(slug) ? catalog.indexOf(slug) : catalog.length);
+      const actions = [...slugs]
+        .sort((left, right) => rank(left) - rank(right))
+        .map((slug) => humanize(slug.slice(slug.indexOf('.') + 1)));
+      return { resource, label: humanize(resource), actions, full: catalog.length > 0 && catalog.every((slug) => slugs.includes(slug)) };
+    });
 }
 
 async function loadAccess(): Promise<void> {
@@ -200,126 +229,149 @@ onMounted(() => {
 </script>
 
 <template>
-  <main class="relative overflow-hidden px-6 py-12 sm:px-10 lg:px-16 lg:py-16" data-testid="roles-page">
-    <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(currentColor_1px,transparent_1px)] text-foreground opacity-[0.03] [background-size:22px_22px] dark:opacity-[0.05]"></div>
-
-    <section class="relative mx-auto max-w-[1250px]">
-      <div class="flex flex-col gap-8">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p class="font-heading text-xs uppercase tracking-[0.25em] text-primary">Access control</p>
-            <h1 class="mt-3 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">Roles</h1>
-            <p class="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Define role access and assign the permissions each role carries.
-            </p>
-          </div>
-          <div class="flex items-center gap-4 text-sm">
-            <RouterLink to="/dashboard" class="text-muted-foreground transition-colors hover:text-foreground">Dashboard</RouterLink>
-            <button
-              v-if="canCreate"
-              type="button"
-              data-testid="create-role"
-              class="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground transition-opacity hover:opacity-90"
-              @click="openCreate"
-            >
-              New role
-            </button>
-          </div>
+  <main class="nara-page" data-testid="roles-page">
+    <section class="nara-page-inner">
+      <header class="roles-hero">
+        <div class="min-w-0">
+          <h1 class="nara-page-title">Roles<span class="nara-page-title-accent">.</span></h1>
+          <p class="nara-page-lede">Define role access and assign the permissions each role carries.</p>
         </div>
+        <div class="flex items-center gap-3">
+          <button v-if="canCreate" type="button" data-testid="create-role" class="roles-primary" @click="openCreate">
+            <span class="roles-primary-plus" aria-hidden="true">+</span>
+            New role
+          </button>
+        </div>
+      </header>
 
-        <p v-if="loadForbidden" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">You do not have permission to view roles.</p>
-        <p v-if="loadError" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{{ loadError }}</p>
-        <p v-if="actionError" role="alert" class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{{ actionError }}</p>
-        <p v-if="notice" role="status" class="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">{{ notice }}</p>
+      <div class="roles-stack nara-page-body">
+        <p v-if="loadForbidden" role="alert" class="roles-alert roles-alert--error">You do not have permission to view roles.</p>
+        <p v-if="loadError" role="alert" class="roles-alert roles-alert--error">{{ loadError }}</p>
+        <p v-if="actionError" role="alert" class="roles-alert roles-alert--error">{{ actionError }}</p>
+        <p v-if="notice" role="status" class="roles-alert roles-alert--ok"><span class="roles-live-dot"></span>{{ notice }}</p>
+
+        <section v-if="pendingDelete" class="roles-danger" role="dialog" aria-labelledby="delete-role-title">
+          <div class="min-w-0">
+            <h2 id="delete-role-title" class="font-heading text-lg font-extrabold tracking-[-0.03em]">Delete {{ pendingDelete.name }}?</h2>
+            <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">Protected roles cannot be deleted by the browser; the server remains authoritative.</p>
+          </div>
+          <div class="flex shrink-0 gap-2">
+            <button type="button" data-testid="cancel-role-delete" :disabled="isDeleting" class="roles-btn" @click="cancelDelete">Cancel</button>
+            <button type="button" data-testid="confirm-role-delete" :disabled="isDeleting" class="roles-btn roles-btn--danger-solid" @click="confirmDelete">{{ isDeleting ? 'Deleting…' : 'Delete role' }}</button>
+          </div>
+        </section>
 
         <template v-if="!loadForbidden">
-          <section v-if="isFormOpen" class="rounded-2xl border border-primary/30 bg-card p-5 shadow-soft sm:p-6" aria-labelledby="role-form-title">
+          <section v-if="isFormOpen" class="roles-form" aria-labelledby="role-form-title">
             <div class="flex items-start justify-between gap-4">
-              <div>
-                <p class="font-heading text-xs uppercase tracking-[0.2em] text-primary">Access definition</p>
-                <h2 id="role-form-title" class="mt-2 font-heading text-xl font-semibold tracking-tight">{{ isCreating ? 'Create role' : 'Edit role' }}</h2>
+              <div class="flex items-center gap-4">
+                <span class="roles-badge roles-badge--lg" aria-hidden="true">{{ isCreating ? '+' : (editingRole?.name ?? '').slice(0, 2).toUpperCase() }}</span>
+                <div class="min-w-0">
+                  <h2 id="role-form-title" class="font-heading text-xl font-extrabold tracking-[-0.04em]">{{ isCreating ? 'Create role' : 'Edit role' }}</h2>
+                  <p class="mt-0.5 text-sm text-muted-foreground"><span class="roles-mono">{{ selectedPermissions.length }}</span> permission{{ selectedPermissions.length === 1 ? '' : 's' }} selected</p>
+                </div>
               </div>
-              <button type="button" class="text-sm text-muted-foreground hover:text-foreground" :disabled="isSubmitting" @click="closeForm">Close</button>
+              <button type="button" class="roles-close" aria-label="Close" :disabled="isSubmitting" @click="closeForm">×</button>
             </div>
 
-            <p v-if="formError" role="alert" class="mt-5 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ formError }}</p>
-            <form class="mt-5 grid gap-5 md:grid-cols-2" data-testid="role-form" @submit.prevent="submitRole">
-              <label class="grid gap-2 text-sm font-medium" for="role-name">
+            <p v-if="formError" role="alert" class="roles-alert roles-alert--error mt-6">{{ formError }}</p>
+            <form class="mt-6 grid gap-5 md:grid-cols-2" data-testid="role-form" @submit.prevent="submitRole">
+              <label class="roles-field" for="role-name">
                 Name
-                <input id="role-name" v-model="roleName" type="text" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
-                <span v-if="fieldError('name')" class="text-xs font-normal text-destructive">{{ fieldError('name') }}</span>
+                <input id="role-name" v-model="roleName" type="text" class="roles-input" />
+                <span v-if="fieldError('name')" class="roles-error">{{ fieldError('name') }}</span>
               </label>
-              <label class="grid gap-2 text-sm font-medium" for="role-slug">
+              <label class="roles-field" for="role-slug">
                 Slug
-                <input id="role-slug" v-model="roleSlug" type="text" class="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none transition-colors focus:border-primary" />
-                <span v-if="fieldError('slug')" class="text-xs font-normal text-destructive">{{ fieldError('slug') }}</span>
+                <input id="role-slug" v-model="roleSlug" type="text" class="roles-input roles-mono" />
+                <span v-if="fieldError('slug')" class="roles-error">{{ fieldError('slug') }}</span>
               </label>
-              <label class="grid gap-2 text-sm font-medium md:col-span-2" for="role-description">
+              <label class="roles-field md:col-span-2" for="role-description">
                 Description
-                <textarea id="role-description" v-model="roleDescription" rows="3" class="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-primary"></textarea>
-                <span v-if="fieldError('description')" class="text-xs font-normal text-destructive">{{ fieldError('description') }}</span>
+                <textarea id="role-description" v-model="roleDescription" rows="3" class="roles-input roles-textarea"></textarea>
+                <span v-if="fieldError('description')" class="roles-error">{{ fieldError('description') }}</span>
               </label>
 
-              <fieldset class="grid gap-4 md:col-span-2">
-                <legend class="text-sm font-medium">Permissions</legend>
-                <p class="text-xs text-muted-foreground">Permissions are grouped using the server-provided resource metadata.</p>
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <fieldset v-for="[resource, resourcePermissions] in permissionGroups" :key="resource" class="rounded-xl border border-border p-4">
-                    <legend class="px-1 text-sm font-medium capitalize">{{ resource }}</legend>
-                    <label v-for="permission in resourcePermissions" :key="permission.id" class="mt-3 flex items-start gap-2 text-sm font-normal first:mt-2">
+              <fieldset class="md:col-span-2">
+                <legend class="roles-field-label">Permissions</legend>
+                <p class="roles-hint mt-1">Choose what members of this role can see and do.</p>
+                <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <fieldset v-for="[resource, resourcePermissions] in permissionGroups" :key="resource" class="roles-group">
+                    <legend class="sr-only">{{ humanize(resource) }}</legend>
+                    <div class="roles-group-head" aria-hidden="true">
+                      <span>{{ humanize(resource) }}</span>
+                      <span class="roles-group-count">{{ resourcePermissions.filter((p) => selectedPermissions.includes(p.slug)).length }}/{{ resourcePermissions.length }}</span>
+                    </div>
+                    <label v-for="permission in resourcePermissions" :key="permission.id" class="roles-perm">
                       <input v-model="selectedPermissions" type="checkbox" :value="permission.slug" :data-permission-slug="permission.slug" />
-                      <span>
-                        <span class="block">{{ permission.name }}</span>
-                        <span class="block text-xs text-muted-foreground">{{ permissionLabel(permission.slug) }}</span>
+                      <span class="min-w-0">
+                        <span class="block font-semibold">{{ permission.name }}</span>
+                        <span v-if="permission.description" class="block text-[12px] font-normal leading-snug text-muted-foreground">{{ permission.description }}</span>
                       </span>
                     </label>
                   </fieldset>
                 </div>
               </fieldset>
 
-              <div class="flex items-center gap-3 md:col-span-2">
-                <button type="submit" :disabled="isSubmitting" class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">{{ isSubmitting ? 'Saving…' : isCreating ? 'Create role' : 'Save changes' }}</button>
-                <button type="button" :disabled="isSubmitting" class="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground" @click="closeForm">Cancel</button>
+              <div class="flex items-center gap-3 border-t border-border pt-5 md:col-span-2">
+                <button type="submit" :disabled="isSubmitting" class="roles-primary roles-primary--plain">{{ isSubmitting ? 'Saving…' : isCreating ? 'Create role' : 'Save changes' }}</button>
+                <button type="button" :disabled="isSubmitting" class="roles-ghost" @click="closeForm">Cancel</button>
               </div>
             </form>
           </section>
 
-          <p v-if="isLoading" role="status" class="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">Loading roles…</p>
-          <p v-else-if="roles.length === 0" class="rounded-xl border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">No roles are available.</p>
-
-          <section v-else class="overflow-hidden rounded-2xl border border-border bg-card shadow-soft" aria-labelledby="role-list-title">
-            <div class="border-b border-border px-5 py-4 sm:px-6">
-              <h2 id="role-list-title" class="font-heading text-xl font-semibold tracking-tight">Role directory</h2>
-              <p class="mt-1 text-sm text-muted-foreground">Permission assignments and user counts come from the RBAC API.</p>
+          <section class="roles-window" aria-labelledby="role-list-title">
+            <div class="roles-window-bar">
+              <span class="roles-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              <h2 id="role-list-title" class="roles-window-title">Role directory</h2>
+              <span class="roles-count">{{ roles.length }} role{{ roles.length === 1 ? '' : 's' }}</span>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full min-w-[900px] text-left text-sm" data-testid="role-list">
-                <thead class="border-b border-border bg-muted/30 text-xs uppercase tracking-[0.15em] text-muted-foreground">
+
+            <p v-if="isLoading" role="status" class="roles-empty">Loading roles…</p>
+            <p v-else-if="roles.length === 0" class="roles-empty">No roles are available.</p>
+
+            <div v-else class="overflow-x-auto">
+              <table class="roles-table" data-testid="role-list">
+                <thead>
                   <tr>
-                    <th scope="col" class="px-5 py-3 font-medium sm:px-6">Role</th>
-                    <th scope="col" class="px-5 py-3 font-medium sm:px-6">Permissions</th>
-                    <th scope="col" class="px-5 py-3 font-medium sm:px-6">Users</th>
-                    <th scope="col" class="px-5 py-3 text-right font-medium sm:px-6">Actions</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Permissions</th>
+                    <th scope="col">Users</th>
+                    <th scope="col" class="text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-border">
+                <tbody>
                   <tr v-for="role in roles" :key="role.id" :data-role-id="role.id">
-                    <td class="px-5 py-4 sm:px-6">
-                      <span class="block font-medium">{{ role.name }}</span>
-                      <span class="block text-xs text-muted-foreground">{{ role.slug }}</span>
-                      <span v-if="role.description" class="mt-1 block max-w-xs text-xs text-muted-foreground">{{ role.description }}</span>
-                    </td>
-                    <td class="px-5 py-4 sm:px-6">
-                      <div class="flex max-w-md flex-wrap gap-1.5">
-                        <span v-for="permission in role.permissions" :key="permission" class="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">{{ permission }}</span>
-                        <span v-if="role.permissions.length === 0" class="text-muted-foreground">No permissions</span>
+                    <td>
+                      <div class="flex items-start gap-3.5">
+                        <span :class="['roles-badge', { 'roles-badge--admin': role.slug === 'admin' }]" aria-hidden="true">{{ role.name.slice(0, 2).toUpperCase() }}</span>
+                        <span class="min-w-0">
+                          <span class="flex items-center gap-2">
+                            <span class="font-heading font-bold tracking-[-0.02em]">{{ role.name }}</span>
+                            <span v-if="role.slug === 'admin'" class="roles-protected">Protected</span>
+                          </span>
+                          <span class="roles-mono block text-[11.5px] text-muted-foreground">{{ role.slug }}</span>
+                          <span v-if="role.description" class="mt-1.5 block max-w-xs text-[13px] leading-relaxed text-muted-foreground">{{ role.description }}</span>
+                        </span>
                       </div>
                     </td>
-                    <td class="px-5 py-4 sm:px-6"><span data-testid="role-user-count">{{ role.userCount }}</span> user{{ role.userCount === 1 ? '' : 's' }}</td>
-                    <td class="px-5 py-4 text-right sm:px-6">
+                    <td>
+                      <ul v-if="role.permissions.length" class="roles-perm-list">
+                        <li v-for="group in rolePermissionGroups(role)" :key="group.resource">
+                          <span class="roles-perm-resource">{{ group.label }}</span>
+                          <span v-if="group.full" class="roles-perm-full">Full access</span>
+                          <span v-else class="roles-perm-actions">{{ group.actions.join(', ') }}</span>
+                        </li>
+                      </ul>
+                      <span v-else class="text-[13px] text-muted-foreground">No permissions</span>
+                    </td>
+                    <td>
+                      <span class="roles-users"><span data-testid="role-user-count">{{ role.userCount }}</span> user{{ role.userCount === 1 ? '' : 's' }}</span>
+                    </td>
+                    <td class="text-right">
                       <div class="flex justify-end gap-2">
-                        <button v-if="canEdit && role.slug !== 'admin'" type="button" :data-testid="`edit-role-${role.id}`" class="rounded-md border border-border px-3 py-2 text-xs font-medium transition-colors hover:border-primary/50 hover:text-primary" @click="openEdit(role)">Edit</button>
-                        <button v-if="canDelete && role.slug !== 'admin'" type="button" :data-testid="`delete-role-${role.id}`" class="rounded-md border border-destructive/30 px-3 py-2 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10" @click="requestDelete(role)">Delete</button>
+                        <button v-if="canEdit && role.slug !== 'admin'" type="button" :data-testid="`edit-role-${role.id}`" class="roles-btn roles-btn--sm" @click="openEdit(role)">Edit</button>
+                        <button v-if="canDelete && role.slug !== 'admin'" type="button" :data-testid="`delete-role-${role.id}`" class="roles-btn roles-btn--sm roles-btn--danger" @click="requestDelete(role)">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -328,16 +380,94 @@ onMounted(() => {
             </div>
           </section>
         </template>
-
-        <section v-if="pendingDelete" class="rounded-xl border border-destructive/30 bg-destructive/10 p-5" role="dialog" aria-labelledby="delete-role-title">
-          <h2 id="delete-role-title" class="font-heading font-semibold">Delete {{ pendingDelete.name }}?</h2>
-          <p class="mt-2 text-sm text-muted-foreground">Protected roles cannot be deleted by the browser; the server remains authoritative.</p>
-          <div class="mt-4 flex gap-3">
-            <button type="button" data-testid="confirm-role-delete" :disabled="isDeleting" class="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground disabled:opacity-60" @click="confirmDelete">{{ isDeleting ? 'Deleting…' : 'Delete role' }}</button>
-            <button type="button" data-testid="cancel-role-delete" :disabled="isDeleting" class="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground" @click="cancelDelete">Cancel</button>
-          </div>
-        </section>
       </div>
     </section>
   </main>
 </template>
+
+<style scoped>
+.roles-stack { display: flex; flex-direction: column; gap: 20px; }
+.roles-mono { font-family: var(--nara-mono); }
+
+.roles-hero { display: flex; flex-direction: column; gap: 28px; }
+@media (min-width: 640px) { .roles-hero { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
+
+/* Buttons */
+.roles-primary { display: inline-flex; height: 44px; align-items: center; gap: 10px; padding: 0 18px 0 8px; border-radius: 13px; background: var(--nara-ink-raised); color: var(--nara-ink-fg); font-size: 14px; font-weight: 700; box-shadow: inset 0 0 0 1px var(--nara-ink-raised-line), var(--nara-shadow); transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease; }
+.roles-primary--plain { padding: 0 20px; }
+.roles-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 60%, transparent), var(--nara-shadow); }
+.roles-primary:disabled { cursor: not-allowed; opacity: 0.5; }
+.roles-primary-plus { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: color-mix(in srgb, var(--nara-ink-accent) 16%, transparent); color: var(--nara-ink-accent); font-size: 18px; font-weight: 600; line-height: 1; }
+.roles-ghost { display: inline-flex; height: 44px; align-items: center; padding: 0 14px; border-radius: 13px; color: var(--muted-foreground); font-size: 14px; font-weight: 600; transition: color 0.15s ease, background-color 0.15s ease; }
+.roles-ghost:hover { background: color-mix(in srgb, var(--foreground) 5%, transparent); color: var(--foreground); }
+.roles-btn { display: inline-flex; height: 40px; align-items: center; justify-content: center; padding: 0 16px; border: 1px solid var(--border); border-radius: 11px; background: var(--card); font-size: 13.5px; font-weight: 600; white-space: nowrap; transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease; }
+.roles-btn:hover:not(:disabled) { border-color: color-mix(in srgb, var(--primary) 50%, transparent); color: var(--primary); }
+.roles-btn:disabled { cursor: not-allowed; opacity: 0.5; }
+.roles-btn--sm { height: 34px; padding: 0 12px; border-radius: 9px; font-size: 12.5px; }
+.roles-btn--danger { border-color: color-mix(in srgb, var(--destructive) 30%, transparent); color: var(--nara-danger); }
+.roles-btn--danger:hover:not(:disabled) { border-color: color-mix(in srgb, var(--destructive) 60%, transparent); background: color-mix(in srgb, var(--destructive) 8%, transparent); color: var(--nara-danger); }
+.roles-btn--danger-solid { border-color: transparent; background: var(--destructive); color: var(--destructive-foreground); }
+.roles-btn--danger-solid:hover:not(:disabled) { border-color: transparent; color: var(--destructive-foreground); opacity: 0.9; }
+
+/* Alerts */
+.roles-alert { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1px solid; border-radius: 14px; font-size: 14px; }
+.roles-alert--error { border-color: color-mix(in srgb, var(--destructive) 30%, transparent); background: color-mix(in srgb, var(--destructive) 8%, transparent); color: var(--nara-danger); }
+.roles-alert--ok { border-color: color-mix(in srgb, var(--primary) 30%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
+.roles-live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent); }
+.roles-danger { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent); border-radius: 18px; background: var(--card); box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 8%, transparent), var(--nara-shadow); }
+@media (min-width: 768px) { .roles-danger { flex-direction: row; align-items: center; justify-content: space-between; } }
+
+/* Form */
+.roles-form { padding: 26px; border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); border-radius: 22px; background: var(--card); box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 7%, transparent), var(--nara-shadow); animation: roles-enter 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (min-width: 640px) { .roles-form { padding: 32px; } }
+.roles-close { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--border); border-radius: 50%; color: var(--muted-foreground); font-size: 20px; line-height: 1; transition: color 0.15s ease, border-color 0.15s ease; }
+.roles-close:hover:not(:disabled) { border-color: color-mix(in srgb, var(--foreground) 40%, transparent); color: var(--foreground); }
+.roles-field { display: grid; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.roles-field-label { font-size: 13.5px; font-weight: 600; }
+.roles-input { height: 44px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--background); font-size: 14px; font-weight: 400; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.roles-textarea { height: auto; padding: 12px 14px; line-height: 1.6; resize: vertical; }
+.roles-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent); }
+.roles-hint { color: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+.roles-error { color: var(--nara-danger); font-size: 12px; font-weight: 400; }
+
+.roles-group { padding: 6px; border: 1px solid var(--border); border-radius: 16px; background: color-mix(in srgb, var(--foreground) 2%, transparent); }
+.roles-group-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 10px; font-size: 13.5px; font-weight: 800; letter-spacing: -0.02em; }
+.roles-group-count { padding: 2px 8px; border-radius: 7px; background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); font-family: var(--nara-mono); font-size: 10.5px; font-weight: 600; }
+.roles-perm { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border: 1px solid transparent; border-radius: 11px; font-size: 13.5px; cursor: pointer; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.roles-perm:hover { background: var(--card); }
+.roles-perm:has(input:checked) { border-color: color-mix(in srgb, var(--primary) 35%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.roles-perm input { margin-top: 3px; accent-color: var(--primary); }
+
+/* List window */
+.roles-window { overflow: hidden; border: 1px solid var(--border); border-radius: 22px; background: var(--card); box-shadow: 0 0 0 8px color-mix(in srgb, var(--card) 50%, transparent), var(--nara-shadow); }
+.roles-window-bar { display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 20px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--foreground) 2.5%, transparent); }
+.roles-dots { display: flex; gap: 7px; }
+.roles-dots span { width: 10px; height: 10px; border-radius: 50%; background: color-mix(in srgb, var(--foreground) 14%, transparent); }
+.roles-window-title { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.roles-count { margin-left: auto; padding: 4px 10px; border-radius: 8px; background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); font-family: var(--nara-mono); font-size: 11px; font-weight: 600; }
+.roles-empty { padding: 64px 20px; color: var(--muted-foreground); font-size: 14px; text-align: center; }
+
+.roles-table { width: 100%; min-width: 900px; font-size: 14px; text-align: left; }
+.roles-table th { padding: 14px 24px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); font-family: var(--nara-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+.roles-table td { padding: 18px 24px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.roles-table tbody tr:last-child td { border-bottom: 0; }
+.roles-table tbody tr { transition: background-color 0.15s ease; }
+.roles-table tbody tr:hover { background: color-mix(in srgb, var(--primary) 4%, transparent); }
+.roles-table tbody tr td:first-child { box-shadow: inset 2px 0 0 transparent; transition: box-shadow 0.15s ease; }
+.roles-table tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
+
+.roles-badge { display: grid; width: 40px; height: 40px; flex: none; place-items: center; border-radius: 12px; background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 18%, transparent), color-mix(in srgb, var(--primary) 6%, transparent)); color: var(--primary); font-size: 12.5px; font-weight: 800; letter-spacing: -0.03em; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 15%, transparent); }
+.roles-badge--lg { width: 52px; height: 52px; border-radius: 15px; font-size: 17px; }
+.roles-badge--admin { background: var(--nara-ink-raised); color: var(--nara-ink-accent); box-shadow: inset 0 0 0 1px var(--nara-ink-raised-line); }
+.roles-protected { padding: 2px 8px; border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent); border-radius: 999px; color: var(--primary); font-family: var(--nara-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.roles-perm-list { display: grid; max-width: 440px; gap: 6px; }
+.roles-perm-list li { display: grid; grid-template-columns: 96px minmax(0, 1fr); align-items: baseline; gap: 12px; font-size: 13.5px; }
+.roles-perm-resource { font-weight: 700; letter-spacing: -0.01em; }
+.roles-perm-actions { color: var(--muted-foreground); }
+.roles-perm-full { justify-self: start; padding: 1px 9px; border-radius: 999px; background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--primary); font-size: 12px; font-weight: 700; }
+.roles-users { display: inline-flex; align-items: baseline; gap: 4px; color: var(--muted-foreground); font-size: 13px; white-space: nowrap; }
+.roles-users [data-testid='role-user-count'] { color: var(--foreground); font-family: var(--nara-mono); font-size: 15px; font-weight: 700; }
+
+@keyframes roles-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .roles-form { animation: none; } }
+</style>

@@ -207,7 +207,7 @@ describe('browser authentication lifecycle', () => {
     await dashboardNavigation;
 
     expect(router.currentRoute.value.name).toBe('dashboard');
-    expect(container.querySelector('h1')?.textContent).toContain('Welcome, Ada Lovelace.');
+    expect(container.querySelector('h1')?.textContent).toContain('Hi, Ada.');
     expect(document.documentElement).toBe(documentElement);
     expect(useAuthSession().user.value?.email).toBe(email);
     expect(fetchPaths).toContain('/api/auth/register');
@@ -366,7 +366,7 @@ describe('browser authentication lifecycle', () => {
     await navigation;
 
     expect(router.currentRoute.value.name).toBe('dashboard');
-    expect(container.querySelector('h1')?.textContent).toContain('Welcome, Existing User.');
+    expect(container.querySelector('h1')?.textContent).toContain('Hi, Existing.');
     expect(useAuthSession().isAuthenticated.value).toBe(true);
     expect(document.documentElement).toBe(documentElement);
   });
@@ -388,6 +388,9 @@ describe('browser authentication lifecycle', () => {
 
     expect(router.currentRoute.value.name).toBe('change-password');
     expect(container.querySelector('h1')?.textContent).toContain('Change your password');
+    expect(container.querySelector('.nara-auth')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Application navigation"]')).toBeNull();
+    expect(container.querySelector('a[href="/"]')).toBeNull();
     expect(useAuthSession().user.value?.mustChangePassword).toBe(true);
 
     setInput('#current-password', TEST_PASSWORD);
@@ -409,7 +412,7 @@ describe('browser authentication lifecycle', () => {
     await useAuthSession().refresh();
     await mountAt('/dashboard');
 
-    const logoutButton = container.querySelector('button');
+    const logoutButton = [...container.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Sign out'));
     expect(logoutButton?.textContent).toContain('Sign out');
     const navigation = waitForNavigation();
     logoutButton?.click();
