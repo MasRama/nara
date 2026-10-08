@@ -160,6 +160,40 @@ describe('live updates', () => {
     expect(await drain(bystanderEvents)).toEqual([]);
   });
 
+  it("tells an account's other devices when one signs in or out", async () => {
+    const { email, browser: laptop } = await signUp();
+    const bystander = await signUp();
+    const laptopEvents = await listen(laptop);
+    const bystanderEvents = await listen(bystander.browser);
+
+    const phone = await signIn(email);
+    expect(await laptopEvents.next()).toBe('auth.sessions-changed');
+
+    expect((await send(phone, '/api/auth/logout', { method: 'POST' })).status).toBe(200);
+    expect(await laptopEvents.next()).toBe('auth.sessions-changed');
+    expect(await drain(laptopEvents)).toEqual([]);
+
+    expect(await drain(bystanderEvents)).toEqual([]);
+  });
+
+  it('tells accounts that may read roles when roles or their members change, and nobody else', async () => {
+    seed();
+    const admin = await signUpAdmin();
+    const member = await signUp();
+    const adminEvents = await listen(admin.browser);
+    const memberEvents = await listen(member.browser);
+    const slug = `live-${randomUUID().slice(0, 8)}`;
+
+    const created = await send(admin.browser, '/api/roles', { method: 'POST', body: { name: 'Live Role', slug, permissions: [] } });
+    expect(created.status).toBe(201);
+    expect(await adminEvents.next()).toBe('auth.roles-changed');
+
+    expect((await send(admin.browser, `/api/users/${member.id}`, { method: 'PUT', body: { roles: [slug] } })).status).toBe(200);
+    expect(await drain(adminEvents)).toContain('auth.roles-changed');
+
+    expect(await drain(memberEvents)).not.toContain('auth.roles-changed');
+  });
+
   it('announces recorded activity only to accounts allowed to read it', async () => {
     const admin = await signUpAdmin();
     const member = await signUp();

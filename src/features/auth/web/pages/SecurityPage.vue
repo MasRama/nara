@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { confirmPasswordInputSchema, twoFactorCodeInputSchema, type SessionData, type TwoFactorSetup, type TwoFactorStatus } from '../../contract';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { AUTH_SESSIONS_CHANGED_EVENT, confirmPasswordInputSchema, twoFactorCodeInputSchema, type SessionData, type TwoFactorSetup, type TwoFactorStatus } from '../../contract';
 import { encodeQr, qrSvgPath } from '../qr';
 import { createSecurityClient } from '../security-client';
 import { useAuthSession } from '../session';
 import { formatDate, formatRelativeTime, useLocalText } from '../../../../shared/i18n';
+import { onServerEvent } from '../../../../shared/realtime/browser';
 import { error as errorText, issue as issueText, t } from '../locales';
 
 type PasswordAction = 'setup' | 'regenerate' | 'disable';
@@ -95,6 +96,16 @@ async function load(): Promise<void> {
     loadError.value = () => t('security.loadFailed');
   } finally {
     loading.value = false;
+  }
+}
+
+// A device signed in or out elsewhere: refresh the list in place, without the loading state.
+async function followSessionChanges(): Promise<void> {
+  try {
+    const list = await client.listSessions();
+    if (list.success) sessions.value = list.data!.sessions;
+  } catch (error) {
+    console.error(error);
   }
 }
 
@@ -249,6 +260,7 @@ async function revokeOthers(): Promise<void> {
 onMounted(() => {
   void load();
 });
+onUnmounted(onServerEvent(AUTH_SESSIONS_CHANGED_EVENT, () => void followSessionChanges()));
 </script>
 
 <template>

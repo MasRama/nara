@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { getDatabase } from '../../../shared/database';
-import { accountsChanged } from './live';
+import { accountsChanged, rolesChanged } from './live';
 
 export interface Role {
   id: string;
@@ -70,11 +70,13 @@ export function createRoleWithPermissions(
   permissionIds: string[],
 ): Role {
   const database = getDatabase();
-  return database.transaction(() => {
-    const role = createRole(data);
-    replaceRolePermissions(database, role.id, permissionIds);
-    return role;
+  const role = database.transaction(() => {
+    const created = createRole(data);
+    replaceRolePermissions(database, created.id, permissionIds);
+    return created;
   })();
+  rolesChanged(canViewRoles);
+  return role;
 }
 
 export function updateRole(
@@ -109,6 +111,7 @@ export function deleteRoles(roleIds: string[]): number {
   const placeholders = roleIds.map(() => '?').join(', ');
   const result = getDatabase().prepare(`DELETE FROM roles WHERE id IN (${placeholders})`).run(...roleIds);
   accountsChanged(members);
+  rolesChanged(canViewRoles);
   return result.changes;
 }
 
@@ -184,6 +187,11 @@ export function isAdmin(userId: string): boolean {
   return hasRole(userId, 'admin');
 }
 
+/** Who may read the role list: the rule `requirePermission('roles.view')` applies. */
+export function canViewRoles(userId: string): boolean {
+  return isAdmin(userId) || hasPermission(userId, 'roles.view');
+}
+
 export function getUserCountsForRoles(roleIds: string[]): Map<string, number> {
   const counts = new Map(roleIds.map((roleId) => [roleId, 0]));
   if (roleIds.length === 0) return counts;
@@ -212,7 +220,10 @@ export function updateRoleWithPermissions(
     if (permissionIds !== undefined) replaceRolePermissions(database, roleId, permissionIds);
     return updated;
   })();
-  if (role) accountsChanged(getUsersWithRole(roleId).map((user) => user.id));
+  if (role) {
+    accountsChanged(getUsersWithRole(roleId).map((user) => user.id));
+    rolesChanged(canViewRoles);
+  }
   return role;
 }
 

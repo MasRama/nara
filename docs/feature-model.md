@@ -293,7 +293,7 @@ listening. Events are signals, not data: a topic such as `activity.recorded`
 tells the page to refetch through its Feature's own client, so every
 permission check stays in the route that already makes it.
 
-- A Feature names its topics in `contract.ts` and publishes from its own server code with `publish(topic, listener => …)` from `src/shared/realtime`, choosing the recipients; Activity announces only to accounts that may read Activity.
+- A Feature names its topics in `contract.ts` and publishes from its own server code with `publish(topic, listener => …)` from `src/shared/realtime`, choosing the recipients: Auth tells an account's other devices when its session list changes and tells accounts that may read roles when roles change; Activity announces only to accounts that may read Activity.
 - Ending a session calls `revalidate`; a stream whose session no longer resolves gets `stream.ended` and closes. Each heartbeat (25 s) re-resolves the session too, so an expired session is noticed without a mutation.
 - In the browser, `onServerEvent(topic, handler)` from `src/shared/realtime/browser` subscribes and returns the unsubscribe function. After a dropped connection comes back, every handler runs again with `resumed: true`, because events sent meanwhile are lost.
 - `src/app/live-updates.ts` opens the stream while someone is signed in, sends the tab to the login page with a notice when its session ends elsewhere, and re-reads the account when `auth.account-changed` arrives, leaving a page whose permission is gone.

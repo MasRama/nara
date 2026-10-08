@@ -1,6 +1,6 @@
 import { getDatabase } from '../../../shared/database';
-import { syncUserRoles } from './access';
-import { accountsChanged, sessionsChanged } from './live';
+import { canViewRoles, syncUserRoles } from './access';
+import { accountsChanged, rolesChanged, sessionsChanged } from './live';
 
 /**
  * Auth-owned account directory. Auth owns account identity data
@@ -89,11 +89,14 @@ export function createAccount(data: AccountCreateInput): AccountRecord {
 
 export function createAccountWithRoles(data: AccountCreateInput, roleIds?: string[]): AccountRecord {
   const database = getDatabase();
-  return database.transaction(() => {
-    const account = createAccount(data);
-    if (roleIds !== undefined) syncUserRoles(account.id, roleIds);
-    return account;
+  const account = database.transaction(() => {
+    const created = createAccount(data);
+    if (roleIds !== undefined) syncUserRoles(created.id, roleIds);
+    return created;
   })();
+  // Role member counts changed.
+  if (roleIds !== undefined && roleIds.length > 0) rolesChanged(canViewRoles);
+  return account;
 }
 
 export function updateAccount(userId: string, data: AccountUpdateInput): AccountRecord | undefined {
@@ -135,7 +138,10 @@ export function updateAccountWithRoles(
     if (options.roleIds !== undefined) syncUserRoles(userId, options.roleIds);
     return findAccountById(userId);
   })();
-  if (account) accountsChanged([userId]);
+  if (account) {
+    accountsChanged([userId]);
+    if (options.roleIds !== undefined) rolesChanged(canViewRoles);
+  }
   return account;
 }
 
@@ -158,5 +164,6 @@ export function deleteAccounts(userIds: string[]): number {
   const placeholders = userIds.map(() => '?').join(', ');
   const deleted = getDatabase().prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...userIds).changes;
   sessionsChanged(userIds);
+  if (deleted > 0) rolesChanged(canViewRoles);
   return deleted;
 }

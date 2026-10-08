@@ -4,6 +4,12 @@ import { CONTROL_MESSAGE, emailSchema, hasNoControlChars, personNameSchema } fro
 /** Live update topic: the signed-in account's profile, roles, or permissions changed; refetch it. */
 export const AUTH_ACCOUNT_CHANGED_EVENT = 'auth.account-changed';
 
+/** Live update topic: the signed-in account's list of signed-in devices changed; refetch it. */
+export const AUTH_SESSIONS_CHANGED_EVENT = 'auth.sessions-changed';
+
+/** Live update topic: roles, their permissions, or their member counts changed; refetch the list. */
+export const AUTH_ROLES_CHANGED_EVENT = 'auth.roles-changed';
+
 /**
  * Auth/RBAC domain validation. Role name/slug/description semantics are owned
  * here, not by feature-neutral security infrastructure: shared code provides

@@ -30,18 +30,18 @@ interface Connection {
 
 const connections = new Set<Connection>();
 
-/** Sends `topic` to every connected listener `to` selects. */
+const ending = new WeakSet<Connection>();
+
+/** Sends `topic` to every connected listener `to` selects, except streams already ending. */
 export function publish(topic: string, to: (listener: Listener) => boolean): void {
   for (const connection of connections) {
-    if (to(connection.listener)) void connection.send(topic);
+    if (!ending.has(connection) && to(connection.listener)) void connection.send(topic);
   }
 }
 
 function sameListener(left: Listener | undefined, right: Listener): boolean {
   return left?.userId === right.userId && left.sessionId === right.sessionId;
 }
-
-const ending = new WeakSet<Connection>();
 
 function endIfSignedOut(connection: Connection): boolean {
   if (ending.has(connection)) return true;

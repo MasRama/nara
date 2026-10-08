@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { createRoleInputSchema } from '../../contract';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { AUTH_ROLES_CHANGED_EVENT, createRoleInputSchema } from '../../contract';
 import type { PermissionData, RoleData } from '../../contract';
 import { createAccessClient } from '../access-client';
 import { useAuthSession } from '../session';
 import { locale, useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
+import { onServerEvent } from '../../../../shared/realtime/browser';
 import { error as errorText, find, issue as issueText, t } from '../locales';
 
 // Keep the page on the auth Feature boundary while reusing its own contracts and client.
@@ -137,6 +138,16 @@ async function loadAccess(): Promise<void> {
   }
 }
 
+// Roles changed elsewhere: refresh the list in place, keeping any open form as it is.
+async function followRoleChanges(): Promise<void> {
+  try {
+    const response = await accessClient.listRoles();
+    if (response.success && response.data) roles.value = response.data.roles;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function resetForm(): void {
   editingRole.value = null;
   roleName.value = '';
@@ -252,6 +263,7 @@ async function confirmDelete(): Promise<void> {
 onMounted(() => {
   void loadAccess();
 });
+onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges()));
 </script>
 
 <template>

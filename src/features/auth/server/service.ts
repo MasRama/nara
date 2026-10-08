@@ -90,8 +90,10 @@ export function liveListener(context: Context): Listener | undefined {
 
 export function endSession(sessionId: string | undefined): void {
   if (!sessionId) return;
+  const owner = findUserBySessionId(sessionId);
   deleteSession(sessionId);
-  sessionEnded(sessionId);
+  if (owner) sessionsChanged([owner.id]);
+  else sessionEnded(sessionId);
 }
 
 export { SESSION_COOKIE_NAME };

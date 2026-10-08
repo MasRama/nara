@@ -209,4 +209,35 @@ describe('live updates in the open tab', () => {
     expect(newest()).toContain('Signed in');
     expect(newest()).toContain(member.id);
   });
+
+  it('lists a device as it signs in and drops it as it signs out', async () => {
+    const account = await register();
+    await openTab(account.cookie, '/security');
+    const devices = () => container.querySelectorAll('[data-testid="session-row"]').length;
+    expect(devices()).toBe(1);
+
+    const phone = await asDevice('', '/api/auth/login', 'POST', { email: account.email, password: PASSWORD });
+    await settle();
+    expect(devices()).toBe(2);
+
+    expect((await asDevice(phone.cookie, '/api/auth/logout', 'POST')).status).toBe(200);
+    await settle();
+    expect(devices()).toBe(1);
+    expect(router.currentRoute.value.name).toBe('security');
+  });
+
+  it("shows another administrator's new role without a reload", async () => {
+    const admin = await register();
+    grantRole(admin.id, 'admin');
+    const colleague = await register();
+    grantRole(colleague.id, 'admin');
+    await openTab(admin.cookie, '/roles');
+    const slug = `live-${randomUUID().slice(0, 8)}`;
+    expect(container.querySelector('[data-testid="role-list"]')?.textContent).not.toContain(slug);
+
+    expect((await asDevice(colleague.cookie, '/api/roles', 'POST', { name: 'Live Editors', slug, permissions: [] })).status).toBe(201);
+    await settle();
+
+    expect(container.querySelector('[data-testid="role-list"]')?.textContent).toContain(slug);
+  });
 });
