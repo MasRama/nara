@@ -39,6 +39,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "tsc --noEmit",
     "check:frontend": "vue-tsc --noEmit -p tsconfig.frontend.json",
+    "nara": "ts-node -r tsconfig-paths/register src/cli/index.ts",
     "architecture:doctor": "npx ts-node -r tsconfig-paths/register src/cli/index.ts doctor",
     "architecture:doctor:build": "node build/src/cli/index.js doctor",
     "check:fast": "npm run check:frontend && npm run test:fast && npm run build && npm run architecture:doctor:build",

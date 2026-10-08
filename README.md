@@ -20,11 +20,13 @@ generate a second, smaller starter shape.
 
 ```bash
 npm run check
-npx nara doctor
-npx nara context health --json
-npx nara add audit
+npm run nara -- doctor
+npm run nara -- context auth --json
+npm run nara -- add audit
 ```
 
+`npm run nara --` runs the CLI from this checkout. Do not use `npx nara`
+before `@nara-web/cli` is published: it resolves an unrelated npm package.
 Nara's architecture analysis is deterministic and does not require an AI
 provider.
 
@@ -52,8 +54,10 @@ authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 `NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
 
 The repository root proves Auth/RBAC (including per-device sessions and TOTP
-two-factor sign-in at `/security`), Users, Activity, assets, storage, and the
-SQLite lifecycle. Additional official capabilities are installed explicitly
+two-factor sign-in at `/security`), Users, Activity, assets, storage, the
+SQLite lifecycle, an interface in English and Indonesian with Feature-owned
+dictionaries, and live updates that sign a tab out, apply permission changes,
+and refresh Activity, sessions, and roles without a reload. Additional official capabilities are installed explicitly
 with `nara add`.
 
 Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves
@@ -69,14 +73,14 @@ src/features/billing/
 ├── contract.ts       # shared boundary types and schemas
 ├── index.ts          # public server/general boundary
 ├── server/           # runtime and persistence
-├── web/              # optional browser surface
+├── web/              # optional browser surface (locales/ holds its text)
 └── tests/            # feature tests
 ```
 
 Cross-feature imports use the target Feature's public boundary:
 
 ```ts
-import { getUser } from '@/features/users';
+import { getCurrentUser } from '@/features/auth';
 ```
 
 Deep cross-feature imports such as `@/features/users/server/repository` are
