@@ -2,6 +2,8 @@ export { securityHeaders } from './headers';
 export { csrfProtection, requestCsrfToken } from './csrf';
 export { createRateLimiter } from './rate-limit';
 export { apiBodyLimit } from './body-limit';
+export { declareRoutePolicies, routePolicyFor } from './route-policy';
+export type { RoutePolicy, RoutePolicyRegistry } from './route-policy';
 export { clientIp } from './ip';
 export { createGuard, forbidden, unauthorized } from './authorization';
 export type { Actor, Guard } from './authorization';

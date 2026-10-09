@@ -3,15 +3,15 @@ import type { Context, Next } from 'hono';
 /**
  * Route-owned API request body budgets. Handlers call `context.req.json()`
  * regardless of the declared media type, so enforcement must not depend on
- * attacker-controlled `Content-Type`: an unrelated endpoint never gains the
- * larger avatar upload budget merely by declaring `multipart/form-data`.
+ * attacker-controlled `Content-Type`: an unrelated endpoint never gains a
+ * larger upload budget merely by declaring `multipart/form-data`.
  *
  * - Every state-changing `/api/` request is bounded by `jsonMaxBytes`
  *   (default 1 MB) regardless of media type.
- * - Only `POST /api/assets/avatar` receives the narrowly larger
- *   `uploadMaxBytes` request budget (5 MB file + 256 KiB framing allowance).
- *   The Feature-level 5 MB file check stays authoritative; this bound only
- *   rejects before `parseBody()` can materialize an arbitrarily large upload.
+ * - `routeBudget` returns the budget a route declared for itself (see
+ *   `RoutePolicy.bodyMaxBytes`); the owning Feature's file checks stay
+ *   authoritative, this bound only rejects before `parseBody()` can
+ *   materialize an arbitrarily large upload.
  *
  * Bodies are bounded without buffering unbounded input: the declared length
  * is checked first, then at most `maxBytes + 1` are streamed from a cloned
@@ -19,22 +19,13 @@ import type { Context, Next } from 'hono';
  */
 export interface ApiBodyLimitOptions {
   jsonMaxBytes: number;
-  uploadMaxBytes: number;
+  routeBudget?: (context: Context) => number | undefined;
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const AVATAR_UPLOAD_PATH = '/api/assets/avatar';
 
 function isApiRequest(context: Context): boolean {
   return new URL(context.req.url).pathname.startsWith('/api/');
-}
-
-/** Only the avatar upload endpoint owns the larger request budget. */
-function isAvatarUpload(context: Context): boolean {
-  return (
-    context.req.method.toUpperCase() === 'POST' &&
-    new URL(context.req.url).pathname === AVATAR_UPLOAD_PATH
-  );
 }
 
 async function exceedsBound(raw: Request, maxBytes: number): Promise<boolean> {
@@ -77,13 +68,13 @@ function declaredExceeds(context: Context, maxBytes: number): boolean {
 }
 
 export function apiBodyLimit(options: ApiBodyLimitOptions) {
-  const { jsonMaxBytes, uploadMaxBytes } = options;
+  const { jsonMaxBytes, routeBudget } = options;
 
   return async function apiBodyLimitMiddleware(context: Context, next: Next): Promise<Response | void> {
     if (!isApiRequest(context)) return next();
     if (SAFE_METHODS.has(context.req.method.toUpperCase())) return next();
     // Route-owned budget: endpoint policy decides, never Content-Type.
-    const maxBytes = isAvatarUpload(context) ? uploadMaxBytes : jsonMaxBytes;
+    const maxBytes = routeBudget?.(context) ?? jsonMaxBytes;
 
     if (declaredExceeds(context, maxBytes)) {
       return payloadTooLarge(context);

@@ -603,19 +603,19 @@ describe('CSRF middleware scope', () => {
 
   it('bounds budgets by route, never by Content-Type', async () => {
     const probe = new Hono();
-    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, uploadMaxBytes: 1024 }));
+    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, routeBudget: (context) => (context.req.path === '/api/upload' ? 1024 : undefined) }));
     probe.post('/api/json', (context) => context.json({ ok: true }));
-    probe.post('/api/assets/avatar', (context) => context.json({ ok: true }));
+    probe.post('/api/upload', (context) => context.json({ ok: true }));
     const blocked = await probe.request('/api/json', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'way too long for eight bytes' }),
     });
     expect(blocked.status).toBe(413);
-    // The avatar endpoint owns the larger request budget.
+    // The route given a budget owns the larger request budget.
     const form = new FormData();
     form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
-    const allowed = await probe.request('/api/assets/avatar', { method: 'POST', body: form });
+    const allowed = await probe.request('/api/upload', { method: 'POST', body: form });
     expect(allowed.status).toBe(200);
     // An unrelated endpoint gains nothing from declaring multipart.
     const smuggled = await probe.request('/api/json', { method: 'POST', body: form });
@@ -746,7 +746,8 @@ describe('request body Content-Type bypass', () => {
 
   it('denies the upload budget to unrelated endpoints declaring multipart', async () => {
     const probe = new Hono();
-    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, uploadMaxBytes: 1024 }));
+    // Only a route that declared a budget gets one; this one declared none.
+    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, routeBudget: (context) => (context.req.path === '/api/assets/avatar' ? 1024 : undefined) }));
     probe.post('/api/upload', (context) => context.json({ ok: true }));
     const form = new FormData();
     form.set('file', new File(['way too long for eight bytes'], 'big.bin'));
@@ -802,7 +803,7 @@ describe('multipart early bound', () => {
   it('enforces the multipart request cap on streamed bodies', async () => {
     const probe = new Hono();
     const cap = 1024;
-    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, uploadMaxBytes: cap }));
+    probe.use('*', apiBodyLimit({ jsonMaxBytes: 8, routeBudget: () => cap }));
     probe.post('/api/assets/avatar', (context) => context.json({ ok: true }));
     const big = new Uint8Array(cap + 512).fill(0x61);
     const stream = new ReadableStream({

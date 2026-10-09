@@ -10,7 +10,7 @@ import {
   type AvatarUploadSuccess,
 } from '../contract';
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
-import { createGuard, type Guard } from '../../../shared/security';
+import { createGuard, type Guard, type RoutePolicy } from '../../../shared/security';
 import type { UsersServerHost } from './host';
 import { announceAccountsChanged } from './live';
 
@@ -193,6 +193,16 @@ const serveAvatarHandlerFor = (host: UsersServerHost) => async (context: Context
     return context.body('Not found', 404);
   }
 };
+
+/**
+ * Mounted next to `createAssetRoutes`. The upload counts toward the strict
+ * per-client limit, and its request budget is the file limit plus a 256 KiB
+ * multipart framing allowance; the file check in the handler stays
+ * authoritative.
+ */
+export const USERS_ASSET_ROUTE_POLICIES = [
+  { method: 'POST', path: '/avatar', sensitive: true, bodyMaxBytes: AVATAR_MAX_FILE_SIZE_BYTES + 256 * 1024 },
+] as const satisfies readonly RoutePolicy[];
 
 /**
  * Avatar HTTP behavior constructed from the same host requirements as the

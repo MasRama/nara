@@ -9,6 +9,8 @@ import {
   apiBodyLimit,
   createRateLimiter,
   csrfProtection,
+  declareRoutePolicies,
+  routePolicyFor,
   securityHeaders,
 } from '../shared/security';
 import { Logger } from '../shared/logging';
@@ -16,6 +18,7 @@ import { closeEventStreams, createEventStream, EVENTS_PATH } from '../shared/rea
 import { handleError } from './error-handler';
 import { requestId, requestLifecycleLog } from './observability';
 import {
+  AUTH_ROUTE_POLICIES,
   createAuthRoutes,
   createAccessRoutes,
   cleanupExpiredSessions,
@@ -34,7 +37,6 @@ import {
   type MigrationFile,
 } from '../shared/database';
 import { pruneExpiredActivity } from '../features/activity';
-import { AVATAR_MAX_FILE_SIZE_BYTES } from '../features/users';
 import composeUsersServer from './bindings/users.server';
 import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
 import { healthRoutes } from '../../official-features/health';
@@ -100,6 +102,9 @@ const spaHandler = frontendBuildAvailable
   : undefined;
 
 export const app = new Hono();
+// Feature routers declare their sensitive routes and body budgets where they
+// are mounted; the middleware below reads those declarations per request.
+const routePolicy = routePolicyFor(app);
 
 const isProductionServer = env.NODE_ENV === 'production';
 
@@ -117,16 +122,18 @@ const globalRateLimiter = createRateLimiter({
   skip: (context) => !isApiRequest(context),
 });
 
-const authRateLimiter = createRateLimiter({
+// One shared bucket for every route a Feature declares sensitive.
+const sensitiveRateLimiter = createRateLimiter({
   maxRequests: env.AUTH_RATE_LIMIT_MAX,
   windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
-  name: 'auth',
+  name: 'sensitive',
+  skip: (context) => !routePolicy.isSensitive(context),
 });
 
 /** Deterministic test reset: clears limiter buckets and login lockout state. */
 export function resetSecurityState(): void {
   globalRateLimiter.reset();
-  authRateLimiter.reset();
+  sensitiveRateLimiter.reset();
   resetLoginThrottle();
 }
 
@@ -143,21 +150,13 @@ app.use('*', securityHeaders({ isProduction: isProductionServer }));
 app.use('*', compress());
 
 app.use('*', globalRateLimiter.middleware);
-app.use('/api/auth/login', authRateLimiter.middleware);
-app.use('/api/auth/register', authRateLimiter.middleware);
-app.use('/api/auth/change-password', authRateLimiter.middleware);
-app.use('/api/auth/logout', authRateLimiter.middleware);
-// Covers the sign-in code step and password-confirmed two-factor management.
-app.use('/api/auth/two-factor/*', authRateLimiter.middleware);
-app.use('/api/assets/avatar', authRateLimiter.middleware);
+app.use('*', sensitiveRateLimiter.middleware);
 app.use('*', csrfProtection({ isProduction: isProductionServer }));
 // Auth decides which of its own routes stay reachable; the prefix matches its mount below.
 app.use('/api/*', passwordChangeGate('/api/auth'));
-// Route-owned body budgets: every state-changing /api/* request is bounded
-// by MAX_JSON_BODY_BYTES regardless of declared Content-Type; only
-// POST /api/assets/avatar owns the narrowly larger upload request budget
-// (the Users avatar limit + 256 KiB framing) with the Feature file check authoritative.
-app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, uploadMaxBytes: AVATAR_MAX_FILE_SIZE_BYTES + 256 * 1024 }));
+// Every state-changing /api/* request is bounded by MAX_JSON_BODY_BYTES
+// regardless of declared Content-Type, unless its route declared a budget.
+app.use('*', apiBodyLimit({ jsonMaxBytes: env.MAX_JSON_BODY_BYTES, routeBudget: routePolicy.bodyBudget }));
 
 app.route('/health', healthRoutes);
 // Feature migration files do not change while the process runs, so they are
@@ -216,6 +215,7 @@ if (staticHandler) {
   });
 }
 
+declareRoutePolicies(app, '/api/auth', AUTH_ROUTE_POLICIES);
 app.route('/api/auth', createAuthRoutes(authActivitySink));
 app.route('/api/roles', createAccessRoutes(authActivitySink));
 composeUsersServer(app, { recordActivity: recordApplicationActivity });

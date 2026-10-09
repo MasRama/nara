@@ -23,6 +23,6 @@ export type {
   UserProfileResponse,
   UsersResponse,
 } from './contract';
-export { createAssetRoutes } from './server/assets-routes';
+export { createAssetRoutes, USERS_ASSET_ROUTE_POLICIES } from './server/assets-routes';
 export type { UsersServerHost } from './server/host';
 export { createUserRoutes } from './server/routes';

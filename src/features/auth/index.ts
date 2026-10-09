@@ -1,4 +1,4 @@
-export { authRoutes, createAuthRoutes } from './server/routes';
+export { AUTH_ROUTE_POLICIES, authRoutes, createAuthRoutes } from './server/routes';
 export {
   createAccountWithRoles,
   deleteAccounts,

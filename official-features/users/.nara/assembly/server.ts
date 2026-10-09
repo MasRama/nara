@@ -17,7 +17,14 @@ import {
   SESSION_COOKIE_NAME,
   updateAccountWithRoles,
 } from '../../features/auth';
-import { createAssetRoutes, createUserRoutes, USERS_PERMISSIONS, type UsersServerHost } from '../../features/users';
+import {
+  createAssetRoutes,
+  createUserRoutes,
+  USERS_ASSET_ROUTE_POLICIES,
+  USERS_PERMISSIONS,
+  type UsersServerHost,
+} from '../../features/users';
+import { declareRoutePolicies } from '../../shared/security';
 import { createLocalAssetStorage } from '../../shared/storage';
 
 // Auth owns the permission rows; it writes the users.<action> slugs at startup.
@@ -76,5 +83,6 @@ export default function composeUsersServer(
   const userRoutes = createUserRoutes(host);
   const assetRoutes = createAssetRoutes(host);
   app.route('/api/users', userRoutes);
+  declareRoutePolicies(app, '/api/assets', USERS_ASSET_ROUTE_POLICIES);
   app.route('/api/assets', assetRoutes);
 }

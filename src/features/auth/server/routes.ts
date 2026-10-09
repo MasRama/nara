@@ -17,7 +17,7 @@ import {
   type RegisterSuccess,
 } from '../contract';
 import { getUserPermissions, getUserRoles } from './access';
-import { clientIp, jsonInput, requestCsrfToken } from '../../../shared/security';
+import { clientIp, jsonInput, requestCsrfToken, type RoutePolicy } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import {
   createUser,
@@ -229,6 +229,16 @@ const logoutHandler = (context: Context, activity?: AuthActivitySink) => {
   }
   return context.json({ success: true as const, message: 'Logout successful' } satisfies AuthSuccess);
 };
+
+/** Credential endpoints share the application's strict per-client limit; paths are relative to the mount. */
+export const AUTH_ROUTE_POLICIES = [
+  { path: '/login', sensitive: true },
+  { path: '/register', sensitive: true },
+  { path: '/change-password', sensitive: true },
+  { path: '/logout', sensitive: true },
+  // The sign-in code step and password-confirmed two-factor management.
+  { path: '/two-factor/*', sensitive: true },
+] as const satisfies readonly RoutePolicy[];
 
 export function createAuthRoutes(activity?: AuthActivitySink) {
   return new Hono()
