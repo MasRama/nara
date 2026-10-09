@@ -4,9 +4,7 @@ import { AUTH_ROLES_CHANGED_EVENT, createRoleInputSchema } from '../../contract'
 import type { PermissionData, RoleData } from '../../contract';
 import { createAccessClient } from '../access-client';
 import { useAuthSession } from '../session';
-import { locale, useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { onServerEvent } from '../../../../shared/realtime/browser';
-import { error as errorText, find, issue as issueText, t } from '../locales';
 
 // Keep the page on the auth Feature boundary while reusing its own contracts and client.
 const authSession = useAuthSession();
@@ -15,10 +13,10 @@ const accessClient = createAccessClient();
 const roles = ref<RoleData[]>([]);
 const permissionsByResource = ref<Record<string, PermissionData[]>>({});
 const isLoading = ref(false);
-const loadError = useLocalText();
+const loadError = ref('');
 const loadForbidden = ref(false);
-const actionError = useLocalText();
-const notice = useLocalText();
+const actionError = ref('');
+const notice = ref('');
 
 const isFormOpen = ref(false);
 const isCreating = ref(false);
@@ -27,8 +25,8 @@ const roleName = ref('');
 const roleSlug = ref('');
 const roleDescription = ref('');
 const selectedPermissions = ref<string[]>([]);
-const formError = useLocalText();
-const fieldErrors = useLocalFieldErrors();
+const formError = ref('');
+const fieldErrors = ref<Record<string, string[]>>({});
 const isSubmitting = ref(false);
 
 const pendingDelete = ref<RoleData | null>(null);
@@ -39,12 +37,12 @@ const canEdit = computed(() => authSession.can('roles.edit'));
 const canDelete = computed(() => authSession.can('roles.delete'));
 const permissionGroups = computed(() => Object.entries(permissionsByResource.value).sort(([left], [right]) => left.localeCompare(right)));
 
-function mapIssues(issues: ValidationIssue[]): LocalFieldErrors {
-  const mapped: LocalFieldErrors = {};
+function mapIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
+  const mapped: Record<string, string[]> = {};
   for (const issue of issues) {
     const key = issue.path.join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(() => issueText(issue));
+    mapped[key].push(issue.message);
   }
   return mapped;
 }
@@ -58,22 +56,8 @@ function humanize(value: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-// Permission rows are English catalog data. Other locales translate the
-// slugs the dictionary knows and keep the stored text for any other one.
-function catalogText(key: string, stored: string): string {
-  return (locale.value === 'en' ? undefined : find(key)) ?? stored;
-}
-
 function resourceLabel(resource: string): string {
-  return find(`permissionGroup.${resource}`) ?? humanize(resource);
-}
-
-function permissionName(permission: PermissionData): string {
-  return catalogText(`permission.${permission.slug}`, permission.name);
-}
-
-function permissionDescription(permission: PermissionData): string {
-  return permission.description ? catalogText(`permissionDescription.${permission.slug}`, permission.description) : '';
+  return humanize(resource);
 }
 
 interface RolePermissionGroup {
@@ -101,7 +85,7 @@ function rolePermissionGroups(role: RoleData): RolePermissionGroup[] {
         .sort((left, right) => rank(left) - rank(right))
         .map((slug) => {
           const action = slug.slice(slug.indexOf('.') + 1);
-          return find(`permissionAction.${action}`) ?? humanize(action);
+          return humanize(action);
         });
       return { resource, label: resourceLabel(resource), actions, full: catalog.length > 0 && catalog.every((slug) => slugs.includes(slug)) };
     });
@@ -119,7 +103,7 @@ async function loadAccess(): Promise<void> {
 
     if (!rolesResponse.success || !rolesResponse.data) {
       loadForbidden.value = !rolesResponse.success && rolesResponse.code === 'FORBIDDEN';
-      if (!loadForbidden.value) loadError.value = () => errorText(rolesResponse);
+      if (!loadForbidden.value) loadError.value = rolesResponse.message;
       roles.value = [];
     } else {
       roles.value = rolesResponse.data.roles;
@@ -128,11 +112,11 @@ async function loadAccess(): Promise<void> {
     if (permissionsResponse.success && permissionsResponse.data) {
       permissionsByResource.value = permissionsResponse.data;
     } else if (!permissionsResponse.success && permissionsResponse.code !== 'FORBIDDEN') {
-      if (!loadError.value) loadError.value = () => errorText(permissionsResponse);
+      if (!loadError.value) loadError.value = permissionsResponse.message;
     }
   } catch (error) {
     console.error(error);
-    loadError.value = () => t('roles.loadFailed');
+    loadError.value = 'Unable to load roles';
   } finally {
     isLoading.value = false;
   }
@@ -198,7 +182,7 @@ async function submitRole(): Promise<void> {
   const parsed = createRoleInputSchema.safeParse(payload);
   if (!parsed.success) {
     fieldErrors.value = mapIssues(parsed.error.issues);
-    formError.value = () => t('common.correctFields');
+    formError.value = 'Please correct the highlighted fields.';
     return;
   }
 
@@ -209,18 +193,18 @@ async function submitRole(): Promise<void> {
       ? await accessClient.createRole(parsed.data)
       : await accessClient.updateRole(editingRole.value?.id ?? '', parsed.data);
     if (!response.success) {
-      formError.value = () => errorText(response);
+      formError.value = response.message;
       fieldErrors.value = response.errors ?? {};
       return;
     }
 
     isFormOpen.value = false;
     resetForm();
-    notice.value = () => (creating ? t('roles.created') : t('roles.updated'));
+    notice.value = (creating ? 'Role created' : 'Role updated');
     await loadAccess();
   } catch (error) {
     console.error(error);
-    formError.value = () => t('roles.form.failed');
+    formError.value = 'Unable to save role';
   } finally {
     isSubmitting.value = false;
   }
@@ -246,15 +230,15 @@ async function confirmDelete(): Promise<void> {
     const response = await accessClient.deleteRoles({ ids: [pendingDelete.value.id] });
     if (!response.success) {
       // PROTECTED_ROLE also answers role edits; this is the delete wording.
-      actionError.value = () => (response.code === 'PROTECTED_ROLE' ? t('roles.delete.protected') : errorText(response));
+      actionError.value = response.message;
       return;
     }
-    notice.value = () => t('roles.deleted');
+    notice.value = 'Roles deleted';
     pendingDelete.value = null;
     await loadAccess();
   } catch (error) {
     console.error(error);
-    actionError.value = () => t('roles.delete.failed');
+    actionError.value = 'Unable to delete role';
   } finally {
     isDeleting.value = false;
   }
@@ -271,31 +255,31 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
     <section class="nara-page-inner">
       <header class="roles-hero">
         <div class="min-w-0">
-          <h1 class="nara-page-title">{{ t('roles.title') }}<span class="nara-page-title-accent">.</span></h1>
-          <p class="nara-page-lede">{{ t('roles.lede') }}</p>
+          <h1 class="nara-page-title">Roles<span class="nara-page-title-accent">.</span></h1>
+          <p class="nara-page-lede">Define role access and assign the permissions each role carries.</p>
         </div>
         <div class="flex items-center gap-3">
           <button v-if="canCreate" type="button" data-testid="create-role" class="roles-primary" @click="openCreate">
             <span class="roles-primary-plus" aria-hidden="true">+</span>
-            {{ t('roles.new') }}
+            New role
           </button>
         </div>
       </header>
 
       <div class="roles-stack nara-page-body">
-        <p v-if="loadForbidden" role="alert" class="roles-alert roles-alert--error">{{ t('roles.forbidden') }}</p>
+        <p v-if="loadForbidden" role="alert" class="roles-alert roles-alert--error">You do not have permission to view roles.</p>
         <p v-if="loadError" role="alert" class="roles-alert roles-alert--error">{{ loadError }}</p>
         <p v-if="actionError" role="alert" class="roles-alert roles-alert--error">{{ actionError }}</p>
         <p v-if="notice" role="status" class="roles-alert roles-alert--ok"><span class="roles-live-dot"></span>{{ notice }}</p>
 
         <section v-if="pendingDelete" class="roles-danger" role="dialog" aria-labelledby="delete-role-title">
           <div class="min-w-0">
-            <h2 id="delete-role-title" class="font-heading text-lg font-extrabold tracking-[-0.03em]">{{ t('roles.delete.title', { name: pendingDelete.name }) }}</h2>
-            <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">{{ t('roles.delete.description') }}</p>
+            <h2 id="delete-role-title" class="font-heading text-lg font-extrabold tracking-[-0.03em]">Delete {{ pendingDelete.name }}?</h2>
+            <p class="mt-1.5 text-sm leading-relaxed text-muted-foreground">Protected roles cannot be deleted by the browser; the server remains authoritative.</p>
           </div>
           <div class="flex shrink-0 gap-2">
-            <button type="button" data-testid="cancel-role-delete" :disabled="isDeleting" class="roles-btn" @click="cancelDelete">{{ t('common.cancel') }}</button>
-            <button type="button" data-testid="confirm-role-delete" :disabled="isDeleting" class="roles-btn roles-btn--danger-solid" @click="confirmDelete">{{ isDeleting ? t('roles.delete.submitting') : t('roles.delete.submit') }}</button>
+            <button type="button" data-testid="cancel-role-delete" :disabled="isDeleting" class="roles-btn" @click="cancelDelete">Cancel</button>
+            <button type="button" data-testid="confirm-role-delete" :disabled="isDeleting" class="roles-btn roles-btn--danger-solid" @click="confirmDelete">{{ isDeleting ? 'Deleting…' : 'Delete role' }}</button>
           </div>
         </section>
 
@@ -305,34 +289,34 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
               <div class="flex items-center gap-4">
                 <span class="roles-badge roles-badge--lg" aria-hidden="true">{{ isCreating ? '+' : (editingRole?.name ?? '').slice(0, 2).toUpperCase() }}</span>
                 <div class="min-w-0">
-                  <h2 id="role-form-title" class="font-heading text-xl font-extrabold tracking-[-0.04em]">{{ isCreating ? t('roles.form.createTitle') : t('roles.form.editTitle') }}</h2>
-                  <p class="mt-0.5 text-sm text-muted-foreground"><span class="roles-mono">{{ selectedPermissions.length }}</span> {{ t('roles.form.selected', { count: selectedPermissions.length }) }}</p>
+                  <h2 id="role-form-title" class="font-heading text-xl font-extrabold tracking-[-0.04em]">{{ isCreating ? 'Create role' : 'Edit role' }}</h2>
+                  <p class="mt-0.5 text-sm text-muted-foreground"><span class="roles-mono">{{ selectedPermissions.length }}</span> {{ selectedPermissions.length === 1 ? 'permission selected' : 'permissions selected' }}</p>
                 </div>
               </div>
-              <button type="button" class="roles-close" :aria-label="t('roles.form.close')" :disabled="isSubmitting" @click="closeForm">×</button>
+              <button type="button" class="roles-close" aria-label="Close" :disabled="isSubmitting" @click="closeForm">×</button>
             </div>
 
             <p v-if="formError" role="alert" class="roles-alert roles-alert--error mt-6">{{ formError }}</p>
             <form class="mt-6 grid gap-5 md:grid-cols-2" data-testid="role-form" @submit.prevent="submitRole">
               <label class="roles-field" for="role-name">
-                {{ t('roles.form.name') }}
+                Name
                 <input id="role-name" v-model="roleName" type="text" class="roles-input" />
                 <span v-if="fieldError('name')" class="roles-error">{{ fieldError('name') }}</span>
               </label>
               <label class="roles-field" for="role-slug">
-                {{ t('roles.form.slug') }}
+                Slug
                 <input id="role-slug" v-model="roleSlug" type="text" class="roles-input roles-mono" />
                 <span v-if="fieldError('slug')" class="roles-error">{{ fieldError('slug') }}</span>
               </label>
               <label class="roles-field md:col-span-2" for="role-description">
-                {{ t('roles.form.description') }}
+                Description
                 <textarea id="role-description" v-model="roleDescription" rows="3" class="roles-input roles-textarea"></textarea>
                 <span v-if="fieldError('description')" class="roles-error">{{ fieldError('description') }}</span>
               </label>
 
               <fieldset class="md:col-span-2">
-                <legend class="roles-field-label">{{ t('roles.form.permissions') }}</legend>
-                <p class="roles-hint mt-1">{{ t('roles.form.permissionsHint') }}</p>
+                <legend class="roles-field-label">Permissions</legend>
+                <p class="roles-hint mt-1">Choose what members of this role can see and do.</p>
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <fieldset v-for="[resource, resourcePermissions] in permissionGroups" :key="resource" class="roles-group">
                     <legend class="sr-only">{{ resourceLabel(resource) }}</legend>
@@ -343,8 +327,8 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
                     <label v-for="permission in resourcePermissions" :key="permission.id" class="roles-perm">
                       <input v-model="selectedPermissions" type="checkbox" :value="permission.slug" :data-permission-slug="permission.slug" />
                       <span class="min-w-0">
-                        <span class="block font-semibold">{{ permissionName(permission) }}</span>
-                        <span v-if="permission.description" class="block text-[12px] font-normal leading-snug text-muted-foreground">{{ permissionDescription(permission) }}</span>
+                        <span class="block font-semibold">{{ permission.name }}</span>
+                        <span v-if="permission.description" class="block text-[12px] font-normal leading-snug text-muted-foreground">{{ permission.description }}</span>
                       </span>
                     </label>
                   </fieldset>
@@ -352,8 +336,8 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
               </fieldset>
 
               <div class="flex items-center gap-3 border-t border-border pt-5 md:col-span-2">
-                <button type="submit" :disabled="isSubmitting" class="roles-primary roles-primary--plain">{{ isSubmitting ? t('roles.form.saving') : isCreating ? t('roles.form.create') : t('roles.form.save') }}</button>
-                <button type="button" :disabled="isSubmitting" class="roles-ghost" @click="closeForm">{{ t('common.cancel') }}</button>
+                <button type="submit" :disabled="isSubmitting" class="roles-primary roles-primary--plain">{{ isSubmitting ? 'Saving…' : isCreating ? 'Create role' : 'Save changes' }}</button>
+                <button type="button" :disabled="isSubmitting" class="roles-ghost" @click="closeForm">Cancel</button>
               </div>
             </form>
           </section>
@@ -361,21 +345,21 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
           <section class="roles-window" aria-labelledby="role-list-title">
             <div class="roles-window-bar">
               <span class="roles-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <h2 id="role-list-title" class="roles-window-title">{{ t('roles.list.title') }}</h2>
-              <span class="roles-count">{{ t('roles.list.count', { count: roles.length }) }}</span>
+              <h2 id="role-list-title" class="roles-window-title">Role directory</h2>
+              <span class="roles-count">{{ roles.length }} {{ roles.length === 1 ? 'role' : 'roles' }}</span>
             </div>
 
-            <p v-if="isLoading" role="status" class="roles-empty">{{ t('roles.list.loading') }}</p>
-            <p v-else-if="roles.length === 0" class="roles-empty">{{ t('roles.list.empty') }}</p>
+            <p v-if="isLoading" role="status" class="roles-empty">Loading roles…</p>
+            <p v-else-if="roles.length === 0" class="roles-empty">No roles are available.</p>
 
             <div v-else class="overflow-x-auto">
               <table class="roles-table" data-testid="role-list">
                 <thead>
                   <tr>
-                    <th scope="col">{{ t('roles.list.role') }}</th>
-                    <th scope="col">{{ t('roles.list.permissions') }}</th>
-                    <th scope="col">{{ t('roles.list.users') }}</th>
-                    <th scope="col" class="text-right">{{ t('roles.list.actions') }}</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Permissions</th>
+                    <th scope="col">Users</th>
+                    <th scope="col" class="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -386,7 +370,7 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
                         <span class="min-w-0">
                           <span class="flex items-center gap-2">
                             <span class="font-heading font-bold tracking-[-0.02em]">{{ role.name }}</span>
-                            <span v-if="role.slug === 'admin'" class="roles-protected">{{ t('roles.list.protected') }}</span>
+                            <span v-if="role.slug === 'admin'" class="roles-protected">Protected</span>
                           </span>
                           <span class="roles-mono block text-[11.5px] text-muted-foreground">{{ role.slug }}</span>
                           <span v-if="role.description" class="mt-1.5 block max-w-xs text-[13px] leading-relaxed text-muted-foreground">{{ role.description }}</span>
@@ -397,19 +381,19 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
                       <ul v-if="role.permissions.length" class="roles-perm-list">
                         <li v-for="group in rolePermissionGroups(role)" :key="group.resource">
                           <span class="roles-perm-resource">{{ group.label }}</span>
-                          <span v-if="group.full" class="roles-perm-full">{{ t('roles.list.fullAccess') }}</span>
+                          <span v-if="group.full" class="roles-perm-full">Full access</span>
                           <span v-else class="roles-perm-actions">{{ group.actions.join(', ') }}</span>
                         </li>
                       </ul>
-                      <span v-else class="text-[13px] text-muted-foreground">{{ t('roles.list.noPermissions') }}</span>
+                      <span v-else class="text-[13px] text-muted-foreground">No permissions</span>
                     </td>
                     <td>
-                      <span class="roles-users"><span data-testid="role-user-count">{{ role.userCount }}</span> {{ t('roles.list.userCount', { count: role.userCount }) }}</span>
+                      <span class="roles-users"><span data-testid="role-user-count">{{ role.userCount }}</span> {{ role.userCount === 1 ? 'user' : 'users' }}</span>
                     </td>
                     <td class="text-right">
                       <div class="flex justify-end gap-2">
-                        <button v-if="canEdit && role.slug !== 'admin'" type="button" :data-testid="`edit-role-${role.id}`" class="roles-btn roles-btn--sm" @click="openEdit(role)">{{ t('roles.list.edit') }}</button>
-                        <button v-if="canDelete && role.slug !== 'admin'" type="button" :data-testid="`delete-role-${role.id}`" class="roles-btn roles-btn--sm roles-btn--danger" @click="requestDelete(role)">{{ t('roles.list.delete') }}</button>
+                        <button v-if="canEdit && role.slug !== 'admin'" type="button" :data-testid="`edit-role-${role.id}`" class="roles-btn roles-btn--sm" @click="openEdit(role)">Edit</button>
+                        <button v-if="canDelete && role.slug !== 'admin'" type="button" :data-testid="`delete-role-${role.id}`" class="roles-btn roles-btn--sm roles-btn--danger" @click="requestDelete(role)">Delete</button>
                       </div>
                     </td>
                   </tr>

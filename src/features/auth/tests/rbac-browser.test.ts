@@ -7,7 +7,6 @@ import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { setLocale } from '../../../shared/i18n';
 import { createAccessClient, useAuthSession } from '../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
@@ -191,7 +190,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await setLocale('en');
   application?.unmount();
   application = undefined;
   await useAuthSession().logout();
@@ -201,7 +199,7 @@ afterEach(async () => {
 });
 
 describe('roles and permissions browser surfaces', () => {
-  it('shows the shipped permission catalog in Indonesian and keeps the stored text in English', async () => {
+  it('shows the shipped permission catalog as stored, grouped by resource', async () => {
     await startAuthenticatedAdmin();
     await mountAt('/roles');
     await settle();
@@ -213,13 +211,6 @@ describe('roles and permissions browser surfaces', () => {
     expect(resetPermission()).toContain('Reset User Passwords');
     expect(resetPermission()).toContain('Reset another account password and revoke its active sessions');
     expect(adminRow()).toContain('Users');
-
-    await setLocale('id');
-    await nextTick();
-    expect(resetPermission()).toContain('Atur ulang kata sandi pengguna');
-    expect(resetPermission()).toContain('Atur ulang kata sandi akun lain dan cabut semua sesi aktifnya');
-    expect(adminRow()).toContain('Pengguna');
-    expect(adminRow()).not.toContain('Users');
   });
 
   it('lists roles with server user counts and persists role permission CRUD', async () => {

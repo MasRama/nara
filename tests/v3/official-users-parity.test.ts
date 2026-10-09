@@ -26,9 +26,6 @@ describe('official Users parity', () => {
     'web/client.ts',
     'web/host.ts',
     'web/index.ts',
-    'web/locales/en.ts',
-    'web/locales/id.ts',
-    'web/locales/index.ts',
     'web/pages/ProfilePage.vue',
     'web/pages/UsersPage.vue',
   ];

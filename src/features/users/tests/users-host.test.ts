@@ -226,7 +226,7 @@ function isAuthSpecifier(specifier: string): boolean {
 
 function isSharedSpecifier(specifier: string): boolean {
   // Only the guaranteed application substrate (shared/database,
-  // shared/config, shared/storage, and shared/i18n) may be imported.
+  // shared/config, and shared/storage) may be imported.
   // Reference-only modules such as logging or security validation must be
   // feature-owned or host-provided instead.
   return specifier.includes('shared/logging') || specifier.includes('shared/security');

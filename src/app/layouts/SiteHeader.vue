@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import LocaleSwitcher from '../../shared/i18n/LocaleSwitcher.vue';
-import { t } from '../locales';
 
 // One floating header frame for the landing page and the authenticated shell.
 // `landing` overlays the hero (fixed, centred links); `app` sits in the page
@@ -11,7 +9,7 @@ withDefaults(defineProps<{ variant?: 'landing' | 'app'; navLabel: string }>(), {
 
 const isDark = ref(document.documentElement.classList.contains('dark'));
 const scrolled = ref(false);
-const themeLabel = computed(() => (isDark.value ? t('header.useLight') : t('header.useDark')));
+const themeLabel = computed(() => (isDark.value ? 'Use light mode' : 'Use dark mode'));
 
 function toggleTheme(): void {
   isDark.value = !isDark.value;
@@ -41,9 +39,9 @@ onBeforeUnmount(() => {
 <template>
   <header class="site-header" :class="[`site-header--${variant}`, { 'site-header--scrolled': scrolled }]">
     <div class="site-header-frame">
-      <RouterLink to="/" class="site-header-brand" :aria-label="t('header.homeLabel')">
+      <RouterLink to="/" class="site-header-brand" aria-label="Nara home">
         <img src="/nara.png" alt="" width="28" height="28" class="site-header-logo" />
-        <span class="site-header-wordmark" translate="no">nara<span class="site-header-dot">.</span></span>
+        <span class="site-header-wordmark">nara<span class="site-header-dot">.</span></span>
       </RouterLink>
 
       <nav v-if="$slots.nav" class="site-header-nav" :aria-label="navLabel">
@@ -52,7 +50,6 @@ onBeforeUnmount(() => {
 
       <div class="site-header-actions">
         <slot name="actions-start" />
-        <LocaleSwitcher />
         <button type="button" class="theme-button site-header-icon" :aria-label="themeLabel" @click="toggleTheme">
           <svg v-if="isDark" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0 4a1 1 0 0 1-1-1v-1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1Zm0-19a1 1 0 0 1-1-1V1a1 1 0 1 1 2 0v1a1 1 0 0 1-1 1ZM3.5 20.5a1 1 0 0 1-.7-1.7l.7-.8a1 1 0 1 1 1.5 1.4l-.8.8a1 1 0 0 1-.7.3Zm15-15a1 1 0 0 1-.7-1.7l.8-.8a1 1 0 0 1 1.4 1.5l-.8.7a1 1 0 0 1-.7.3ZM3 13H2a1 1 0 1 1 0-2h1a1 1 0 1 1 0 2Zm19 0h-1a1 1 0 1 1 0-2h1a1 1 0 1 1 0 2ZM4.3 5.7a1 1 0 0 1-.8-.3l-.7-.8a1 1 0 1 1 1.4-1.4l.8.7a1 1 0 0 1-.7 1.8Zm15 14.8a1 1 0 0 1-.7-.3l-.8-.8a1 1 0 1 1 1.4-1.4l.8.8a1 1 0 0 1-.7 1.7Z" /></svg>
           <svg v-else viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21 14.2A8.5 8.5 0 0 1 9.8 3a8.5 8.5 0 1 0 11.2 11.2Z" /></svg>

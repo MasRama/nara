@@ -2,14 +2,12 @@
 import { computed, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
-import { useLocalText } from '../../shared/i18n';
-import { error as errorText, t } from '../locales';
 import SiteHeader from './SiteHeader.vue';
 
 const authSession = useAuthSession();
 const router = useRouter();
 const isLoggingOut = ref(false);
-const logoutError = useLocalText();
+const logoutError = ref('');
 const user = computed(() => authSession.user.value);
 const canViewUsers = computed(() => authSession.can('users.view'));
 const canViewRoles = computed(() => authSession.can('roles.view'));
@@ -32,13 +30,13 @@ async function logout(): Promise<void> {
   try {
     const response = await authSession.logout();
     if (!response.success) {
-      logoutError.value = () => errorText(response);
+      logoutError.value = response.message;
       return;
     }
     await router.replace({ name: 'login' });
   } catch (error) {
     console.error(error);
-    logoutError.value = () => t('shell.signOutFailed');
+    logoutError.value = 'Unable to sign out';
   } finally {
     isLoggingOut.value = false;
   }
@@ -47,22 +45,22 @@ async function logout(): Promise<void> {
 
 <template>
   <div class="min-h-[100dvh] bg-background font-body text-foreground antialiased selection:bg-primary/20 selection:text-primary">
-    <SiteHeader :nav-label="t('shell.navLabel')">
+    <SiteHeader nav-label="Application navigation">
       <template v-if="authSession.isAuthenticated.value" #nav>
-        <RouterLink to="/dashboard" class="site-header-link" active-class="site-header-link--active">{{ t('shell.nav.dashboard') }}</RouterLink>
-        <RouterLink v-if="canViewUsers" to="/users" class="site-header-link" active-class="site-header-link--active">{{ t('shell.nav.users') }}</RouterLink>
-        <RouterLink v-if="canViewRoles" to="/roles" class="site-header-link" active-class="site-header-link--active">{{ t('shell.nav.roles') }}</RouterLink>
-        <RouterLink v-if="canViewActivity" to="/activity" class="site-header-link" active-class="site-header-link--active">{{ t('shell.nav.activity') }}</RouterLink>
-        <RouterLink to="/profile" class="site-header-link" active-class="site-header-link--active">{{ t('shell.nav.profile') }}</RouterLink>
-        <RouterLink to="/security" class="site-header-link" active-class="site-header-link--active">{{ t('shell.nav.security') }}</RouterLink>
+        <RouterLink to="/dashboard" class="site-header-link" active-class="site-header-link--active">Dashboard</RouterLink>
+        <RouterLink v-if="canViewUsers" to="/users" class="site-header-link" active-class="site-header-link--active">Users</RouterLink>
+        <RouterLink v-if="canViewRoles" to="/roles" class="site-header-link" active-class="site-header-link--active">Roles</RouterLink>
+        <RouterLink v-if="canViewActivity" to="/activity" class="site-header-link" active-class="site-header-link--active">Activity</RouterLink>
+        <RouterLink to="/profile" class="site-header-link" active-class="site-header-link--active">Profile</RouterLink>
+        <RouterLink to="/security" class="site-header-link" active-class="site-header-link--active">Security</RouterLink>
       </template>
       <template #actions>
-        <RouterLink to="/profile" class="site-header-avatar" :aria-label="t('shell.openProfile', { name: user?.name ?? t('shell.yourAccount') })">
-          <img v-if="user?.avatar" :src="user.avatar" :alt="t('shell.avatarAlt', { name: user.name })" />
+        <RouterLink to="/profile" class="site-header-avatar" :aria-label="`Open profile for ${user?.name ?? 'your account'}`">
+          <img v-if="user?.avatar" :src="user.avatar" :alt="`${user.name} avatar`" />
           <span v-else>{{ initials }}</span>
         </RouterLink>
         <button type="button" :disabled="isLoggingOut" class="site-header-link" @click="logout">
-          {{ isLoggingOut ? t('shell.signingOut') : t('shell.signOut') }}
+          {{ isLoggingOut ? 'Signing out…' : 'Sign out' }}
         </button>
       </template>
       <p v-if="logoutError" role="alert" class="mx-auto max-w-[1112px] px-4 pt-3 text-sm text-destructive">

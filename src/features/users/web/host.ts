@@ -26,8 +26,6 @@ export interface UsersPasswordChange {
 export interface UsersPasswordChangeResult {
   success: boolean;
   message: string;
-  /** The provider's refusal code, so Users can show the refusal in the interface language. */
-  code?: string;
   errors?: Record<string, string[]>;
 }
 

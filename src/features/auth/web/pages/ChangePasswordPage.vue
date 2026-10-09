@@ -5,8 +5,6 @@ import { changePasswordInputSchema } from '../../contract';
 import { createAuthClient } from '../client';
 import { useAuthSession } from '../session';
 import AuthPageFrame from '../components/AuthPageFrame.vue';
-import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
-import { error as errorText, issue as issueText, t } from '../locales';
 
 const currentPassword = ref('');
 const newPassword = ref('');
@@ -15,19 +13,19 @@ const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
 const isSubmitting = ref(false);
-const formError = useLocalText();
-const fieldErrors = useLocalFieldErrors();
+const formError = ref('');
+const fieldErrors = ref<Record<string, string[]>>({});
 
 const authClient = createAuthClient();
 const authSession = useAuthSession();
 const router = useRouter();
 
-function mapIssues(issues: ReadonlyArray<ValidationIssue>): LocalFieldErrors {
-  const mapped: LocalFieldErrors = {};
+function mapIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
+  const mapped: Record<string, string[]> = {};
   for (const issue of issues) {
     const key = issue.path.map(String).join('.') || '_root';
     mapped[key] ??= [];
-    mapped[key].push(() => issueText(issue));
+    mapped[key].push(issue.message);
   }
   return mapped;
 }
@@ -43,12 +41,12 @@ async function submit(): Promise<void> {
   });
   if (!parsed.success) {
     fieldErrors.value = mapIssues(parsed.error.issues);
-    formError.value = () => t('common.correctFields');
+    formError.value = 'Please correct the highlighted fields.';
     return;
   }
   if (newPassword.value !== confirmPassword.value) {
-    fieldErrors.value = { confirmPassword: [() => t('common.passwordsMismatch')] };
-    formError.value = () => t('common.correctFields');
+    fieldErrors.value = { confirmPassword: ['Passwords do not match'] };
+    formError.value = 'Please correct the highlighted fields.';
     return;
   }
 
@@ -58,14 +56,14 @@ async function submit(): Promise<void> {
     if (!response.success) {
       fieldErrors.value = response.errors ?? {};
       // This route's INVALID_PASSWORD names the current password, unlike Security's confirmation.
-      formError.value = () => response.code === 'INVALID_PASSWORD' ? t('changePassword.invalidPassword') : errorText(response);
+      formError.value = response.message;
       return;
     }
     await authSession.refresh();
     await router.replace({ name: 'dashboard' });
   } catch (error) {
     console.error(error);
-    formError.value = () => t('changePassword.failed');
+    formError.value = 'Unable to change your password';
   } finally {
     isSubmitting.value = false;
   }
@@ -78,10 +76,10 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <AuthPageFrame :heading="t('changePassword.heading')" :highlight="t('changePassword.highlight')" :description="t('changePassword.description')" :locked="authSession.user.value?.mustChangePassword === true">
+  <AuthPageFrame heading="Change your" highlight="password." description="Set a new password before continuing." :locked="authSession.user.value?.mustChangePassword === true">
       <form class="nara-auth-form" @submit.prevent="submit">
         <label class="nara-auth-field" for="current-password">
-          {{ t('changePassword.currentPassword') }}
+          Current password
           <span class="nara-auth-password-wrap">
             <input
               id="current-password"
@@ -93,15 +91,15 @@ async function logout(): Promise<void> {
               :aria-describedby="fieldErrors.current_password ? 'current-password-error' : undefined"
               class="nara-auth-input nara-auth-input-password"
             />
-            <button type="button" class="nara-auth-show" :aria-label="showCurrentPassword ? t('changePassword.hideCurrent') : t('changePassword.showCurrent')" @click="showCurrentPassword = !showCurrentPassword">
-              {{ showCurrentPassword ? t('common.hide') : t('common.show') }}
+            <button type="button" class="nara-auth-show" :aria-label="showCurrentPassword ? 'Hide current password' : 'Show current password'" @click="showCurrentPassword = !showCurrentPassword">
+              {{ showCurrentPassword ? 'Hide' : 'Show' }}
             </button>
           </span>
           <span v-if="fieldErrors.current_password" id="current-password-error" class="nara-auth-error">{{ fieldErrors.current_password[0] }}</span>
         </label>
 
         <label class="nara-auth-field" for="new-password">
-          {{ t('changePassword.newPassword') }}
+          New password
           <span class="nara-auth-password-wrap">
             <input
               id="new-password"
@@ -113,15 +111,15 @@ async function logout(): Promise<void> {
               :aria-describedby="fieldErrors.new_password ? 'new-password-error' : undefined"
               class="nara-auth-input nara-auth-input-password"
             />
-            <button type="button" class="nara-auth-show" :aria-label="showNewPassword ? t('changePassword.hideNew') : t('changePassword.showNew')" @click="showNewPassword = !showNewPassword">
-              {{ showNewPassword ? t('common.hide') : t('common.show') }}
+            <button type="button" class="nara-auth-show" :aria-label="showNewPassword ? 'Hide new password' : 'Show new password'" @click="showNewPassword = !showNewPassword">
+              {{ showNewPassword ? 'Hide' : 'Show' }}
             </button>
           </span>
           <span v-if="fieldErrors.new_password" id="new-password-error" class="nara-auth-error">{{ fieldErrors.new_password[0] }}</span>
         </label>
 
         <label class="nara-auth-field" for="confirm-password">
-          {{ t('changePassword.confirmPassword') }}
+          Confirm new password
           <span class="nara-auth-password-wrap">
             <input
               id="confirm-password"
@@ -133,8 +131,8 @@ async function logout(): Promise<void> {
               :aria-describedby="fieldErrors.confirmPassword ? 'confirm-password-error' : undefined"
               class="nara-auth-input nara-auth-input-password"
             />
-            <button type="button" class="nara-auth-show" :aria-label="showConfirmPassword ? t('common.hideConfirmation') : t('common.showConfirmation')" @click="showConfirmPassword = !showConfirmPassword">
-              {{ showConfirmPassword ? t('common.hide') : t('common.show') }}
+            <button type="button" class="nara-auth-show" :aria-label="showConfirmPassword ? 'Hide confirmation' : 'Show confirmation'" @click="showConfirmPassword = !showConfirmPassword">
+              {{ showConfirmPassword ? 'Hide' : 'Show' }}
             </button>
           </span>
           <span v-if="fieldErrors.confirmPassword" id="confirm-password-error" class="nara-auth-error">{{ fieldErrors.confirmPassword[0] }}</span>
@@ -143,10 +141,10 @@ async function logout(): Promise<void> {
         <p v-if="formError" role="alert" class="nara-auth-alert">{{ formError }}</p>
 
         <button type="submit" :disabled="isSubmitting" class="nara-auth-submit">
-          {{ isSubmitting ? t('changePassword.submitting') : t('changePassword.submit') }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
+          {{ isSubmitting ? 'Updating password…' : 'Update password' }}<span v-if="!isSubmitting" class="nara-auth-submit-arrow" aria-hidden="true">→</span>
         </button>
         <button type="button" class="nara-auth-quiet-button" @click="logout">
-          {{ t('changePassword.signOut') }}
+          Sign out instead
         </button>
       </form>
   </AuthPageFrame>

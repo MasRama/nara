@@ -571,7 +571,7 @@ describe('users administration browser surfaces', () => {
     await mountAt('/users');
     await settle();
 
-    // The page shows its own translated failure; the host's reason goes to the console.
+    // The page shows its own failure message; the host's reason goes to the console.
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Unable to load roles');
     expect(logged).toHaveBeenCalledWith(expect.objectContaining({ message: 'Role directory unavailable' }));
     await click('[data-testid="create-user"]');

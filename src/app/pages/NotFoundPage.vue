@@ -1,25 +1,24 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router';
-import { t } from '../locales';
 </script>
 
 <template>
   <main class="not-found" data-testid="not-found-page">
     <div class="not-found-inner">
-      <RouterLink to="/" class="not-found-brand" :aria-label="t('notFound.homeLabel')">
+      <RouterLink to="/" class="not-found-brand" aria-label="Nara home">
         <img src="/nara.png" alt="" width="29" height="29" />
-        <span translate="no">nara<b>.</b></span>
+        <span>nara<b>.</b></span>
       </RouterLink>
       <div class="not-found-copy">
-        <p class="not-found-index">{{ t('notFound.index') }}</p>
+        <p class="not-found-index">404 / UNKNOWN ROUTE</p>
         <span class="not-found-number" aria-hidden="true">404<span>.</span></span>
-        <h1>{{ t('notFound.titleStart') }} <em>{{ t('notFound.titleEmphasis') }}</em></h1>
-        <p>{{ t('notFound.copy') }}</p>
-        <RouterLink to="/" class="not-found-action">{{ t('notFound.action') }} <span aria-hidden="true">↗</span></RouterLink>
+        <h1>Page <em>not found.</em></h1>
+        <p>This route doesn't exist in this application. The rest of your workspace is still right where you left it.</p>
+        <RouterLink to="/" class="not-found-action">Return home <span aria-hidden="true">↗</span></RouterLink>
       </div>
       <footer class="not-found-footer">
-        <span>{{ t('notFound.footerStart') }}</span>
-        <span>{{ t('notFound.footerEnd') }}</span>
+        <span>YOUR CODE. YOUR BOUNDARIES.</span>
+        <span>NARA / APPLICATION KIT</span>
       </footer>
     </div>
   </main>

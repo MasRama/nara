@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { formatDate, useLocalText } from '../../../../shared/i18n';
 import { onServerEvent } from '../../../../shared/realtime/browser';
 import { ACTIVITY_RECORDED_EVENT, type ActivityRecord } from '../../contract';
 import { createActivityClient } from '../client';
-import { error as errorText, find, t } from '../locales';
 
 const client = createActivityClient();
 const activities = ref<ActivityRecord[]>([]);
@@ -12,7 +10,7 @@ const total = ref(0);
 const page = ref(1);
 const limit = 20;
 const isLoading = ref(false);
-const errorMessage = useLocalText();
+const errorMessage = ref('');
 const actionFilter = ref('');
 const actorFilter = ref('');
 const fromDate = ref('');
@@ -21,28 +19,28 @@ const toDate = ref('');
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)));
 const hasFilters = computed(() => Boolean(actionFilter.value || actorFilter.value || fromDate.value || toDate.value));
 
-// Labels for the actions recorded by the shipped features live at `action.<slug>`;
-// unknown actions fall back to a generic phrase.
-const knownActions = [
-  'auth.registered',
-  'auth.login',
-  'auth.logout',
-  'auth.password-changed',
-  'auth.session-revoked',
-  'auth.sessions-revoked',
-  'auth.two-factor-enabled',
-  'auth.two-factor-disabled',
-  'auth.recovery-codes-regenerated',
-  'users.created',
-  'users.updated',
-  'users.profile-updated',
-  'users.password-reset',
-  'users.deleted',
-  'roles.created',
-  'roles.updated',
-  'roles.deleted',
-];
-const actionOptions = computed(() => knownActions.map((slug) => [slug, actionLabel(slug)] as const));
+// Labels for the actions recorded by the shipped features; unknown actions
+// fall back to a generic phrase.
+const ACTION_LABELS: Record<string, string> = {
+  'auth.registered': 'Account registered',
+  'auth.login': 'Signed in',
+  'auth.logout': 'Signed out',
+  'auth.password-changed': 'Password changed',
+  'auth.session-revoked': 'Session signed out',
+  'auth.sessions-revoked': 'Other sessions signed out',
+  'auth.two-factor-enabled': 'Two-factor turned on',
+  'auth.two-factor-disabled': 'Two-factor turned off',
+  'auth.recovery-codes-regenerated': 'Recovery codes regenerated',
+  'users.created': 'User created',
+  'users.updated': 'User updated',
+  'users.profile-updated': 'Profile updated',
+  'users.password-reset': 'Password reset',
+  'users.deleted': 'User deleted',
+  'roles.created': 'Role created',
+  'roles.updated': 'Role updated',
+  'roles.deleted': 'Role deleted',
+};
+const actionOptions = Object.entries(ACTION_LABELS);
 
 type Tone = 'create' | 'delete' | 'auth' | 'update';
 
@@ -51,7 +49,7 @@ function capitalize(value: string): string {
 }
 
 function actionLabel(action: string): string {
-  return find(`action.${action}`) ?? capitalize(action.replace(/[.\-_]+/g, ' ').trim());
+  return ACTION_LABELS[action] ?? capitalize(action.replace(/[.\-_]+/g, ' ').trim());
 }
 
 function actionTone(action: string): Tone {
@@ -76,9 +74,9 @@ function dayLabel(value: number): string {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (day.toDateString() === today.toDateString()) return t('feed.today');
-  if (day.toDateString() === yesterday.toDateString()) return t('feed.yesterday');
-  return formatDate(day, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  if (day.toDateString() === today.toDateString()) return 'Today';
+  if (day.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return day.toLocaleDateString('en', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 const groupedActivities = computed(() => {
@@ -95,7 +93,7 @@ const groupedActivities = computed(() => {
 function metadataEntries(activity: ActivityRecord): Array<[string, string]> {
   return Object.entries(activity.metadata).map(([key, value]) => [
     capitalize(key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[-_]+/g, ' ').toLowerCase()),
-    typeof value === 'boolean' ? (value ? t('feed.yes') : t('feed.no')) : String(value),
+    typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value),
   ]);
 }
 
@@ -112,7 +110,7 @@ async function load(nextPage = page.value): Promise<void> {
       to: dateBoundary(toDate.value, true),
     });
     if (!response.success) {
-      errorMessage.value = () => errorText(response);
+      errorMessage.value = response.message;
       return;
     }
     activities.value = response.data.activities;
@@ -120,7 +118,7 @@ async function load(nextPage = page.value): Promise<void> {
     page.value = response.data.page;
   } catch (error) {
     console.error(error);
-    errorMessage.value = () => t('feed.loadFailed');
+    errorMessage.value = 'Unable to load activity';
   } finally {
     isLoading.value = false;
     if (refreshQueued && page.value === 1) {
@@ -160,52 +158,52 @@ onUnmounted(onServerEvent(ACTIVITY_RECORDED_EVENT, followLiveActivity));
     <section class="nara-page-inner">
       <header class="act-hero">
         <div class="min-w-0">
-          <h1 class="nara-page-title">{{ t('page.title') }}<span class="nara-page-title-accent">.</span></h1>
-          <p class="nara-page-lede">{{ t('page.lede') }}</p>
+          <h1 class="nara-page-title">Activity<span class="nara-page-title-accent">.</span></h1>
+          <p class="nara-page-lede">Sign-ins and admin changes in this app. Sensitive request data is never stored here.</p>
         </div>
-        <span class="act-total"><span class="act-live-dot"></span>{{ t('page.total', { count: total }) }}</span>
+        <span class="act-total"><span class="act-live-dot"></span>{{ total }} {{ total === 1 ? 'event' : 'events' }}</span>
       </header>
 
       <div class="act-stack nara-page-body">
-        <form class="act-filters" :aria-label="t('filters.label')" @submit.prevent="applyFilters">
+        <form class="act-filters" aria-label="Filter activity" @submit.prevent="applyFilters">
           <label class="act-field act-field--wide" for="activity-action">
-            <span>{{ t('filters.action') }}</span>
-            <input id="activity-action" v-model="actionFilter" list="activity-action-options" :placeholder="t('filters.actionPlaceholder')" autocomplete="off" />
+            <span>Action</span>
+            <input id="activity-action" v-model="actionFilter" list="activity-action-options" placeholder="Any action" autocomplete="off" />
             <datalist id="activity-action-options">
               <option v-for="[slug, label] in actionOptions" :key="slug" :value="slug">{{ label }}</option>
             </datalist>
           </label>
           <label class="act-field act-field--wide" for="activity-actor">
-            <span>{{ t('filters.actor') }}</span>
-            <input id="activity-actor" v-model="actorFilter" :placeholder="t('filters.actorPlaceholder')" autocomplete="off" />
+            <span>Actor ID</span>
+            <input id="activity-actor" v-model="actorFilter" placeholder="Anyone" autocomplete="off" />
           </label>
           <label class="act-field" for="activity-from">
-            <span>{{ t('filters.from') }}</span>
+            <span>From</span>
             <input id="activity-from" v-model="fromDate" type="date" />
           </label>
           <label class="act-field" for="activity-to">
-            <span>{{ t('filters.to') }}</span>
+            <span>To</span>
             <input id="activity-to" v-model="toDate" type="date" />
           </label>
           <div class="act-filter-actions">
-            <button v-if="hasFilters" type="button" :disabled="isLoading" class="act-ghost" @click="clearFilters">{{ t('filters.clear') }}</button>
-            <button type="submit" :disabled="isLoading" class="act-submit">{{ t('filters.apply') }}</button>
+            <button v-if="hasFilters" type="button" :disabled="isLoading" class="act-ghost" @click="clearFilters">Clear</button>
+            <button type="submit" :disabled="isLoading" class="act-submit">Filter</button>
           </div>
         </form>
 
         <p v-if="errorMessage" role="alert" class="act-alert">{{ errorMessage }}</p>
 
-        <section class="act-window" :aria-label="t('feed.label')">
+        <section class="act-window" aria-label="Activity feed">
           <div class="act-window-bar">
             <span class="act-dots" aria-hidden="true"><span></span><span></span><span></span></span>
-            <span class="act-window-title">{{ t('feed.title') }}</span>
-            <span class="act-page">{{ t('feed.page', { page, pages: totalPages }) }}</span>
+            <span class="act-window-title">Event log</span>
+            <span class="act-page">Page {{ page }} / {{ totalPages }}</span>
           </div>
 
-          <div v-if="isLoading && activities.length === 0" class="act-empty">{{ t('feed.loading') }}</div>
+          <div v-if="isLoading && activities.length === 0" class="act-empty">Loading activity…</div>
           <div v-else-if="activities.length === 0" class="act-empty">
-            <p class="font-heading text-lg font-extrabold tracking-[-0.03em] text-foreground">{{ t('feed.empty') }}</p>
-            <p class="mt-1.5">{{ hasFilters ? t('feed.emptyFiltered') : t('feed.emptyHint') }}</p>
+            <p class="font-heading text-lg font-extrabold tracking-[-0.03em] text-foreground">No activity found</p>
+            <p class="mt-1.5">{{ hasFilters ? 'Try widening the filters.' : 'Events will appear here after sign-ins or admin changes.' }}</p>
           </div>
 
           <div v-else class="act-feed">
@@ -217,11 +215,11 @@ onUnmounted(onServerEvent(ACTIVITY_RECORDED_EVENT, followLiveActivity));
                   <div class="act-event-body">
                     <div class="act-event-head">
                       <p class="act-event-title">{{ actionLabel(activity.action) }}</p>
-                      <time class="act-time" :datetime="new Date(activity.occurredAt).toISOString()">{{ formatDate(activity.occurredAt, { timeStyle: 'short' }) }}</time>
+                      <time class="act-time" :datetime="new Date(activity.occurredAt).toISOString()">{{ new Date(activity.occurredAt).toLocaleTimeString('en', { timeStyle: 'short' }) }}</time>
                     </div>
                     <p class="act-event-target">
-                      <span class="text-foreground">{{ activity.targetLabel || activity.targetId || t('feed.application') }}</span>
-                      <template v-if="activity.actorId"> · {{ t('feed.by') }} <code class="act-mono">{{ activity.actorId }}</code></template>
+                      <span class="text-foreground">{{ activity.targetLabel || activity.targetId || 'Application' }}</span>
+                      <template v-if="activity.actorId"> · by <code class="act-mono">{{ activity.actorId }}</code></template>
                     </p>
                     <dl v-if="metadataEntries(activity).length" class="act-meta">
                       <div v-for="entry in metadataEntries(activity)" :key="entry[0]">
@@ -236,8 +234,8 @@ onUnmounted(onServerEvent(ACTIVITY_RECORDED_EVENT, followLiveActivity));
           </div>
 
           <div class="act-pager">
-            <button type="button" :disabled="page <= 1 || isLoading" class="act-btn" @click="load(page - 1)">{{ t('feed.previous') }}</button>
-            <button type="button" :disabled="page >= totalPages || isLoading" class="act-btn" @click="load(page + 1)">{{ t('feed.next') }}</button>
+            <button type="button" :disabled="page <= 1 || isLoading" class="act-btn" @click="load(page - 1)">← Previous</button>
+            <button type="button" :disabled="page >= totalPages || isLoading" class="act-btn" @click="load(page + 1)">Next →</button>
           </div>
         </section>
       </div>

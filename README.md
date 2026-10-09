@@ -55,8 +55,7 @@ authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 
 The repository root proves Auth/RBAC (including per-device sessions and TOTP
 two-factor sign-in at `/security`), Users, Activity, assets, storage, the
-SQLite lifecycle, an interface in English and Indonesian with Feature-owned
-dictionaries, and live updates that sign a tab out, apply permission changes,
+SQLite lifecycle, and live updates that sign a tab out, apply permission changes,
 and refresh Activity, sessions, and roles without a reload. Additional official capabilities are installed explicitly
 with `nara add`.
 
@@ -73,7 +72,7 @@ src/features/billing/
 ├── contract.ts       # shared boundary types and schemas
 ├── index.ts          # public server/general boundary
 ├── server/           # runtime and persistence
-├── web/              # optional browser surface (locales/ holds its text)
+├── web/              # optional browser surface
 └── tests/            # feature tests
 ```
 

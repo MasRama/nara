@@ -59,12 +59,7 @@ export const usersWebHost: UsersWebHost = {
       new_password: input.newPassword,
     });
     if (response.success) return { success: true as const, message: response.message };
-    return {
-      success: false as const,
-      message: response.message,
-      code: response.code,
-      errors: translatePasswordErrors(response.errors),
-    };
+    return { success: false as const, message: response.message, errors: translatePasswordErrors(response.errors) };
   },
 };
 

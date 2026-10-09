@@ -10,7 +10,6 @@ import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/se
 import { createAuthSession, useAuthSession, type AuthClient, type CurrentUser } from '../web';
 import { createSecurityClient } from '../web/security-client';
 import { totpCode, totpStep } from '../server/totp';
-import { locale, setLocale } from '../../../shared/i18n';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 
@@ -175,7 +174,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await setLocale('en');
   application?.unmount();
   application = undefined;
   await useAuthSession().logout();
@@ -275,41 +273,6 @@ describe('browser authentication lifecycle', () => {
     expect(router.currentRoute.value.name).toBe('login');
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('Invalid email or password');
     expect(useAuthSession().status.value).toBe('unauthenticated');
-  });
-
-  it('switches the login page to Indonesian, remembers the choice, and translates refusals by code', async () => {
-    const email = `login-locale-${Date.now()}@example.com`;
-    await registerDirect(email);
-    await useAuthSession().logout();
-    await mountAt('/login');
-
-    const switcher = container.querySelector<HTMLSelectElement>('select[aria-label="Language / Bahasa"]');
-    if (!switcher) throw new Error('Missing locale switcher');
-    expect(container.querySelector('h1')?.textContent).toContain('Welcome');
-
-    switcher.value = 'id';
-    switcher.dispatchEvent(new Event('change', { bubbles: true }));
-    await vi.waitFor(() => expect(locale.value).toBe('id'));
-    await nextTick();
-
-    expect(container.querySelector('h1')?.textContent).toContain('Selamat datang');
-    expect(container.querySelector('button[type="submit"]')?.textContent).toContain('Masuk');
-    expect(document.documentElement.lang).toBe('id');
-    expect(localStorage.getItem('nara-locale')).toBe('id');
-
-    setInput('#email', email);
-    setInput('#password', 'wrong password');
-    submitForm();
-    await settle();
-
-    const alert = () => container.querySelector('[role="alert"]')?.textContent ?? '';
-    expect(alert()).toContain('Email atau kata sandi salah');
-    expect(alert()).not.toContain('Invalid email or password');
-
-    // A refusal already on screen follows the next switch.
-    await setLocale('en');
-    await nextTick();
-    expect(alert()).toContain('Invalid email or password');
   });
 
   it('bootstraps an existing session once and resolves missing or expired sessions as guests', async () => {

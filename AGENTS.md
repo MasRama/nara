@@ -11,7 +11,7 @@ Authority: user instruction → this file → [`ARCHITECTURE.md`](./ARCHITECTURE
 ```text
 src/features/<feature>/   contract.ts · index.ts · server/ · web/ (optional) · tests/
 src/app/                  server.ts · router.ts · App.vue · pages/ · layouts/
-src/shared/               config/ · database/ · i18n/ · logging/ · security/
+src/shared/               config/ · database/ · logging/ · security/
 resources/app.ts          thin Vite entry mounting the app shell
 official-features/        installable open-code features (health, audit, users)
 ```
@@ -28,7 +28,7 @@ official-features/        installable open-code features (health, audit, users)
 - Browser code under `web/` must not import `server/` files, `@/shared/database`, Node-only built-ins, or server-only packages.
 - Server is authoritative: enforce auth/permissions in Hono routes, never only in Vue. Permission slugs are `<resource>.<action>`; `admin` bypasses where the route requires it.
 - Responses use `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`, English messages, Zod validation at the route boundary via `jsonInput`/`queryInput` (401 auth, 403 permission, 404 absent, 409 conflict, 422 validation).
-- Interface text lives in the owning feature's `web/locales/` (app pages and shell: `src/app/locales/`), never inline in templates; `en.ts` is the source of truth and every locale matches its keys. The UI translates API refusals by `code`.
+- Interface text is English and lives in the page's template. The UI shows API refusals by `message` and branches on `code`, never on message text.
 - SQL lives in the owning feature's repository via `better-sqlite3` prepared statements; multi-write replacements use transactions. No ORM, no string-interpolated values.
 - Locked stack: do not replace Hono, add a frontend framework (React/Svelte/Nuxt/SSR), add a native HTTP engine (Ultimate Express/uWebSockets.js), or wrap Hono/Vue behind a custom Nara abstraction. New dependency genuinely required → prefer the existing stack or standard library and update the actual package manifest (`package.json`). If it changes current architecture, update `ARCHITECTURE.md`; otherwise keep rationale close to the code or test that enforces it.
 - No overengineering: no speculative abstractions, plugin systems, caches, DI containers, RPC/ORM/validation frameworks, or duplicated architecture metadata. Keep changes scoped; no mass-formatting, no unrelated refactors, no secrets, no force-push.

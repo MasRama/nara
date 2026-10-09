@@ -9,10 +9,8 @@ import {
   profileInputSchema,
 } from '../../contract';
 import type { UserProfile } from '../../contract';
-import { useLocalFieldErrors, useLocalText, type LocalFieldErrors, type ValidationIssue } from '../../../../shared/i18n';
 import { createUsersClient } from '../client';
 import type { UsersWebHost } from '../host';
-import { error as errorText, issue as issueText, t } from '../locales';
 
 const passwordChangeInputSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -35,17 +33,17 @@ const profileLoading = ref(true);
 const profileSaving = ref(false);
 const passwordSaving = ref(false);
 const avatarSaving = ref(false);
-const profileLoadError = useLocalText();
-const profileError = useLocalText();
-const profileNotice = useLocalText();
-const passwordError = useLocalText();
-const passwordNotice = useLocalText();
-const avatarError = useLocalText();
-const avatarNotice = useLocalText();
-const profileErrors = useLocalFieldErrors();
-const passwordErrors = useLocalFieldErrors();
+const profileLoadError = ref('');
+const profileError = ref('');
+const profileNotice = ref('');
+const passwordError = ref('');
+const passwordNotice = ref('');
+const avatarError = ref('');
+const avatarNotice = ref('');
+const profileErrors = ref<Record<string, string[]>>({});
+const passwordErrors = ref<Record<string, string[]>>({});
 
-const displayName = computed(() => profile.value?.name || props.host.currentSessionUser()?.name || t('profile.fallbackName'));
+const displayName = computed(() => profile.value?.name || props.host.currentSessionUser()?.name || 'Your account');
 const initials = computed(() => {
   const value = displayName.value.trim();
   return value
@@ -57,12 +55,12 @@ const initials = computed(() => {
 });
 const avatarUrl = computed(() => profile.value?.avatar || props.host.currentSessionUser()?.avatar || '');
 
-function errorsFromIssues(issues: ReadonlyArray<ValidationIssue>): LocalFieldErrors {
-  const errors: LocalFieldErrors = {};
+function errorsFromIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
+  const errors: Record<string, string[]> = {};
   for (const issue of issues) {
     const key = issue.path.map(String).join('.') || '_root';
     errors[key] ??= [];
-    errors[key].push(() => issueText(issue));
+    errors[key].push(issue.message);
   }
   return errors;
 }
@@ -96,10 +94,10 @@ async function loadProfile(): Promise<void> {
         return;
       }
     }
-    profileLoadError.value = () => errorText(response);
+    profileLoadError.value = response.message;
   } catch (error) {
     console.error(error);
-    profileLoadError.value = () => t('profile.loadFailed');
+    profileLoadError.value = 'Unable to load your profile';
   } finally {
     profileLoading.value = false;
   }
@@ -113,7 +111,7 @@ async function saveProfile(): Promise<void> {
   const parsed = profileInputSchema.safeParse({ name: name.value.trim(), email: email.value.trim() });
   if (!parsed.success) {
     profileErrors.value = errorsFromIssues(parsed.error.issues);
-    profileError.value = () => t('profile.details.invalid');
+    profileError.value = 'Please correct the highlighted profile fields.';
     return;
   }
 
@@ -122,15 +120,15 @@ async function saveProfile(): Promise<void> {
     const response = await usersClient.updateProfile(parsed.data);
     if (!response.success) {
       profileErrors.value = response.errors ?? {};
-      profileError.value = () => errorText(response);
+      profileError.value = response.message;
       return;
     }
 
     setSessionUser(response.data.user);
-    profileNotice.value = () => t('profile.details.saved');
+    profileNotice.value = 'Profile changes saved.';
   } catch (error) {
     console.error(error);
-    profileError.value = () => t('profile.details.failed');
+    profileError.value = 'Unable to save your profile';
   } finally {
     profileSaving.value = false;
   }
@@ -147,12 +145,12 @@ async function changePassword(): Promise<void> {
   });
   if (!parsed.success) {
     passwordErrors.value = errorsFromIssues(parsed.error.issues);
-    passwordError.value = () => t('profile.password.invalid');
+    passwordError.value = 'Please correct the highlighted password fields.';
     return;
   }
   if (newPassword.value !== confirmPassword.value) {
-    passwordErrors.value = { confirmPassword: [() => t('profile.password.mismatch')] };
-    passwordError.value = () => t('profile.password.invalid');
+    passwordErrors.value = { confirmPassword: ['Passwords do not match'] };
+    passwordError.value = 'Please correct the highlighted password fields.';
     return;
   }
 
@@ -164,17 +162,17 @@ async function changePassword(): Promise<void> {
     });
     if (!response.success) {
       passwordErrors.value = response.errors ?? {};
-      passwordError.value = () => errorText(response);
+      passwordError.value = response.message;
       return;
     }
 
     currentPassword.value = '';
     newPassword.value = '';
     confirmPassword.value = '';
-    passwordNotice.value = () => t('profile.password.updated');
+    passwordNotice.value = 'Password updated';
   } catch (error) {
     console.error(error);
-    passwordError.value = () => t('profile.password.failed');
+    passwordError.value = 'Unable to change your password';
   } finally {
     passwordSaving.value = false;
   }
@@ -189,12 +187,12 @@ async function handleAvatarChange(event: Event): Promise<void> {
   avatarError.value = '';
   avatarNotice.value = '';
   if (!AVATAR_ALLOWED_MIME_TYPES.some((type) => type === file.type)) {
-    avatarError.value = () => t('profile.photo.wrongType');
+    avatarError.value = 'Choose a JPEG, PNG, GIF, or WebP image.';
     input.value = '';
     return;
   }
   if (file.size > AVATAR_MAX_FILE_SIZE_BYTES) {
-    avatarError.value = () => t('profile.photo.tooLarge', { size: AVATAR_MAX_FILE_SIZE_MB });
+    avatarError.value = `Choose an image smaller than ${AVATAR_MAX_FILE_SIZE_MB}MB.`;
     input.value = '';
     return;
   }
@@ -203,10 +201,7 @@ async function handleAvatarChange(event: Event): Promise<void> {
   try {
     const response = await usersClient.uploadAvatar(file);
     if (!response.success) {
-      avatarError.value = () =>
-        response.code === 'FILE_TOO_LARGE'
-          ? t('profile.photo.serverTooLarge', { size: AVATAR_MAX_FILE_SIZE_MB })
-          : errorText(response);
+      avatarError.value = response.message;
       return;
     }
 
@@ -214,10 +209,10 @@ async function handleAvatarChange(event: Event): Promise<void> {
     if (currentUser) {
       setSessionUser({ ...currentUser, avatar: response.data.url });
     }
-    avatarNotice.value = () => t('profile.photo.updated');
+    avatarNotice.value = 'Profile photo updated.';
   } catch (error) {
     console.error(error);
-    avatarError.value = () => t('profile.photo.failed');
+    avatarError.value = 'Unable to update your profile photo';
   } finally {
     avatarSaving.value = false;
     input.value = '';
@@ -233,33 +228,33 @@ onMounted(() => {
   <main class="nara-page">
     <section class="nara-page-inner">
       <header>
-        <h1 class="nara-page-title">{{ t('profile.title') }}<span class="nara-page-title-accent">.</span></h1>
-        <p class="nara-page-lede">{{ t('profile.lede') }}</p>
+        <h1 class="nara-page-title">Your profile<span class="nara-page-title-accent">.</span></h1>
+        <p class="nara-page-lede">Keep your personal details, profile photo, and sign-in access up to date.</p>
       </header>
 
-      <p v-if="profileLoading" role="status" class="prof-alert prof-alert--muted nara-page-body">{{ t('profile.loading') }}</p>
+      <p v-if="profileLoading" role="status" class="prof-alert prof-alert--muted nara-page-body">Loading profile…</p>
       <p v-if="profileLoadError" role="alert" class="prof-alert prof-alert--error nara-page-body">{{ profileLoadError }}</p>
 
       <template v-if="profile">
         <div class="prof-settings nara-page-body">
           <section class="prof-row" aria-labelledby="photo-title">
             <div class="prof-row-intro">
-              <h2 id="photo-title" class="prof-row-title">{{ t('profile.photo.title') }}</h2>
-              <p class="prof-row-desc">{{ t('profile.photo.hint', { size: AVATAR_MAX_FILE_SIZE_MB }) }}</p>
+              <h2 id="photo-title" class="prof-row-title">Profile photo</h2>
+              <p class="prof-row-desc">JPEG, PNG, GIF, or WebP up to {{ AVATAR_MAX_FILE_SIZE_MB }}MB.</p>
             </div>
             <div class="prof-row-body">
               <div class="prof-photo">
-                <label for="avatar-file" :class="['prof-avatar', { 'prof-avatar--busy': avatarSaving }]" :title="avatarSaving ? t('profile.photo.uploading') : t('profile.photo.change')">
-                  <img v-if="avatarUrl" data-testid="profile-avatar" :src="avatarUrl" :alt="t('profile.photo.alt', { name: displayName })" />
+                <label for="avatar-file" :class="['prof-avatar', { 'prof-avatar--busy': avatarSaving }]" :title="avatarSaving ? 'Uploading…' : 'Change profile photo'">
+                  <img v-if="avatarUrl" data-testid="profile-avatar" :src="avatarUrl" :alt="`${displayName} avatar`" />
                   <span v-else data-testid="profile-avatar-fallback">{{ initials }}</span>
-                  <span class="prof-avatar-overlay" aria-hidden="true">{{ avatarSaving ? '…' : t('profile.photo.overlay') }}</span>
+                  <span class="prof-avatar-overlay" aria-hidden="true">{{ avatarSaving ? '…' : 'Change' }}</span>
                 </label>
                 <div class="min-w-0 flex-1">
                   <p class="prof-name font-heading">{{ displayName }}</p>
                   <p class="prof-email">{{ profile.email }}</p>
                 </div>
                 <label for="avatar-file" :class="['prof-btn', { 'pointer-events-none opacity-60': avatarSaving }]">
-                  {{ avatarSaving ? t('profile.photo.uploading') : t('profile.photo.change') }}
+                  {{ avatarSaving ? 'Uploading…' : 'Change profile photo' }}
                 </label>
                 <input id="avatar-file" type="file" :accept="AVATAR_ALLOWED_MIME_TYPES.join(',')" class="sr-only" :disabled="avatarSaving" @change="handleAvatarChange" />
               </div>
@@ -270,47 +265,47 @@ onMounted(() => {
 
           <section class="prof-row" aria-labelledby="personal-title">
             <div class="prof-row-intro">
-              <h2 id="personal-title" class="prof-row-title">{{ t('profile.details.title') }}</h2>
-              <p class="prof-row-desc">{{ t('profile.details.lede') }}</p>
+              <h2 id="personal-title" class="prof-row-title">Personal information</h2>
+              <p class="prof-row-desc">How your name and email appear across the app.</p>
             </div>
             <form class="prof-row-body" data-testid="profile-form" @submit.prevent="saveProfile">
               <div class="prof-field">
-                <label for="name">{{ t('profile.details.name') }}</label>
+                <label for="name">Full name</label>
                 <input id="name" v-model="name" name="name" type="text" autocomplete="name" class="prof-input" :aria-invalid="Boolean(profileErrors.name)" :aria-describedby="profileErrors.name ? 'name-error' : undefined" />
                 <p v-if="profileErrors.name" id="name-error" class="prof-error">{{ profileErrors.name[0] }}</p>
               </div>
               <div class="prof-field">
-                <label for="email">{{ t('profile.details.email') }}</label>
+                <label for="email">Email address</label>
                 <input id="email" v-model="email" name="email" type="email" autocomplete="email" class="prof-input" :aria-invalid="Boolean(profileErrors.email)" :aria-describedby="profileErrors.email ? 'email-error' : undefined" />
                 <p v-if="profileErrors.email" id="email-error" class="prof-error">{{ profileErrors.email[0] }}</p>
               </div>
               <div class="prof-actions">
                 <p v-if="profileError" role="alert" class="prof-msg prof-msg--error">{{ profileError }}</p>
                 <p v-if="profileNotice" role="status" class="prof-msg prof-msg--ok"><span class="prof-dot"></span>{{ profileNotice }}</p>
-                <button type="submit" :disabled="profileSaving" class="prof-primary">{{ profileSaving ? t('profile.details.saving') : t('profile.details.save') }}</button>
+                <button type="submit" :disabled="profileSaving" class="prof-primary">{{ profileSaving ? 'Saving…' : 'Save profile' }}</button>
               </div>
             </form>
           </section>
 
           <section id="security" class="prof-row" aria-labelledby="security-title">
             <div class="prof-row-intro">
-              <h2 id="security-title" class="prof-row-title">{{ t('profile.password.title') }}</h2>
-              <p class="prof-row-desc">{{ t('profile.password.lede') }}</p>
+              <h2 id="security-title" class="prof-row-title">Change password</h2>
+              <p class="prof-row-desc">Confirm your current password before choosing a new one. Your session stays active after the change.</p>
             </div>
             <form class="prof-row-body" data-testid="password-form" @submit.prevent="changePassword">
               <div class="prof-field">
-                <label for="current_password">{{ t('profile.password.current') }}</label>
+                <label for="current_password">Current password</label>
                 <input id="current_password" v-model="currentPassword" name="current_password" type="password" autocomplete="current-password" class="prof-input" :aria-invalid="Boolean(passwordErrors.currentPassword)" />
                 <p v-if="passwordErrors.currentPassword" class="prof-error">{{ passwordErrors.currentPassword[0] }}</p>
               </div>
               <div class="grid gap-5 sm:grid-cols-2">
                 <div class="prof-field">
-                  <label for="new_password">{{ t('profile.password.new') }}</label>
+                  <label for="new_password">New password</label>
                   <input id="new_password" v-model="newPassword" name="new_password" type="password" autocomplete="new-password" class="prof-input" :aria-invalid="Boolean(passwordErrors.newPassword)" />
                   <p v-if="passwordErrors.newPassword" class="prof-error">{{ passwordErrors.newPassword[0] }}</p>
                 </div>
                 <div class="prof-field">
-                  <label for="confirm_password">{{ t('profile.password.confirm') }}</label>
+                  <label for="confirm_password">Confirm new password</label>
                   <input id="confirm_password" v-model="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" class="prof-input" :aria-invalid="Boolean(passwordErrors.confirmPassword)" />
                   <p v-if="passwordErrors.confirmPassword" class="prof-error">{{ passwordErrors.confirmPassword[0] }}</p>
                 </div>
@@ -318,7 +313,7 @@ onMounted(() => {
               <div class="prof-actions">
                 <p v-if="passwordError" role="alert" class="prof-msg prof-msg--error">{{ passwordError }}</p>
                 <p v-if="passwordNotice" role="status" class="prof-msg prof-msg--ok"><span class="prof-dot"></span>{{ passwordNotice }}</p>
-                <button type="submit" :disabled="passwordSaving" class="prof-primary">{{ passwordSaving ? t('profile.password.saving') : t('profile.password.save') }}</button>
+                <button type="submit" :disabled="passwordSaving" class="prof-primary">{{ passwordSaving ? 'Updating…' : 'Update password' }}</button>
               </div>
             </form>
           </section>
