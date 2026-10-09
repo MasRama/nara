@@ -22,6 +22,9 @@ export const USERS_PERMISSIONS = [
   { action: 'delete', name: 'Delete Users' },
 ] as const satisfies readonly PermissionDeclaration[];
 
+/** Password resets are gated by `canResetPasswords`; the rest by `canManageUsers`. */
+export type UsersManageAction = Exclude<(typeof USERS_PERMISSIONS)[number]['action'], 'reset-password'>;
+
 /** Live update topic: accounts were created, edited, or deleted through Users; refetch what you show. */
 export const USERS_CHANGED_EVENT = 'users.changed';
 

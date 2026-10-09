@@ -35,9 +35,11 @@ export const usersWebHost: UsersWebHost = {
     return user ? { id: user.id, name: user.name, email: user.email, avatar: user.avatar } : null;
   },
 
-  can: (permission) => authSession.can(permission),
+  canManageUsers: (action) => authSession.can(`users.${action}`),
 
-  isAdmin: () => authSession.hasRole('admin'),
+  canAssignRoles: () => authSession.hasRole('admin'),
+
+  canResetPasswords: () => authSession.hasRole('admin') || authSession.can('users.reset-password'),
 
   refreshSession: () => authSession.refresh(),
 

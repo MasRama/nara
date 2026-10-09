@@ -1,5 +1,7 @@
 // Browser capabilities Users needs but does not own. The application binds
 // these to its identity provider; Users web never imports Auth directly.
+import type { UsersManageAction } from '../contract';
+
 export interface UsersWebRole {
   id: string;
   name: string;
@@ -32,8 +34,10 @@ export interface UsersPasswordChangeResult {
 export interface UsersWebHost {
   readonly csrf: UsersWebCsrf;
   currentSessionUser(): UsersWebSessionUser | null;
-  can(permission: string): boolean;
-  isAdmin(): boolean;
+  /** The same decisions the server host makes, for the signed-in user; the server still enforces them. */
+  canManageUsers(action: UsersManageAction): boolean;
+  canAssignRoles(): boolean;
+  canResetPasswords(): boolean;
   refreshSession(): Promise<boolean>;
   syncSessionUser(user: UsersWebSessionUser): void;
   listRoles(): Promise<UsersWebRole[]>;

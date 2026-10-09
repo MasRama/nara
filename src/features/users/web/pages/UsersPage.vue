@@ -57,11 +57,11 @@ const mergeNotice = ref('');
 const editors = ref<Record<string, UsersEditor[]>>({});
 let stopEditing: (() => void) | undefined;
 
-const canCreate = computed(() => props.host.can('users.create'));
-const canEdit = computed(() => props.host.can('users.edit'));
-const canDelete = computed(() => props.host.can('users.delete'));
-const canAssignRoles = computed(() => props.host.isAdmin());
-const canResetPasswords = computed(() => props.host.isAdmin() || props.host.can('users.reset-password'));
+const canCreate = computed(() => props.host.canManageUsers('create'));
+const canEdit = computed(() => props.host.canManageUsers('edit'));
+const canDelete = computed(() => props.host.canManageUsers('delete'));
+const canAssignRoles = computed(() => props.host.canAssignRoles());
+const canResetPasswords = computed(() => props.host.canResetPasswords());
 const editingSelf = computed(() => editingUser.value?.id === props.host.currentSessionUser()?.id);
 const editingAdmin = computed(() => editingUser.value?.roles.includes('admin') === true);
 const canEditCurrentForm = computed(
@@ -72,11 +72,11 @@ const canResetEditingPassword = computed(
     !isCreating.value &&
     !editingSelf.value &&
     canResetPasswords.value &&
-    (props.host.isAdmin() || !editingAdmin.value),
+    (canAssignRoles.value || !editingAdmin.value),
 );
 
 function isProtectedAdmin(user: ManagedUser): boolean {
-  return user.roles.includes('admin') && !props.host.isAdmin();
+  return user.roles.includes('admin') && !canAssignRoles.value;
 }
 
 function canEditUser(user: ManagedUser): boolean {

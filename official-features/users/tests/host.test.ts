@@ -90,6 +90,17 @@ describe('official users host requirements', () => {
     expect(boundary).toContain('./host');
   });
 
+  // Users' browser code asks its host in Users' own actions, as the server
+  // side does; the slugs belong to whatever access control the host binds.
+  it('keeps permission slugs out of browser code', () => {
+    const offenders: string[] = [];
+    for (const file of collectSourceFiles(path.join(featureDirectory, 'web'))) {
+      const found = readFileSync(file, 'utf8').match(/['"`](?:users|roles|activity)\.[a-z-]+['"`]/g) ?? [];
+      if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it('ships users-owned migrations with the feature', () => {
     const migrations = readdirSync(path.join(featureDirectory, 'server', 'migrations')).sort();
     expect(migrations).toEqual([
