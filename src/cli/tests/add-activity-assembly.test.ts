@@ -97,6 +97,16 @@ describe('activity feature assembly', () => {
     expect(analyzeArchitecture(fixture).healthy).toBe(true);
   });
 
+  // An application's test config does not know which installed tests render
+  // the page, so the shipped browser test names its own DOM environment.
+  it('ships its browser test with its own DOM environment', () => {
+    const fixture = createApplication();
+    expect(installOfficialFeature('activity', fixture).ok).toBe(true);
+
+    const browserTest = readFileSync(path.join(fixture, 'src/features/activity/tests/browser.test.ts'), 'utf8');
+    expect(browserTest.startsWith('// @vitest-environment jsdom\n')).toBe(true);
+  });
+
   it('refuses an application whose Auth lacks what the binding uses', () => {
     const fixture = createApplication(AUTH_BOUNDARY.replace(/^export const isAdmin.*\n/m, ''));
 
