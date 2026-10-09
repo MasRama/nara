@@ -10,6 +10,7 @@ import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
+import { syncDeclaredPermissions } from '../../auth';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { usersWebHost } from '../../../app/bindings/users.web';
 import { createUsersClient } from '../web';
@@ -337,6 +338,8 @@ beforeEach(async () => {
   fetchUrls = [];
   pendingFetches = new Set();
   seed();
+  // Startup order: roles exist, then declared permissions are written and granted to admin.
+  syncDeclaredPermissions();
   installApiFetch();
 
   await signOut();

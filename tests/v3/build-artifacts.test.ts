@@ -47,6 +47,6 @@ describe('production build artifacts', () => {
     expect(existsSync(staleMigration)).toBe(false);
     expect(existsSync(staleSeed)).toBe(false);
     expect(existsSync(path.join(staleRoot, 'migrations', '202609030002_create_sessions.sql'))).toBe(true);
-    expect(existsSync(path.join(staleRoot, 'seeds', '202609030001_permissions.js'))).toBe(true);
+    expect(existsSync(path.join(staleRoot, 'seeds', '202609030002_roles.js'))).toBe(true);
   });
 });

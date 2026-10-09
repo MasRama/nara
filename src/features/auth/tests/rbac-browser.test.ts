@@ -6,6 +6,7 @@ import App from '../../../app/App.vue';
 import router from '../../../app/router';
 import { app as serverApp } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
+import { syncDeclaredPermissions } from '../server/permissions';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { createAccessClient, useAuthSession } from '../web';
 
@@ -183,6 +184,8 @@ beforeEach(async () => {
   document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   pendingFetches = new Set();
   seed();
+  // Startup order: roles exist, then declared permissions are written and granted to admin.
+  syncDeclaredPermissions();
   installApiFetch();
   await useAuthSession().logout();
   await router.push('/');

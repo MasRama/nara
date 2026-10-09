@@ -63,6 +63,7 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 - Features expose Hono sub-applications; `src/app/server.ts` mounts them (`/api/auth`, `/api/users`, …) plus `/health` and `/ready`. Public-boundary consumers are architecture facts, while route mounts require the statically provable Hono import → Hono instance → `.route()` chain; they are not runtime health checks.
 - JSON shape: `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`. English messages. Zod validation at the route boundary through `jsonInput`/`queryInput` middleware (422 `VALIDATION_ERROR`, before the handler's state checks; access checks that must not leak validation details run ahead of it); `src/app/error-handler.ts` maps domain errors.
 - Contracts live in the owning feature's `contract.ts`, including strict response schemas that routes type their responses against (`satisfies`); browser code consumes them through the feature's `web/` client, built on Hono's `hc` from a type-only import of the feature's own routes, so the compiler checks paths, request bodies, and responses end to end. Per-feature contract tests run each web client method against the real app and parse every answer with those schemas. No RPC layer beyond Hono's own `hc`.
+- Permissions are declared by the Feature that gates them (`<feature>/contract.ts` exports its actions), handed to Auth by the Feature's binding through `declarePermissions`, and written by startup after migrations. Auth's seed holds roles only; Auth never lists another Feature's slugs.
 
 ## CLI
 

@@ -11,7 +11,7 @@ Authority: user instruction → this file → [`ARCHITECTURE.md`](./ARCHITECTURE
 ```text
 src/features/<feature>/   contract.ts · index.ts · server/ · web/ (optional) · tests/
 src/app/                  server.ts · router.ts · App.vue · pages/ · layouts/
-src/shared/               config/ · database/ · logging/ · security/
+src/shared/               config/ · database/ · logging/ · realtime/ · security/ · storage/
 resources/app.ts          thin Vite entry mounting the app shell
 official-features/        installable open-code features (health, audit, users)
 ```

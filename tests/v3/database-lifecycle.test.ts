@@ -396,20 +396,20 @@ describe('canonical SQLite migration lifecycle', () => {
     }
   });
 
-  it('runs reference seeds repeatedly without duplicate permissions or roles', () => {
+  it('runs reference seeds repeatedly without duplicate roles', () => {
     const database = openMemoryDatabase();
     try {
       migrate({ database, root: process.cwd() });
-      expect(discoverSeeds({ root: process.cwd() }).map((seedFile) => seedFile.name)).toEqual([
-        '202609030001_permissions.ts',
-        '202609030002_roles.ts',
-        '202609030003_role_permissions.ts',
+      expect(discoverSeeds({ root: process.cwd() }).map((seedFile) => seedFile.name)).toEqual(['202609030002_roles.ts']);
+      seed({ database, root: process.cwd() });
+      seed({ database, root: process.cwd() });
+      // Permissions come from Feature declarations at startup; only old migrations wrote any.
+      expect(database.prepare('SELECT slug FROM permissions ORDER BY slug').all()).toEqual([
+        { slug: 'activity.view' },
+        { slug: 'users.reset-password' },
       ]);
-      seed({ database, root: process.cwd() });
-      seed({ database, root: process.cwd() });
-      expect(database.prepare('SELECT COUNT(*) AS count FROM permissions').get()).toEqual({ count: 10 });
       expect(database.prepare('SELECT COUNT(*) AS count FROM roles').get()).toEqual({ count: 2 });
-      expect(database.prepare('SELECT COUNT(*) AS count FROM role_permissions').get()).toEqual({ count: 10 });
+      expect(database.prepare('SELECT COUNT(*) AS count FROM role_permissions').get()).toEqual({ count: 0 });
       expect(database.prepare('SELECT COUNT(*) AS count FROM users').get()).toEqual({ count: 0 });
     } finally {
       database.close();

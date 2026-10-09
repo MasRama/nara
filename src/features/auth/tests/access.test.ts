@@ -4,6 +4,7 @@ import { app } from '../../../app/server';
 import { getDatabase, seed } from '../../../shared/database';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { createRoleWithPermissions, getRolePermissions, updateRoleWithPermissions } from '../server/access';
+import { syncDeclaredPermissions } from '../server/permissions';
 
 async function registerAdmin(): Promise<string> {
   const bootstrap = await issueCsrf(app);
@@ -263,8 +264,9 @@ describe('auth access capability', () => {
     expect(updateRoleWithPermissions(randomUUID(), { name: 'Nobody' }, undefined, 1)).toEqual({ status: 'missing' });
   });
 
-  it('seeds least-privilege default access policy', () => {
+  it('keeps least-privilege default access policy', () => {
     seed();
+    syncDeclaredPermissions();
     const database = getDatabase();
     expect(database.prepare("SELECT id FROM permissions WHERE slug IN ('settings.view', 'settings.edit')").all()).toEqual([]);
     expect(database.prepare("SELECT id FROM permissions WHERE slug = 'users.reset-password'").get()).toBeDefined();

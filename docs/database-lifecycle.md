@@ -17,7 +17,7 @@ src/shared/database/
 
 src/features/auth/server/
 ├── migrations/     # users, sessions, roles, permissions, RBAC joins
-└── seeds/          # permissions, roles, role-permission references
+└── seeds/          # admin and user roles
 
 src/features/users/server/
 └── migrations/     # assets (with a provider-neutral owner reference)
@@ -103,7 +103,7 @@ The former v3 `sqlite.ts` schema bootstrap is recognized only when every expecte
 
 ## Startup and commands
 
-The normal application startup opens the database and applies pending migrations before Hono begins listening. A migration failure aborts startup. Startup never runs arbitrary seeds.
+The normal application startup opens the database and applies pending migrations before Hono begins listening. A migration failure aborts startup. Startup then writes the permissions Feature bindings declared. Startup never runs arbitrary seeds.
 
 ```bash
 npm run migrate          # apply pending migrations
@@ -120,7 +120,7 @@ npm run db:check         # run quick_check and foreign_key_check
 
 ## Seeds and administrator bootstrap
 
-Feature seeds are deterministic, idempotent, and run in transactions. The auth reference seeds restore permissions, `admin`/`user` roles, and their role-permission relationships. Re-running them does not create duplicates.
+Feature seeds are deterministic, idempotent, and run in transactions. The auth reference seed restores the `admin`/`user` roles. Re-running it does not create duplicates. Permissions are not seeded: Features declare them through their bindings and startup writes them after migrations, so they appear on the first start after `npm run setup`.
 
 Administrator credentials remain separate from reference seeds. `npm run setup`
 and `npm run bootstrap:admin` create an administrator only when no administrator

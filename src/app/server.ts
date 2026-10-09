@@ -23,6 +23,7 @@ import {
   passwordChangeGate,
   resetLoginThrottle,
   SESSION_CLEANUP_INTERVAL_MS,
+  syncDeclaredPermissions,
 } from '../features/auth';
 import {
   discoverMigrations,
@@ -348,6 +349,9 @@ export function initializeApplicationRuntime(): RuntimeHandle {
     applied: migrationResult.applied,
     skipped: migrationResult.skipped,
   });
+  // Feature bindings declared their permissions while composing the app above.
+  const permissions = syncDeclaredPermissions();
+  Logger.info('Permissions ready', { inserted: permissions.inserted, updated: permissions.updated });
   startSessionCleanup();
   startApplicationMaintenance();
   return { stop: stopApplicationRuntime };

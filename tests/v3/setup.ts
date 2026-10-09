@@ -11,6 +11,9 @@ migrate();
 // Isolate rate-limiter buckets and login lockout between tests so suites are
 // deterministic. Middleware still runs with production-equivalent logic.
 const { resetSecurityState } = await import('../../src/app/server');
+// Startup writes the permissions Feature bindings declared; tests do the same.
+const { syncDeclaredPermissions } = await import('../../src/features/auth');
+syncDeclaredPermissions();
 const { beforeEach } = await import('vitest');
 beforeEach(() => {
   resetSecurityState();
