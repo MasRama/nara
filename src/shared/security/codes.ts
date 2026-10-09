@@ -1,7 +1,7 @@
 /**
- * Refusal codes any `/api` route can answer with, whichever Feature owns it:
- * the shared guards and input validation, and the application pipeline ahead
- * of every route (CSRF, rate and body limits, the error handler, and the
+ * Refusal codes any Feature route under `/api` can answer with, whichever
+ * Feature owns it: the shared guards and input validation, and the application
+ * pipeline ahead of every route (CSRF, rate and body limits, the error handler, and the
  * password-change gate an Auth provider mounts). A Feature's contract adds its
  * own codes to these; the UI branches only on declared codes.
  *

@@ -137,6 +137,15 @@ guaranteed module the application no longer provides (for example a deleted
 `src/shared/realtime/browser.ts`) fails before mutation, naming the missing
 file.
 
+The guaranteed substrate grows with Nara. An application started from an
+older reference app takes the newer substrate files from the reference app
+before adding or evolving a Feature that relies on them. Users and Activity
+import `src/shared/security/codes.ts` (shared refusal codes), and Users also
+relies on `forbidden`, `unauthorized`, and `jsonInput`/`queryInput` from
+`src/shared/security/authorization.ts` and `validation.ts` keeping their
+`code` as a literal; with older copies of those files `npm run lint` fails in
+`src/features/users/web/client.ts`.
+
 Run the architecture check after installation:
 
 ```bash
