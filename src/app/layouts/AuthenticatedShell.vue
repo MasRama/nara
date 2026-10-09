@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useAuthSession } from '../../features/auth/web';
+import { navigationLinks } from '../navigation';
 import SiteHeader from './SiteHeader.vue';
 
 const authSession = useAuthSession();
@@ -9,9 +10,7 @@ const router = useRouter();
 const isLoggingOut = ref(false);
 const logoutError = ref('');
 const user = computed(() => authSession.user.value);
-const canViewUsers = computed(() => authSession.can('users.view'));
-const canViewRoles = computed(() => authSession.can('roles.view'));
-const canViewActivity = computed(() => authSession.can('activity.view'));
+const links = computed(() => navigationLinks(router.options.routes, authSession.can));
 const initials = computed(() => {
   const name = user.value?.name.trim() ?? '';
   return name
@@ -47,12 +46,9 @@ async function logout(): Promise<void> {
   <div class="min-h-[100dvh] bg-background font-body text-foreground antialiased selection:bg-primary/20 selection:text-primary">
     <SiteHeader nav-label="Application navigation">
       <template v-if="authSession.isAuthenticated.value" #nav>
-        <RouterLink to="/dashboard" class="site-header-link" active-class="site-header-link--active">Dashboard</RouterLink>
-        <RouterLink v-if="canViewUsers" to="/users" class="site-header-link" active-class="site-header-link--active">Users</RouterLink>
-        <RouterLink v-if="canViewRoles" to="/roles" class="site-header-link" active-class="site-header-link--active">Roles</RouterLink>
-        <RouterLink v-if="canViewActivity" to="/activity" class="site-header-link" active-class="site-header-link--active">Activity</RouterLink>
-        <RouterLink to="/profile" class="site-header-link" active-class="site-header-link--active">Profile</RouterLink>
-        <RouterLink to="/security" class="site-header-link" active-class="site-header-link--active">Security</RouterLink>
+        <RouterLink v-for="link in links" :key="link.to" :to="link.to" class="site-header-link" active-class="site-header-link--active">
+          {{ link.label }}
+        </RouterLink>
       </template>
       <template #actions>
         <RouterLink to="/profile" class="site-header-avatar" :aria-label="`Open profile for ${user?.name ?? 'your account'}`">

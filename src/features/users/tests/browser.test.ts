@@ -531,6 +531,9 @@ describe('users administration browser surfaces', () => {
 
     expect(container.querySelector('a[href="/users"]')?.textContent).toContain('Users');
     expect(container.querySelector('a[href="/roles"]')?.textContent).toContain('Roles');
+    // The shell lists routes that declare meta.nav, in route order.
+    const links = [...container.querySelectorAll('nav[aria-label="Application navigation"] a')].map((link) => link.textContent?.trim());
+    expect(links).toEqual(['Dashboard', 'Profile', 'Users', 'Roles', 'Activity', 'Security']);
   });
 
   it('redirects restricted users away from administration routes', async () => {

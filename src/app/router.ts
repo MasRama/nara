@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw, type RouterScrollB
 import { ChangePasswordPage, LoginPage, RegisterPage, RolesPage, SecurityPage, useAuthSession } from '../features/auth/web';
 import { ActivityPage } from '../features/activity/web';
 import usersWebRoutes from './bindings/users.web';
+import { canEnter } from './navigation';
 import DashboardPage from './pages/DashboardPage.vue';
 import HomePage from './pages/HomePage.vue';
 import NotFoundPage from './pages/NotFoundPage.vue';
@@ -28,7 +29,7 @@ export const appRoutes = [
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardPage,
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, nav: { label: 'Dashboard' } },
   },
   {
     path: '/change-password',
@@ -36,24 +37,25 @@ export const appRoutes = [
     component: ChangePasswordPage,
     meta: { requiresAuth: true, standaloneAuth: true },
   },
-  {
-    path: '/security',
-    name: 'security',
-    component: SecurityPage,
-    meta: { requiresAuth: true },
-  },
+  // Routes with meta.nav appear in the shell's navigation in this order.
   ...usersWebRoutes,
-  {
-    path: '/activity',
-    name: 'activity',
-    component: ActivityPage,
-    meta: { requiresAuth: true, requiresPermission: 'activity.view' },
-  },
   {
     path: '/roles',
     name: 'roles',
     component: RolesPage,
-    meta: { requiresAuth: true, requiresPermission: 'roles.view' },
+    meta: { requiresAuth: true, requiresPermission: 'roles.view', nav: { label: 'Roles' } },
+  },
+  {
+    path: '/activity',
+    name: 'activity',
+    component: ActivityPage,
+    meta: { requiresAuth: true, requiresPermission: 'activity.view', nav: { label: 'Activity' } },
+  },
+  {
+    path: '/security',
+    name: 'security',
+    component: SecurityPage,
+    meta: { requiresAuth: true, nav: { label: 'Security' } },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -105,8 +107,7 @@ router.beforeEach(async (to) => {
   ) {
     return { name: 'change-password' };
   }
-  const requiredPermission = to.meta.requiresPermission;
-  if (typeof requiredPermission === 'string' && !authSession.can(requiredPermission)) {
+  if (!canEnter(to.meta, authSession.can)) {
     return { name: 'dashboard' };
   }
 

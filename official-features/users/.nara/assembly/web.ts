@@ -69,13 +69,13 @@ export default [
     name: 'profile',
     component: ProfilePage,
     props: { host: usersWebHost },
-    meta: { requiresAuth: true },
+    meta: { requiresAuth: true, nav: { label: 'Profile' } },
   },
   {
     path: '/users',
     name: 'users',
     component: UsersPage,
     props: { host: usersWebHost },
-    meta: { requiresAuth: true, requiresPermission: 'users.view' },
+    meta: { requiresAuth: true, requiresPermission: 'users.view', nav: { label: 'Users' } },
   },
 ] satisfies RouteRecordRaw[];
