@@ -1,6 +1,7 @@
 import { computed, watch } from 'vue';
 import type { Router } from 'vue-router';
 import { AUTH_ACCOUNT_CHANGED_EVENT, SESSION_ENDED_REASON, useAuthSession } from '../features/auth/web';
+import { canEnter } from './navigation';
 import {
   connectServerEvents,
   disconnectServerEvents,
@@ -49,8 +50,7 @@ export function startLiveUpdates(router: Router): () => void {
 
   async function accountChanged(): Promise<void> {
     await refreshSession();
-    const required = router.currentRoute.value.meta.requiresPermission;
-    if (typeof required === 'string' && session.isAuthenticated.value && !session.can(required)) {
+    if (session.isAuthenticated.value && !canEnter(router.currentRoute.value.meta, session.can)) {
       await router.replace({ name: 'dashboard' });
     }
   }

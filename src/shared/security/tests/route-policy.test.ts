@@ -78,6 +78,18 @@ describe('declared route policy', () => {
     expect(() => declareRoutePolicies(app, '/api', [{ path: 'login' }])).toThrow('Route policy path "login" must start with "/".');
   });
 
+  // A parameter would be compared literally against the request path and never match.
+  it('refuses paths a request path cannot equal', () => {
+    const app = new Hono();
+    for (const path of ['/avatar/:id', '/files/*/meta', '/maybe?', '/{id}']) {
+      expect(() => declareRoutePolicies(app, '/api/assets', [{ path, sensitive: true }]), path).toThrow(
+        'must be a static path',
+      );
+    }
+    expect(() => declareRoutePolicies(app, '/api/:tenant', [{ path: '/login', sensitive: true }])).toThrow('must be a static path');
+    expect(() => declareRoutePolicies(app, 'api', [{ path: '/login', sensitive: true }])).toThrow('Mount path "api" must start with "/".');
+  });
+
   it('refuses two budgets for the same endpoint', () => {
     const app = new Hono();
     declareRoutePolicies(app, '/api/assets', [{ method: 'POST', path: '/avatar', bodyMaxBytes: 1 }]);

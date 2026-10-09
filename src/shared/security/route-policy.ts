@@ -43,8 +43,13 @@ function policiesOf(app: Hono): DeclaredPolicy[] {
   return policies;
 }
 
+// Policies compare literally against the request path, so a route parameter
+// or pattern would never match; only a final `/*` is understood.
+const DYNAMIC = /[:{}?*]/;
+
 /** Declare a Feature router's policies where it is mounted, next to `app.route(mountPath, ...)`. */
 export function declareRoutePolicies(app: Hono, mountPath: string, policies: readonly RoutePolicy[]): void {
+  if (!mountPath.startsWith('/')) throw new Error(`Mount path "${mountPath}" must start with "/".`);
   const existing = policiesOf(app);
   const incoming: DeclaredPolicy[] = [];
   for (const policy of policies) {
@@ -52,6 +57,9 @@ export function declareRoutePolicies(app: Hono, mountPath: string, policies: rea
     const absolute = `${mountPath.replace(/\/$/, '')}${policy.path === '/' ? '' : policy.path}` || '/';
     const wildcard = absolute.endsWith('/*');
     const base = wildcard ? absolute.slice(0, -2) : absolute;
+    if (DYNAMIC.test(base)) {
+      throw new Error(`Route policy path "${absolute}" must be a static path, optionally ending in "/*".`);
+    }
     if (policy.bodyMaxBytes !== undefined) {
       if (!policy.method || wildcard) {
         throw new Error(`Body budget for "${absolute}" must name a method and an exact path.`);

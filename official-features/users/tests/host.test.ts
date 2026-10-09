@@ -92,10 +92,18 @@ describe('official users host requirements', () => {
 
   // Users' browser code asks its host in Users' own actions, as the server
   // side does; the slugs belong to whatever access control the host binds.
+  const PERMISSION_SLUG = /['"`](?:users|roles|activity)\.(?:[a-z-]+['"`]|\$\{)/g;
+
+  it('recognizes permission slugs however they are spelled', () => {
+    for (const spelled of ["'users.create'", '"roles.view"', '`activity.view`', '`users.${action}`']) {
+      expect(spelled.match(PERMISSION_SLUG), spelled).not.toBeNull();
+    }
+  });
+
   it('keeps permission slugs out of browser code', () => {
     const offenders: string[] = [];
     for (const file of collectSourceFiles(path.join(featureDirectory, 'web'))) {
-      const found = readFileSync(file, 'utf8').match(/['"`](?:users|roles|activity)\.[a-z-]+['"`]/g) ?? [];
+      const found = readFileSync(file, 'utf8').match(PERMISSION_SLUG) ?? [];
       if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
     }
     expect(offenders).toEqual([]);
