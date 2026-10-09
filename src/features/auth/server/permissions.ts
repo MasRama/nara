@@ -29,18 +29,28 @@ export function createPermissionRegistry(
   const declared = new Map<string, DeclaredPermission>();
   let synchronized = false;
 
+  // An identical declaration may arrive again: the dev server re-evaluates
+  // bindings after a server-side edit while this module stays loaded.
   function declare(resource: string, permissions: readonly PermissionDeclaration[]): void {
+    const incoming: DeclaredPermission[] = [];
     for (const permission of permissions) {
       const slug = `${resource}.${permission.action}`;
-      if (synchronized) {
-        throw new Error(`Permission "${slug}" was declared after permissions were synchronized; declare it while composing the application.`);
-      }
       if (!SEGMENT.test(resource) || !SEGMENT.test(permission.action)) {
         throw new Error(`Permission "${slug}" must be <resource>.<action> in lowercase kebab-case.`);
       }
-      if (declared.has(slug)) throw new Error(`Permission "${slug}" is declared twice.`);
-      declared.set(slug, { ...permission, resource, slug });
+      const known = declared.get(slug) ?? incoming.find((pending) => pending.slug === slug);
+      if (known) {
+        if (known.name !== permission.name || known.description !== permission.description) {
+          throw new Error(`Permission "${slug}" is declared twice with different names or descriptions.`);
+        }
+        continue;
+      }
+      if (synchronized) {
+        throw new Error(`Permission "${slug}" was declared after permissions were synchronized; restart the server, or declare it while composing the application.`);
+      }
+      incoming.push({ ...permission, resource, slug });
     }
+    for (const permission of incoming) declared.set(permission.slug, permission);
   }
 
   function sync(database: Database.Database): PermissionSyncResult {

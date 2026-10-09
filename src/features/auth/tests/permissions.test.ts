@@ -121,12 +121,32 @@ describe('Feature-declared permissions', () => {
     expect(warn).toHaveBeenCalledWith('Permissions no Feature declares', { slugs: ['legacy.view'] });
   });
 
-  it('rejects malformed or duplicate declarations', () => {
+  it('rejects malformed or conflicting declarations', () => {
     const registry = createPermissionRegistry();
     expect(() => registry.declare('Users', VIEW_USERS)).toThrow('Users.view');
     expect(() => registry.declare('users', [{ action: 'view all', name: 'View All' }])).toThrow('users.view all');
+    expect(() => registry.declare('roles', [{ action: 'view', name: 'View Roles' }, { action: 'view', name: 'See Roles' }])).toThrow(
+      'Permission "roles.view" is declared twice',
+    );
     registry.declare('users', VIEW_USERS);
-    expect(() => registry.declare('users', VIEW_USERS)).toThrow('users.view');
+    expect(() => registry.declare('users', [{ action: 'view', name: 'See Users' }])).toThrow('Permission "users.view" is declared twice');
+  });
+
+  it('records nothing from a declaration that fails part-way', () => {
+    const registry = createPermissionRegistry();
+    expect(() => registry.declare('users', [...VIEW_USERS, { action: 'Bad', name: 'Bad' }])).toThrow('users.Bad');
+    expect(() => registry.declare('users', VIEW_USERS)).not.toThrow();
+  });
+
+  // The dev server re-evaluates bindings after a server-side edit while this
+  // module stays loaded, so the same declaration arrives again after a sync.
+  it('accepts an identical declaration again, even after a sync', () => {
+    const database = freshDatabase();
+    const registry = createPermissionRegistry([['users', VIEW_USERS]]);
+    registry.sync(database);
+
+    expect(() => registry.declare('users', VIEW_USERS)).not.toThrow();
+    expect(registry.sync(database)).toEqual({ inserted: [], updated: [], undeclared: [] });
   });
 
   it('refuses declarations after a sync', () => {
@@ -134,7 +154,7 @@ describe('Feature-declared permissions', () => {
     registry.sync(freshDatabase());
 
     expect(() => registry.declare('users', VIEW_USERS)).toThrow(
-      'Permission "users.view" was declared after permissions were synchronized',
+      'Permission "users.view" was declared after permissions were synchronized; restart the server',
     );
   });
 });
