@@ -23,11 +23,13 @@ import {
   type UsersEditingSuccess,
   type UsersMessageSuccess,
   type UsersResponseSuccess,
+  USERS_EDITING_EVENT,
 } from '../contract';
-import { createGuard, forbidden } from './guard';
+import { createPresence, publish } from '../../../shared/realtime';
+import { createGuard, forbidden, jsonInput, queryInput } from '../../../shared/security';
 import { cleanupUserAvatarAssets } from './assets-routes';
 import type { UsersServerHost } from './host';
-import { jsonInput, queryInput } from './input';
+import { announceAccountsChanged } from './live';
 
 const MAX_PAGE = 1_000_000;
 const MAX_PAGE_SIZE = 100;
@@ -81,6 +83,11 @@ function normalizedQueryInteger(raw: string | undefined, fallback: number, maxim
  * Auth-owned account rows with SQL.
  */
 export function createUserRoutes(host: UsersServerHost) {
+  // Who has which account open, for whoever may view the directory.
+  const editors = createPresence({
+    onChange: () => publish(USERS_EDITING_EVENT, (listener) => host.canManageUsers(listener.userId, 'view')),
+  });
+
   // The account provider is application-chosen; copy only declared fields so
   // provider-specific columns never reach the API.
   function toProfile(user: UserProfile): UserProfile {
@@ -124,7 +131,7 @@ export function createUserRoutes(host: UsersServerHost) {
         );
       }
       const user = update.account;
-      host.live?.accountsChanged([user.id]);
+      announceAccountsChanged(host, [user.id]);
       host.recordActivity?.({
         action: 'users.profile-updated',
         resource: 'users',
@@ -186,7 +193,7 @@ export function createUserRoutes(host: UsersServerHost) {
         },
         roleSelection?.ids,
       );
-      host.live?.accountsChanged([user.id]);
+      announceAccountsChanged(host, [user.id]);
       host.recordActivity?.({
         action: 'users.created',
         resource: 'users',
@@ -278,7 +285,7 @@ export function createUserRoutes(host: UsersServerHost) {
         );
       }
       const user = update.account;
-      host.live?.accountsChanged([user.id]);
+      announceAccountsChanged(host, [user.id]);
       host.recordActivity?.({
         action: 'users.updated',
         resource: 'users',
@@ -361,7 +368,7 @@ export function createUserRoutes(host: UsersServerHost) {
     });
     const deleted = host.deleteAccounts(input.ids);
     await cleanupUserAvatarAssets(host, input.ids);
-    host.live?.accountsChanged(input.ids);
+    announceAccountsChanged(host, input.ids);
     for (const target of targets) {
       host.recordActivity?.({
         action: 'users.deleted',
@@ -375,7 +382,7 @@ export function createUserRoutes(host: UsersServerHost) {
   };
 
   const listEditingHandler = (context: Context) =>
-    context.json({ success: true as const, message: 'OK', data: { editing: host.live?.editors() ?? {} } } satisfies UsersEditingSuccess);
+    context.json({ success: true as const, message: 'OK', data: { editing: editors.editors() } } satisfies UsersEditingSuccess);
 
   /** Lists the caller as editing the account until the form renews or leaves; unknown accounts answer 404. */
   const startEditingHandler = (context: Context) => {
@@ -385,12 +392,12 @@ export function createUserRoutes(host: UsersServerHost) {
       return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
     }
     const name = host.findAccountById(actor.id)?.name ?? '';
-    host.live?.startEditing(userId, { id: actor.id, name });
+    editors.enter(userId, { id: actor.id, name });
     return context.json({ success: true as const, message: 'OK' } satisfies UsersMessageSuccess);
   };
 
   const stopEditingHandler = (context: Context) => {
-    host.live?.stopEditing(context.req.param('id') ?? '', guard.actor(context).id);
+    editors.leave(context.req.param('id') ?? '', guard.actor(context).id);
     return context.json({ success: true as const, message: 'OK' } satisfies UsersMessageSuccess);
   };
 

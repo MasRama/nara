@@ -3,8 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { Hono } from 'hono';
-import { describe, expect, it } from 'vitest';
+import { getCookie } from 'hono/cookie';
+import { afterEach, describe, expect, it } from 'vitest';
 import { getDatabase } from '../../../shared/database';
+import { closeEventStreams, createEventStream, STREAM_READY_EVENT } from '../../../shared/realtime';
+import { readEvents, type EventReader } from '../../../shared/realtime/tests/helpers';
 import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../index';
 
 const ONE_PIXEL_PNG = Buffer.from(
@@ -191,6 +194,21 @@ function buildApp(host: UsersServerHost): Hono {
   return new Hono().route('/api/users', createUserRoutes(host)).route('/api/assets', createAssetRoutes(host));
 }
 
+async function listen(app: Hono, cookie: string): Promise<EventReader> {
+  const response = await app.request('/events', { headers: { Cookie: cookie } });
+  expect(response.status).toBe(200);
+  const events = readEvents(response);
+  expect(await events.next()).toBe(STREAM_READY_EVENT);
+  return events;
+}
+
+/** Every event that arrives until the stream stays quiet. */
+async function drain(events: EventReader, quietMs = 100): Promise<string[]> {
+  const received: string[] = [];
+  for (let event = await events.next(quietMs); event !== 'timeout'; event = await events.next(quietMs)) received.push(event);
+  return received;
+}
+
 function cookieFor(host: UsersServerHost, token: string): string {
   return `${host.sessionCookieName}=${token}`;
 }
@@ -242,14 +260,6 @@ function isAuthSpecifier(specifier: string): boolean {
   );
 }
 
-function isSharedSpecifier(specifier: string): boolean {
-  // Only the guaranteed application substrate (shared/database,
-  // shared/config, and shared/storage) may be imported.
-  // Reference-only modules such as logging or security validation must be
-  // feature-owned or host-provided instead.
-  return specifier.includes('shared/logging') || specifier.includes('shared/security') || specifier.includes('shared/realtime');
-}
-
 function accountTableReferences(source: string): string[] {
   const found: string[] = [];
   const pattern = /\b(?:FROM|INTO|UPDATE|JOIN)\s+users\b/i;
@@ -259,6 +269,10 @@ function accountTableReferences(source: string): string[] {
 }
 
 describe('users host requirements with an alternative provider', () => {
+  afterEach(() => {
+    closeEventStreams();
+  });
+
   it('exposes route factories built from an explicit host value', () => {
     const { host } = createMockHost();
     expect(typeof createUserRoutes).toBe('function');
@@ -271,16 +285,6 @@ describe('users host requirements with an alternative provider', () => {
     const offenders: string[] = [];
     for (const file of collectSourceFiles(featureDirectory)) {
       const found = importSpecifiers(readFileSync(file, 'utf8')).filter(isAuthSpecifier);
-      if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
-    }
-    expect(offenders).toEqual([]);
-  });
-
-  it('contains no reference-only shared import in feature-owned source', () => {
-    const featureDirectory = path.resolve(__dirname, '..');
-    const offenders: string[] = [];
-    for (const file of collectSourceFiles(featureDirectory)) {
-      const found = importSpecifiers(readFileSync(file, 'utf8')).filter(isSharedSpecifier);
       if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
     }
     expect(offenders).toEqual([]);
@@ -751,54 +755,49 @@ describe('users host requirements with an alternative provider', () => {
     expect(profile.payload).not.toHaveProperty('current.roles');
   });
 
-  it('tells the live host what changed and who is editing', async () => {
+  it('announces changes and editors to whoever may view users, and changes to the account itself', async () => {
     const { host, state } = createMockHost();
-    const changed: string[][] = [];
-    const editing = new Map<string, Array<{ id: string; name: string }>>();
-    const app = buildApp({
-      ...host,
-      live: {
-        accountsChanged: (ids) => changed.push(ids),
-        startEditing: (accountId, editor) => editing.set(accountId, [editor]),
-        stopEditing: (accountId) => editing.delete(accountId),
-        editors: () => Object.fromEntries(editing),
-      },
-    });
+    const app = buildApp(host).get(
+      '/events',
+      createEventStream({
+        resolve: (context) => {
+          const token = getCookie(context, host.sessionCookieName);
+          const userId = token === undefined ? undefined : state.actors.get(token);
+          return userId === undefined ? undefined : { userId, sessionId: token! };
+        },
+      }),
+    );
     const { id: adminId } = seedAccount(host, { name: 'Ada Admin' });
     state.assignments.set(adminId, ['mock-role-admin']);
-    const { id: targetId } = seedAccount(host);
     const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+    const { id: targetId } = seedAccount(host);
+    const targetCookie = cookieFor(host, loginAs(state, targetId));
+    const viewerCookie = cookieFor(host, loginAs(state, seedAccount(host).id, { permissions: ['users.view'] }));
+    const bystanderCookie = cookieFor(host, loginAs(state, seedAccount(host).id));
+    const [target, viewer, bystander] = await Promise.all([targetCookie, viewerCookie, bystanderCookie].map((cookie) => listen(app, cookie)));
 
     expect((await jsonRequest(app, `/api/users/${targetId}/editing`, { method: 'PUT', cookie: adminCookie })).status).toBe(200);
-    expect(await jsonRequest(app, '/api/users/editing', { cookie: adminCookie })).toMatchObject({
+    expect(await drain(viewer)).toEqual(['users.editing']);
+    expect(await jsonRequest(app, '/api/users/editing', { cookie: viewerCookie })).toMatchObject({
       status: 200,
       payload: { data: { editing: { [targetId]: [{ id: adminId, name: 'Ada Admin' }] } } },
     });
     expect((await jsonRequest(app, `/api/users/${randomUUID()}/editing`, { method: 'PUT', cookie: adminCookie })).status).toBe(404);
 
-    await jsonRequest(app, `/api/users/${targetId}`, { method: 'PUT', cookie: adminCookie, body: { revision: 1, name: 'Changed' } });
-    await jsonRequest(app, `/api/users/${targetId}/editing`, { method: 'DELETE', cookie: adminCookie });
-    expect(editing.size).toBe(0);
-    await jsonRequest(app, '/api/users', { method: 'DELETE', cookie: adminCookie, body: { ids: [targetId] } });
-    expect(changed).toEqual([[targetId], [targetId]]);
+    expect((await jsonRequest(app, `/api/users/${targetId}`, { method: 'PUT', cookie: adminCookie, body: { revision: 1, name: 'Changed' } })).status).toBe(200);
+    expect(await drain(target)).toEqual(['users.changed']);
+    expect(await drain(viewer)).toEqual(['users.changed']);
+
+    expect((await jsonRequest(app, `/api/users/${targetId}/editing`, { method: 'DELETE', cookie: adminCookie })).status).toBe(200);
+    expect(await drain(viewer)).toEqual(['users.editing']);
+    expect(await jsonRequest(app, '/api/users/editing', { cookie: viewerCookie })).toMatchObject({ payload: { data: { editing: {} } } });
+
+    expect((await jsonRequest(app, '/api/users', { method: 'DELETE', cookie: adminCookie, body: { ids: [targetId] } })).status).toBe(200);
+    expect(await drain(viewer)).toEqual(['users.changed']);
+    expect(await drain(bystander)).toEqual([]);
 
     // Presence needs users.edit to announce and users.view to read.
-    const viewerCookie = cookieFor(host, loginAs(state, seedAccount(host).id, { permissions: ['users.view'] }));
     expect((await jsonRequest(app, `/api/users/${adminId}/editing`, { method: 'PUT', cookie: viewerCookie })).status).toBe(403);
-    expect((await jsonRequest(app, '/api/users/editing', { cookie: viewerCookie })).status).toBe(200);
-    const plainCookie = cookieFor(host, loginAs(state, seedAccount(host).id));
-    expect((await jsonRequest(app, '/api/users/editing', { cookie: plainCookie })).status).toBe(403);
-  });
-
-  it('works without a live host and reports nobody editing', async () => {
-    const { host, state } = createMockHost();
-    const app = buildApp(host);
-    const { id: adminId } = seedAccount(host);
-    const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
-    expect((await jsonRequest(app, `/api/users/${adminId}/editing`, { method: 'PUT', cookie: adminCookie })).status).toBe(200);
-    expect(await jsonRequest(app, '/api/users/editing', { cookie: adminCookie })).toMatchObject({
-      status: 200,
-      payload: { data: { editing: {} } },
-    });
+    expect((await jsonRequest(app, '/api/users/editing', { cookie: bystanderCookie })).status).toBe(403);
   });
 });

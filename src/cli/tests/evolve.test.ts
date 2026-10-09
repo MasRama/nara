@@ -206,6 +206,30 @@ describe('evolve command', () => {
     expect(readFileSync(localIndex)).toEqual(beforeFeature);
   });
 
+  it('refuses an update that needs a shared module the application lacks', () => {
+    const fixture = createFixture();
+    installHealth(fixture);
+    const incoming = copyOfficialHealth();
+    writeFileSync(
+      path.join(incoming, 'index.ts'),
+      `import { publish } from '../../shared/realtime';\n${readFileSync(path.join(incoming, 'index.ts'), 'utf8')}`,
+    );
+    const beforeFeature = readFileSync(healthIndex(fixture));
+    const beforeLineage = readFileSync(path.join(lineageDirectory(fixture, 'health'), 'lineage.json'));
+
+    const result = evolveFeature({ feature: 'health', cwd: fixture, officialDirectory: incoming });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.errorCode).toBe('missing-substrate');
+    expect(result.error.message).toBe(
+      'Cannot evolve "health": it needs src/shared/realtime, which this application does not provide. '
+      + 'Restore it from the Nara reference application first; no files were changed.',
+    );
+    expect(readFileSync(healthIndex(fixture))).toEqual(beforeFeature);
+    expect(readFileSync(path.join(lineageDirectory(fixture, 'health'), 'lineage.json'))).toEqual(beforeLineage);
+  });
+
   it('blocks a newly introduced architecture diagnostic', () => {
     const fixture = createFixture();
     installHealth(fixture);

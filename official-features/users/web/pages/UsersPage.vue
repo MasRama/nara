@@ -10,7 +10,7 @@ import {
 } from '../../contract';
 import type { ManagedUser, StaleUserError, UpdateUserInput, UpdateUserResponse, UsersEditor } from '../../contract';
 import { createUsersClient } from '../client';
-import { keepEditing, mergeEdit, sameValue } from '../editing';
+import { keepEditing, mergeEdit, onServerEvent, sameValue } from '../../../../shared/realtime/browser';
 import type { UsersWebHost, UsersWebRole } from '../host';
 
 const props = defineProps<{ host: UsersWebHost }>();
@@ -486,14 +486,9 @@ async function confirmDelete(): Promise<void> {
 onMounted(() => {
   void Promise.all([loadUsers(1), loadRoles(), loadEditors()]);
 });
-const unsubscribe = [
-  props.host.onLiveEvent?.(USERS_CHANGED_EVENT, () => void followUserChanges()),
-  props.host.onLiveEvent?.(USERS_EDITING_EVENT, () => void loadEditors()),
-];
-onUnmounted(() => {
-  for (const stop of unsubscribe) stop?.();
-  stopEditing?.();
-});
+onUnmounted(onServerEvent(USERS_CHANGED_EVENT, () => void followUserChanges()));
+onUnmounted(onServerEvent(USERS_EDITING_EVENT, () => void loadEditors()));
+onUnmounted(() => stopEditing?.());
 </script>
 
 <template>

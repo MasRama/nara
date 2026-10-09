@@ -474,6 +474,10 @@ describe('requirements metadata separation', () => {
     };
     const fixture = createFixture();
     projectShell(fixture, {
+      // The guaranteed src/shared modules Users imports.
+      ...Object.fromEntries(
+        ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+      ),
       'src/features/auth/index.ts': [
         'export const createAccountWithRoles = (): unknown => ({});',
         'export const deleteAccounts = (): number => 0;',

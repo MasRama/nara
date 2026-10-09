@@ -29,6 +29,7 @@ import {
 } from './assembly';
 import { featureNameIsValid } from '../feature-name';
 import { resolveOfficialFeatureDirectory } from '../package-root';
+import { checkSharedSubstrate, sharedModuleUses } from './substrate';
 import {
   checkAssemblyPrerequisites,
   readFeatureRequirements,
@@ -562,6 +563,10 @@ export function installOfficialFeature(
       if (stale !== undefined) {
         return { ok: false, error: { kind: 'requirements', message: `${stale}` } };
       }
+    }
+    const substrateProblem = checkSharedSubstrate(root, name, sharedModuleUses(name, sourceFiles, templates), 'add');
+    if (substrateProblem !== undefined) {
+      return { ok: false, error: { kind: 'prerequisite', message: substrateProblem } };
     }
     const declaredProviders = requirements?.providers;
     if (templates.server === undefined && templates.web === undefined) {

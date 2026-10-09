@@ -10,8 +10,9 @@ import {
   type AvatarUploadSuccess,
 } from '../contract';
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
+import { createGuard, type Guard } from '../../../shared/security';
 import type { UsersServerHost } from './host';
-import { createGuard, type Guard } from './guard';
+import { announceAccountsChanged } from './live';
 
 const AVATAR_STORAGE_PREFIX = 'avatars';
 
@@ -162,7 +163,7 @@ const uploadAvatarHandlerFor = (host: UsersServerHost, guard: Guard<NonNullable<
     // asset here is unsafe under concurrent uploads: another request may have
     // created its file before committing it as the account avatar.
     await cleanupPreviousUserAvatar(host, sessionUser.id, sessionUser.avatar);
-    host.live?.accountsChanged([sessionUser.id]);
+    announceAccountsChanged(host, [sessionUser.id]);
     return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } } satisfies AvatarUploadSuccess);
   } catch (error) {
     return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' }, 400);

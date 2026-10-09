@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { emailSchema, personNameSchema } from '../../shared/security/input';
 
 export const AVATAR_MAX_FILE_SIZE_MB = 5;
 export const AVATAR_MAX_FILE_SIZE_BYTES = AVATAR_MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -15,34 +16,6 @@ export const STALE_REVISION = 'STALE_REVISION';
 
 /** The revision an edit was based on; a newer one refuses it with `STALE_REVISION`. */
 const revisionSchema = z.number().int().positive();
-
-/**
- * Users-owned input validation. These schemas are deliberately local
- * copies of the generic person/email shapes: the Users Feature must not
- * depend on reference-only shared modules, so it owns the exact rules it
- * validates (including the user-visible messages its tests assert).
- */
-function hasNoControlChars(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    if (code <= 31 || code === 127) return false;
-  }
-  return true;
-}
-
-const personNameSchema = z
-  .string()
-  .trim()
-  .min(2, 'Name must be at least 2 characters')
-  .max(100)
-  .refine(hasNoControlChars, { message: 'Name must not contain control characters' });
-
-const emailSchema = z
-  .string()
-  .trim()
-  .email('Invalid email format')
-  .refine(hasNoControlChars, { message: 'Email must not contain control characters' })
-  .transform((value) => value.toLowerCase());
 
 export const profileInputSchema = z.object({
   revision: revisionSchema,

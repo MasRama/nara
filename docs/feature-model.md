@@ -157,7 +157,7 @@ Routes validate input with middleware that declares the schema on the route:
 })
 ```
 
-`jsonInput(schema)` and `queryInput(schema)` come from `src/shared/security`; an installable Feature, which cannot rely on it, carries its own copy in `server/input.ts`. A missing or malformed JSON body is validated as `{}`, so every refusal is the same `422 VALIDATION_ERROR`; empty query values count as absent. Validation runs before the handler, so an invalid body is refused with 422 before a state check could answer 404 or 409. A check that decides whether the caller may act at all belongs in middleware ahead of `jsonInput`, so a caller without access never sees validation details (Users checks `users.edit` this way on `PUT /api/users/:id`).
+`jsonInput(schema)` and `queryInput(schema)` come from `src/shared/security`, which installable Features may rely on as part of the guaranteed substrate. A missing or malformed JSON body is validated as `{}`, so every refusal is the same `422 VALIDATION_ERROR`; empty query values count as absent. Validation runs before the handler, so an invalid body is refused with 422 before a state check could answer 404 or 409. A check that decides whether the caller may act at all belongs in middleware ahead of `jsonInput`, so a caller without access never sees validation details (Users checks `users.edit` this way on `PUT /api/users/:id`).
 
 Web clients call the routes through Hono's `hc`, typed from the Feature's own route factory with `import type`, so no server code reaches the browser bundle:
 
@@ -240,7 +240,7 @@ application binding:
 - Requirements stay demand-driven and narrow: a small number of cohesive interfaces when responsibilities genuinely separate (for Users, `UsersIdentityHost` for account-directory behavior and `UsersAuthorizationHost` for roles and permissions), never a speculative universal service bag or a generic `execute()`/`services` catch-all.
 - The provider relationship belongs to application composition (`src/app/bindings/`), never to Feature-owned source. `inspect`/`context` therefore show no Feature dependency while the binding reading order shows the composition.
 - Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
-- Only the guaranteed application substrate may be imported from `src/shared/` (`shared/database` persistence engine, `shared/config` environment, and `shared/storage` binary-object capability). Reference-only modules (logging, security validation, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
+- Only the guaranteed application substrate may be imported from `src/shared/` (`config`, `database`, `realtime`, `security`, `storage`; see below). Reference-only modules (logging, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
 - Persistence ownership is single-writer per table: a Feature that needs another Feature's rows reaches them exclusively through a typed host requirement, never through direct SQL. The `users` table is Auth-owned; Users owns its workflow and its `assets` table with a provider-neutral owner reference.
 
 ## Configuration
@@ -306,7 +306,7 @@ overwrites the other.
 - Each editable row has a `revision` column that every update raises. An update input carries the `revision` it was based on, and the repository writes with `WHERE id = ? AND revision = ?`. When nothing matches, the route answers `409 STALE_REVISION` with the record as it is now in `current`. Writes that are not form edits, such as an avatar upload, apply without a revision but still raise it.
 - In the browser, `mergeEdit(base, mine, theirs)` from `src/shared/realtime/browser` merges three versions of a form: a field only the other side changed follows them, a field only you changed stays yours, and a field you both changed differently is a conflict that keeps your value until you choose. Array fields such as permissions or roles merge as sets and never conflict. Pages run it when a change event announces a newer revision and when a save is refused as stale, and keep Save disabled while a conflict is open.
 - Presence is advisory. `createPresence({ onChange })` from `src/shared/realtime` keeps who is editing what in the process; entries expire after 30 s unless renewed. Pages call `keepEditing(id, client)`, which renews every `PRESENCE_RENEW_MS` (10 s) through `PUT /api/<resource>/:id/editing` and leaves through `DELETE` on close or `pagehide`. `GET /api/<resource>/editing` lists editors for whoever may view the resource, and `onChange` publishes the Feature's editing topic (`auth.roles-editing`, `users.editing`).
-- Users cannot import `src/shared/realtime`, since it is installable: it declares an optional `live` on `UsersServerHost` (publish `users.changed`, track editors) and an optional `onLiveEvent` on `UsersWebHost`, and carries its own copy of the merge in `web/editing.ts`. Without them Users still guards against stale writes; it only stops updating open pages live.
+- Users, though installable, uses all of this directly, since `src/shared/realtime` is part of the guaranteed substrate. Who hears its topics is the host's own rule: whoever `canManageUsers(id, 'view')` allows, plus the changed account for `users.changed`.
 
 ## Shared code
 
@@ -332,16 +332,21 @@ installable Features can rely on it:
 - the Feature structure itself (`src/features/<feature>/`),
 - `src/shared/database/` (SQLite persistence engine),
 - `src/shared/config/` (environment and constants it reads),
+- `src/shared/realtime/` (Server-Sent Events `publish`, editing presence, and the browser's `onServerEvent`, `mergeEdit`, and `keepEditing`),
+- `src/shared/security/` (route guards, `jsonInput`/`queryInput`, and the generic person and email input schemas),
 - `src/shared/storage/` (provider-neutral `AssetStorage` contract plus the local filesystem adapter).
 
 Only these `src/shared/` modules are guaranteed. `AssetStorage` keys are
 provider-neutral logical object identifiers; Features own asset metadata and
 delivery URLs while the application binding chooses the storage provider.
 Everything else under
-`src/shared/` (logging, security validation, error taxonomy, app tuning
-constants) is reference-only: official Features must own such behavior
-themselves or receive it through a typed host requirement. `nara add`
-never copies `src/shared/` during installation.
+`src/shared/` (logging, error taxonomy, app tuning constants) is
+reference-only: official Features must own such behavior themselves or
+receive it through a typed host requirement. `nara add` never copies
+`src/shared/` during installation; it reads which modules the package
+imports and refuses one outside this list, or one the application no longer
+provides, before writing anything. `nara evolve` applies the same check to
+incoming source.
 
 ## Tests
 

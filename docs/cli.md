@@ -129,6 +129,14 @@ together: any failure restores all of them with no stage files left
 behind. Nara never edits the lockfile and never runs `npm install`
 itself.
 
+Shared modules need no declaration: `nara add` reads which `src/shared/`
+modules the source and assembly templates import. Importing anything
+outside the guaranteed substrate (`config`, `database`, `realtime`,
+`security`, `storage`) fails as a defect of the official package, and a
+guaranteed module the application no longer provides (for example a deleted
+`src/shared/realtime/browser.ts`) fails before mutation, naming the missing
+file.
+
 Run the architecture check after installation:
 
 ```bash
@@ -211,7 +219,9 @@ the human report renders it as a `Requirements notice:` section.
 
 Error JSON uses `status: "error"`, a stable `errorCode`, a human-readable
 `message`, and `canApply: false`. No network service or AI provider is
-required.
+required. `missing-substrate` means the incoming source imports a
+`src/shared/` module outside the guaranteed substrate or one the application
+no longer provides; no files were changed.
 
 ## `nara evolve <feature> --transition | --verify | --accept`
 

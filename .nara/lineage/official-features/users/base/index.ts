@@ -23,5 +23,5 @@ export type {
   UsersResponse,
 } from './contract';
 export { createAssetRoutes } from './server/assets-routes';
-export type { UsersLiveHost, UsersServerHost } from './server/host';
+export type { UsersServerHost } from './server/host';
 export { createUserRoutes } from './server/routes';

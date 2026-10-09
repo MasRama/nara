@@ -7,6 +7,7 @@ import { captureArchitectureSnapshotWithIssues, toPosix } from '../architecture/
 import { featureNameIsValid } from '../feature-name';
 import { resolveOfficialFeatureDirectory } from '../package-root';
 import { checkInstalledRequirements } from '../composition/requirements';
+import { checkSharedSubstrate, sharedModuleUses } from '../composition/substrate';
 import {
   cleanupStagedLineage,
   digestFeatureFiles,
@@ -68,6 +69,7 @@ export type FeatureEvolutionErrorCode =
   | 'missing-local'
   | 'missing-lineage'
   | 'lineage-error'
+  | 'missing-substrate'
   | 'filesystem';
 
 export interface FeatureEvolutionErrorReport {
@@ -367,6 +369,10 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
         ),
       };
     }
+
+    // Evolve installs Feature source only; bindings stay as the application wrote them.
+    const substrateProblem = checkSharedSubstrate(root, feature, sharedModuleUses(feature, incoming, {}), 'evolve');
+    if (substrateProblem !== undefined) return evolutionError(feature, 'missing-substrate', substrateProblem);
 
     const validation = architectureValidation(root, feature, reconciliation.candidate);
     const architecture = validation.architecture;

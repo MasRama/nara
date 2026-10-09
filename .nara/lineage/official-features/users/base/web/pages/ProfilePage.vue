@@ -12,7 +12,7 @@ import {
 } from '../../contract';
 import type { StaleProfileError, UpdateProfileResponse, UserProfile } from '../../contract';
 import { createUsersClient } from '../client';
-import { mergeEdit, sameValue } from '../editing';
+import { mergeEdit, onServerEvent, sameValue } from '../../../../shared/realtime/browser';
 import type { UsersWebHost } from '../host';
 
 const passwordChangeInputSchema = z.object({
@@ -297,8 +297,7 @@ async function handleAvatarChange(event: Event): Promise<void> {
 onMounted(() => {
   void loadProfile();
 });
-const stopFollowing = props.host.onLiveEvent?.(USERS_CHANGED_EVENT, () => void followProfileChanges());
-onUnmounted(() => stopFollowing?.());
+onUnmounted(onServerEvent(USERS_CHANGED_EVENT, () => void followProfileChanges()));
 </script>
 
 <template>

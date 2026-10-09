@@ -49,8 +49,13 @@ function isAuthSpecifier(specifier: string): boolean {
   );
 }
 
-function isReferenceOnlySharedSpecifier(specifier: string): boolean {
-  return specifier.includes('shared/logging') || specifier.includes('shared/security');
+// The modules every Nara application guarantees (GUARANTEED_SHARED_MODULES
+// in the CLI, which refuses to add or evolve source reaching others).
+const GUARANTEED_SHARED_MODULES = ['config', 'database', 'realtime', 'security', 'storage'];
+
+function isUnguaranteedSharedSpecifier(specifier: string): boolean {
+  const module = /(?:^|\/)shared\/([^/]+)/.exec(specifier)?.[1];
+  return module !== undefined && !GUARANTEED_SHARED_MODULES.includes(module);
 }
 
 function accountTableReferences(source: string): string[] {
@@ -94,10 +99,10 @@ describe('official users host requirements', () => {
     ]);
   });
 
-  it('ships source with no reference-only shared import', () => {
+  it('imports only the guaranteed shared substrate', () => {
     const offenders: string[] = [];
     for (const file of collectSourceFiles(featureDirectory)) {
-      const found = importSpecifiers(readFileSync(file, 'utf8')).filter(isReferenceOnlySharedSpecifier);
+      const found = importSpecifiers(readFileSync(file, 'utf8')).filter(isUnguaranteedSharedSpecifier);
       if (found.length > 0) offenders.push(`${path.relative(featureDirectory, file)}: ${found.join(', ')}`);
     }
     expect(offenders).toEqual([]);

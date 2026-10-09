@@ -7,7 +7,6 @@ import {
   ensureCsrfToken,
   useAuthSession,
 } from '../../features/auth/web';
-import { onServerEvent } from '../../shared/realtime/browser';
 
 // Application-owned Auth adapter and route placement for Users.
 const authSession = useAuthSession();
@@ -62,8 +61,6 @@ export const usersWebHost: UsersWebHost = {
     if (response.success) return { success: true as const, message: response.message };
     return { success: false as const, message: response.message, errors: translatePasswordErrors(response.errors) };
   },
-
-  onLiveEvent: (topic, handler) => onServerEvent(topic, handler),
 };
 
 export default [

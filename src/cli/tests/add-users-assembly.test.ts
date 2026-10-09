@@ -85,8 +85,14 @@ const FIXTURE_PACKAGE_JSON = `{
 }
 `;
 
+// The guaranteed src/shared modules Users imports; every Nara application carries them.
+const SHARED_SUBSTRATE: Record<string, string> = Object.fromEntries(
+  ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+);
+
 function projectShell(fixture: string, options: { auth?: string; authWeb?: string; packageJson?: string } = {}): void {
   writeFiles(fixture, {
+    ...SHARED_SUBSTRATE,
     'src/app/server.ts': MINIMAL_SERVER_ROOT,
     'src/app/router.ts': MINIMAL_ROUTER_ROOT,
     'package.json': options.packageJson ?? FIXTURE_PACKAGE_JSON,
@@ -215,6 +221,7 @@ describe('users feature assembly', () => {
   it('fails closed without the auth provider and without mutation', () => {
     const fixture = createFixture();
     writeFiles(fixture, {
+      ...SHARED_SUBSTRATE,
       'src/app/server.ts': MINIMAL_SERVER_ROOT,
       'src/app/router.ts': MINIMAL_ROUTER_ROOT,
       'package.json': FIXTURE_PACKAGE_JSON,
