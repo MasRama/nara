@@ -36,6 +36,11 @@ export function findAssetOwnerIds(): string[] {
   );
 }
 
+/** Assets whose owner was cleared when Auth's account rows still cascaded into this table. */
+export function findOwnerlessAssets(): UserAsset[] {
+  return getDatabase().prepare('SELECT * FROM assets WHERE user_id IS NULL').all() as UserAsset[];
+}
+
 export function findUserAssetByUrl(url: string): UserAsset | undefined {
   return getDatabase().prepare('SELECT * FROM assets WHERE url = ?').get(url) as UserAsset | undefined;
 }

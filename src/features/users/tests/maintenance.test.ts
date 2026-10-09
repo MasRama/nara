@@ -54,6 +54,18 @@ describe('Users maintenance', () => {
     expect(host.assetStorage.delete).not.toHaveBeenCalledWith(kept.storage_key);
   });
 
+  // Before Users stopped referencing Auth's table, deleting an account set the owner to NULL.
+  it('removes assets left without any owner by an older deletion', () => {
+    const host = hostWith(async () => true);
+    const legacy = avatarOf('deleted-account');
+    getDatabase().prepare('UPDATE assets SET user_id = NULL WHERE id = ?').run(legacy.id);
+
+    expect(sweep(host)).toEqual({ removed: 1 });
+
+    expect(assetExists(legacy.id)).toBe(false);
+    expect(host.assetStorage.delete).toHaveBeenCalledWith(legacy.storage_key);
+  });
+
   it('reports nothing when every asset still has its owner', () => {
     avatarOf(LIVING_OWNER);
     expect(sweep(hostWith(async () => true))).toBeUndefined();

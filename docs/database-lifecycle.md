@@ -160,8 +160,9 @@ The reference application declares four tasks:
    `ACTIVITY_RETENTION_DAYS` oldest first, at most 10,000 rows per pass, so
    stale history converges without one long write.
 3. `users/orphaned-assets`, every 24 hours: deletes the asset rows and stored
-   files of accounts that no longer exist. Deleting accounts commits before
-   their avatars are cleaned up, so an interrupted deletion converges here.
+   files of accounts that no longer exist, and of assets an older deletion
+   left without an owner. Deleting accounts commits before their avatars are
+   cleaned up, so an interrupted deletion converges here.
    Users asks its host whether an owner exists; it never reads Auth's tables.
 4. `database/optimize`, every 24 hours, owned by the application: `PRAGMA
    optimize` lets SQLite update planner statistics only when SQLite determines
