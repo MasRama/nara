@@ -194,11 +194,12 @@ sends `X-Accel-Buffering: no` for nginx; other reverse proxies must not buffer
 `text/event-stream` responses, and their read timeout must exceed the 25-second
 heartbeat.
 
-The reference app also performs bounded SQLite maintenance: planner statistics
-are optimized at connection/migration boundaries and periodically at runtime,
-while Activity events older than `ACTIVITY_RETENTION_DAYS` (default `365`) are
-pruned in bounded batches. Set the value to `0` only when indefinite Activity
-retention is intentional.
+Each Feature declares the upkeep of its own tables, and the runtime runs it
+after migrations and then on each task's interval: Auth deletes expired
+sessions hourly, Activity prunes events older than `ACTIVITY_RETENTION_DAYS`
+(default `365`) in bounded batches, and the app optimizes SQLite planner
+statistics. Set the retention to `0` only when indefinite Activity retention
+is intentional.
 
 Database ownership, migrations, seeds, backup, and integrity behavior are
 documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
