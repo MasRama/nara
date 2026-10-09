@@ -231,10 +231,11 @@ activity
 ```
 
 Activity records what other Features report. `nara add activity` mounts its
-page, API, permission and retention; the application then passes
-`createActivityRecorder(...)` from `src/app/bindings/activity.server.ts` to the
-Features it wants recorded, as the reference app does for Auth and Users in
-`src/app/server.ts`.
+page, API, permission and retention; the application then creates a reporter
+with `createActivityRecorder(...)` from `src/app/bindings/activity.server.ts`
+and hands it to the Features it wants recorded, as the reference app does for
+Auth and Users in `src/app/server.ts`. Each of those Features declares the
+actions it reports, with the label the feed shows, and can report only those.
 
 Installation copies visible source into the application and composes explicit
 application-owned bindings where needed. There is no runtime plugin registry or

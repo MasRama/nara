@@ -140,11 +140,20 @@ file.
 The guaranteed substrate grows with Nara. An application started from an
 older reference app takes the newer substrate files from the reference app
 before adding or evolving a Feature that relies on them. Users and Activity
-import `src/shared/security/codes.ts` (shared refusal codes), and Users also
+import `src/shared/security/codes.ts` (shared refusal codes) and
+`src/shared/security/activity.ts` (activity declarations), and Users also
 relies on `forbidden`, `unauthorized`, and `jsonInput`/`queryInput` from
 `src/shared/security/authorization.ts` and `validation.ts` keeping their
 `code` as a literal; with older copies of those files `npm run lint` fails in
 `src/features/users/web/client.ts`.
+
+Evolving Activity and Users never rewrites the bindings, so an application
+whose bindings predate declared activity keeps recording, but its feed shows
+plain labels until the bindings declare: take `createActivityRecorder` from
+the newer Activity assembly template, and pass the reporter it returns to the
+reporting Features (`activity.declare('auth', AUTH_ACTIVITY)` for Auth,
+`composeUsersServer(app, { activity })` with the newer Users binding), as the
+reference `src/app/server.ts` does.
 
 Run the architecture check after installation:
 
