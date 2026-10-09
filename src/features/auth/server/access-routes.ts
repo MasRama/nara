@@ -89,7 +89,7 @@ function unknownPermissions(context: Context, slugs: string[]) {
     {
       success: false as const,
       message: 'Validation failed',
-      code: 'VALIDATION_ERROR',
+      code: 'VALIDATION_ERROR' as const,
       errors: { permissions: slugs.map((slug) => `Unknown permission: ${slug}`) },
     },
     422,
@@ -148,7 +148,7 @@ const createRoleHandler = async (context: Context, input: CreateRoleInput, activ
     );
   } catch (error) {
     if (uniqueConstraint(error)) {
-      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 409);
+      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' as const }, 409);
     }
     Logger.error('Failed to create role', error instanceof Error ? error : new Error(String(error)));
     throw error;
@@ -159,11 +159,11 @@ const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activ
   const user = sessionGuard.actor(context);
 
   const roleId = context.req.param('id');
-  if (!roleId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
+  if (!roleId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' as const }, 400);
   const existing = findRoleById(roleId);
-  if (!existing) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+  if (!existing) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' as const }, 404);
   if (existing.slug === 'admin') {
-    return context.json({ success: false as const, message: 'Cannot edit the admin role', code: 'PROTECTED_ROLE' }, 403);
+    return context.json({ success: false as const, message: 'Cannot edit the admin role', code: 'PROTECTED_ROLE' as const }, 403);
   }
 
   const { permissions, revision, ...roleData } = input;
@@ -176,7 +176,7 @@ const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activ
   try {
     const update = updateRoleWithPermissions(roleId, roleData, permissionSelection?.ids, revision);
     if (update.status === 'missing') {
-      return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+      return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' as const }, 404);
     }
     if (update.status === 'stale') {
       return context.json(
@@ -207,7 +207,7 @@ const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activ
     } satisfies RoleResponseSuccess);
   } catch (error) {
     if (uniqueConstraint(error)) {
-      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' }, 409);
+      return context.json({ success: false as const, message: 'Slug already in use', code: 'DUPLICATE_SLUG' as const }, 409);
     }
     Logger.error('Failed to update role', error instanceof Error ? error : new Error(String(error)));
     throw error;
@@ -218,7 +218,7 @@ const deleteRolesHandler = async (context: Context, input: DeleteRolesInput, act
   const user = sessionGuard.actor(context);
 
   if (input.ids.some((roleId) => findRoleById(roleId)?.slug === 'admin')) {
-    return context.json({ success: false as const, message: 'Cannot delete the admin role', code: 'PROTECTED_ROLE' }, 400);
+    return context.json({ success: false as const, message: 'Cannot delete the admin role', code: 'PROTECTED_ROLE' as const }, 400);
   }
 
   const targets = input.ids.flatMap((roleId) => {
@@ -246,7 +246,7 @@ const listEditingHandler = (context: Context, editors: Presence) =>
 const enterEditingHandler = (context: Context, editors: Presence) => {
   const { user } = sessionGuard.actor(context);
   const roleId = context.req.param('id') ?? '';
-  if (!findRoleById(roleId)) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+  if (!findRoleById(roleId)) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' as const }, 404);
   editors.enter(roleId, { id: user.id, name: user.name });
   return context.json({ success: true as const, message: 'OK' } satisfies AuthSuccess);
 };

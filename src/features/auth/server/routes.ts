@@ -80,7 +80,7 @@ const registerHandler = async (context: Context, input: RegisterInput, activity?
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       return context.json(
-        { success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' },
+        { success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const },
         409,
       );
     }
@@ -96,7 +96,7 @@ function loginLocked(context: Context, lockoutMs: number) {
     {
       success: false as const,
       message: `Too many attempts. Try again in ${Math.max(1, Math.ceil(lockoutMs / 60_000))} minutes.`,
-      code: 'LOGIN_LOCKED',
+      code: 'LOGIN_LOCKED' as const,
     },
     429,
   );
@@ -119,7 +119,7 @@ const loginHandler = async (context: Context, input: LoginInput, activity?: Auth
     Logger.logSecurity('login_failed', { email: input.email });
     if (result.isLocked) return loginLocked(context, result.lockoutMs);
     return context.json(
-      { success: false as const, message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
+      { success: false as const, message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' as const },
       401,
     );
   }
@@ -155,12 +155,12 @@ const loginHandler = async (context: Context, input: LoginInput, activity?: Auth
 const changePasswordHandler = async (context: Context, input: ChangePasswordInput, activity?: AuthActivitySink) => {
   const user = findUserById(sessionGuard.actor(context).id);
   if (!user) {
-    return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
   }
 
   if (!(await checkPassword(input.current_password, user))) {
     return context.json(
-      { success: false as const, message: 'Current password is incorrect', code: 'INVALID_PASSWORD' },
+      { success: false as const, message: 'Current password is incorrect', code: 'INVALID_PASSWORD' as const },
       400,
     );
   }

@@ -19,6 +19,14 @@ export async function authRouteTypes(): Promise<void> {
   // @ts-expect-error the code is a string
   await auth['two-factor'].enable.$post({ json: { code: 123456 } });
 
+  // Refusal codes are the ones Auth's contract declares, so a misspelt branch fails to compile.
+  const login = await (await auth.login.$post({ json: { email: 'grace@example.com', password: 'secret' } })).json();
+  if (!login.success) {
+    void (login.code === 'LOGIN_LOCKED');
+    // @ts-expect-error Auth declares no LOGIN_FAILED refusal
+    void (login.code === 'LOGIN_FAILED');
+  }
+
   const sessions = await (await auth.sessions.$get()).json();
   if (sessions.success) {
     const lastSeenAt: number | null = sessions.data.sessions[0].lastSeenAt;

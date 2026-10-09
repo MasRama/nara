@@ -19,7 +19,7 @@ export function passwordChangeGate(authMountPath: string): MiddlewareHandler {
         {
           success: false as const,
           message: 'Change your temporary password before continuing',
-          code: 'PASSWORD_CHANGE_REQUIRED',
+          code: 'PASSWORD_CHANGE_REQUIRED' as const,
         },
         403,
       );

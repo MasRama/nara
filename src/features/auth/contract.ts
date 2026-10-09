@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import { CONTROL_MESSAGE, emailSchema, hasNoControlChars, personNameSchema } from '../../shared/security/input';
 
 /** Live update topic: the signed-in account's profile, roles, or permissions changed; refetch it. */
@@ -14,7 +15,27 @@ export const AUTH_ROLES_CHANGED_EVENT = 'auth.roles-changed';
 export const AUTH_ROLES_EDITING_EVENT = 'auth.roles-editing';
 
 /** Refusal code: the update was based on an older revision; the response carries the record as it is now. */
-export const STALE_REVISION = 'STALE_REVISION';
+export const STALE_REVISION = 'STALE_REVISION' as const;
+
+/** Refusal codes Auth's routes answer with, besides the ones every API route can. */
+export const AUTH_REFUSAL_CODES = [
+  'CURRENT_SESSION',
+  'DUPLICATE_EMAIL',
+  'DUPLICATE_SLUG',
+  'INVALID_CREDENTIALS',
+  'INVALID_ID',
+  'INVALID_PASSWORD',
+  'INVALID_TWO_FACTOR_CODE',
+  'LOGIN_LOCKED',
+  'NOT_FOUND',
+  'PROTECTED_ROLE',
+  STALE_REVISION,
+  'TWO_FACTOR_CHALLENGE_EXPIRED',
+  'TWO_FACTOR_DISABLED',
+  'TWO_FACTOR_ENABLED',
+  'TWO_FACTOR_LOCKED',
+  'TWO_FACTOR_SETUP_REQUIRED',
+] as const;
 
 /**
  * Auth/RBAC domain validation. Role name/slug/description semantics are owned
@@ -181,7 +202,7 @@ export function authResponseSchemas() {
   const error = z.strictObject({
     success: z.literal(false),
     message: z.string(),
-    code: z.string(),
+    code: z.enum([...API_REFUSAL_CODES, ...AUTH_REFUSAL_CODES]),
     errors: z.record(z.string(), z.array(z.string())).optional(),
   });
 

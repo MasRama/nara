@@ -21,10 +21,11 @@ export interface Guard<A extends Actor> {
 }
 
 export function unauthorized(context: Context) {
-  return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
+  return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' as const }, 401);
 }
 
-export function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN') {
+/** A 403 refusal; `code` stays a literal so clients see exactly which refusal it is. */
+export function forbidden<C extends string = 'FORBIDDEN'>(context: Context, message = 'Forbidden', code = 'FORBIDDEN' as C) {
   return context.json({ success: false as const, message, code }, 403);
 }
 

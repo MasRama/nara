@@ -19,7 +19,7 @@ export function validationErrors(error: z.ZodError): Record<string, string[]> {
 
 export function validationFailed(context: Context, error: z.ZodError) {
   return context.json(
-    { success: false as const, message: 'Validation failed', code: 'VALIDATION_ERROR', errors: validationErrors(error) },
+    { success: false as const, message: 'Validation failed', code: 'VALIDATION_ERROR' as const, errors: validationErrors(error) },
     422,
   );
 }

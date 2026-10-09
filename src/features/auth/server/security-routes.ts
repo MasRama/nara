@@ -83,7 +83,7 @@ const challengeExpired = (context: Context) =>
     {
       success: false as const,
       message: 'Your sign-in expired. Enter your password again.',
-      code: 'TWO_FACTOR_CHALLENGE_EXPIRED',
+      code: 'TWO_FACTOR_CHALLENGE_EXPIRED' as const,
     },
     401,
   );
@@ -115,12 +115,12 @@ const challengeHandler = async (context: Context, input: TwoFactorChallengeInput
     if (attempts >= AUTH.TWO_FACTOR_MAX_ATTEMPTS) {
       clearChallenge(context, challenge.id);
       return context.json(
-        { success: false as const, message: 'Too many invalid codes. Sign in again.', code: 'TWO_FACTOR_LOCKED' },
+        { success: false as const, message: 'Too many invalid codes. Sign in again.', code: 'TWO_FACTOR_LOCKED' as const },
         429,
       );
     }
     return context.json(
-      { success: false as const, message: 'Invalid authentication code', code: 'INVALID_TWO_FACTOR_CODE' },
+      { success: false as const, message: 'Invalid authentication code', code: 'INVALID_TWO_FACTOR_CODE' as const },
       401,
     );
   }
@@ -159,7 +159,7 @@ const accountGuard = createGuard((context): Authenticated | undefined => {
 });
 
 const invalidPassword = (context: Context) =>
-  context.json({ success: false as const, message: 'Password is incorrect', code: 'INVALID_PASSWORD' }, 400);
+  context.json({ success: false as const, message: 'Password is incorrect', code: 'INVALID_PASSWORD' as const }, 400);
 
 /** Re-authenticates with the current password; returns an error response or undefined. */
 async function confirmPassword(context: Context, user: StoredUser, password: string) {
@@ -216,11 +216,11 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       const handle = context.req.param('id');
       const target = listActiveSessions(auth.user.id).find((session) => session.handle === handle);
       if (!target) {
-        return context.json({ success: false as const, message: 'Session not found', code: 'NOT_FOUND' }, 404);
+        return context.json({ success: false as const, message: 'Session not found', code: 'NOT_FOUND' as const }, 404);
       }
       if (target.id === auth.token) {
         return context.json(
-          { success: false as const, message: 'Use sign out to end the current session', code: 'CURRENT_SESSION' },
+          { success: false as const, message: 'Use sign out to end the current session', code: 'CURRENT_SESSION' as const },
           409,
         );
       }
@@ -245,7 +245,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       const auth = accountGuard.actor(context);
       if (twoFactorStatus(auth.user.id).enabled) {
         return context.json(
-          { success: false as const, message: 'Two-factor authentication is already enabled', code: 'TWO_FACTOR_ENABLED' },
+          { success: false as const, message: 'Two-factor authentication is already enabled', code: 'TWO_FACTOR_ENABLED' as const },
           409,
         );
       }
@@ -264,13 +264,13 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       const state = findTwoFactorState(auth.user.id);
       if (state?.two_factor_enabled_at != null) {
         return context.json(
-          { success: false as const, message: 'Two-factor authentication is already enabled', code: 'TWO_FACTOR_ENABLED' },
+          { success: false as const, message: 'Two-factor authentication is already enabled', code: 'TWO_FACTOR_ENABLED' as const },
           409,
         );
       }
       if (!state?.two_factor_pending_secret) {
         return context.json(
-          { success: false as const, message: 'Start two-factor setup first', code: 'TWO_FACTOR_SETUP_REQUIRED' },
+          { success: false as const, message: 'Start two-factor setup first', code: 'TWO_FACTOR_SETUP_REQUIRED' as const },
           409,
         );
       }
@@ -280,7 +280,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
           {
             success: false as const,
             message: 'Validation failed',
-            code: 'VALIDATION_ERROR',
+            code: 'VALIDATION_ERROR' as const,
             errors: { code: ['That code did not match. Check your device clock and try again.'] },
           },
           422,
@@ -300,7 +300,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       const auth = accountGuard.actor(context);
       if (!twoFactorStatus(auth.user.id).enabled) {
         return context.json(
-          { success: false as const, message: 'Two-factor authentication is not enabled', code: 'TWO_FACTOR_DISABLED' },
+          { success: false as const, message: 'Two-factor authentication is not enabled', code: 'TWO_FACTOR_DISABLED' as const },
           409,
         );
       }
@@ -315,7 +315,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
       const auth = accountGuard.actor(context);
       if (!twoFactorStatus(auth.user.id).enabled) {
         return context.json(
-          { success: false as const, message: 'Two-factor authentication is not enabled', code: 'TWO_FACTOR_DISABLED' },
+          { success: false as const, message: 'Two-factor authentication is not enabled', code: 'TWO_FACTOR_DISABLED' as const },
           409,
         );
       }
