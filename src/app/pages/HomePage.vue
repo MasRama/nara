@@ -158,7 +158,7 @@ const endpoints = computed(() => [
   { path: '/ready', detail: 'Schema-aware' },
 ]);
 
-const officialFeatures = ['health', 'audit', 'users'] as const;
+const officialFeatures = ['health', 'audit', 'users', 'activity'] as const;
 
 const foundationLanes = computed(() => [
   {

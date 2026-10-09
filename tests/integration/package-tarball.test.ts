@@ -31,6 +31,9 @@ describe('nara publishable tarball integrity', () => {
       'package/official-features/users/index.ts',
       'package/official-features/users/.nara/assembly/server.ts',
       'package/official-features/users/.nara/assembly/web.ts',
+      'package/official-features/activity/index.ts',
+      'package/official-features/activity/.nara/assembly/server.ts',
+      'package/official-features/activity/.nara/assembly/web.ts',
     ]) expect(files.has(required)).toBe(true);
     expect([...files].some((file) => file.startsWith('package/substrate/'))).toBe(false);
     expect(files.has('package/dist/commands/new-project.js')).toBe(false);
