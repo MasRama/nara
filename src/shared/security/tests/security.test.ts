@@ -756,6 +756,36 @@ describe('request body Content-Type bypass', () => {
   });
 });
 
+// Hono routes on the decoded path, so /%61pi/... reaches the same handlers
+// as /api/...; every API gate must see it as an API request too.
+describe('percent-encoded API paths', () => {
+  it('still require a CSRF token', async () => {
+    const response = await app.request('/%61pi/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...testIp() },
+      body: JSON.stringify({ email: uniqueEmail(), password: TEST_PASSWORD }),
+    });
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: 'CSRF_INVALID' });
+  });
+
+  it('still bound the request body', async () => {
+    const state = await issueCsrf(app);
+    const big = JSON.stringify({ name: 'x'.repeat(env.MAX_JSON_BODY_BYTES), email: uniqueEmail(), password: TEST_PASSWORD });
+    const response = await app.request('/%61pi/auth/register', {
+      method: 'POST',
+      headers: { ...csrfHeaders(state), 'Content-Type': 'application/json', 'Content-Length': String(big.length), ...testIp() },
+      body: big,
+    });
+    expect(response.status).toBe(413);
+  });
+
+  it('still count toward the global API limit', async () => {
+    const response = await app.request('/%61pi/auth/me');
+    expect(response.headers.get('X-RateLimit-Limit')).toBe(String(env.RATE_LIMIT_MAX));
+  });
+});
+
 describe('cheap rejection ordering', () => {
   it('rejects an invalid CSRF mutation without consuming its request body', async () => {
     const body = new ReadableStream<Uint8Array>({

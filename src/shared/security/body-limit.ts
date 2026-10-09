@@ -24,8 +24,9 @@ export interface ApiBodyLimitOptions {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+// The decoded path Hono routes on: /%61pi/... reaches the same handlers.
 function isApiRequest(context: Context): boolean {
-  return new URL(context.req.url).pathname.startsWith('/api/');
+  return context.req.path.startsWith('/api/');
 }
 
 async function exceedsBound(raw: Request, maxBytes: number): Promise<boolean> {

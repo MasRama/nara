@@ -108,8 +108,9 @@ const routePolicy = routePolicyFor(app);
 
 const isProductionServer = env.NODE_ENV === 'production';
 
-function isApiRequest(context: { req: { url: string } }): boolean {
-  return new URL(context.req.url).pathname.startsWith('/api/');
+// The decoded path Hono routes on: /%61pi/... reaches the same handlers.
+function isApiRequest(context: { req: { path: string } }): boolean {
+  return context.req.path.startsWith('/api/');
 }
 
 // Auth-specific lockout lives inside the Auth Feature; everything here applies

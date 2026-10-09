@@ -56,8 +56,8 @@ export function csrfProtection(options: CsrfOptions) {
   const { isProduction } = options;
 
   return async function csrfMiddleware(context: Context, next: Next): Promise<Response | void> {
-    const url = new URL(context.req.url);
-    if (!url.pathname.startsWith('/api/')) return next();
+    // The decoded path Hono routes on: /%61pi/... reaches the same handlers.
+    if (!context.req.path.startsWith('/api/')) return next();
 
     const token = ensureCsrfToken(context, isProduction);
     if (SAFE_METHODS.has(context.req.method.toUpperCase())) return next();
