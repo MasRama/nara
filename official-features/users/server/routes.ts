@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
-import type { Context } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
 import { z } from 'zod';
 import {
   createUserInputSchema,
@@ -9,9 +9,14 @@ import {
   profileInputSchema,
   resetUserPasswordInputSchema,
   updateUserInputSchema,
+  type CreateUserInput,
+  type DeleteUsersInput,
   type DeleteUsersResponseSuccess,
   type ManagedUser,
   type ManagedUserResponseSuccess,
+  type ProfileInput,
+  type ResetUserPasswordInput,
+  type UpdateUserInput,
   type UserProfile,
   type UserProfileSuccess,
   type UsersResponseSuccess,
@@ -19,33 +24,16 @@ import {
 import { createGuard, forbidden } from './guard';
 import { cleanupUserAvatarAssets } from './assets-routes';
 import type { UsersServerHost } from './host';
+import { jsonInput, queryInput } from './input';
 
 const MAX_PAGE = 1_000_000;
 const MAX_PAGE_SIZE = 100;
-
-function validationErrors(error: z.ZodError): Record<string, string[]> {
-  const errors: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.join('.') || '_root';
-    errors[key] ??= [];
-    errors[key].push(issue.message);
-  }
-  return errors;
-}
-
-async function requestBody(context: Context): Promise<unknown> {
-  try {
-    return await context.req.json();
-  } catch {
-    return {};
-  }
-}
 
 function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
 }
 
-function validationFailure(context: Context, field: string, messages: string[]): Response {
+function validationFailure(context: Context, field: string, messages: string[]) {
   return context.json(
     { success: false as const, message: 'Validation failed', code: 'VALIDATION_ERROR', errors: { [field]: messages } },
     422,
@@ -69,6 +57,13 @@ function resolveRoleIds(host: UsersServerHost, slugs: string[]): { ids: string[]
     unknown,
   };
 }
+
+/** Paging stays lenient: out-of-range or malformed values are clamped, never refused. */
+const listUsersQuerySchema = z.object({
+  page: z.string().optional(),
+  limit: z.string().optional(),
+  search: z.string().optional(),
+});
 
 function normalizedQueryInteger(raw: string | undefined, fallback: number, maximum: number): number {
   const parsed = Number.parseInt(raw ?? String(fallback), 10);
@@ -105,24 +100,11 @@ export function createUserRoutes(host: UsersServerHost) {
     return context.json({ success: true as const, message: 'OK', data: { user: toProfile(user) } } satisfies UserProfileSuccess);
   };
 
-  const updateProfileHandler = async (context: Context) => {
+  const updateProfileHandler = async (context: Context, input: ProfileInput) => {
     const sessionUser = guard.actor(context);
 
-    const parsed = profileInputSchema.safeParse(await requestBody(context));
-    if (!parsed.success) {
-      return context.json(
-        {
-          success: false as const,
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          errors: validationErrors(parsed.error),
-        },
-        422,
-      );
-    }
-
     try {
-      const user = host.updateAccount(sessionUser.id, parsed.data);
+      const user = host.updateAccount(sessionUser.id, input);
       if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
       host.recordActivity?.({
         action: 'users.profile-updated',
@@ -144,10 +126,10 @@ export function createUserRoutes(host: UsersServerHost) {
     }
   };
 
-  const listUsersHandler = (context: Context) => {
-    const page = normalizedQueryInteger(context.req.query('page'), 1, MAX_PAGE);
-    const limit = normalizedQueryInteger(context.req.query('limit'), 10, MAX_PAGE_SIZE);
-    const search = context.req.query('search') ?? '';
+  const listUsersHandler = (context: Context, query: z.output<typeof listUsersQuerySchema>) => {
+    const page = normalizedQueryInteger(query.page, 1, MAX_PAGE);
+    const limit = normalizedQueryInteger(query.limit, 10, MAX_PAGE_SIZE);
+    const search = query.search ?? '';
     const result = host.listAccounts(page, limit, search);
     return context.json({
       success: true as const,
@@ -161,25 +143,12 @@ export function createUserRoutes(host: UsersServerHost) {
     } satisfies UsersResponseSuccess);
   };
 
-  const createUserHandler = async (context: Context) => {
+  const createUserHandler = async (context: Context, input: CreateUserInput) => {
     const sessionUser = guard.actor(context);
 
-    const parsed = createUserInputSchema.safeParse(await requestBody(context));
-    if (!parsed.success) {
-      return context.json(
-        {
-          success: false as const,
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          errors: validationErrors(parsed.error),
-        },
-        422,
-      );
-    }
-
     const canAssignRoles = host.canAssignRoles(sessionUser.id);
-    if (parsed.data.roles !== undefined && !canAssignRoles) return forbidden(context);
-    const roleSelection = parsed.data.roles === undefined ? undefined : resolveRoleIds(host, parsed.data.roles);
+    if (input.roles !== undefined && !canAssignRoles) return forbidden(context);
+    const roleSelection = input.roles === undefined ? undefined : resolveRoleIds(host, input.roles);
     if (roleSelection && roleSelection.unknown.length > 0) {
       return validationFailure(
         context,
@@ -192,9 +161,9 @@ export function createUserRoutes(host: UsersServerHost) {
       const user = host.createAccount(
         {
           id: randomUUID(),
-          name: parsed.data.name,
-          email: parsed.data.email,
-          passwordHash: await host.hashPassword(parsed.data.password),
+          name: input.name,
+          email: input.email,
+          passwordHash: await host.hashPassword(input.password),
         },
         roleSelection?.ids,
       );
@@ -218,28 +187,22 @@ export function createUserRoutes(host: UsersServerHost) {
     }
   };
 
-  const updateUserHandler = async (context: Context) => {
+  // Accounts may edit themselves; anyone else needs users.edit. Checked before
+  // the body is validated, so callers without access learn nothing from 422s.
+  const canEditTarget: MiddlewareHandler = async (context, next) => {
+    const actor = guard.actor(context);
+    if (actor.id !== context.req.param('id') && !host.canManageUsers(actor.id, 'edit')) return forbidden(context);
+    await next();
+  };
+
+  const updateUserHandler = async (context: Context, input: UpdateUserInput) => {
     const sessionUser = guard.actor(context);
 
     const userId = context.req.param('id');
     if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
     const self = sessionUser.id === userId;
-    if (!self && !host.canManageUsers(sessionUser.id, 'edit')) return forbidden(context);
 
-    const parsed = updateUserInputSchema.safeParse(await requestBody(context));
-    if (!parsed.success) {
-      return context.json(
-        {
-          success: false as const,
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          errors: validationErrors(parsed.error),
-        },
-        422,
-      );
-    }
-
-    const { roles, password, ...profile } = parsed.data;
+    const { roles, password, ...profile } = input;
     const actorIsAdmin = host.canAssignRoles(sessionUser.id);
 
     const target = host.findAccountById(userId);
@@ -306,7 +269,7 @@ export function createUserRoutes(host: UsersServerHost) {
     }
   };
 
-  const resetPasswordHandler = async (context: Context) => {
+  const resetPasswordHandler = async (context: Context, input: ResetUserPasswordInput) => {
     const sessionUser = guard.actor(context);
 
     const userId = context.req.param('id');
@@ -326,20 +289,7 @@ export function createUserRoutes(host: UsersServerHost) {
       return forbidden(context, 'Only administrators may reset an administrator password', 'PROTECTED_ADMIN');
     }
 
-    const parsed = resetUserPasswordInputSchema.safeParse(await requestBody(context));
-    if (!parsed.success) {
-      return context.json(
-        {
-          success: false as const,
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          errors: validationErrors(parsed.error),
-        },
-        422,
-      );
-    }
-
-    const user = host.resetPassword(userId, await host.hashPassword(parsed.data.password));
+    const user = host.resetPassword(userId, await host.hashPassword(input.password));
     if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
     host.recordActivity?.({
       action: 'users.password-reset',
@@ -355,39 +305,27 @@ export function createUserRoutes(host: UsersServerHost) {
     } satisfies ManagedUserResponseSuccess);
   };
 
-  const deleteUsersHandler = async (context: Context) => {
+  const deleteUsersHandler = async (context: Context, input: DeleteUsersInput) => {
     const sessionUser = guard.actor(context);
 
-    const parsed = deleteUsersInputSchema.safeParse(await requestBody(context));
-    if (!parsed.success) {
-      return context.json(
-        {
-          success: false as const,
-          message: 'Validation failed',
-          code: 'VALIDATION_ERROR',
-          errors: validationErrors(parsed.error),
-        },
-        422,
-      );
-    }
-    if (parsed.data.ids.includes(sessionUser.id)) {
+    if (input.ids.includes(sessionUser.id)) {
       return context.json({ success: false as const, message: 'Cannot delete your own account', code: 'SELF_DELETE' }, 400);
     }
 
     const adminId = adminRoleId(host);
     if (adminId) {
-      const remainingAdmins = host.usersWithRole(adminId).filter((user) => !parsed.data.ids.includes(user.id));
+      const remainingAdmins = host.usersWithRole(adminId).filter((user) => !input.ids.includes(user.id));
       if (remainingAdmins.length === 0) {
         return context.json({ success: false as const, message: 'Cannot delete the last admin', code: 'LAST_ADMIN' }, 400);
       }
     }
 
-    const targets = parsed.data.ids.flatMap((userId) => {
+    const targets = input.ids.flatMap((userId) => {
       const user = host.findAccountById(userId);
       return user ? [{ id: user.id, name: user.name }] : [];
     });
-    const deleted = host.deleteAccounts(parsed.data.ids);
-    await cleanupUserAvatarAssets(host, parsed.data.ids);
+    const deleted = host.deleteAccounts(input.ids);
+    await cleanupUserAvatarAssets(host, input.ids);
     for (const target of targets) {
       host.recordActivity?.({
         action: 'users.deleted',
@@ -402,11 +340,17 @@ export function createUserRoutes(host: UsersServerHost) {
 
   return new Hono()
     .get('/me', guard.signedIn, currentProfileHandler)
-    .patch('/me', guard.signedIn, updateProfileHandler)
-    .get('/', canManage('view'), listUsersHandler)
-    .post('/', canManage('create'), createUserHandler)
-    // Accounts may edit themselves; users.edit is checked in the handler.
-    .put('/:id', guard.signedIn, updateUserHandler)
-    .post('/:id/reset-password', guard.allow((actor) => host.canResetPasswords(actor.id)), resetPasswordHandler)
-    .delete('/', canManage('delete'), deleteUsersHandler);
+    .patch('/me', guard.signedIn, jsonInput(profileInputSchema), (context) => updateProfileHandler(context, context.req.valid('json')))
+    .get('/', canManage('view'), queryInput(listUsersQuerySchema), (context) => listUsersHandler(context, context.req.valid('query')))
+    .post('/', canManage('create'), jsonInput(createUserInputSchema), (context) => createUserHandler(context, context.req.valid('json')))
+    .put('/:id', guard.signedIn, canEditTarget, jsonInput(updateUserInputSchema), (context) =>
+      updateUserHandler(context, context.req.valid('json')),
+    )
+    .post(
+      '/:id/reset-password',
+      guard.allow((actor) => host.canResetPasswords(actor.id)),
+      jsonInput(resetUserPasswordInputSchema),
+      (context) => resetPasswordHandler(context, context.req.valid('json')),
+    )
+    .delete('/', canManage('delete'), jsonInput(deleteUsersInputSchema), (context) => deleteUsersHandler(context, context.req.valid('json')));
 }

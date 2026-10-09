@@ -11,15 +11,16 @@ import {
   type RevokeSessionsSuccess,
   type SessionData,
   type SessionsSuccess,
+  type TwoFactorChallengeInput,
   type TwoFactorSetupSuccess,
   type TwoFactorStatusSuccess,
 } from '../contract';
 import { env } from '../../../shared/config';
-import { clientIp, createGuard } from '../../../shared/security';
+import { clientIp, createGuard, jsonInput } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
 import { AUTH } from './config';
-import { requestBody, setSessionCookie, validationFailed } from './http';
+import { setSessionCookie } from './http';
 import {
   consumeRecoveryCode,
   countUnusedRecoveryCodes,
@@ -87,13 +88,10 @@ const challengeExpired = (context: Context) =>
     401,
   );
 
-const challengeHandler = async (context: Context, activity?: AuthActivitySink) => {
+const challengeHandler = async (context: Context, input: TwoFactorChallengeInput, activity?: AuthActivitySink) => {
   const challengeId = getCookie(context, TWO_FACTOR_COOKIE_NAME);
   const challenge = challengeId ? findTwoFactorChallenge(challengeId) : undefined;
   if (!challenge) return challengeExpired(context);
-
-  const parsed = twoFactorChallengeInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) return validationFailed(context, parsed.error);
 
   const user = findUserById(challenge.user_id);
   const state = findTwoFactorState(challenge.user_id);
@@ -103,12 +101,12 @@ const challengeHandler = async (context: Context, activity?: AuthActivitySink) =
   }
 
   let verified: boolean;
-  if (parsed.data.code !== undefined) {
-    const step = verifyTotp(state.two_factor_secret, parsed.data.code, { lastUsedStep: state.two_factor_last_step });
+  if (input.code !== undefined) {
+    const step = verifyTotp(state.two_factor_secret, input.code, { lastUsedStep: state.two_factor_last_step });
     // The conditional update closes the race where two requests submit the same code.
     verified = step !== null && recordTwoFactorStep(user.id, step);
   } else {
-    verified = consumeRecoveryCode(user.id, hashRecoveryCode(parsed.data.recovery_code!));
+    verified = consumeRecoveryCode(user.id, hashRecoveryCode(input.recovery_code!));
   }
 
   if (!verified) {
@@ -131,7 +129,7 @@ const challengeHandler = async (context: Context, activity?: AuthActivitySink) =
   endSession(getCookie(context, SESSION_COOKIE_NAME));
   const token = startSession(user, context.req.header('user-agent'), clientIp(context));
   setSessionCookie(context, token);
-  const method = parsed.data.code !== undefined ? 'authenticator' : 'recovery-code';
+  const method = input.code !== undefined ? 'authenticator' : 'recovery-code';
   Logger.logAuth('login_success', { userId: user.id, twoFactor: method });
   activity?.({
     action: 'auth.login',
@@ -164,10 +162,8 @@ const invalidPassword = (context: Context) =>
   context.json({ success: false as const, message: 'Password is incorrect', code: 'INVALID_PASSWORD' }, 400);
 
 /** Re-authenticates with the current password; returns an error response or undefined. */
-async function confirmPassword(context: Context, user: StoredUser) {
-  const parsed = confirmPasswordInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) return validationFailed(context, parsed.error);
-  if (!(await checkPassword(parsed.data.password, user))) {
+async function confirmPassword(context: Context, user: StoredUser, password: string) {
+  if (!(await checkPassword(password, user))) {
     Logger.logSecurity('security_password_confirmation_failed', { userId: user.id });
     return invalidPassword(context);
   }
@@ -189,7 +185,9 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
     activity?.({ action, resource: 'auth', actorId: user.id, targetId: user.id, targetLabel: user.name, metadata });
 
   return new Hono()
-    .post('/two-factor/challenge', (context) => challengeHandler(context, activity))
+    .post('/two-factor/challenge', jsonInput(twoFactorChallengeInputSchema), (context) =>
+      challengeHandler(context, context.req.valid('json'), activity),
+    )
     .get('/sessions', accountGuard.signedIn, (context) => {
       const auth = accountGuard.actor(context);
       const sessions: SessionData[] = listActiveSessions(auth.user.id).map((session) => ({
@@ -243,7 +241,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
         data: { twoFactor: twoFactorStatus(auth.user.id) },
       } satisfies TwoFactorStatusSuccess);
     })
-    .post('/two-factor/setup', accountGuard.signedIn, async (context) => {
+    .post('/two-factor/setup', accountGuard.signedIn, jsonInput(confirmPasswordInputSchema), async (context) => {
       const auth = accountGuard.actor(context);
       if (twoFactorStatus(auth.user.id).enabled) {
         return context.json(
@@ -251,7 +249,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
           409,
         );
       }
-      const failure = await confirmPassword(context, auth.user);
+      const failure = await confirmPassword(context, auth.user, context.req.valid('json').password);
       if (failure) return failure;
       const secret = generateTotpSecret();
       setPendingTwoFactorSecret(auth.user.id, secret);
@@ -261,7 +259,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
         data: { secret, otpauthUrl: otpauthUrl({ issuer: AUTH.TWO_FACTOR_ISSUER, account: auth.user.email, secret }) },
       } satisfies TwoFactorSetupSuccess);
     })
-    .post('/two-factor/enable', accountGuard.signedIn, async (context) => {
+    .post('/two-factor/enable', accountGuard.signedIn, jsonInput(twoFactorCodeInputSchema), async (context) => {
       const auth = accountGuard.actor(context);
       const state = findTwoFactorState(auth.user.id);
       if (state?.two_factor_enabled_at != null) {
@@ -276,9 +274,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
           409,
         );
       }
-      const parsed = twoFactorCodeInputSchema.safeParse(await requestBody(context));
-      if (!parsed.success) return validationFailed(context, parsed.error);
-      const step = verifyTotp(state.two_factor_pending_secret, parsed.data.code);
+      const step = verifyTotp(state.two_factor_pending_secret, context.req.valid('json').code);
       if (step === null) {
         return context.json(
           {
@@ -300,7 +296,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
         data: { recoveryCodes },
       } satisfies RecoveryCodesSuccess);
     })
-    .post('/two-factor/disable', accountGuard.signedIn, async (context) => {
+    .post('/two-factor/disable', accountGuard.signedIn, jsonInput(confirmPasswordInputSchema), async (context) => {
       const auth = accountGuard.actor(context);
       if (!twoFactorStatus(auth.user.id).enabled) {
         return context.json(
@@ -308,14 +304,14 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
           409,
         );
       }
-      const failure = await confirmPassword(context, auth.user);
+      const failure = await confirmPassword(context, auth.user, context.req.valid('json').password);
       if (failure) return failure;
       disableTwoFactor(auth.user.id);
       Logger.logAuth('two_factor_disabled', { userId: auth.user.id });
       record(auth.user, 'auth.two-factor-disabled');
       return context.json({ success: true as const, message: 'Two-factor authentication disabled' } satisfies AuthSuccess);
     })
-    .post('/two-factor/recovery-codes', accountGuard.signedIn, async (context) => {
+    .post('/two-factor/recovery-codes', accountGuard.signedIn, jsonInput(confirmPasswordInputSchema), async (context) => {
       const auth = accountGuard.actor(context);
       if (!twoFactorStatus(auth.user.id).enabled) {
         return context.json(
@@ -323,7 +319,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
           409,
         );
       }
-      const failure = await confirmPassword(context, auth.user);
+      const failure = await confirmPassword(context, auth.user, context.req.valid('json').password);
       if (failure) return failure;
       const recoveryCodes = generateRecoveryCodes();
       replaceRecoveryCodes(auth.user.id, recoveryCodes.map(hashRecoveryCode));

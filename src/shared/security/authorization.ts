@@ -20,11 +20,11 @@ export interface Guard<A extends Actor> {
   actor(context: Context): A;
 }
 
-export function unauthorized(context: Context): Response {
+export function unauthorized(context: Context) {
   return context.json({ success: false as const, message: 'Unauthorized', code: 'UNAUTHORIZED' }, 401);
 }
 
-export function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN'): Response {
+export function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN') {
   return context.json({ success: false as const, message, code }, 403);
 }
 

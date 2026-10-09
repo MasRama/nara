@@ -61,8 +61,8 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 ## HTTP and contracts
 
 - Features expose Hono sub-applications; `src/app/server.ts` mounts them (`/api/auth`, `/api/users`, …) plus `/health` and `/ready`. Public-boundary consumers are architecture facts, while route mounts require the statically provable Hono import → Hono instance → `.route()` chain; they are not runtime health checks.
-- JSON shape: `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`. English messages. Zod `safeParse` at the route boundary; `src/app/error-handler.ts` maps domain errors.
-- Contracts live in the owning feature's `contract.ts`, including strict response schemas that routes type their responses against (`satisfies`); browser code consumes them through the feature's `web/` typed client. Per-feature contract tests run each web client method against the real app and parse every answer with those schemas. No global RPC abstraction.
+- JSON shape: `{ success: true, message, data? }` / `{ success: false, message, code, errors? }`. English messages. Zod validation at the route boundary through `jsonInput`/`queryInput` middleware (422 `VALIDATION_ERROR`, before the handler's state checks; access checks that must not leak validation details run ahead of it); `src/app/error-handler.ts` maps domain errors.
+- Contracts live in the owning feature's `contract.ts`, including strict response schemas that routes type their responses against (`satisfies`); browser code consumes them through the feature's `web/` client, built on Hono's `hc` from a type-only import of the feature's own routes, so the compiler checks paths, request bodies, and responses end to end. Per-feature contract tests run each web client method against the real app and parse every answer with those schemas. No RPC layer beyond Hono's own `hc`.
 
 ## CLI
 

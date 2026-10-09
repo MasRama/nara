@@ -15,7 +15,7 @@ export interface Guard<A extends { id: string }> {
   actor(context: Context): A;
 }
 
-export function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN'): Response {
+export function forbidden(context: Context, message = 'Forbidden', code = 'FORBIDDEN') {
   return context.json({ success: false as const, message, code }, 403);
 }
 

@@ -79,4 +79,29 @@ describe('users feature', () => {
       code: 'UNAUTHORIZED',
     });
   });
+
+  it('refuses to edit another account before validating the body', async () => {
+    const editor = await registerUser(`${randomUUID()}@example.com`);
+    const target = await registerUser(`${randomUUID()}@example.com`);
+    const targetProfile = (await (await app.request('/api/users/me', { headers: { Cookie: target } })).json()) as {
+      data: { user: { id: string } };
+    };
+
+    const put = async (cookie: string, userId: string) => {
+      const state = await issueCsrf(app, cookie);
+      return app.request(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'not-an-email' }),
+      });
+    };
+
+    const other = await put(editor, targetProfile.data.user.id);
+    expect(other.status).toBe(403);
+    expect(await other.json()).toEqual({ success: false, message: 'Forbidden', code: 'FORBIDDEN' });
+
+    const self = await put(target, targetProfile.data.user.id);
+    expect(self.status).toBe(422);
+    await expect(self.json()).resolves.toMatchObject({ code: 'VALIDATION_ERROR', errors: { email: ['Invalid email format'] } });
+  });
 });

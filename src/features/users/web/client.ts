@@ -1,3 +1,4 @@
+import { hc } from 'hono/client';
 import type {
   AvatarUploadResponse,
   CreateUserInput,
@@ -10,32 +11,8 @@ import type {
   UserProfileResponse,
   UsersResponse,
 } from '../contract';
+import type { createAssetRoutes, createUserRoutes } from '..';
 import type { UsersWebCsrf } from './host';
-
-async function readResponse<T>(response: Response): Promise<T> {
-  return (await response.json()) as T;
-}
-
-async function jsonRequest<T>(url: string, init: RequestInit, csrf?: UsersWebCsrf): Promise<T> {
-  const method = (init.method ?? 'GET').toUpperCase();
-  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-    await csrf?.ensureToken();
-  }
-  return readResponse<T>(
-    await fetch(url, {
-      ...init,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(csrf ? csrf.headers(init.headers) : init.headers),
-      },
-    }),
-  );
-}
-
-function endpoint(baseUrl: string, path: string): string {
-  return `${baseUrl.replace(/\/$/, '')}${path}`;
-}
 
 export interface UsersClient {
   me(): Promise<UserProfileResponse>;
@@ -63,54 +40,24 @@ export interface UsersClientOptions {
 export function createUsersClient(options: UsersClientOptions = {}): UsersClient {
   const { baseUrl = '/api/users', assetsBaseUrl = '/api/assets', csrf } = options;
 
+  /** Same-origin `fetch` carrying the session cookie and, on writes, the host's CSRF token. */
+  const apiFetch: typeof fetch = async (input, init = {}) => {
+    const method = (init.method ?? 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') await csrf?.ensureToken();
+    return fetch(input, { ...init, credentials: 'include', headers: csrf ? csrf.headers(init.headers) : init.headers });
+  };
+  const users = hc<ReturnType<typeof createUserRoutes>>(baseUrl.replace(/\/$/, ''), { fetch: apiFetch });
+  const assets = hc<ReturnType<typeof createAssetRoutes>>(assetsBaseUrl.replace(/\/$/, ''), { fetch: apiFetch });
+
   return {
-    me: async () =>
-      jsonRequest<UserProfileResponse>(endpoint(baseUrl, '/me'), { method: 'GET' }, csrf),
-    updateProfile: async (input) =>
-      jsonRequest<UserProfileResponse>(endpoint(baseUrl, '/me'), {
-        method: 'PATCH',
-        body: JSON.stringify(input),
-      }, csrf),
-    listUsers: async ({ page = 1, limit = 10, search = '' } = {}) => {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-        search,
-      });
-      return jsonRequest<UsersResponse>(`${baseUrl.replace(/\/$/, '')}?${params.toString()}`, { method: 'GET' }, csrf);
-    },
-    createUser: async (input) =>
-      jsonRequest<ManagedUserResponse>(baseUrl.replace(/\/$/, ''), {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }, csrf),
-    updateUser: async (id, input) =>
-      jsonRequest<ManagedUserResponse>(`${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(input),
-      }, csrf),
-    resetPassword: async (id, input) =>
-      jsonRequest<ManagedUserResponse>(`${baseUrl.replace(/\/$/, '')}/${encodeURIComponent(id)}/reset-password`, {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }, csrf),
-    deleteUsers: async (input) =>
-      jsonRequest<DeleteUsersResponse>(baseUrl.replace(/\/$/, ''), {
-        method: 'DELETE',
-        body: JSON.stringify(input),
-      }, csrf),
-    uploadAvatar: async (file) => {
-      const form = new FormData();
-      form.set('file', file);
-      await csrf?.ensureToken();
-      return readResponse<AvatarUploadResponse>(
-        await fetch(endpoint(assetsBaseUrl, '/avatar'), {
-          method: 'POST',
-          credentials: 'include',
-          headers: csrf ? csrf.headers() : {},
-          body: form,
-        }),
-      );
-    },
+    me: async () => (await users.me.$get()).json(),
+    updateProfile: async (input) => (await users.me.$patch({ json: input })).json(),
+    listUsers: async ({ page = 1, limit = 10, search = '' } = {}) =>
+      (await users.index.$get({ query: { page: String(page), limit: String(limit), search } })).json(),
+    createUser: async (input) => (await users.index.$post({ json: input })).json(),
+    updateUser: async (id, input) => (await users[':id'].$put({ param: { id }, json: input })).json(),
+    resetPassword: async (id, input) => (await users[':id']['reset-password'].$post({ param: { id }, json: input })).json(),
+    deleteUsers: async (input) => (await users.index.$delete({ json: input })).json(),
+    uploadAvatar: async (file) => (await assets.avatar.$post({ form: { file } })).json(),
   };
 }

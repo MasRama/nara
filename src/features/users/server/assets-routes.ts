@@ -45,7 +45,7 @@ function uploadedFile(value: unknown): File | undefined {
   return value as File;
 }
 
-function invalidFile(context: Context, message: string, code: string, status = 400): Response {
+function invalidFile(context: Context, message: string, code: string, status = 400) {
   return context.json({ success: false as const, message, code }, status as 400 | 413);
 }
 

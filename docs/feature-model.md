@@ -149,6 +149,26 @@ export type ProfileSaved = z.infer<ReturnType<typeof profileResponseSchemas>['sa
 
 Routes type each response with `satisfies ProfileSaved`, and copy fields explicitly instead of spreading rows or provider objects. A contract test in the Feature's `tests/` runs every `web/` client method against the real app (`installBrowser(app)` from `src/shared/security/tests/browser.ts`) and parses each answer, refusals included, with these schemas, so a renamed path, a renamed field, or an undeclared field fails.
 
+Routes validate input with middleware that declares the schema on the route:
+
+```ts
+.patch('/me', guard.signedIn, jsonInput(profileInputSchema), (context) => {
+  const input = context.req.valid('json'); // ProfileInput, already parsed
+  // ...
+})
+```
+
+`jsonInput(schema)` and `queryInput(schema)` come from `src/shared/security`; an installable Feature, which cannot rely on it, carries its own copy in `server/input.ts`. A missing or malformed JSON body is validated as `{}`, so every refusal is the same `422 VALIDATION_ERROR`; empty query values count as absent. Validation runs before the handler, so an invalid body is refused with 422 before a state check could answer 404 or 409. A check that decides whether the caller may act at all belongs in middleware ahead of `jsonInput`, so a caller without access never sees validation details (Users checks `users.edit` this way on `PUT /api/users/:id`).
+
+Web clients call the routes through Hono's `hc`, typed from the Feature's own route factory with `import type`, so no server code reaches the browser bundle:
+
+```ts
+const api = hc<ReturnType<typeof createUserRoutes>>('/api/users', { fetch: apiFetch });
+updateProfile: async (input) => (await api.me.$patch({ json: input })).json(),
+```
+
+`apiFetch` adds the session cookie and, on writes, the CSRF token. Each client method keeps its contract return type (`Promise<UserProfileResponse>`), so `npm run lint` fails when a path, a request body, or a response field drifts between route and client. Guards, CSRF, and rate limits answer from middleware the inferred types cannot see; the contract unions include those refusals. Each Feature's `tests/client-types.ts` pins this with `@ts-expect-error` on a wrong route, body, and response field.
+
 ## Server and web relationship
 
 Server code belongs under `server/`. It may use databases, filesystem APIs, server-only dependencies, and private implementation details within its own Feature. The Feature exposes route sub-applications or safe general functions through `index.ts`. A substantial Feature whose behavior needs application-owned capabilities exposes factories built from explicit host requirements (for example, `createUserRoutes(host)`) instead of singletons wired to another Feature; the application binding owns the final mount paths.

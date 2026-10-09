@@ -7,14 +7,17 @@ import {
   loginInputSchema,
   registerInputSchema,
   type AuthSuccess,
+  type ChangePasswordInput,
   type CsrfTokenSuccess,
   type CurrentUser,
   type CurrentUserSuccess,
+  type LoginInput,
   type LoginSuccess,
+  type RegisterInput,
   type RegisterSuccess,
 } from '../contract';
 import { getUserPermissions, getUserRoles } from './access';
-import { clientIp, requestCsrfToken } from '../../../shared/security';
+import { clientIp, jsonInput, requestCsrfToken } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import {
   createUser,
@@ -39,7 +42,7 @@ import {
   startSession,
 } from './service';
 import type { AuthActivitySink } from './activity';
-import { requestBody, setSessionCookie, validationErrors } from './http';
+import { setSessionCookie } from './http';
 import { beginTwoFactorChallenge, createSecurityRoutes } from './security-routes';
 import { sessionGuard } from './guard';
 
@@ -47,27 +50,13 @@ function isUniqueConstraintError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
 }
 
-const registerHandler = async (context: Context, activity?: AuthActivitySink) => {
-  const parsed = registerInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) {
-    const errors = validationErrors(parsed.error);
-    return context.json(
-      {
-        success: false as const,
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        errors,
-      },
-      422,
-    );
-  }
-
+const registerHandler = async (context: Context, input: RegisterInput, activity?: AuthActivitySink) => {
   try {
     const user = createUser({
       id: randomUUID(),
-      name: parsed.data.name,
-      email: parsed.data.email,
-      password: await hashPassword(parsed.data.password),
+      name: input.name,
+      email: input.email,
+      password: await hashPassword(input.password),
     });
     const token = startSession(user, context.req.header('user-agent'), clientIp(context));
     setSessionCookie(context, token);
@@ -113,35 +102,21 @@ function loginLocked(context: Context, lockoutMs: number) {
   );
 }
 
-const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
-  const parsed = loginInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) {
-    const errors = validationErrors(parsed.error);
-    return context.json(
-      {
-        success: false as const,
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        errors,
-      },
-      422,
-    );
-  }
-
-  const identifier = parsed.data.email.trim().toLowerCase();
+const loginHandler = async (context: Context, input: LoginInput, activity?: AuthActivitySink) => {
+  const identifier = input.email.trim().toLowerCase();
   const ip = clientIp(context);
 
   if (isLockedOut(identifier, ip)) {
-    Logger.logSecurity('login_blocked_locked', { email: parsed.data.email });
+    Logger.logSecurity('login_blocked_locked', { email: input.email });
     return loginLocked(context, remainingLockoutMs(identifier, ip));
   }
 
-  const user = findUserByEmail(parsed.data.email);
+  const user = findUserByEmail(input.email);
   // checkPassword always runs a hash comparison (dummy hash for unknown
   // emails) so failure timing does not disclose account existence.
-  if (!(await checkPassword(parsed.data.password, user))) {
+  if (!(await checkPassword(input.password, user))) {
     const result = recordFailedAttempt(identifier, ip);
-    Logger.logSecurity('login_failed', { email: parsed.data.email });
+    Logger.logSecurity('login_failed', { email: input.email });
     if (result.isLocked) return loginLocked(context, result.lockoutMs);
     return context.json(
       { success: false as const, message: 'Invalid email or password', code: 'INVALID_CREDENTIALS' },
@@ -177,33 +152,20 @@ const loginHandler = async (context: Context, activity?: AuthActivitySink) => {
   } satisfies LoginSuccess);
 };
 
-const changePasswordHandler = async (context: Context, activity?: AuthActivitySink) => {
+const changePasswordHandler = async (context: Context, input: ChangePasswordInput, activity?: AuthActivitySink) => {
   const user = findUserById(sessionGuard.actor(context).id);
   if (!user) {
     return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
   }
 
-  const parsed = changePasswordInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) {
-    return context.json(
-      {
-        success: false as const,
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        errors: validationErrors(parsed.error),
-      },
-      422,
-    );
-  }
-
-  if (!(await checkPassword(parsed.data.current_password, user))) {
+  if (!(await checkPassword(input.current_password, user))) {
     return context.json(
       { success: false as const, message: 'Current password is incorrect', code: 'INVALID_PASSWORD' },
       400,
     );
   }
 
-  updatePassword(user.id, await hashPassword(parsed.data.new_password));
+  updatePassword(user.id, await hashPassword(input.new_password));
   // A credential change signs out every other device; this browser gets a fresh session.
   deleteSessionsByUserId(user.id);
   const token = startSession(user, context.req.header('user-agent'), clientIp(context));
@@ -271,9 +233,11 @@ const logoutHandler = (context: Context, activity?: AuthActivitySink) => {
 export function createAuthRoutes(activity?: AuthActivitySink) {
   return new Hono()
     .get('/csrf', csrfHandler)
-    .post('/register', (context) => registerHandler(context, activity))
-    .post('/login', (context) => loginHandler(context, activity))
-    .post('/change-password', sessionGuard.signedIn, (context) => changePasswordHandler(context, activity))
+    .post('/register', jsonInput(registerInputSchema), (context) => registerHandler(context, context.req.valid('json'), activity))
+    .post('/login', jsonInput(loginInputSchema), (context) => loginHandler(context, context.req.valid('json'), activity))
+    .post('/change-password', sessionGuard.signedIn, jsonInput(changePasswordInputSchema), (context) =>
+      changePasswordHandler(context, context.req.valid('json'), activity),
+    )
     .get('/me', sessionGuard.signedIn, currentUserHandler)
     .post('/logout', (context) => logoutHandler(context, activity))
     .route('/', createSecurityRoutes(activity));

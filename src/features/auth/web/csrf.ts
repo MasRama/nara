@@ -60,3 +60,10 @@ export async function ensureCsrfToken(fetcher: typeof fetch = fetch): Promise<st
   }
   return readCsrfToken();
 }
+
+/** Same-origin `fetch` for typed clients: carries the session cookie and, on writes, the CSRF token. */
+export const apiFetch: typeof fetch = async (input, init = {}) => {
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') await ensureCsrfToken();
+  return fetch(input, { ...init, credentials: 'include', headers: csrfHeaders(init.headers) });
+};

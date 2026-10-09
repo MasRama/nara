@@ -1,3 +1,4 @@
+import { hc } from 'hono/client';
 import type {
   CreateRoleInput,
   DeleteRolesInput,
@@ -7,27 +8,8 @@ import type {
   RolesResponse,
   UpdateRoleInput,
 } from '../contract';
-import { csrfHeaders, ensureCsrfToken } from './csrf';
-async function readResponse<T>(response: Response): Promise<T> {
-  return (await response.json()) as T;
-}
-
-async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
-  const method = (init.method ?? 'GET').toUpperCase();
-  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
-    await ensureCsrfToken();
-  }
-  return readResponse<T>(
-    await fetch(url, {
-      ...init,
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...csrfHeaders(init.headers),
-      },
-    }),
-  );
-}
+import type { createAccessRoutes } from '..';
+import { apiFetch } from './csrf';
 
 export interface AccessClient {
   listRoles(): Promise<RolesResponse>;
@@ -38,25 +20,13 @@ export interface AccessClient {
 }
 
 export function createAccessClient(baseUrl = '/api/roles'): AccessClient {
-  const base = baseUrl.replace(/\/$/, '');
+  const api = hc<ReturnType<typeof createAccessRoutes>>(baseUrl.replace(/\/$/, ''), { fetch: apiFetch });
 
   return {
-    listRoles: async () => jsonRequest<RolesResponse>(base, { method: 'GET' }),
-    listPermissions: async () => jsonRequest<PermissionsResponse>(`${base}/permissions`, { method: 'GET' }),
-    createRole: async (input) =>
-      jsonRequest<RoleResponse>(base, {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
-    updateRole: async (id, input) =>
-      jsonRequest<RoleResponse>(`${base}/${encodeURIComponent(id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(input),
-      }),
-    deleteRoles: async (input) =>
-      jsonRequest<DeleteRolesResponse>(base, {
-        method: 'DELETE',
-        body: JSON.stringify(input),
-      }),
+    listRoles: async () => (await api.index.$get()).json(),
+    listPermissions: async () => (await api.permissions.$get()).json(),
+    createRole: async (input) => (await api.index.$post({ json: input })).json(),
+    updateRole: async (id, input) => (await api[':id'].$put({ param: { id }, json: input })).json(),
+    deleteRoles: async (input) => (await api.index.$delete({ json: input })).json(),
   };
 }

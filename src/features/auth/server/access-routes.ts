@@ -1,17 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { z } from 'zod';
 import {
   createRoleInputSchema,
   deleteRolesInputSchema,
   updateRoleInputSchema,
+  type CreateRoleInput,
+  type DeleteRolesInput,
   type DeleteRolesResponseSuccess,
   type PermissionData,
   type PermissionsResponseSuccess,
   type RoleData,
   type RoleResponseSuccess,
   type RolesResponseSuccess,
+  type UpdateRoleInput,
 } from '../contract';
 import {
   createRoleWithPermissions,
@@ -26,28 +28,10 @@ import {
   type Permission,
   type Role,
 } from './access';
-import { forbidden } from '../../../shared/security';
+import { forbidden, jsonInput } from '../../../shared/security';
 import { requirePermission, sessionGuard } from './guard';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
-
-function validationErrors(error: z.ZodError): Record<string, string[]> {
-  const errors: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const key = issue.path.join('.') || '_root';
-    errors[key] ??= [];
-    errors[key].push(issue.message);
-  }
-  return errors;
-}
-
-async function requestBody(context: Context): Promise<unknown> {
-  try {
-    return await context.req.json();
-  } catch {
-    return {};
-  }
-}
 
 function uniqueConstraint(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
@@ -93,7 +77,7 @@ function resolvePermissionIds(slugs: string[]): { ids: string[]; unknown: string
   };
 }
 
-function unknownPermissions(context: Context, slugs: string[]): Response {
+function unknownPermissions(context: Context, slugs: string[]) {
   return context.json(
     {
       success: false as const,
@@ -126,23 +110,10 @@ const listPermissionsHandler = (context: Context) => {
   return context.json({ success: true as const, message: 'OK', data: grouped } satisfies PermissionsResponseSuccess);
 };
 
-const createRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
+const createRoleHandler = async (context: Context, input: CreateRoleInput, activity?: AuthActivitySink) => {
   const user = sessionGuard.actor(context);
 
-  const parsed = createRoleInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) {
-    return context.json(
-      {
-        success: false as const,
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        errors: validationErrors(parsed.error),
-      },
-      422,
-    );
-  }
-
-  const permissions = resolvePermissionIds(parsed.data.permissions);
+  const permissions = resolvePermissionIds(input.permissions);
   if (permissions.unknown.length > 0) return unknownPermissions(context, permissions.unknown);
   if (permissions.ids.length > 0 && !isAdmin(user.id)) return forbidden(context);
 
@@ -150,9 +121,9 @@ const createRoleHandler = async (context: Context, activity?: AuthActivitySink) 
     const role = createRoleWithPermissions(
       {
         id: randomUUID(),
-        name: parsed.data.name,
-        slug: parsed.data.slug,
-        description: parsed.data.description ?? null,
+        name: input.name,
+        slug: input.slug,
+        description: input.description ?? null,
       },
       permissions.ids,
     );
@@ -177,7 +148,7 @@ const createRoleHandler = async (context: Context, activity?: AuthActivitySink) 
   }
 };
 
-const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) => {
+const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activity?: AuthActivitySink) => {
   const user = sessionGuard.actor(context);
 
   const roleId = context.req.param('id');
@@ -188,20 +159,7 @@ const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) 
     return context.json({ success: false as const, message: 'Cannot edit the admin role', code: 'PROTECTED_ROLE' }, 403);
   }
 
-  const parsed = updateRoleInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) {
-    return context.json(
-      {
-        success: false as const,
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        errors: validationErrors(parsed.error),
-      },
-      422,
-    );
-  }
-
-  const { permissions, ...roleData } = parsed.data;
+  const { permissions, ...roleData } = input;
   const permissionSelection = permissions === undefined ? undefined : resolvePermissionIds(permissions);
   if (permissionSelection && permissionSelection.unknown.length > 0) {
     return unknownPermissions(context, permissionSelection.unknown);
@@ -235,31 +193,19 @@ const updateRoleHandler = async (context: Context, activity?: AuthActivitySink) 
   }
 };
 
-const deleteRolesHandler = async (context: Context, activity?: AuthActivitySink) => {
+const deleteRolesHandler = async (context: Context, input: DeleteRolesInput, activity?: AuthActivitySink) => {
   const user = sessionGuard.actor(context);
 
-  const parsed = deleteRolesInputSchema.safeParse(await requestBody(context));
-  if (!parsed.success) {
-    return context.json(
-      {
-        success: false as const,
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        errors: validationErrors(parsed.error),
-      },
-      422,
-    );
-  }
-  if (parsed.data.ids.some((roleId) => findRoleById(roleId)?.slug === 'admin')) {
+  if (input.ids.some((roleId) => findRoleById(roleId)?.slug === 'admin')) {
     return context.json({ success: false as const, message: 'Cannot delete the admin role', code: 'PROTECTED_ROLE' }, 400);
   }
 
-  const targets = parsed.data.ids.flatMap((roleId) => {
+  const targets = input.ids.flatMap((roleId) => {
     const role = findRoleById(roleId);
     return role ? [{ id: role.id, name: role.name }] : [];
   });
-  const deleted = deleteRoles(parsed.data.ids);
-  Logger.warn('Roles deleted', { adminId: user.id, deletedIds: parsed.data.ids, count: deleted });
+  const deleted = deleteRoles(input.ids);
+  Logger.warn('Roles deleted', { adminId: user.id, deletedIds: input.ids, count: deleted });
   for (const target of targets) {
     activity?.({
       action: 'roles.deleted',
@@ -276,7 +222,13 @@ export function createAccessRoutes(activity?: AuthActivitySink) {
   return new Hono()
     .get('/', requirePermission('roles.view'), listRolesHandler)
     .get('/permissions', requirePermission('roles.view'), listPermissionsHandler)
-    .post('/', requirePermission('roles.create'), (context) => createRoleHandler(context, activity))
-    .put('/:id', requirePermission('roles.edit'), (context) => updateRoleHandler(context, activity))
-    .delete('/', requirePermission('roles.delete'), (context) => deleteRolesHandler(context, activity));
+    .post('/', requirePermission('roles.create'), jsonInput(createRoleInputSchema), (context) =>
+      createRoleHandler(context, context.req.valid('json'), activity),
+    )
+    .put('/:id', requirePermission('roles.edit'), jsonInput(updateRoleInputSchema), (context) =>
+      updateRoleHandler(context, context.req.valid('json'), activity),
+    )
+    .delete('/', requirePermission('roles.delete'), jsonInput(deleteRolesInputSchema), (context) =>
+      deleteRolesHandler(context, context.req.valid('json'), activity),
+    );
 }

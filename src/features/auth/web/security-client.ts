@@ -1,3 +1,4 @@
+import { hc } from 'hono/client';
 import type {
   AuthError,
   AuthSuccess,
@@ -11,18 +12,8 @@ import type {
   TwoFactorSetupResponse,
   TwoFactorStatusResponse,
 } from '../contract';
-import { csrfHeaders, ensureCsrfToken } from './csrf';
-
-async function jsonRequest<T>(url: string, init: RequestInit): Promise<T> {
-  const method = (init.method ?? 'GET').toUpperCase();
-  if (method !== 'GET') await ensureCsrfToken();
-  const response = await fetch(url, {
-    ...init,
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...csrfHeaders(init.headers) },
-  });
-  return (await response.json()) as T;
-}
+import type { authRoutes } from '..';
+import { apiFetch } from './csrf';
 
 export interface SecurityClient {
   completeTwoFactor(input: TwoFactorChallengeInput): Promise<TwoFactorChallengeResponse>;
@@ -37,19 +28,18 @@ export interface SecurityClient {
 }
 
 export function createSecurityClient(baseUrl = '/api/auth'): SecurityClient {
-  const base = baseUrl.replace(/\/$/, '');
-  const post = <T>(path: string, body?: unknown) =>
-    jsonRequest<T>(`${base}${path}`, { method: 'POST', body: JSON.stringify(body ?? {}) });
+  const api = hc<typeof authRoutes>(baseUrl.replace(/\/$/, ''), { fetch: apiFetch });
+  const twoFactor = api['two-factor'];
 
   return {
-    completeTwoFactor: (input) => post('/two-factor/challenge', input),
-    listSessions: () => jsonRequest(`${base}/sessions`, { method: 'GET' }),
-    revokeSession: (id) => jsonRequest(`${base}/sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-    revokeOtherSessions: () => post('/sessions/revoke-others'),
-    twoFactorStatus: () => jsonRequest(`${base}/two-factor`, { method: 'GET' }),
-    startTwoFactorSetup: (input) => post('/two-factor/setup', input),
-    enableTwoFactor: (input) => post('/two-factor/enable', input),
-    disableTwoFactor: (input) => post('/two-factor/disable', input),
-    regenerateRecoveryCodes: (input) => post('/two-factor/recovery-codes', input),
+    completeTwoFactor: async (input) => (await twoFactor.challenge.$post({ json: input })).json(),
+    listSessions: async () => (await api.sessions.$get()).json(),
+    revokeSession: async (id) => (await api.sessions[':id'].$delete({ param: { id } })).json(),
+    revokeOtherSessions: async () => (await api.sessions['revoke-others'].$post()).json(),
+    twoFactorStatus: async () => (await twoFactor.$get()).json(),
+    startTwoFactorSetup: async (input) => (await twoFactor.setup.$post({ json: input })).json(),
+    enableTwoFactor: async (input) => (await twoFactor.enable.$post({ json: input })).json(),
+    disableTwoFactor: async (input) => (await twoFactor.disable.$post({ json: input })).json(),
+    regenerateRecoveryCodes: async (input) => (await twoFactor['recovery-codes'].$post({ json: input })).json(),
   };
 }

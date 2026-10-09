@@ -33,6 +33,10 @@ class BrowserFormData {
     this.values.set(name, value);
   }
 
+  append(name: string, value: string | TestFile): void {
+    this.values.set(name, value);
+  }
+
   entries(): IterableIterator<[string, string | TestFile]> {
     return this.values.entries();
   }

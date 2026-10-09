@@ -21,6 +21,7 @@ describe('official Users parity', () => {
     'server/assets.ts',
     'server/guard.ts',
     'server/host.ts',
+    'server/input.ts',
     'server/routes.ts',
     'web/client.ts',
     'web/host.ts',
