@@ -148,6 +148,8 @@ export type ProfileSaved = z.infer<ReturnType<typeof profileResponseSchemas>['sa
 
 Routes type each response with `satisfies ProfileSaved`, and copy fields explicitly instead of spreading rows or provider objects. A contract test in the Feature's `tests/` runs every `web/` client method against the real app (`installBrowser(app)` from `src/shared/security/tests/browser.ts`) and parses each answer, refusals included, with these schemas, so a renamed path, a renamed field, or an undeclared field fails.
 
+Refusal codes are part of the contract too. Each Feature lists the codes its routes answer with (`AUTH_REFUSAL_CODES`, `USERS_REFUSAL_CODES`) and its error schema accepts those plus `API_REFUSAL_CODES` from `src/shared/security/codes.ts`, the codes any `/api` route can get from the shared guards, input validation, and the pipeline ahead of it. Routes send codes as literals (`code: 'NOT_FOUND' as const`), so the typed client rejects a code the contract does not declare and a page that branches on a misspelt code fails to compile.
+
 Routes validate input with middleware that declares the schema on the route:
 
 ```ts
