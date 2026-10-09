@@ -37,7 +37,7 @@ import { forbidden, jsonInput } from '../../../shared/security';
 import { createPresence, publish, type Presence } from '../../../shared/realtime';
 import { requirePermission, sessionGuard } from './guard';
 import { Logger } from '../../../shared/logging';
-import type { AuthActivitySink } from './activity';
+import type { RolesActivitySink } from './activity';
 
 function uniqueConstraint(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
@@ -117,7 +117,7 @@ const listPermissionsHandler = (context: Context) => {
   return context.json({ success: true as const, message: 'OK', data: grouped } satisfies PermissionsResponseSuccess);
 };
 
-const createRoleHandler = async (context: Context, input: CreateRoleInput, activity?: AuthActivitySink) => {
+const createRoleHandler = async (context: Context, input: CreateRoleInput, activity?: RolesActivitySink) => {
   const user = sessionGuard.actor(context);
 
   const permissions = resolvePermissionIds(input.permissions);
@@ -155,7 +155,7 @@ const createRoleHandler = async (context: Context, input: CreateRoleInput, activ
   }
 };
 
-const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activity?: AuthActivitySink) => {
+const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activity?: RolesActivitySink) => {
   const user = sessionGuard.actor(context);
 
   const roleId = context.req.param('id');
@@ -214,7 +214,7 @@ const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activ
   }
 };
 
-const deleteRolesHandler = async (context: Context, input: DeleteRolesInput, activity?: AuthActivitySink) => {
+const deleteRolesHandler = async (context: Context, input: DeleteRolesInput, activity?: RolesActivitySink) => {
   const user = sessionGuard.actor(context);
 
   if (input.ids.some((roleId) => findRoleById(roleId)?.slug === 'admin')) {
@@ -256,7 +256,7 @@ const leaveEditingHandler = (context: Context, editors: Presence) => {
   return context.json({ success: true as const, message: 'OK' } satisfies AuthSuccess);
 };
 
-export function createAccessRoutes(activity?: AuthActivitySink) {
+export function createAccessRoutes(activity?: RolesActivitySink) {
   const editors = createPresence({
     onChange: () => publish(AUTH_ROLES_EDITING_EVENT, (listener) => canViewRoles(listener.userId)),
   });

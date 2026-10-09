@@ -12,6 +12,8 @@ export { resetLoginThrottle } from './server/login-throttle';
 export { AUTH_MAINTENANCE } from './server/maintenance';
 export { cleanupExpiredSessions } from './server/repository';
 export {
+  AUTH_ACTIVITY,
+  ROLES_ACTIVITY,
   changePasswordInputSchema,
   createRoleInputSchema,
   deleteRolesInputSchema,
@@ -48,6 +50,6 @@ export {
 } from './server/access';
 export { createAccessRoutes } from './server/access-routes';
 export { passwordChangeGate } from './server/password-change-gate';
-export type { AuthActivitySink } from './server/activity';
+export type { AuthActivitySink, RolesActivitySink } from './server/activity';
 export { declarePermissions, syncDeclaredPermissions } from './server/permissions';
 export type { PermissionSyncResult } from './server/permissions';

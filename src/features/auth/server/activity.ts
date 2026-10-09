@@ -1,25 +1,9 @@
-export type AuthActivityAction =
-  | 'auth.registered'
-  | 'auth.login'
-  | 'auth.logout'
-  | 'auth.password-changed'
-  | 'auth.session-revoked'
-  | 'auth.sessions-revoked'
-  | 'auth.two-factor-enabled'
-  | 'auth.two-factor-disabled'
-  | 'auth.recovery-codes-regenerated'
-  | 'roles.created'
-  | 'roles.updated'
-  | 'roles.deleted';
+import type { ReportedActivity } from '../../../shared/security';
+import type { AUTH_ACTIVITY, ROLES_ACTIVITY } from '../contract';
 
-export interface AuthActivityEvent {
-  action: AuthActivityAction;
-  resource: 'auth' | 'roles';
-  actorId: string | null;
-  targetId?: string | null;
-  targetLabel?: string | null;
-  metadata?: Record<string, string | number | boolean | null>;
-}
+export type AuthActivityEvent = ReportedActivity<'auth', typeof AUTH_ACTIVITY>;
+export type RolesActivityEvent = ReportedActivity<'roles', typeof ROLES_ACTIVITY>;
 
-/** Optional application-owned side effect; Auth never imports its consumer. */
+/** Optional application-owned side effects; Auth never imports their consumer. */
 export type AuthActivitySink = (event: AuthActivityEvent) => void;
+export type RolesActivitySink = (event: RolesActivityEvent) => void;

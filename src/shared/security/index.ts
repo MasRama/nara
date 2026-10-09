@@ -9,3 +9,11 @@ export { createGuard, forbidden, unauthorized } from './authorization';
 export type { Actor, Guard } from './authorization';
 export { jsonInput, queryInput, validationErrors, validationFailed } from './validation';
 export type { PermissionDeclaration } from './permissions';
+export { ACTIVITY_KINDS } from './activity';
+export type {
+  ActivityDeclaration,
+  ActivityKind,
+  ActivityMetadataValue,
+  ActivityReporter,
+  ReportedActivity,
+} from './activity';

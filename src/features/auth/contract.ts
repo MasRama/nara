@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import { CONTROL_MESSAGE, emailSchema, hasNoControlChars, personNameSchema } from '../../shared/security/input';
+import type { ActivityDeclaration } from '../../shared/security/activity';
 
 /** Live update topic: the signed-in account's profile, roles, or permissions changed; refetch it. */
 export const AUTH_ACCOUNT_CHANGED_EVENT = 'auth.account-changed';
@@ -36,6 +37,26 @@ export const AUTH_REFUSAL_CODES = [
   'TWO_FACTOR_LOCKED',
   'TWO_FACTOR_SETUP_REQUIRED',
 ] as const;
+
+/** What Auth reports about sign-in and account security, as `auth.<action>`. */
+export const AUTH_ACTIVITY = [
+  { action: 'registered', label: 'Account registered', kind: 'create' },
+  { action: 'login', label: 'Signed in', kind: 'access' },
+  { action: 'logout', label: 'Signed out', kind: 'access' },
+  { action: 'password-changed', label: 'Password changed', kind: 'access' },
+  { action: 'session-revoked', label: 'Session signed out', kind: 'access' },
+  { action: 'sessions-revoked', label: 'Other sessions signed out', kind: 'access' },
+  { action: 'two-factor-enabled', label: 'Two-factor turned on', kind: 'access' },
+  { action: 'two-factor-disabled', label: 'Two-factor turned off', kind: 'access' },
+  { action: 'recovery-codes-regenerated', label: 'Recovery codes regenerated', kind: 'access' },
+] as const satisfies readonly ActivityDeclaration[];
+
+/** What Auth reports about roles, as `roles.<action>`. */
+export const ROLES_ACTIVITY = [
+  { action: 'created', label: 'Role created', kind: 'create' },
+  { action: 'updated', label: 'Role updated', kind: 'update' },
+  { action: 'deleted', label: 'Role deleted', kind: 'delete' },
+] as const satisfies readonly ActivityDeclaration[];
 
 /**
  * Auth/RBAC domain validation. Role name/slug/description semantics are owned
