@@ -144,18 +144,24 @@ Both operational commands require an existing persistent database file and fail 
 
 ## Runtime maintenance and retention
 
-The reference application starts one maintenance timer in addition to the
-hourly expired-session cleanup. The maintenance timer runs every 24 hours and
-is stopped with the rest of the application runtime during graceful shutdown.
+Each Feature owns the upkeep of its own tables. It exports `MaintenanceTask`s
+(`name`, `everyMs`, `run(now)`), and whatever composes it declares them with
+`declareMaintenance(feature, tasks)` from `src/shared/database`. After
+migrations the application runtime runs every declared task once, then on its
+own interval, and stops them all during graceful shutdown. A task that throws
+is logged as `Maintenance failed` with its Feature and task name and runs again
+on its next interval; it never stops the server. A task that removed something
+returns the details, logged as `Maintenance ran`.
 
-Each maintenance pass performs two bounded operations:
+The reference application declares three tasks:
 
-1. `PRAGMA optimize` lets SQLite update planner statistics only when SQLite
-   determines that doing so is useful.
-2. Activity events older than `ACTIVITY_RETENTION_DAYS` are deleted oldest
-   first, with at most 10,000 rows removed per pass. The same bounded prune
-   runs once at application startup so stale history starts converging without
-   waiting a full day.
+1. `auth/expired-sessions`, hourly: deletes expired sessions.
+2. `activity/retention`, every 24 hours: deletes Activity events older than
+   `ACTIVITY_RETENTION_DAYS` oldest first, at most 10,000 rows per pass, so
+   stale history converges without one long write.
+3. `database/optimize`, every 24 hours, owned by the application: `PRAGMA
+   optimize` lets SQLite update planner statistics only when SQLite determines
+   that doing so is useful.
 
 The default retention is 365 days. Set `ACTIVITY_RETENTION_DAYS=0` to disable
 automatic Activity pruning. Values above zero are interpreted as whole days

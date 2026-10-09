@@ -1,5 +1,6 @@
 import type { Hono } from 'hono';
 import {
+  ACTIVITY_MAINTENANCE,
   ACTIVITY_PERMISSIONS,
   announceActivity,
   createActivityRoutes,
@@ -15,10 +16,13 @@ import {
   SESSION_COOKIE_NAME,
   type AuthActivitySink,
 } from '../../features/auth';
+import { declareMaintenance } from '../../shared/database';
 import { Logger } from '../../shared/logging';
 
 // Auth owns the permission rows; it writes activity.view at startup.
 declarePermissions('activity', ACTIVITY_PERMISSIONS);
+// Activity prunes its own history once the application runtime starts.
+declareMaintenance('activity', ACTIVITY_MAINTENANCE);
 
 // Activity is best-effort: its failure must not turn an already-committed
 // business mutation into an ambiguous 500 response.

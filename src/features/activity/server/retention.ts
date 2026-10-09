@@ -1,3 +1,4 @@
+import type { MaintenanceTask } from '../../../shared/database';
 import { ACTIVITY } from './config';
 import { pruneActivityBefore } from './repository';
 
@@ -13,3 +14,15 @@ export function pruneExpiredActivity(
   const removed = pruneActivityBefore(now - retentionDays * 24 * 60 * 60 * 1000, ACTIVITY.PRUNE_LIMIT);
   return { removed, retentionDays };
 }
+
+/** Activity's upkeep on its own table; the application starts it after migrations. */
+export const ACTIVITY_MAINTENANCE: readonly MaintenanceTask[] = [
+  {
+    name: 'retention',
+    everyMs: ACTIVITY.PRUNE_INTERVAL_MS,
+    run: (now) => {
+      const { removed, retentionDays } = pruneExpiredActivity(now);
+      return removed > 0 ? { removed, retentionDays } : undefined;
+    },
+  },
+];

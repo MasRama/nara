@@ -10,4 +10,6 @@ export const ACTIVITY = {
   RETENTION_DAYS: environment.ACTIVITY_RETENTION_DAYS,
   /** Most events one retention pass deletes, so a backlog never blocks the database. */
   PRUNE_LIMIT: 10_000,
+  /** How often the retention pass runs. */
+  PRUNE_INTERVAL_MS: 24 * 60 * 60 * 1000,
 } as const;

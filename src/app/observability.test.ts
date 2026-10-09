@@ -6,13 +6,7 @@ import { compress } from 'hono/compress';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { handleError } from './error-handler';
 import { getRequestId, normalizeRequestId, requestId, requestLifecycleLog } from './observability';
-import {
-  app,
-  startApplicationMaintenance,
-  startSessionCleanup,
-  stopApplicationMaintenance,
-  stopSessionCleanup,
-} from './server';
+import { app, startApplicationMaintenance, stopApplicationMaintenance } from './server';
 import { recordActivity } from '../features/activity';
 import { cleanupExpiredSessions } from '../features/auth';
 import { getDatabase } from '../shared/database';
@@ -44,7 +38,6 @@ function sessionExists(id: string): boolean {
 }
 
 afterEach(() => {
-  stopSessionCleanup();
   stopApplicationMaintenance();
   vi.restoreAllMocks();
 });
@@ -313,60 +306,52 @@ describe('expired session cleanup', () => {
     expect(sessionExists(expired)).toBe(false);
     expect(sessionExists(valid)).toBe(true);
   });
-
-  it('removes expired sessions on the scheduled path without hour-long sleeps', async () => {
-    const userId = seedUser();
-    const expired = seedSession(userId, Date.now() - 1_000);
-    const valid = seedSession(userId, Date.now() + 3_600_000);
-    const handle = startSessionCleanup({ intervalMs: 15 });
-    try {
-      // Startup pass already ran synchronously inside startSessionCleanup.
-      expect(sessionExists(expired)).toBe(false);
-      expect(sessionExists(valid)).toBe(true);
-      const later = seedSession(userId, Date.now() - 1_000);
-      await vi.waitFor(() => expect(sessionExists(later)).toBe(false), { timeout: 5_000 });
-      expect(sessionExists(valid)).toBe(true);
-    } finally {
-      handle.stop();
-    }
-  });
-
-  it('is stoppable and safe to stop twice without leaking handles', () => {
-    const handle = startSessionCleanup({ intervalMs: 60_000 });
-    expect(() => handle.stop()).not.toThrow();
-    expect(() => handle.stop()).not.toThrow();
-    expect(() => stopSessionCleanup()).not.toThrow();
-  });
 });
 
 describe('application maintenance', () => {
-  it('prunes expired activity immediately and on the scheduled path', async () => {
+  const day = 86_400_000;
+  const activityExists = (id: string) => getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(id) !== undefined;
+
+  it("runs every Feature's declared maintenance at startup and on the scheduled path", async () => {
     const now = Date.now();
-    const expired = recordActivity({
-      action: 'maintenance.expired',
-      resource: 'test',
-      actorId: null,
-      occurredAt: now - 366 * 86_400_000,
-    });
-    const recent = recordActivity({ action: 'maintenance.recent', resource: 'test', actorId: null, occurredAt: now });
-    const exists = (id: string) => getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(id) !== undefined;
+    const userId = seedUser();
+    const expiredSession = seedSession(userId, now - 1_000);
+    const validSession = seedSession(userId, now + 3_600_000);
+    const expiredEvent = recordActivity({ action: 'maintenance.expired', resource: 'test', actorId: null, occurredAt: now - 366 * day });
+    const recentEvent = recordActivity({ action: 'maintenance.recent', resource: 'test', actorId: null, occurredAt: now });
 
     const handle = startApplicationMaintenance({ intervalMs: 15, now });
     try {
-      expect(exists(expired.id)).toBe(false);
-      expect(exists(recent.id)).toBe(true);
+      // The startup pass ran synchronously for Auth and Activity alike.
+      expect(sessionExists(expiredSession)).toBe(false);
+      expect(activityExists(expiredEvent.id)).toBe(false);
 
-      const later = recordActivity({
-        action: 'maintenance.later-expired',
-        resource: 'test',
-        actorId: null,
-        occurredAt: now - 366 * 86_400_000,
-      });
-      await vi.waitFor(() => expect(exists(later.id)).toBe(false), { timeout: 5_000 });
-      expect(exists(recent.id)).toBe(true);
+      const laterSession = seedSession(userId, Date.now() - 1_000);
+      const laterEvent = recordActivity({ action: 'maintenance.later-expired', resource: 'test', actorId: null, occurredAt: now - 366 * day });
+      await vi.waitFor(
+        () => {
+          expect(sessionExists(laterSession)).toBe(false);
+          expect(activityExists(laterEvent.id)).toBe(false);
+        },
+        { timeout: 5_000 },
+      );
+      expect(sessionExists(validSession)).toBe(true);
+      expect(activityExists(recentEvent.id)).toBe(true);
     } finally {
       handle.stop();
     }
+  });
+
+  it("logs what a Feature's maintenance removed, naming the Feature and task", () => {
+    seedSession(seedUser(), Date.now() - 1_000);
+    const info = vi.spyOn(Logger, 'info');
+    const handle = startApplicationMaintenance({ intervalMs: 60_000 });
+    handle.stop();
+
+    expect(info).toHaveBeenCalledWith(
+      'Maintenance ran',
+      expect.objectContaining({ feature: 'auth', task: 'expired-sessions', removed: expect.any(Number) }),
+    );
   });
 
   it('is stoppable and safe to stop twice', () => {
@@ -376,3 +361,4 @@ describe('application maintenance', () => {
     expect(() => stopApplicationMaintenance()).not.toThrow();
   });
 });
+

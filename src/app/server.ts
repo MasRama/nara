@@ -18,25 +18,26 @@ import { closeEventStreams, createEventStream, EVENTS_PATH } from '../shared/rea
 import { handleError } from './error-handler';
 import { requestId, requestLifecycleLog } from './observability';
 import {
+  AUTH_MAINTENANCE,
   AUTH_ROUTE_POLICIES,
   createAuthRoutes,
   createAccessRoutes,
-  cleanupExpiredSessions,
   liveListener,
   passwordChangeGate,
   resetLoginThrottle,
-  SESSION_CLEANUP_INTERVAL_MS,
   syncDeclaredPermissions,
 } from '../features/auth';
 import {
+  declareMaintenance,
   discoverMigrations,
   getDatabase,
   migrate,
   optimizeDatabase,
   outstandingMigrations,
+  startMaintenance,
+  type MaintenanceHandle,
   type MigrationFile,
 } from '../shared/database';
-import { pruneExpiredActivity } from '../features/activity';
 import composeUsersServer from './bindings/users.server';
 import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
 import { healthRoutes } from '../../official-features/health';
@@ -217,6 +218,7 @@ if (staticHandler) {
 }
 
 declareRoutePolicies(app, '/api/auth', AUTH_ROUTE_POLICIES);
+declareMaintenance('auth', AUTH_MAINTENANCE);
 app.route('/api/auth', createAuthRoutes(authActivitySink));
 app.route('/api/roles', createAccessRoutes(authActivitySink));
 composeUsersServer(app, { recordActivity: recordApplicationActivity });
@@ -256,90 +258,41 @@ export interface RuntimeHandle {
   stop: () => void;
 }
 
-let sessionCleanupTimer: NodeJS.Timeout | undefined;
-let applicationMaintenanceTimer: NodeJS.Timeout | undefined;
+// The application's own upkeep: SQLite refreshes its query planner statistics.
+declareMaintenance('database', [
+  {
+    name: 'optimize',
+    everyMs: MAINTENANCE.INTERVAL_MS,
+    run: () => {
+      optimizeDatabase();
+    },
+  },
+]);
+
+let maintenance: MaintenanceHandle | undefined;
 
 /**
- * App-owned session cleanup scheduling. Runs Auth's expired-session delete
- * once the database is ready, then on one periodic interval. Exactly one
- * timer exists; it is unref'd so it never blocks process exit, and
- * {@link stopSessionCleanup} clears it on shutdown. No timers are created
- * at import time.
+ * Runs the maintenance Features declared while the app was composed: once
+ * now, then on each task's interval. A failing task is logged and retried
+ * on its next run; it never stops the server. Timers never keep the process
+ * alive, and none exist until this is called.
  */
-export function startSessionCleanup(options?: { intervalMs?: number; now?: number }): RuntimeHandle {
-  stopSessionCleanup();
-  const removed = cleanupExpiredSessions(options?.now ?? Date.now());
-  if (removed > 0) Logger.info('Expired sessions removed', { removed });
-  const timer = setInterval(
-    () => {
-      try {
-        cleanupExpiredSessions();
-      } catch (error) {
-        Logger.error('Expired session cleanup failed', error instanceof Error ? error : new Error(String(error)));
-      }
-    },
-    options?.intervalMs ?? SESSION_CLEANUP_INTERVAL_MS,
-  );
-  if (typeof timer.unref === 'function') timer.unref();
-  sessionCleanupTimer = timer;
-  return { stop: stopSessionCleanup };
-}
-
-export function stopSessionCleanup(): void {
-  if (sessionCleanupTimer) {
-    clearInterval(sessionCleanupTimer);
-    sessionCleanupTimer = undefined;
-  }
-}
-
-function pruneExpiredActivityAndLog(now = Date.now()): void {
-  const { removed, retentionDays } = pruneExpiredActivity(now);
-  if (removed > 0) {
-    Logger.info('Expired activity events removed', { removed, retentionDays });
-  }
-}
-
-function runApplicationMaintenance(now = Date.now()): void {
-  try {
-    optimizeDatabase();
-  } catch (error) {
-    Logger.error('SQLite optimize failed', error instanceof Error ? error : new Error(String(error)));
-  }
-
-  try {
-    pruneExpiredActivityAndLog(now);
-  } catch (error) {
-    Logger.error('Activity retention cleanup failed', error instanceof Error ? error : new Error(String(error)));
-  }
-}
-
 export function startApplicationMaintenance(options?: { intervalMs?: number; now?: number }): RuntimeHandle {
   stopApplicationMaintenance();
-
-  try {
-    pruneExpiredActivityAndLog(options?.now ?? Date.now());
-  } catch (error) {
-    Logger.error('Activity retention cleanup failed', error instanceof Error ? error : new Error(String(error)));
-  }
-
-  const timer = setInterval(
-    () => runApplicationMaintenance(),
-    options?.intervalMs ?? MAINTENANCE.INTERVAL_MS,
-  );
-  timer.unref?.();
-  applicationMaintenanceTimer = timer;
+  maintenance = startMaintenance({
+    ...options,
+    onResult: ({ feature, task, details }) => Logger.info('Maintenance ran', { feature, task, ...details }),
+    onFailure: ({ feature, task, error }) => Logger.error('Maintenance failed', { err: error, feature, task }),
+  });
   return { stop: stopApplicationMaintenance };
 }
 
 export function stopApplicationMaintenance(): void {
-  if (applicationMaintenanceTimer) {
-    clearInterval(applicationMaintenanceTimer);
-    applicationMaintenanceTimer = undefined;
-  }
+  maintenance?.stop();
+  maintenance = undefined;
 }
 
 export function stopApplicationRuntime(): void {
-  stopSessionCleanup();
   stopApplicationMaintenance();
   closeEventStreams();
 }
@@ -353,7 +306,6 @@ export function initializeApplicationRuntime(): RuntimeHandle {
   // Feature bindings declared their permissions while composing the app above.
   const permissions = syncDeclaredPermissions();
   Logger.info('Permissions ready', { inserted: permissions.inserted, updated: permissions.updated });
-  startSessionCleanup();
   startApplicationMaintenance();
   return { stop: stopApplicationRuntime };
 }
