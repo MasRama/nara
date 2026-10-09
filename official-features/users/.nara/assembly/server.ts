@@ -20,10 +20,12 @@ import {
 import {
   createAssetRoutes,
   createUserRoutes,
+  createUsersMaintenance,
   USERS_ASSET_ROUTE_POLICIES,
   USERS_PERMISSIONS,
   type UsersServerHost,
 } from '../../features/users';
+import { declareMaintenance } from '../../shared/database';
 import { declareRoutePolicies } from '../../shared/security';
 import { createLocalAssetStorage } from '../../shared/storage';
 
@@ -74,6 +76,8 @@ function createUsersServerHost(recordActivity?: UsersServerHost['recordActivity'
 }
 
 const usersServerHost: UsersServerHost = createUsersServerHost();
+// Users sweeps the assets of accounts deleted before their avatars were.
+declareMaintenance('users', createUsersMaintenance(usersServerHost));
 
 export default function composeUsersServer(
   app: Hono,

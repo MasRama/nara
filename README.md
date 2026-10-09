@@ -198,8 +198,8 @@ heartbeat.
 Each Feature declares the upkeep of its own tables, and the runtime runs it
 after migrations and then on each task's interval: Auth deletes expired
 sessions hourly, Activity prunes events older than `ACTIVITY_RETENTION_DAYS`
-(default `365`) in bounded batches, and the app optimizes SQLite planner
-statistics. Set the retention to `0` only when indefinite Activity retention
+(default `365`) in bounded batches, Users removes the avatars of deleted
+accounts, and the app optimizes SQLite planner statistics. Set the retention to `0` only when indefinite Activity retention
 is intentional.
 
 Database ownership, migrations, seeds, backup, and integrity behavior are

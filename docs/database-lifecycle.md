@@ -153,13 +153,17 @@ is logged as `Maintenance failed` with its Feature and task name and runs again
 on its next interval; it never stops the server. A task that removed something
 returns the details, logged as `Maintenance ran`.
 
-The reference application declares three tasks:
+The reference application declares four tasks:
 
 1. `auth/expired-sessions`, hourly: deletes expired sessions.
 2. `activity/retention`, every 24 hours: deletes Activity events older than
    `ACTIVITY_RETENTION_DAYS` oldest first, at most 10,000 rows per pass, so
    stale history converges without one long write.
-3. `database/optimize`, every 24 hours, owned by the application: `PRAGMA
+3. `users/orphaned-assets`, every 24 hours: deletes the asset rows and stored
+   files of accounts that no longer exist. Deleting accounts commits before
+   their avatars are cleaned up, so an interrupted deletion converges here.
+   Users asks its host whether an owner exists; it never reads Auth's tables.
+4. `database/optimize`, every 24 hours, owned by the application: `PRAGMA
    optimize` lets SQLite update planner statistics only when SQLite determines
    that doing so is useful.
 

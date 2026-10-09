@@ -26,3 +26,4 @@ export type {
 export { createAssetRoutes, USERS_ASSET_ROUTE_POLICIES } from './server/assets-routes';
 export type { UsersServerHost } from './server/host';
 export { createUserRoutes } from './server/routes';
+export { createUsersMaintenance } from './server/maintenance';

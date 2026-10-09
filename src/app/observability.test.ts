@@ -312,6 +312,28 @@ describe('application maintenance', () => {
   const day = 86_400_000;
   const activityExists = (id: string) => getDatabase().prepare('SELECT 1 FROM activity_events WHERE id = ?').get(id) !== undefined;
 
+  // Users declares its sweep in its binding; it must reach the runtime like Auth's and Activity's.
+  it('sweeps the assets of an account that no longer exists', () => {
+    const ownedBy = (userId: string) => {
+      const id = randomUUID();
+      getDatabase()
+        .prepare(
+          `INSERT INTO assets (id, name, type, url, mime_type, size, storage_key, user_id, created_at, updated_at)
+           VALUES (?, 'avatar.webp', 'avatar', ?, 'image/webp', 1, ?, ?, 0, 0)`,
+        )
+        .run(id, `/api/assets/avatar/${id}.webp`, `avatars/${id}.webp`, userId);
+      return id;
+    };
+    const assetExists = (id: string) => getDatabase().prepare('SELECT 1 FROM assets WHERE id = ?').get(id) !== undefined;
+    const orphan = ownedBy(`deleted-${randomUUID()}`);
+    const kept = ownedBy(seedUser());
+
+    startApplicationMaintenance().stop();
+
+    expect(assetExists(orphan)).toBe(false);
+    expect(assetExists(kept)).toBe(true);
+  });
+
   it("runs every Feature's declared maintenance at startup and on the scheduled path", async () => {
     const now = Date.now();
     const userId = seedUser();

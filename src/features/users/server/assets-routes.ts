@@ -61,7 +61,7 @@ function legacyAvatarStorageKey(url: string): string | undefined {
   return validAvatarFilename(filename) ? `${AVATAR_STORAGE_PREFIX}/${filename}` : undefined;
 }
 
-function assetStorageKey(asset: { storage_key: string | null; url: string }): string | undefined {
+export function assetStorageKey(asset: { storage_key: string | null; url: string }): string | undefined {
   return asset.storage_key ?? legacyAvatarStorageKey(asset.url);
 }
 

@@ -29,6 +29,13 @@ export function findUserAssets(userId: string): UserAsset[] {
     .all(userId) as UserAsset[];
 }
 
+/** Every account that still owns at least one asset. */
+export function findAssetOwnerIds(): string[] {
+  return (getDatabase().prepare('SELECT DISTINCT user_id FROM assets WHERE user_id IS NOT NULL').all() as Array<{ user_id: string }>).map(
+    (row) => row.user_id,
+  );
+}
+
 export function findUserAssetByUrl(url: string): UserAsset | undefined {
   return getDatabase().prepare('SELECT * FROM assets WHERE url = ?').get(url) as UserAsset | undefined;
 }
