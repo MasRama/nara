@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import type { PermissionDeclaration } from '../../shared/security/permissions';
 
 /** The actions Activity gates; the application's binding declares them to its access-control provider. */
@@ -75,7 +76,8 @@ export function activityResponseSchemas() {
     error: z.strictObject({
       success: z.literal(false),
       message: z.string(),
-      code: z.string(),
+      // Activity adds no refusal codes of its own.
+      code: z.enum(API_REFUSAL_CODES),
       errors: z.record(z.string(), z.array(z.string())).optional(),
     }),
   };

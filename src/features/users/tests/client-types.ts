@@ -16,6 +16,14 @@ export async function usersRouteTypes(): Promise<void> {
   // @ts-expect-error deleting takes a list of ids
   await users.index.$delete({ json: { id: 'u1' } });
 
+  // Refusal codes are the ones Users' contract declares, so a misspelt branch fails to compile.
+  const deleted = await (await users.index.$delete({ json: { ids: ['u1'] } })).json();
+  if (!deleted.success) {
+    void (deleted.code === 'LAST_ADMIN');
+    // @ts-expect-error Users declares no LAST_ADMINISTRATOR refusal
+    void (deleted.code === 'LAST_ADMINISTRATOR');
+  }
+
   const listed = await (await users.index.$get({ query: { page: '1', search: 'grace' } })).json();
   if (listed.success) {
     const roles: string[] = listed.data.users[0].roles;

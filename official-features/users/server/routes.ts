@@ -40,7 +40,7 @@ function isUniqueConstraintError(error: unknown): boolean {
 
 function validationFailure(context: Context, field: string, messages: string[]) {
   return context.json(
-    { success: false as const, message: 'Validation failed', code: 'VALIDATION_ERROR', errors: { [field]: messages } },
+    { success: false as const, message: 'Validation failed', code: 'VALIDATION_ERROR' as const, errors: { [field]: messages } },
     422,
   );
 }
@@ -106,7 +106,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const sessionUser = guard.actor(context);
 
     const user = host.findAccountById(sessionUser.id);
-    if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     return context.json({ success: true as const, message: 'OK', data: { user: toProfile(user) } } satisfies UserProfileSuccess);
   };
 
@@ -117,7 +117,7 @@ export function createUserRoutes(host: UsersServerHost) {
     try {
       const update = host.updateAccount(sessionUser.id, profile, { revision });
       if (update.status === 'missing') {
-        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
       }
       if (update.status === 'stale') {
         return context.json(
@@ -146,7 +146,7 @@ export function createUserRoutes(host: UsersServerHost) {
       } satisfies UserProfileSuccess);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
+        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
       }
       throw error;
     }
@@ -208,7 +208,7 @@ export function createUserRoutes(host: UsersServerHost) {
       );
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
+        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
       }
       throw error;
     }
@@ -226,14 +226,14 @@ export function createUserRoutes(host: UsersServerHost) {
     const sessionUser = guard.actor(context);
 
     const userId = context.req.param('id');
-    if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
+    if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' as const }, 400);
     const self = sessionUser.id === userId;
 
     const { roles, password, revision, ...profile } = input;
     const actorIsAdmin = host.canAssignRoles(sessionUser.id);
 
     const target = host.findAccountById(userId);
-    if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     const targetIsAdmin = host.rolesForUser(userId).includes('admin');
     if (!self && targetIsAdmin && !actorIsAdmin) {
       return forbidden(context, 'Only administrators may modify an administrator account', 'PROTECTED_ADMIN');
@@ -258,7 +258,7 @@ export function createUserRoutes(host: UsersServerHost) {
       const adminId = adminRoleId(host);
       if (adminId && !roleSelection.ids.includes(adminId)) {
         return context.json(
-          { success: false as const, message: 'Cannot remove admin role from yourself', code: 'SELF_DEMOTION' },
+          { success: false as const, message: 'Cannot remove admin role from yourself', code: 'SELF_DEMOTION' as const },
           400,
         );
       }
@@ -271,7 +271,7 @@ export function createUserRoutes(host: UsersServerHost) {
     try {
       const update = host.updateAccount(userId, profile, { revision, ...(roleSelection ? { roleIds: roleSelection.ids } : {}) });
       if (update.status === 'missing') {
-        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
       }
       if (update.status === 'stale') {
         return context.json(
@@ -305,7 +305,7 @@ export function createUserRoutes(host: UsersServerHost) {
       } satisfies ManagedUserResponseSuccess);
     } catch (error) {
       if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' }, 409);
+        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
       }
       throw error;
     }
@@ -315,7 +315,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const sessionUser = guard.actor(context);
 
     const userId = context.req.param('id');
-    if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
+    if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' as const }, 400);
     if (sessionUser.id === userId) {
       return forbidden(
         context,
@@ -325,14 +325,14 @@ export function createUserRoutes(host: UsersServerHost) {
     }
 
     const target = host.findAccountById(userId);
-    if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     const actorIsAdmin = host.canAssignRoles(sessionUser.id);
     if (host.rolesForUser(userId).includes('admin') && !actorIsAdmin) {
       return forbidden(context, 'Only administrators may reset an administrator password', 'PROTECTED_ADMIN');
     }
 
     const user = host.resetPassword(userId, await host.hashPassword(input.password));
-    if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     host.recordActivity?.({
       action: 'users.password-reset',
       resource: 'users',
@@ -351,14 +351,14 @@ export function createUserRoutes(host: UsersServerHost) {
     const sessionUser = guard.actor(context);
 
     if (input.ids.includes(sessionUser.id)) {
-      return context.json({ success: false as const, message: 'Cannot delete your own account', code: 'SELF_DELETE' }, 400);
+      return context.json({ success: false as const, message: 'Cannot delete your own account', code: 'SELF_DELETE' as const }, 400);
     }
 
     const adminId = adminRoleId(host);
     if (adminId) {
       const remainingAdmins = host.usersWithRole(adminId).filter((user) => !input.ids.includes(user.id));
       if (remainingAdmins.length === 0) {
-        return context.json({ success: false as const, message: 'Cannot delete the last admin', code: 'LAST_ADMIN' }, 400);
+        return context.json({ success: false as const, message: 'Cannot delete the last admin', code: 'LAST_ADMIN' as const }, 400);
       }
     }
 
@@ -389,7 +389,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const actor = guard.actor(context);
     const userId = context.req.param('id') ?? '';
     if (!host.findAccountById(userId)) {
-      return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     }
     const name = host.findAccountById(actor.id)?.name ?? '';
     editors.enter(userId, { id: actor.id, name });

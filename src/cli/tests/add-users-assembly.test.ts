@@ -88,7 +88,7 @@ const FIXTURE_PACKAGE_JSON = `{
 
 // The guaranteed src/shared modules Users imports; every Nara application carries them.
 const SHARED_SUBSTRATE: Record<string, string> = Object.fromEntries(
-  ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+  ['database', 'realtime', 'realtime/browser', 'security', 'security/codes', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
 );
 
 function projectShell(fixture: string, options: { auth?: string; authWeb?: string; packageJson?: string } = {}): void {

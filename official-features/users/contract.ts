@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { PermissionDeclaration } from '../../shared/security/permissions';
+import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import { emailSchema, personNameSchema } from '../../shared/security/input';
 
 export const AVATAR_MAX_FILE_SIZE_MB = 5;
@@ -32,7 +33,25 @@ export const USERS_CHANGED_EVENT = 'users.changed';
 export const USERS_EDITING_EVENT = 'users.editing';
 
 /** Refusal code: the update was based on an older revision; the response carries the account as it is now. */
-export const STALE_REVISION = 'STALE_REVISION';
+export const STALE_REVISION = 'STALE_REVISION' as const;
+
+/** Refusal codes Users' routes answer with, besides the ones every API route can. */
+export const USERS_REFUSAL_CODES = [
+  'CURRENT_PASSWORD_REQUIRED',
+  'DUPLICATE_EMAIL',
+  'FILE_REQUIRED',
+  'FILE_TOO_LARGE',
+  'INVALID_FILE_TYPE',
+  'INVALID_ID',
+  'INVALID_OUTPUT',
+  'LAST_ADMIN',
+  'NOT_FOUND',
+  'PROTECTED_ADMIN',
+  'SELF_DELETE',
+  'SELF_DEMOTION',
+  STALE_REVISION,
+  'UPLOAD_FAILED',
+] as const;
 
 /** The revision an edit was based on; a newer one refuses it with `STALE_REVISION`. */
 const revisionSchema = z.number().int().positive();
@@ -120,7 +139,7 @@ export function usersResponseSchemas() {
   const error = z.strictObject({
     success: z.literal(false),
     message: z.string(),
-    code: z.string(),
+    code: z.enum([...API_REFUSAL_CODES, ...USERS_REFUSAL_CODES]),
     errors: z.record(z.string(), z.array(z.string())).optional(),
   });
 

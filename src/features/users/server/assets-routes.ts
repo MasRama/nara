@@ -46,7 +46,7 @@ function uploadedFile(value: unknown): File | undefined {
   return value as File;
 }
 
-function invalidFile(context: Context, message: string, code: string, status = 400) {
+function invalidFile<C extends string>(context: Context, message: string, code: C, status = 400) {
   return context.json({ success: false as const, message, code }, status as 400 | 413);
 }
 
@@ -166,7 +166,7 @@ const uploadAvatarHandlerFor = (host: UsersServerHost, guard: Guard<NonNullable<
     announceAccountsChanged(host, [sessionUser.id]);
     return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } } satisfies AvatarUploadSuccess);
   } catch (error) {
-    return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' }, 400);
+    return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' as const }, 400);
   }
 };
 

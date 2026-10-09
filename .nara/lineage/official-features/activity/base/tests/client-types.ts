@@ -1,5 +1,6 @@
 import { hc } from 'hono/client';
 import type { createActivityRoutes } from '..';
+import type { ActivityError } from '../contract';
 
 /**
  * Compile-time checks that the web client sees the real route: `npm run lint`
@@ -19,4 +20,11 @@ export async function activityRouteTypes(): Promise<void> {
   void total;
   // @ts-expect-error entries carry an actorId, not an actor
   void listed.data.activities[0].actor;
+
+  // Activity adds no refusal codes of its own; it answers only with the shared ones.
+  const refused: ActivityError = { success: false, message: 'Forbidden', code: 'FORBIDDEN' };
+  void refused;
+  // @ts-expect-error Activity declares no NOT_FOUND refusal
+  const undeclared: ActivityError = { success: false, message: 'Not found', code: 'NOT_FOUND' };
+  void undeclared;
 }
