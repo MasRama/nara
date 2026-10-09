@@ -39,7 +39,7 @@ import {
   type MigrationFile,
 } from '../shared/database';
 import composeUsersServer from './bindings/users.server';
-import composeActivityServer, { authActivitySink, recordApplicationActivity } from './bindings/activity.server';
+import composeActivityServer, { createActivityRecorder } from './bindings/activity.server';
 import { healthRoutes } from '../../official-features/health';
 
 const frontendBuildDirectory = resolve(process.cwd(), 'build', 'client');
@@ -219,8 +219,12 @@ if (staticHandler) {
 
 declareRoutePolicies(app, '/api/auth', AUTH_ROUTE_POLICIES);
 declareMaintenance('auth', AUTH_MAINTENANCE);
-app.route('/api/auth', createAuthRoutes(authActivitySink));
-app.route('/api/roles', createAccessRoutes(authActivitySink));
+// Auth and Users report what happened; Activity records it best-effort.
+const recordApplicationActivity = createActivityRecorder((error) => {
+  Logger.error('Failed to record application activity', error);
+});
+app.route('/api/auth', createAuthRoutes(recordApplicationActivity));
+app.route('/api/roles', createAccessRoutes(recordApplicationActivity));
 composeUsersServer(app, { recordActivity: recordApplicationActivity });
 composeActivityServer(app);
 // Live updates for signed-in browsers; Auth decides who is listening.

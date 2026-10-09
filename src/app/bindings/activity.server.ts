@@ -14,33 +14,29 @@ import {
   hasPermission,
   isAdmin,
   SESSION_COOKIE_NAME,
-  type AuthActivitySink,
 } from '../../features/auth';
 import { declareMaintenance } from '../../shared/database';
-import { Logger } from '../../shared/logging';
 
 // Auth owns the permission rows; it writes activity.view at startup.
 declarePermissions('activity', ACTIVITY_PERMISSIONS);
 // Activity prunes its own history once the application runtime starts.
 declareMaintenance('activity', ACTIVITY_MAINTENANCE);
 
-// Activity is best-effort: its failure must not turn an already-committed
-// business mutation into an ambiguous 500 response.
-export function recordApplicationActivity(input: ActivityRecordInput): void {
-  try {
-    recordActivity(input);
-    announceActivity(activityServerHost);
-  } catch (error) {
-    Logger.error(
-      'Failed to record application activity',
-      error instanceof Error ? error : new Error(String(error)),
-    );
-  }
+/**
+ * Records what another Feature reports. Activity is best-effort: its failure
+ * must not turn an already-committed business mutation into an ambiguous 500
+ * response, so the application decides how a failure is reported.
+ */
+export function createActivityRecorder(onFailure: (error: Error) => void): (input: ActivityRecordInput) => void {
+  return (input) => {
+    try {
+      recordActivity(input);
+      announceActivity(activityServerHost);
+    } catch (error) {
+      onFailure(error instanceof Error ? error : new Error(String(error)));
+    }
+  };
 }
-
-export const authActivitySink: AuthActivitySink = (event) => {
-  recordApplicationActivity(event);
-};
 
 const activityServerHost: ActivityServerHost = {
   sessionCookieName: SESSION_COOKIE_NAME,
