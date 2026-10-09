@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { PermissionDeclaration } from '../../shared/security/permissions';
+import type { ActivityDeclaration } from '../../shared/security/activity';
 import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import { emailSchema, personNameSchema } from '../../shared/security/input';
 
@@ -25,6 +26,15 @@ export const USERS_PERMISSIONS = [
 
 /** Password resets are gated by `canResetPasswords`; the rest by `canManageUsers`. */
 export type UsersManageAction = Exclude<(typeof USERS_PERMISSIONS)[number]['action'], 'reset-password'>;
+
+/** What Users reports happened, as `users.<action>`; the application hands it to its activity trail. */
+export const USERS_ACTIVITY = [
+  { action: 'created', label: 'User created', kind: 'create' },
+  { action: 'updated', label: 'User updated', kind: 'update' },
+  { action: 'profile-updated', label: 'Profile updated', kind: 'update' },
+  { action: 'password-reset', label: 'Password reset', kind: 'update' },
+  { action: 'deleted', label: 'User deleted', kind: 'delete' },
+] as const satisfies readonly ActivityDeclaration[];
 
 /** Live update topic: accounts were created, edited, or deleted through Users; refetch what you show. */
 export const USERS_CHANGED_EVENT = 'users.changed';

@@ -4,6 +4,7 @@ import {
   ACTIVITY_PERMISSIONS,
   announceActivity,
   createActivityRoutes,
+  declareActivity,
   recordActivity,
   type ActivityRecordInput,
   type ActivityServerHost,
@@ -16,6 +17,7 @@ import {
   SESSION_COOKIE_NAME,
 } from '../../features/auth';
 import { declareMaintenance } from '../../shared/database';
+import type { ActivityReporter } from '../../shared/security';
 
 // Auth owns the permission rows; it writes activity.view at startup.
 declarePermissions('activity', ACTIVITY_PERMISSIONS);
@@ -23,18 +25,26 @@ declarePermissions('activity', ACTIVITY_PERMISSIONS);
 declareMaintenance('activity', ACTIVITY_MAINTENANCE);
 
 /**
- * Records what another Feature reports. Activity is best-effort: its failure
- * must not turn an already-committed business mutation into an ambiguous 500
- * response, so the application decides how a failure is reported.
+ * Records what other Features report. Each reporting Feature first declares
+ * its actions, which label the feed; it can only report those. Activity is
+ * best-effort: its failure must not turn an already-committed business
+ * mutation into an ambiguous 500 response, so the application decides how a
+ * failure is reported.
  */
-export function createActivityRecorder(onFailure: (error: Error) => void): (input: ActivityRecordInput) => void {
-  return (input) => {
+export function createActivityRecorder(onFailure: (error: Error) => void): ActivityReporter {
+  const record = (input: ActivityRecordInput): void => {
     try {
       recordActivity(input);
       announceActivity(activityServerHost);
     } catch (error) {
       onFailure(error instanceof Error ? error : new Error(String(error)));
     }
+  };
+  return {
+    declare: (resource, declarations) => {
+      declareActivity(resource, declarations);
+      return record;
+    },
   };
 }
 

@@ -35,10 +35,24 @@ describe('activity browser surface', () => {
                 metadata: { self: false },
                 occurredAt: 1_700_000_000_000,
               },
+              {
+                id: 'event-2',
+                action: 'billing.invoice-sent',
+                resource: 'billing',
+                actorId: 'actor-1',
+                targetId: null,
+                targetLabel: null,
+                metadata: {},
+                occurredAt: 1_699_999_000_000,
+              },
             ],
-            total: 1,
+            total: 2,
             page: 1,
             limit: 20,
+            actions: [
+              { action: 'auth.login', label: 'Signed in', kind: 'access' },
+              { action: 'users.updated', label: 'Member edited', kind: 'update' },
+            ],
           },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -53,7 +67,18 @@ describe('activity browser surface', () => {
     await flush();
 
     expect(container.textContent).toContain('Activity');
-    expect(container.textContent).toContain('User updated');
+    // Labels and filter options come from what reporting Features declared.
+    expect(container.textContent).toContain('Member edited');
+    expect(container.textContent).not.toContain('User updated');
+    expect(container.textContent).toContain('Billing invoice sent');
+    const options = [...container.querySelectorAll('#activity-action-options option')].map((option) => [
+      option.getAttribute('value'),
+      option.textContent,
+    ]);
+    expect(options).toEqual([
+      ['auth.login', 'Signed in'],
+      ['users.updated', 'Member edited'],
+    ]);
     expect(container.textContent).toContain('Ada Lovelace');
     expect(container.textContent).toContain('SelfNo');
 

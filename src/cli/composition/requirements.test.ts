@@ -476,7 +476,7 @@ describe('requirements metadata separation', () => {
     projectShell(fixture, {
       // The guaranteed src/shared modules Users imports.
       ...Object.fromEntries(
-        ['database', 'realtime', 'realtime/browser', 'security', 'security/codes', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+        ['database', 'realtime', 'realtime/browser', 'security', 'security/activity', 'security/codes', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
       ),
       'src/features/auth/index.ts': [
         'export const createAccountWithRoles = (): unknown => ({});',

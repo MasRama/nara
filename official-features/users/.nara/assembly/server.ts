@@ -21,12 +21,13 @@ import {
   createAssetRoutes,
   createUserRoutes,
   createUsersMaintenance,
+  USERS_ACTIVITY,
   USERS_ASSET_ROUTE_POLICIES,
   USERS_PERMISSIONS,
   type UsersServerHost,
 } from '../../features/users';
 import { declareMaintenance } from '../../shared/database';
-import { declareRoutePolicies } from '../../shared/security';
+import { declareRoutePolicies, type ActivityReporter } from '../../shared/security';
 import { createLocalAssetStorage } from '../../shared/storage';
 
 // Auth owns the permission rows; it writes the users.<action> slugs at startup.
@@ -79,11 +80,11 @@ const usersServerHost: UsersServerHost = createUsersServerHost();
 // Users sweeps the assets of accounts deleted before their avatars were.
 declareMaintenance('users', createUsersMaintenance(usersServerHost));
 
-export default function composeUsersServer(
-  app: Hono,
-  options: { recordActivity?: UsersServerHost['recordActivity'] } = {},
-): void {
-  const host = options.recordActivity ? createUsersServerHost(options.recordActivity) : usersServerHost;
+/** With `activity`, Users declares what it reports there and reports through it. */
+export default function composeUsersServer(app: Hono, options: { activity?: ActivityReporter } = {}): void {
+  const host = options.activity
+    ? createUsersServerHost(options.activity.declare('users', USERS_ACTIVITY))
+    : usersServerHost;
   const userRoutes = createUserRoutes(host);
   const assetRoutes = createAssetRoutes(host);
   app.route('/api/users', userRoutes);

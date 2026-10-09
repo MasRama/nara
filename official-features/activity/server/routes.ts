@@ -2,6 +2,7 @@ import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
 import { activityQuerySchema, type ActivityListSuccess } from '../contract';
 import type { ActivityServerHost } from './host';
+import { declaredActivity } from './catalog';
 import { listActivity } from './repository';
 import { createGuard, queryInput } from '../../../shared/security';
 
@@ -18,6 +19,7 @@ export function createActivityRoutes(host: ActivityServerHost) {
         total: result.total,
         page: query.page,
         limit: query.limit,
+        actions: declaredActivity(),
       },
     } satisfies ActivityListSuccess);
   });

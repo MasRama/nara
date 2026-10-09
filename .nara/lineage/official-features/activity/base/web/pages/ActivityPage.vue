@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { onServerEvent } from '../../../../shared/realtime/browser';
-import { ACTIVITY_RECORDED_EVENT, type ActivityRecord } from '../../contract';
+import { ACTIVITY_RECORDED_EVENT, type ActivityRecord, type DeclaredActivity } from '../../contract';
+import type { ActivityKind } from '../../../../shared/security/activity';
 import { createActivityClient } from '../client';
 
 const client = createActivityClient();
@@ -19,28 +20,11 @@ const toDate = ref('');
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit)));
 const hasFilters = computed(() => Boolean(actionFilter.value || actorFilter.value || fromDate.value || toDate.value));
 
-// Labels for the actions recorded by the shipped features; unknown actions
-// fall back to a generic phrase.
-const ACTION_LABELS: Record<string, string> = {
-  'auth.registered': 'Account registered',
-  'auth.login': 'Signed in',
-  'auth.logout': 'Signed out',
-  'auth.password-changed': 'Password changed',
-  'auth.session-revoked': 'Session signed out',
-  'auth.sessions-revoked': 'Other sessions signed out',
-  'auth.two-factor-enabled': 'Two-factor turned on',
-  'auth.two-factor-disabled': 'Two-factor turned off',
-  'auth.recovery-codes-regenerated': 'Recovery codes regenerated',
-  'users.created': 'User created',
-  'users.updated': 'User updated',
-  'users.profile-updated': 'Profile updated',
-  'users.password-reset': 'Password reset',
-  'users.deleted': 'User deleted',
-  'roles.created': 'Role created',
-  'roles.updated': 'Role updated',
-  'roles.deleted': 'Role deleted',
-};
-const actionOptions = Object.entries(ACTION_LABELS);
+// What reporting Features declared arrives with the feed; an action nobody
+// declares (an older event, a removed Feature) gets a plain label.
+const declaredActions = ref<DeclaredActivity[]>([]);
+const actionOptions = computed(() => declaredActions.value.map(({ action, label }) => [action, label] as const));
+const declaredByAction = computed(() => new Map(declaredActions.value.map((declared) => [declared.action, declared])));
 
 type Tone = 'create' | 'delete' | 'auth' | 'update';
 
@@ -49,15 +33,14 @@ function capitalize(value: string): string {
 }
 
 function actionLabel(action: string): string {
-  return ACTION_LABELS[action] ?? capitalize(action.replace(/[.\-_]+/g, ' ').trim());
+  return declaredByAction.value.get(action)?.label ?? capitalize(action.replace(/[.\-_]+/g, ' ').trim());
 }
 
+const toneByKind: Record<ActivityKind, Tone> = { create: 'create', delete: 'delete', access: 'auth', update: 'update' };
+
 function actionTone(action: string): Tone {
-  const verb = action.slice(action.lastIndexOf('.') + 1);
-  if (verb === 'deleted') return 'delete';
-  if (verb === 'created' || verb === 'registered') return 'create';
-  if (action.startsWith('auth.')) return 'auth';
-  return 'update';
+  const kind = declaredByAction.value.get(action)?.kind;
+  return kind ? toneByKind[kind] : 'update';
 }
 
 const toneGlyph: Record<Tone, string> = { create: '+', delete: '−', auth: '→', update: '~' };
@@ -114,6 +97,7 @@ async function load(nextPage = page.value): Promise<void> {
       return;
     }
     activities.value = response.data.activities;
+    declaredActions.value = response.data.actions;
     total.value = response.data.total;
     page.value = response.data.page;
   } catch (error) {

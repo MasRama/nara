@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import type { PermissionDeclaration } from '../../shared/security/permissions';
+import { ACTIVITY_KINDS, type ActivityKind, type ActivityMetadataValue } from '../../shared/security/activity';
 
 /** The actions Activity gates; the application's binding declares them to its access-control provider. */
 export const ACTIVITY_PERMISSIONS = [
@@ -31,8 +32,15 @@ export const activityQuerySchema = z.object({
 
 export type ActivityQuery = z.infer<typeof activityQuerySchema>;
 
-export type ActivityMetadataValue = string | number | boolean | null;
+export type { ActivityMetadataValue };
 export type ActivityMetadata = Record<string, ActivityMetadataValue>;
+
+/** An action a reporting Feature declared, under its full `<resource>.<action>` slug. */
+export interface DeclaredActivity {
+  action: string;
+  label: string;
+  kind: ActivityKind;
+}
 
 export interface ActivityRecordInput {
   action: string;
@@ -61,8 +69,14 @@ export function activityResponseSchemas() {
     metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])),
     occurredAt: z.number(),
   });
+  const declared = z.strictObject({
+    action: z.string(),
+    label: z.string(),
+    kind: z.enum(ACTIVITY_KINDS),
+  });
   return {
     record,
+    declared,
     listSuccess: z.strictObject({
       success: z.literal(true),
       message: z.string(),
@@ -71,6 +85,8 @@ export function activityResponseSchemas() {
         total: z.number(),
         page: z.number(),
         limit: z.number(),
+        // What reporting Features declared: labels and filter options for the feed.
+        actions: z.array(declared),
       }),
     }),
     error: z.strictObject({

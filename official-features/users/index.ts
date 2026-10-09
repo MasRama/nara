@@ -7,6 +7,7 @@ export {
   updateUserInputSchema,
   USERS_CHANGED_EVENT,
   USERS_EDITING_EVENT,
+  USERS_ACTIVITY,
   USERS_PERMISSIONS,
 } from './contract';
 export type {

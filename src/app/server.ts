@@ -18,6 +18,7 @@ import { closeEventStreams, createEventStream, EVENTS_PATH } from '../shared/rea
 import { handleError } from './error-handler';
 import { requestId, requestLifecycleLog } from './observability';
 import {
+  AUTH_ACTIVITY,
   AUTH_MAINTENANCE,
   AUTH_ROUTE_POLICIES,
   createAuthRoutes,
@@ -25,6 +26,7 @@ import {
   liveListener,
   passwordChangeGate,
   resetLoginThrottle,
+  ROLES_ACTIVITY,
   syncDeclaredPermissions,
 } from '../features/auth';
 import {
@@ -219,13 +221,13 @@ if (staticHandler) {
 
 declareRoutePolicies(app, '/api/auth', AUTH_ROUTE_POLICIES);
 declareMaintenance('auth', AUTH_MAINTENANCE);
-// Auth and Users report what happened; Activity records it best-effort.
-const recordApplicationActivity = createActivityRecorder((error) => {
+// Auth and Users declare what they report; Activity records it best-effort.
+const activity = createActivityRecorder((error) => {
   Logger.error('Failed to record application activity', error);
 });
-app.route('/api/auth', createAuthRoutes(recordApplicationActivity));
-app.route('/api/roles', createAccessRoutes(recordApplicationActivity));
-composeUsersServer(app, { recordActivity: recordApplicationActivity });
+app.route('/api/auth', createAuthRoutes(activity.declare('auth', AUTH_ACTIVITY)));
+app.route('/api/roles', createAccessRoutes(activity.declare('roles', ROLES_ACTIVITY)));
+composeUsersServer(app, { activity });
 composeActivityServer(app);
 // Live updates for signed-in browsers; Auth decides who is listening.
 app.get(EVENTS_PATH, createEventStream({ resolve: liveListener }));

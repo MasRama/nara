@@ -169,4 +169,20 @@ describe('activity capability', () => {
       },
     });
   });
+
+  it('serves the actions reporting Features declared, so the feed labels them without listing them', async () => {
+    const actor = await registerUser('Declared Activity Reader');
+    makeAdmin(actor.id);
+
+    const response = await app.request('/api/activity', { headers: { Cookie: actor.cookie } });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as { data: { actions: Array<{ action: string; label: string; kind: string }> } };
+    const actions = payload.data.actions.map((declared) => declared.action);
+
+    // Declared by Auth and Users through their bindings, in declaration order.
+    expect(payload.data.actions).toContainEqual({ action: 'auth.login', label: 'Signed in', kind: 'access' });
+    expect(payload.data.actions).toContainEqual({ action: 'roles.deleted', label: 'Role deleted', kind: 'delete' });
+    expect(payload.data.actions).toContainEqual({ action: 'users.created', label: 'User created', kind: 'create' });
+    expect(new Set(actions).size).toBe(actions.length);
+  });
 });

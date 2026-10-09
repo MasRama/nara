@@ -53,7 +53,7 @@ function createApplication(auth = AUTH_BOUNDARY): string {
   fixtures.push(fixture);
   writeFiles(fixture, {
     ...Object.fromEntries(
-      ['config', 'database', 'realtime', 'realtime/browser', 'security', 'security/codes', 'security/permissions'].map((entry) => [
+      ['config', 'database', 'realtime', 'realtime/browser', 'security', 'security/activity', 'security/codes', 'security/permissions'].map((entry) => [
         `src/shared/${entry}.ts`,
         'export {};\n',
       ]),

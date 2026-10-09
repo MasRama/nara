@@ -20,6 +20,8 @@ export async function activityRouteTypes(): Promise<void> {
   void total;
   // @ts-expect-error entries carry an actorId, not an actor
   void listed.data.activities[0].actor;
+  const kind: 'create' | 'update' | 'delete' | 'access' = listed.data.actions[0].kind;
+  void kind;
 
   // Activity adds no refusal codes of its own; it answers only with the shared ones.
   const refused: ActivityError = { success: false, message: 'Forbidden', code: 'FORBIDDEN' };
