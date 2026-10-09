@@ -6,3 +6,4 @@ export { clientIp } from './ip';
 export { createGuard, forbidden, unauthorized } from './authorization';
 export type { Actor, Guard } from './authorization';
 export { jsonInput, queryInput, validationErrors, validationFailed } from './validation';
+export type { PermissionDeclaration } from './permissions';
