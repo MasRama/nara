@@ -197,6 +197,8 @@ Application-wide browser route composition belongs under `src/app/router.ts` and
 
 Features own their browser pages, but they do not own the global router. The app layer composes those pages through the owning Feature's browser-safe public barrel, `src/features/<feature>/web/index.ts`, rather than importing page files directly.
 
+The authenticated shell's navigation comes from the same route records. A route opts in with `meta: { nav: { label } }`; the shell lists those top-level routes in route order and hides one whose `meta.requiresPermission` the session lacks, using the check the router guard applies (`src/app/navigation.ts`). A binding's routes therefore bring their own links, and the shell names no Feature.
+
 ## Dependencies
 
 Dependencies follow ownership and direction:
@@ -236,7 +238,7 @@ application binding:
 ```
 
 - Requirements are ordinary TypeScript interfaces and factory parameters (for example, `createUserRoutes(host: UsersServerHost)`). No container, no service locator, no decorators, no global registry, no Nara-specific runtime.
-- Requirements represent the Feature's actual needs in its own vocabulary, not the provider's implementation. The application binding adapts between the two (Users asks `canManageUsers(actorId, action)` and `findAccountById`; the Auth-backed binding answers with `isAdmin`/`hasPermission` and its account directory).
+- Requirements represent the Feature's actual needs in its own vocabulary, not the provider's implementation. The application binding adapts between the two (Users asks `canManageUsers(actorId, action)` and `findAccountById`; the Auth-backed binding answers with `isAdmin`/`hasPermission` and its account directory). The browser host mirrors it: `UsersPage` asks `canManageUsers(action)`, `canAssignRoles()` and `canResetPasswords()`, and spells no permission slug.
 - Requirements stay demand-driven and narrow: a small number of cohesive interfaces when responsibilities genuinely separate (for Users, `UsersIdentityHost` for account-directory behavior and `UsersAuthorizationHost` for roles and permissions), never a speculative universal service bag or a generic `execute()`/`services` catch-all.
 - The provider relationship belongs to application composition (`src/app/bindings/`), never to Feature-owned source. `inspect`/`context` therefore show no Feature dependency while the binding reading order shows the composition.
 - Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
