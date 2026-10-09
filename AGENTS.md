@@ -41,6 +41,7 @@ official-features/        installable open-code features (health, audit, users)
 | HTTP composition, browser routes, app shell | `src/app/` (`server.ts`, `router.ts`, pages/layouts) |
 | Business-neutral infra only | `src/shared/` (config, database engine, errors, logging, security) |
 | Reusable installable feature | `official-features/<name>/` + `nara add` wiring |
+| Users runtime code | `official-features/users/`, then `npm run nara -- evolve users`; never edit `src/features/users/` copies of official files (its own `tests/` are local) |
 | CLI / architecture engine | `src/cli/` with fixture-backed tests |
 
 ## Inspect before editing

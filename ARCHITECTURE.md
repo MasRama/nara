@@ -117,7 +117,9 @@ Five distinct things; do not conflate them:
    to pure INCOMING bytes while application-owned bindings stay untouched.
 
 The repository root is both the development reference and the canonical
-starting application. New products start from that codebase and keep or remove
+starting application. It installs official Users through lineage like any
+application: `official-features/users` is the source, and `src/features/users`
+follows it through `nara evolve`. New products start from that codebase and keep or remove
 Git history according to their own repository workflow.
 
 ## Versioning

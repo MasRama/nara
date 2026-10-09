@@ -165,6 +165,7 @@ process.stdout.write('MIGRATION_DURATION_MS:' + (Date.now() - startedAt) + '\\n'
       cwd: process.cwd(),
       env: {
         ...process.env,
+        TS_NODE_TRANSPILE_ONLY: 'true',
         NODE_ENV: 'development',
         APP_URL: 'http://127.0.0.1:5555',
         DB_FILE: databaseFile,
@@ -523,6 +524,7 @@ describe('canonical SQLite migration lifecycle', () => {
         cwd: root,
         env: {
           ...process.env,
+          TS_NODE_TRANSPILE_ONLY: 'true',
           NODE_ENV: 'development',
           APP_URL: 'http://127.0.0.1:5555',
           DB_FILE: databaseFile,
@@ -555,6 +557,7 @@ describe('canonical SQLite migration lifecycle', () => {
         cwd: root,
         env: {
           ...process.env,
+          TS_NODE_TRANSPILE_ONLY: 'true',
           NODE_ENV: 'development',
           APP_URL: 'http://127.0.0.1:5555',
           DB_FILE: databaseFile,
@@ -571,6 +574,7 @@ describe('canonical SQLite migration lifecycle', () => {
     const command = path.resolve('scripts/database.ts');
     const environment = {
       ...process.env,
+      TS_NODE_TRANSPILE_ONLY: 'true',
       NODE_ENV: 'development',
       APP_URL: 'http://127.0.0.1:5555',
       DB_FILE: missingDatabase,

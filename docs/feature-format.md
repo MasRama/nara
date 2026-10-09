@@ -147,3 +147,9 @@ replaced, and the architecture engine verifies the resulting integration
 before anything is applied. Auth remains a reference implementation
 rather than a package: it is one valid Users provider, not a capability
 that itself needs packaging.
+
+The reference app consumes its own catalog the same way: `src/features/users`
+is an installed copy of `official-features/users` with lineage committed under
+`.nara/lineage/`, so every change to official Users reaches the reference app
+through `nara evolve`, and the reference app's own tests stay as local
+additions.
