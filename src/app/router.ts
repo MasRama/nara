@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouterScrollBehavior } from 'vue-router';
 import { ChangePasswordPage, LoginPage, RegisterPage, RolesPage, SecurityPage, useAuthSession } from '../features/auth/web';
-import { ActivityPage } from '../features/activity/web';
+import activityWebRoutes from './bindings/activity.web';
 import usersWebRoutes from './bindings/users.web';
 import { canEnter } from './navigation';
 import DashboardPage from './pages/DashboardPage.vue';
@@ -45,12 +45,7 @@ export const appRoutes = [
     component: RolesPage,
     meta: { requiresAuth: true, requiresPermission: 'roles.view', nav: { label: 'Roles' } },
   },
-  {
-    path: '/activity',
-    name: 'activity',
-    component: ActivityPage,
-    meta: { requiresAuth: true, requiresPermission: 'activity.view', nav: { label: 'Activity' } },
-  },
+  ...activityWebRoutes,
   {
     path: '/security',
     name: 'security',

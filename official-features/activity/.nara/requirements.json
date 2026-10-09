@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "providers": ["auth"],
+  "packages": {
+    "zod": "^4.4.3"
+  }
+}
