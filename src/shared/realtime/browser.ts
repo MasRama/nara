@@ -1,6 +1,7 @@
 import { EVENTS_PATH, STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
 
-export { STREAM_ENDED_EVENT } from './protocol';
+export { PRESENCE_RENEW_MS, STREAM_ENDED_EVENT } from './protocol';
+export { keepEditing, mergeEdit, sameValue, type EditingClient, type EditMerge } from './editing';
 
 /**
  * The browser side of live updates: one EventSource per page, opened by the

@@ -4,6 +4,18 @@ export const AVATAR_MAX_FILE_SIZE_MB = 5;
 export const AVATAR_MAX_FILE_SIZE_BYTES = AVATAR_MAX_FILE_SIZE_MB * 1024 * 1024;
 export const AVATAR_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 
+/** Live update topic: accounts were created, edited, or deleted through Users; refetch what you show. */
+export const USERS_CHANGED_EVENT = 'users.changed';
+
+/** Live update topic: someone opened or closed an account's edit form; refetch who is editing. */
+export const USERS_EDITING_EVENT = 'users.editing';
+
+/** Refusal code: the update was based on an older revision; the response carries the account as it is now. */
+export const STALE_REVISION = 'STALE_REVISION';
+
+/** The revision an edit was based on; a newer one refuses it with `STALE_REVISION`. */
+const revisionSchema = z.number().int().positive();
+
 /**
  * Users-owned input validation. These schemas are deliberately local
  * copies of the generic person/email shapes: the Users Feature must not
@@ -33,6 +45,7 @@ const emailSchema = z
   .transform((value) => value.toLowerCase());
 
 export const profileInputSchema = z.object({
+  revision: revisionSchema,
   name: personNameSchema,
   email: emailSchema,
 });
@@ -47,6 +60,7 @@ export const createUserInputSchema = z.object({
 
 export const updateUserInputSchema = z
   .object({
+    revision: revisionSchema,
     name: personNameSchema.optional(),
     email: emailSchema.optional(),
     // Kept in the management contract for backwards-compatible diagnostics;
@@ -94,6 +108,7 @@ export function usersResponseSchemas() {
     name: z.string(),
     email: z.string(),
     avatar: z.string().nullable(),
+    revision: z.number(),
   });
   const managedUser = z.strictObject({ ...profile.shape, roles: z.array(z.string()) });
   const asset = z.strictObject({
@@ -108,17 +123,27 @@ export function usersResponseSchemas() {
     created_at: z.number(),
     updated_at: z.number(),
   });
+  const editor = z.strictObject({ id: z.string(), name: z.string() });
+  const error = z.strictObject({
+    success: z.literal(false),
+    message: z.string(),
+    code: z.string(),
+    errors: z.record(z.string(), z.array(z.string())).optional(),
+  });
 
   return {
     profile,
     managedUser,
     asset,
-    error: z.strictObject({
-      success: z.literal(false),
-      message: z.string(),
-      code: z.string(),
-      errors: z.record(z.string(), z.array(z.string())).optional(),
-    }),
+    editor,
+    error,
+    /** 409 for a profile update based on an older revision. */
+    staleProfile: z.strictObject({ ...error.shape, code: z.literal(STALE_REVISION), current: profile }),
+    /** 409 for a managed update based on an older revision. */
+    staleUser: z.strictObject({ ...error.shape, code: z.literal(STALE_REVISION), current: managedUser }),
+    message: z.strictObject({ success: z.literal(true), message: z.string() }),
+    /** Who has each account's edit form open, keyed by account id. */
+    usersEditing: success(z.strictObject({ editing: z.record(z.string(), z.array(editor)) })),
     profileSaved: success(z.strictObject({ user: profile })),
     userSaved: success(z.strictObject({ user: managedUser })),
     users: success(
@@ -141,6 +166,11 @@ export type UserProfile = Infer<'profile'>;
 export type ManagedUser = Infer<'managedUser'>;
 export type UserAsset = Infer<'asset'>;
 export type UserProfileError = Infer<'error'>;
+export type UsersEditor = Infer<'editor'>;
+export type StaleProfileError = Infer<'staleProfile'>;
+export type StaleUserError = Infer<'staleUser'>;
+export type UsersMessageSuccess = Infer<'message'>;
+export type UsersEditingSuccess = Infer<'usersEditing'>;
 export type UserProfileSuccess = Infer<'profileSaved'>;
 export type ManagedUserResponseSuccess = Infer<'userSaved'>;
 export type UsersResponseSuccess = Infer<'users'>;
@@ -148,7 +178,11 @@ export type DeleteUsersResponseSuccess = Infer<'usersDeleted'>;
 export type AvatarUploadSuccess = Infer<'avatarUploaded'>;
 
 export type UserProfileResponse = UserProfileSuccess | UserProfileError;
+export type UpdateProfileResponse = UserProfileSuccess | StaleProfileError | UserProfileError;
 export type ManagedUserResponse = ManagedUserResponseSuccess | UserProfileError;
+export type UpdateUserResponse = ManagedUserResponseSuccess | StaleUserError | UserProfileError;
+export type UsersEditingResponse = UsersEditingSuccess | UserProfileError;
+export type EditingResponse = UsersMessageSuccess | UserProfileError;
 export type UsersResponse = UsersResponseSuccess | UserProfileError;
 export type DeleteUsersResponse = DeleteUsersResponseSuccess | UserProfileError;
 export type AvatarUploadResponse = AvatarUploadSuccess | UserProfileError;

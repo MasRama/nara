@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { z } from 'zod';
 import {
@@ -7,9 +7,12 @@ import {
   AVATAR_MAX_FILE_SIZE_BYTES,
   AVATAR_MAX_FILE_SIZE_MB,
   profileInputSchema,
+  STALE_REVISION,
+  USERS_CHANGED_EVENT,
 } from '../../contract';
-import type { UserProfile } from '../../contract';
+import type { StaleProfileError, UpdateProfileResponse, UserProfile } from '../../contract';
 import { createUsersClient } from '../client';
+import { mergeEdit, sameValue } from '../editing';
 import type { UsersWebHost } from '../host';
 
 const passwordChangeInputSchema = z.object({
@@ -43,6 +46,11 @@ const avatarNotice = ref('');
 const profileErrors = ref<Record<string, string[]>>({});
 const passwordErrors = ref<Record<string, string[]>>({});
 
+type ProfileFields = { name: string; email: string };
+const FIELD_LABELS: Record<keyof ProfileFields, string> = { name: 'Full name', email: 'Email address' };
+// `profile` is the saved version the form builds on; edits saved elsewhere merge in.
+const conflicts = ref<Array<keyof ProfileFields>>([]);
+
 const displayName = computed(() => profile.value?.name || props.host.currentSessionUser()?.name || 'Your account');
 const initials = computed(() => {
   const value = displayName.value.trim();
@@ -63,6 +71,55 @@ function errorsFromIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: 
     errors[key].push(issue.message);
   }
   return errors;
+}
+
+function savedFields(user: UserProfile): ProfileFields {
+  return { name: user.name, email: user.email };
+}
+
+function isStale(response: UpdateProfileResponse): response is StaleProfileError {
+  return !response.success && response.code === STALE_REVISION && 'current' in response;
+}
+
+/**
+ * Folds a newer saved version of your profile into the form. Fields you have
+ * not touched follow it; fields you both changed are listed until you pick a side.
+ */
+function followSaved(user: UserProfile): void {
+  if (!profile.value) return;
+  const theirs = savedFields(user);
+  const result = mergeEdit(savedFields(profile.value), { name: name.value, email: email.value }, theirs);
+  name.value = result.merged.name;
+  email.value = result.merged.email;
+  const open = new Set([...conflicts.value, ...result.conflicts]);
+  conflicts.value = [...open].filter((field) => !sameValue(result.merged[field], theirs[field]));
+  profile.value = user;
+  props.host.syncSessionUser({ id: user.id, name: user.name, email: user.email, avatar: user.avatar });
+  if (result.adopted.length > 0) {
+    profileNotice.value = `Updated with changes saved elsewhere: ${result.adopted.map((field) => FIELD_LABELS[field]).join(', ')}.`;
+  }
+}
+
+function useTheirs(field: keyof ProfileFields): void {
+  if (!profile.value) return;
+  if (field === 'name') name.value = profile.value.name;
+  else email.value = profile.value.email;
+  conflicts.value = conflicts.value.filter((open) => open !== field);
+}
+
+function keepMine(field: keyof ProfileFields): void {
+  conflicts.value = conflicts.value.filter((open) => open !== field);
+}
+
+// Your account changed elsewhere (another device, an administrator, a new photo).
+async function followProfileChanges(): Promise<void> {
+  try {
+    const response = await usersClient.me();
+    if (!response.success || !profile.value || profileSaving.value) return;
+    if (response.data.user.revision > profile.value.revision) followSaved(response.data.user);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function setSessionUser(user: UserProfile): void {
@@ -107,8 +164,16 @@ async function saveProfile(): Promise<void> {
   profileError.value = '';
   profileNotice.value = '';
   profileErrors.value = {};
+  if (conflicts.value.length > 0) {
+    profileError.value = 'Choose which version to keep for each field saved elsewhere.';
+    return;
+  }
 
-  const parsed = profileInputSchema.safeParse({ name: name.value.trim(), email: email.value.trim() });
+  const parsed = profileInputSchema.safeParse({
+    revision: profile.value?.revision ?? 0,
+    name: name.value.trim(),
+    email: email.value.trim(),
+  });
   if (!parsed.success) {
     profileErrors.value = errorsFromIssues(parsed.error.issues);
     profileError.value = 'Please correct the highlighted profile fields.';
@@ -119,6 +184,14 @@ async function saveProfile(): Promise<void> {
   try {
     const response = await usersClient.updateProfile(parsed.data);
     if (!response.success) {
+      if (isStale(response)) {
+        followSaved(response.current);
+        profileError.value =
+          conflicts.value.length > 0
+            ? 'Your profile was saved elsewhere while you were editing. Choose which version to keep.'
+            : 'Your profile was saved elsewhere while you were editing. Those changes are merged in; review and save again.';
+        return;
+      }
       profileErrors.value = response.errors ?? {};
       profileError.value = response.message;
       return;
@@ -205,9 +278,11 @@ async function handleAvatarChange(event: Event): Promise<void> {
       return;
     }
 
-    const currentUser = profile.value ?? props.host.currentSessionUser();
-    if (currentUser) {
-      setSessionUser({ ...currentUser, avatar: response.data.url });
+    if (profile.value) {
+      // The new photo raised the revision; follow it so the details form stays current.
+      profile.value = { ...profile.value, avatar: response.data.url };
+      props.host.syncSessionUser({ ...savedFields(profile.value), id: profile.value.id, avatar: response.data.url });
+      await followProfileChanges();
     }
     avatarNotice.value = 'Profile photo updated.';
   } catch (error) {
@@ -222,6 +297,8 @@ async function handleAvatarChange(event: Event): Promise<void> {
 onMounted(() => {
   void loadProfile();
 });
+const stopFollowing = props.host.onLiveEvent?.(USERS_CHANGED_EVENT, () => void followProfileChanges());
+onUnmounted(() => stopFollowing?.());
 </script>
 
 <template>
@@ -279,10 +356,26 @@ onMounted(() => {
                 <input id="email" v-model="email" name="email" type="email" autocomplete="email" class="prof-input" :aria-invalid="Boolean(profileErrors.email)" :aria-describedby="profileErrors.email ? 'email-error' : undefined" />
                 <p v-if="profileErrors.email" id="email-error" class="prof-error">{{ profileErrors.email[0] }}</p>
               </div>
+              <section v-if="conflicts.length" class="prof-conflicts" data-testid="profile-conflicts" aria-labelledby="profile-conflicts-title">
+                <h3 id="profile-conflicts-title" class="prof-conflicts-title">Saved elsewhere while you were editing</h3>
+                <ul class="mt-3 grid gap-2">
+                  <li v-for="field in conflicts" :key="field" class="prof-conflict" :data-conflict-field="field">
+                    <span class="prof-conflict-label">{{ FIELD_LABELS[field] }}</span>
+                    <span class="prof-conflict-values">
+                      <span>Saved: <strong>{{ profile[field] }}</strong></span>
+                      <span>Yours: <strong>{{ field === 'name' ? name : email }}</strong></span>
+                    </span>
+                    <span class="flex gap-2">
+                      <button type="button" class="prof-btn" :data-testid="`use-theirs-${field}`" @click="useTheirs(field)">Use saved</button>
+                      <button type="button" class="prof-btn" :data-testid="`keep-mine-${field}`" @click="keepMine(field)">Keep mine</button>
+                    </span>
+                  </li>
+                </ul>
+              </section>
               <div class="prof-actions">
                 <p v-if="profileError" role="alert" class="prof-msg prof-msg--error">{{ profileError }}</p>
                 <p v-if="profileNotice" role="status" class="prof-msg prof-msg--ok"><span class="prof-dot"></span>{{ profileNotice }}</p>
-                <button type="submit" :disabled="profileSaving" class="prof-primary">{{ profileSaving ? 'Saving…' : 'Save profile' }}</button>
+                <button type="submit" :disabled="profileSaving || conflicts.length > 0" class="prof-primary">{{ profileSaving ? 'Saving…' : 'Save profile' }}</button>
               </div>
             </form>
           </section>
@@ -355,6 +448,13 @@ onMounted(() => {
 .prof-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent); }
 .prof-input[aria-invalid='true'] { border-color: color-mix(in srgb, var(--destructive) 60%, transparent); }
 .prof-error { color: var(--nara-danger); font-size: 12.5px; }
+.prof-conflicts { padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--destructive) 4%, transparent); }
+.prof-conflicts-title { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.prof-conflict { display: grid; gap: 10px; font-size: 13.5px; }
+@media (min-width: 768px) { .prof-conflict { grid-template-columns: 120px minmax(0, 1fr) auto; align-items: center; } }
+.prof-conflict-label { font-weight: 700; }
+.prof-conflict-values { display: grid; gap: 2px; min-width: 0; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.prof-conflict-values strong { color: var(--foreground); font-weight: 600; }
 
 .prof-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 18px; border-top: 1px solid var(--border); }
 .prof-msg { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }

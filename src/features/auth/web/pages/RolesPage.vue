@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { AUTH_ROLES_CHANGED_EVENT, createRoleInputSchema } from '../../contract';
-import type { PermissionData, RoleData } from '../../contract';
+import { AUTH_ROLES_CHANGED_EVENT, AUTH_ROLES_EDITING_EVENT, createRoleInputSchema, STALE_REVISION } from '../../contract';
+import type { Editor, PermissionData, RoleData, StaleRoleError, UpdateRoleResponse } from '../../contract';
 import { createAccessClient } from '../access-client';
 import { useAuthSession } from '../session';
-import { onServerEvent } from '../../../../shared/realtime/browser';
+import { keepEditing, mergeEdit, onServerEvent, sameValue } from '../../../../shared/realtime/browser';
 
 // Keep the page on the auth Feature boundary while reusing its own contracts and client.
 const authSession = useAuthSession();
@@ -32,9 +32,28 @@ const isSubmitting = ref(false);
 const pendingDelete = ref<RoleData | null>(null);
 const isDeleting = ref(false);
 
+type RoleFields = { name: string; slug: string; description: string; permissions: string[] };
+const FIELD_LABELS: Record<keyof RoleFields, string> = {
+  name: 'Name',
+  slug: 'Slug',
+  description: 'Description',
+  permissions: 'Permissions',
+};
+
+// The open edit form tracks the saved version it builds on, so changes saved
+// elsewhere merge in instead of being overwritten on save.
+const editBase = ref<RoleFields | null>(null);
+const editRevision = ref(0);
+const conflicts = ref<Array<keyof RoleFields>>([]);
+const mergeNotice = ref('');
+const editingGone = ref(false);
+const editors = ref<Record<string, Editor[]>>({});
+let stopEditing: (() => void) | undefined;
+
 const canCreate = computed(() => authSession.can('roles.create'));
 const canEdit = computed(() => authSession.can('roles.edit'));
 const canDelete = computed(() => authSession.can('roles.delete'));
+const formEditors = computed(() => (editingRole.value ? othersEditing(editingRole.value.id) : []));
 const permissionGroups = computed(() => Object.entries(permissionsByResource.value).sort(([left], [right]) => left.localeCompare(right)));
 
 function mapIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
@@ -49,6 +68,73 @@ function mapIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string 
 
 function fieldError(name: string): string {
   return fieldErrors.value[name]?.join('; ') ?? '';
+}
+
+function othersEditing(roleId: string): Editor[] {
+  return (editors.value[roleId] ?? []).filter((editor) => editor.id !== authSession.user.value?.id);
+}
+
+function editorNames(list: Editor[]): string {
+  return list.map((editor) => editor.name).join(', ');
+}
+
+function roleFields(role: RoleData): RoleFields {
+  return { name: role.name, slug: role.slug, description: role.description ?? '', permissions: [...role.permissions] };
+}
+
+function formFields(): RoleFields {
+  return {
+    name: roleName.value,
+    slug: roleSlug.value,
+    description: roleDescription.value,
+    permissions: [...selectedPermissions.value],
+  };
+}
+
+function setFormFields(fields: RoleFields): void {
+  roleName.value = fields.name;
+  roleSlug.value = fields.slug;
+  roleDescription.value = fields.description;
+  selectedPermissions.value = [...fields.permissions];
+}
+
+function displayValue(field: keyof RoleFields, value: RoleFields[keyof RoleFields] | undefined): string {
+  if (field === 'permissions') return Array.isArray(value) && value.length > 0 ? value.join(', ') : 'None';
+  return typeof value === 'string' && value !== '' ? value : 'Empty';
+}
+
+function isStale(response: UpdateRoleResponse): response is StaleRoleError {
+  return !response.success && response.code === STALE_REVISION && 'current' in response;
+}
+
+/**
+ * Folds a newer saved version of the open role into the form. Fields you have
+ * not touched follow it; fields you both changed are listed as conflicts until
+ * you pick a side. Conflicts still open stay listed unless the values now agree.
+ */
+function followSaved(role: RoleData): void {
+  if (!editBase.value) return;
+  const theirs = roleFields(role);
+  const result = mergeEdit(editBase.value, formFields(), theirs);
+  setFormFields(result.merged);
+  const open = new Set([...conflicts.value, ...result.conflicts]);
+  conflicts.value = [...open].filter((field) => !sameValue(result.merged[field], theirs[field]));
+  editBase.value = theirs;
+  editRevision.value = role.revision;
+  editingRole.value = role;
+  if (result.adopted.length > 0) {
+    mergeNotice.value = `Updated with changes saved elsewhere: ${result.adopted.map((field) => FIELD_LABELS[field]).join(', ')}.`;
+  }
+}
+
+function useTheirs(field: keyof RoleFields): void {
+  if (!editBase.value) return;
+  setFormFields({ ...formFields(), [field]: editBase.value[field] });
+  conflicts.value = conflicts.value.filter((open) => open !== field);
+}
+
+function keepMine(field: keyof RoleFields): void {
+  conflicts.value = conflicts.value.filter((open) => open !== field);
 }
 
 function humanize(value: string): string {
@@ -122,17 +208,40 @@ async function loadAccess(): Promise<void> {
   }
 }
 
-// Roles changed elsewhere: refresh the list in place, keeping any open form as it is.
+// Roles changed elsewhere: refresh the list in place and fold a newer version
+// of the role being edited into its form.
 async function followRoleChanges(): Promise<void> {
   try {
     const response = await accessClient.listRoles();
-    if (response.success && response.data) roles.value = response.data.roles;
+    if (!response.success || !response.data) return;
+    roles.value = response.data.roles;
+    const open = editingRole.value;
+    if (!open || !isFormOpen.value || isSubmitting.value) return;
+    const saved = response.data.roles.find((role) => role.id === open.id);
+    if (!saved) editingGone.value = true;
+    else if (saved.revision > editRevision.value) followSaved(saved);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadEditors(): Promise<void> {
+  try {
+    const response = await accessClient.listEditing();
+    if (response.success) editors.value = response.data.editing;
   } catch (error) {
     console.error(error);
   }
 }
 
 function resetForm(): void {
+  stopEditing?.();
+  stopEditing = undefined;
+  editBase.value = null;
+  editRevision.value = 0;
+  conflicts.value = [];
+  mergeNotice.value = '';
+  editingGone.value = false;
   editingRole.value = null;
   roleName.value = '';
   roleSlug.value = '';
@@ -157,6 +266,9 @@ function openEdit(role: RoleData): void {
   roleSlug.value = role.slug;
   roleDescription.value = role.description ?? '';
   selectedPermissions.value = [...role.permissions];
+  editBase.value = roleFields(role);
+  editRevision.value = role.revision;
+  stopEditing = keepEditing(role.id, accessClient);
   isFormOpen.value = true;
   actionError.value = '';
 }
@@ -173,6 +285,12 @@ async function submitRole(): Promise<void> {
   formError.value = '';
   fieldErrors.value = {};
   notice.value = '';
+  if (!isCreating.value && (conflicts.value.length > 0 || editingGone.value)) {
+    formError.value = editingGone.value
+      ? 'This role no longer exists.'
+      : 'Choose which version to keep for each field saved elsewhere.';
+    return;
+  }
   const payload = {
     name: roleName.value,
     slug: roleSlug.value,
@@ -191,8 +309,16 @@ async function submitRole(): Promise<void> {
   try {
     const response = creating
       ? await accessClient.createRole(parsed.data)
-      : await accessClient.updateRole(editingRole.value?.id ?? '', parsed.data);
+      : await accessClient.updateRole(editingRole.value?.id ?? '', { ...parsed.data, revision: editRevision.value });
     if (!response.success) {
+      if (isStale(response)) {
+        followSaved(response.current);
+        formError.value =
+          conflicts.value.length > 0
+            ? 'Someone saved this role while you were editing. Choose which version to keep below.'
+            : 'Someone saved this role while you were editing. Their changes are merged in; review and save again.';
+        return;
+      }
       formError.value = response.message;
       fieldErrors.value = response.errors ?? {};
       return;
@@ -246,8 +372,11 @@ async function confirmDelete(): Promise<void> {
 
 onMounted(() => {
   void loadAccess();
+  void loadEditors();
 });
 onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges()));
+onUnmounted(onServerEvent(AUTH_ROLES_EDITING_EVENT, () => void loadEditors()));
+onUnmounted(() => stopEditing?.());
 </script>
 
 <template>
@@ -297,6 +426,28 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
             </div>
 
             <p v-if="formError" role="alert" class="roles-alert roles-alert--error mt-6">{{ formError }}</p>
+            <p v-if="formEditors.length" role="status" class="roles-alert roles-alert--live mt-6" data-testid="role-editors">
+              <span class="roles-live-dot"></span>{{ editorNames(formEditors) }} {{ formEditors.length === 1 ? 'is' : 'are' }} also editing this role.
+            </p>
+            <p v-if="mergeNotice" role="status" class="roles-alert roles-alert--ok mt-6" data-testid="role-merge-notice">{{ mergeNotice }}</p>
+            <p v-if="editingGone" role="alert" class="roles-alert roles-alert--error mt-6" data-testid="role-gone">This role was deleted while you were editing it.</p>
+            <section v-if="conflicts.length" class="roles-conflicts mt-6" data-testid="role-conflicts" aria-labelledby="role-conflicts-title">
+              <h3 id="role-conflicts-title" class="roles-conflicts-title">Saved elsewhere while you were editing</h3>
+              <p class="roles-hint mt-1">You and someone else both changed these fields. Choose which version to keep.</p>
+              <ul class="mt-3 grid gap-2">
+                <li v-for="field in conflicts" :key="field" class="roles-conflict" :data-conflict-field="field">
+                  <span class="roles-conflict-label">{{ FIELD_LABELS[field] }}</span>
+                  <span class="roles-conflict-values">
+                    <span>Theirs: <strong>{{ displayValue(field, editBase?.[field]) }}</strong></span>
+                    <span>Yours: <strong>{{ displayValue(field, formFields()[field]) }}</strong></span>
+                  </span>
+                  <span class="flex gap-2">
+                    <button type="button" class="roles-btn roles-btn--sm" :data-testid="`use-theirs-${field}`" @click="useTheirs(field)">Use theirs</button>
+                    <button type="button" class="roles-btn roles-btn--sm" :data-testid="`keep-mine-${field}`" @click="keepMine(field)">Keep mine</button>
+                  </span>
+                </li>
+              </ul>
+            </section>
             <form class="mt-6 grid gap-5 md:grid-cols-2" data-testid="role-form" @submit.prevent="submitRole">
               <label class="roles-field" for="role-name">
                 Name
@@ -336,7 +487,7 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
               </fieldset>
 
               <div class="flex items-center gap-3 border-t border-border pt-5 md:col-span-2">
-                <button type="submit" :disabled="isSubmitting" class="roles-primary roles-primary--plain">{{ isSubmitting ? 'Saving…' : isCreating ? 'Create role' : 'Save changes' }}</button>
+                <button type="submit" :disabled="isSubmitting || (!isCreating && (conflicts.length > 0 || editingGone))" class="roles-primary roles-primary--plain">{{ isSubmitting ? 'Saving…' : isCreating ? 'Create role' : 'Save changes' }}</button>
                 <button type="button" :disabled="isSubmitting" class="roles-ghost" @click="closeForm">Cancel</button>
               </div>
             </form>
@@ -373,6 +524,7 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
                             <span v-if="role.slug === 'admin'" class="roles-protected">Protected</span>
                           </span>
                           <span class="roles-mono block text-[11.5px] text-muted-foreground">{{ role.slug }}</span>
+                          <span v-if="othersEditing(role.id).length" class="roles-editing" data-testid="role-editing"><span class="roles-live-dot"></span>{{ editorNames(othersEditing(role.id)) }} editing</span>
                           <span v-if="role.description" class="mt-1.5 block max-w-xs text-[13px] leading-relaxed text-muted-foreground">{{ role.description }}</span>
                         </span>
                       </div>
@@ -435,6 +587,7 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
 .roles-alert { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1px solid; border-radius: 14px; font-size: 14px; }
 .roles-alert--error { border-color: color-mix(in srgb, var(--destructive) 30%, transparent); background: color-mix(in srgb, var(--destructive) 8%, transparent); color: var(--nara-danger); }
 .roles-alert--ok { border-color: color-mix(in srgb, var(--primary) 30%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
+.roles-alert--live { border-color: var(--border); background: color-mix(in srgb, var(--foreground) 3%, transparent); color: var(--foreground); }
 .roles-live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent); }
 .roles-danger { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent); border-radius: 18px; background: var(--card); box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 8%, transparent), var(--nara-shadow); }
 @media (min-width: 768px) { .roles-danger { flex-direction: row; align-items: center; justify-content: space-between; } }
@@ -459,6 +612,17 @@ onUnmounted(onServerEvent(AUTH_ROLES_CHANGED_EVENT, () => void followRoleChanges
 .roles-perm:hover { background: var(--card); }
 .roles-perm:has(input:checked) { border-color: color-mix(in srgb, var(--primary) 35%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); }
 .roles-perm input { margin-top: 3px; accent-color: var(--primary); }
+
+/* Conflicts */
+.roles-conflicts { padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--destructive) 4%, transparent); }
+.roles-conflicts-title { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.roles-conflict { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); font-size: 13.5px; }
+@media (min-width: 768px) { .roles-conflict { grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; } }
+.roles-conflict-label { font-weight: 700; }
+.roles-conflict-values { display: grid; gap: 2px; min-width: 0; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.roles-conflict-values strong { color: var(--foreground); font-weight: 600; }
+.roles-editing { display: inline-flex; align-items: center; gap: 7px; margin-top: 6px; color: var(--primary); font-size: 12px; font-weight: 600; }
+.roles-editing .roles-live-dot { width: 6px; height: 6px; }
 
 /* List window */
 .roles-window { overflow: hidden; border: 1px solid var(--border); border-radius: 22px; background: var(--card); box-shadow: 0 0 0 8px color-mix(in srgb, var(--card) 50%, transparent), var(--nara-shadow); }

@@ -2,20 +2,25 @@ import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import {
+  AUTH_ROLES_EDITING_EVENT,
   createRoleInputSchema,
   deleteRolesInputSchema,
+  STALE_REVISION,
   updateRoleInputSchema,
   type CreateRoleInput,
   type DeleteRolesInput,
   type DeleteRolesResponseSuccess,
   type PermissionData,
+  type AuthSuccess,
   type PermissionsResponseSuccess,
   type RoleData,
+  type RolesEditingSuccess,
   type RoleResponseSuccess,
   type RolesResponseSuccess,
   type UpdateRoleInput,
 } from '../contract';
 import {
+  canViewRoles,
   createRoleWithPermissions,
   deleteRoles,
   findAllPermissions,
@@ -29,6 +34,7 @@ import {
   type Role,
 } from './access';
 import { forbidden, jsonInput } from '../../../shared/security';
+import { createPresence, publish, type Presence } from '../../../shared/realtime';
 import { requirePermission, sessionGuard } from './guard';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
@@ -46,6 +52,7 @@ function toRoleData(role: Role, userCount: number): RoleData {
     description: role.description,
     permissions: getRolePermissions(role.id).map((permission) => permission.slug),
     userCount,
+    revision: role.revision,
   };
 }
 
@@ -159,7 +166,7 @@ const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activ
     return context.json({ success: false as const, message: 'Cannot edit the admin role', code: 'PROTECTED_ROLE' }, 403);
   }
 
-  const { permissions, ...roleData } = input;
+  const { permissions, revision, ...roleData } = input;
   const permissionSelection = permissions === undefined ? undefined : resolvePermissionIds(permissions);
   if (permissionSelection && permissionSelection.unknown.length > 0) {
     return unknownPermissions(context, permissionSelection.unknown);
@@ -167,8 +174,22 @@ const updateRoleHandler = async (context: Context, input: UpdateRoleInput, activ
   if (permissionSelection !== undefined && !isAdmin(user.id)) return forbidden(context);
 
   try {
-    const role = updateRoleWithPermissions(roleId, roleData, permissionSelection?.ids);
-    if (!role) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+    const update = updateRoleWithPermissions(roleId, roleData, permissionSelection?.ids, revision);
+    if (update.status === 'missing') {
+      return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+    }
+    if (update.status === 'stale') {
+      return context.json(
+        {
+          success: false as const,
+          message: 'Someone else changed this role since you opened it',
+          code: STALE_REVISION,
+          current: countedRoleData(update.role),
+        },
+        409,
+      );
+    }
+    const { role } = update;
     activity?.({
       action: 'roles.updated',
       resource: 'roles',
@@ -218,10 +239,34 @@ const deleteRolesHandler = async (context: Context, input: DeleteRolesInput, act
   return context.json({ success: true as const, message: 'Roles deleted', data: { deleted } } satisfies DeleteRolesResponseSuccess);
 };
 
+const listEditingHandler = (context: Context, editors: Presence) =>
+  context.json({ success: true as const, message: 'OK', data: { editing: editors.editors() } } satisfies RolesEditingSuccess);
+
+/** Lists the caller as editing the role until the form renews or leaves; unknown roles answer 404. */
+const enterEditingHandler = (context: Context, editors: Presence) => {
+  const { user } = sessionGuard.actor(context);
+  const roleId = context.req.param('id') ?? '';
+  if (!findRoleById(roleId)) return context.json({ success: false as const, message: 'Role not found', code: 'NOT_FOUND' }, 404);
+  editors.enter(roleId, { id: user.id, name: user.name });
+  return context.json({ success: true as const, message: 'OK' } satisfies AuthSuccess);
+};
+
+const leaveEditingHandler = (context: Context, editors: Presence) => {
+  editors.leave(context.req.param('id') ?? '', sessionGuard.actor(context).id);
+  return context.json({ success: true as const, message: 'OK' } satisfies AuthSuccess);
+};
+
 export function createAccessRoutes(activity?: AuthActivitySink) {
+  const editors = createPresence({
+    onChange: () => publish(AUTH_ROLES_EDITING_EVENT, (listener) => canViewRoles(listener.userId)),
+  });
+
   return new Hono()
     .get('/', requirePermission('roles.view'), listRolesHandler)
     .get('/permissions', requirePermission('roles.view'), listPermissionsHandler)
+    .get('/editing', requirePermission('roles.view'), (context) => listEditingHandler(context, editors))
+    .put('/:id/editing', requirePermission('roles.edit'), (context) => enterEditingHandler(context, editors))
+    .delete('/:id/editing', requirePermission('roles.edit'), (context) => leaveEditingHandler(context, editors))
     .post('/', requirePermission('roles.create'), jsonInput(createRoleInputSchema), (context) =>
       createRoleHandler(context, context.req.valid('json'), activity),
     )

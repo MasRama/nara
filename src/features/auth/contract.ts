@@ -10,6 +10,12 @@ export const AUTH_SESSIONS_CHANGED_EVENT = 'auth.sessions-changed';
 /** Live update topic: roles, their permissions, or their member counts changed; refetch the list. */
 export const AUTH_ROLES_CHANGED_EVENT = 'auth.roles-changed';
 
+/** Live update topic: someone opened or closed a role's edit form; refetch who is editing. */
+export const AUTH_ROLES_EDITING_EVENT = 'auth.roles-editing';
+
+/** Refusal code: the update was based on an older revision; the response carries the record as it is now. */
+export const STALE_REVISION = 'STALE_REVISION';
+
 /**
  * Auth/RBAC domain validation. Role name/slug/description semantics are owned
  * here, not by feature-neutral security infrastructure: shared code provides
@@ -94,6 +100,8 @@ export const createRoleInputSchema = z.object({
 
 export const updateRoleInputSchema = z
   .object({
+    /** The revision this edit was based on; a newer one refuses it with `STALE_REVISION`. */
+    revision: z.number().int().positive(),
     name: roleNameSchema.optional(),
     slug: roleSlugSchema.optional(),
     description: roleDescriptionSchema,
@@ -159,6 +167,7 @@ export function authResponseSchemas() {
     description: z.string().nullable(),
     permissions: z.array(z.string()),
     userCount: z.number(),
+    revision: z.number(),
   });
   const permission = z.strictObject({
     id: z.string(),
@@ -167,6 +176,13 @@ export function authResponseSchemas() {
     resource: z.string(),
     action: z.string(),
     description: z.string().nullable(),
+  });
+  const editor = z.strictObject({ id: z.string(), name: z.string() });
+  const error = z.strictObject({
+    success: z.literal(false),
+    message: z.string(),
+    code: z.string(),
+    errors: z.record(z.string(), z.array(z.string())).optional(),
   });
 
   return {
@@ -177,12 +193,10 @@ export function authResponseSchemas() {
     twoFactorSetup,
     role,
     permission,
-    error: z.strictObject({
-      success: z.literal(false),
-      message: z.string(),
-      code: z.string(),
-      errors: z.record(z.string(), z.array(z.string())).optional(),
-    }),
+    editor,
+    error,
+    /** 409 for an update based on an older revision. */
+    staleRole: z.strictObject({ ...error.shape, code: z.literal(STALE_REVISION), current: role }),
     /** A success that only carries a message. */
     message: z.strictObject({ success: z.literal(true), message: z.string() }),
     csrfToken: success(z.strictObject({ csrfToken: z.string() })),
@@ -197,6 +211,8 @@ export function authResponseSchemas() {
     roles: success(z.strictObject({ roles: z.array(role) })),
     roleSaved: success(z.strictObject({ role })),
     rolesDeleted: success(z.strictObject({ deleted: z.number() })),
+    /** Who has each role's edit form open, keyed by role id. */
+    rolesEditing: success(z.strictObject({ editing: z.record(z.string(), z.array(editor)) })),
     permissions: success(z.record(z.string(), z.array(permission))),
   };
 }
@@ -211,7 +227,9 @@ export type TwoFactorStatus = Infer<'twoFactorStatus'>;
 export type TwoFactorSetup = Infer<'twoFactorSetup'>;
 export type RoleData = Infer<'role'>;
 export type PermissionData = Infer<'permission'>;
+export type Editor = Infer<'editor'>;
 export type AuthError = Infer<'error'>;
+export type StaleRoleError = Infer<'staleRole'>;
 /** `AuthSuccess` carries only a message; `AuthSuccess<T>` always carries `data`. */
 export type AuthSuccess<T = undefined> = [T] extends [undefined]
   ? Infer<'message'>
@@ -230,6 +248,7 @@ export type RolesResponseSuccess = Infer<'roles'>;
 export type RoleResponseSuccess = Infer<'roleSaved'>;
 export type DeleteRolesResponseSuccess = Infer<'rolesDeleted'>;
 export type PermissionsResponseSuccess = Infer<'permissions'>;
+export type RolesEditingSuccess = Infer<'rolesEditing'>;
 
 export type RegisterResponse = RegisterSuccess | AuthError;
 export type LoginResponse = LoginSuccess | AuthError;
@@ -244,4 +263,7 @@ export type RecoveryCodesResponse = RecoveryCodesSuccess | AuthError;
 export type RolesResponse = RolesResponseSuccess | AuthError;
 export type PermissionsResponse = PermissionsResponseSuccess | AuthError;
 export type RoleResponse = RoleResponseSuccess | AuthError;
+export type UpdateRoleResponse = RoleResponseSuccess | StaleRoleError | AuthError;
+export type RolesEditingResponse = RolesEditingSuccess | AuthError;
+export type EditingResponse = AuthSuccess | AuthError;
 export type DeleteRolesResponse = DeleteRolesResponseSuccess | AuthError;

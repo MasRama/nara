@@ -145,12 +145,14 @@ describe('live updates', () => {
     const memberEvents = await listen(member.browser);
     const bystanderEvents = await listen(bystander.browser);
 
-    const assigned = await send(admin.browser, `/api/users/${member.id}`, { method: 'PUT', body: { roles: [slug] } });
+    const assigned = await send(admin.browser, `/api/users/${member.id}`, { method: 'PUT', body: { revision: 1, roles: [slug] } });
     expect(assigned.body).toMatchObject({ success: true });
     expect(await memberEvents.next()).toBe('auth.account-changed');
+    // Users, through which the change was made, also tells the account its record changed.
+    expect(await memberEvents.next()).toBe('users.changed');
 
     const roleId = created.body.data.role.id as string;
-    const updated = await send(admin.browser, `/api/roles/${roleId}`, { method: 'PUT', body: { permissions: ['users.view'] } });
+    const updated = await send(admin.browser, `/api/roles/${roleId}`, { method: 'PUT', body: { revision: 1, permissions: ['users.view'] } });
     expect(updated.body).toMatchObject({ success: true });
     expect(await memberEvents.next()).toBe('auth.account-changed');
 
@@ -188,10 +190,56 @@ describe('live updates', () => {
     expect(created.status).toBe(201);
     expect(await adminEvents.next()).toBe('auth.roles-changed');
 
-    expect((await send(admin.browser, `/api/users/${member.id}`, { method: 'PUT', body: { roles: [slug] } })).status).toBe(200);
+    expect((await send(admin.browser, `/api/users/${member.id}`, { method: 'PUT', body: { revision: 1, roles: [slug] } })).status).toBe(200);
     expect(await drain(adminEvents)).toContain('auth.roles-changed');
 
     expect(await drain(memberEvents)).not.toContain('auth.roles-changed');
+  });
+
+  it('tells accounts that may read roles who opens or closes a role edit form, and nobody else', async () => {
+    seed();
+    const admin = await signUpAdmin();
+    const colleague = await signUpAdmin();
+    const member = await signUp();
+    const slug = `live-${randomUUID().slice(0, 8)}`;
+    const created = await send(admin.browser, '/api/roles', { method: 'POST', body: { name: 'Live Role', slug, permissions: [] } });
+    const roleId = created.body.data.role.id as string;
+    const colleagueEvents = await listen(colleague.browser);
+    const memberEvents = await listen(member.browser);
+
+    expect((await send(admin.browser, `/api/roles/${roleId}/editing`, { method: 'PUT' })).status).toBe(200);
+    expect(await colleagueEvents.next()).toBe('auth.roles-editing');
+    expect((await send(colleague.browser, '/api/roles/editing')).body).toMatchObject({
+      data: { editing: { [roleId]: [{ id: admin.id }] } },
+    });
+
+    // Renewing an open form changes nothing anyone sees.
+    expect((await send(admin.browser, `/api/roles/${roleId}/editing`, { method: 'PUT' })).status).toBe(200);
+    expect(await drain(colleagueEvents)).toEqual([]);
+
+    expect((await send(admin.browser, `/api/roles/${roleId}/editing`, { method: 'DELETE' })).status).toBe(200);
+    expect(await colleagueEvents.next()).toBe('auth.roles-editing');
+    expect((await send(colleague.browser, '/api/roles/editing')).body).toMatchObject({ data: { editing: {} } });
+
+    expect((await send(member.browser, `/api/roles/${roleId}/editing`, { method: 'PUT' })).status).toBe(403);
+    expect((await send(member.browser, '/api/roles/editing')).status).toBe(403);
+    expect(await drain(memberEvents)).toEqual([]);
+  });
+
+  it('tells whoever may view users, and the account itself, when Users changes an account', async () => {
+    const admin = await signUpAdmin();
+    const member = await signUp();
+    const bystander = await signUp();
+    const adminEvents = await listen(admin.browser);
+    const memberEvents = await listen(member.browser);
+    const bystanderEvents = await listen(bystander.browser);
+
+    const me = await send(member.browser, '/api/users/me');
+    const email = me.body.data.user.email as string;
+    expect((await send(member.browser, '/api/users/me', { method: 'PATCH', body: { revision: 1, name: 'Live Rename', email } })).status).toBe(200);
+    expect(await drain(memberEvents)).toContain('users.changed');
+    expect(await drain(adminEvents)).toContain('users.changed');
+    expect(await drain(bystanderEvents)).toEqual([]);
   });
 
   it('announces recorded activity only to accounts allowed to read it', async () => {

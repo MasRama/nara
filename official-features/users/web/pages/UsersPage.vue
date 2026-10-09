@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
-import { createUserInputSchema, updateUserInputSchema } from '../../contract';
-import type { ManagedUser, UpdateUserInput } from '../../contract';
+import {
+  createUserInputSchema,
+  STALE_REVISION,
+  updateUserInputSchema,
+  USERS_CHANGED_EVENT,
+  USERS_EDITING_EVENT,
+} from '../../contract';
+import type { ManagedUser, StaleUserError, UpdateUserInput, UpdateUserResponse, UsersEditor } from '../../contract';
 import { createUsersClient } from '../client';
+import { keepEditing, mergeEdit, sameValue } from '../editing';
 import type { UsersWebHost, UsersWebRole } from '../host';
 
 const props = defineProps<{ host: UsersWebHost }>();
@@ -37,6 +44,18 @@ const isResettingPassword = ref(false);
 const pendingDelete = ref<ManagedUser | null>(null);
 const isDeleting = ref(false);
 let usersLoadRequestId = 0;
+
+type UserFields = { name: string; email: string; roles: string[] };
+const FIELD_LABELS: Record<keyof UserFields, string> = { name: 'Name', email: 'Email', roles: 'Roles' };
+
+// The open edit form tracks the saved version it builds on, so changes saved
+// elsewhere merge in instead of being overwritten on save.
+const editBase = ref<UserFields | null>(null);
+const editRevision = ref(0);
+const conflicts = ref<Array<keyof UserFields>>([]);
+const mergeNotice = ref('');
+const editors = ref<Record<string, UsersEditor[]>>({});
+let stopEditing: (() => void) | undefined;
 
 const canCreate = computed(() => props.host.can('users.create'));
 const canEdit = computed(() => props.host.can('users.edit'));
@@ -80,6 +99,68 @@ function canDeleteUser(user: ManagedUser): boolean {
   );
 }
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / limit.value)));
+const formEditors = computed(() => (editingUser.value ? othersEditing(editingUser.value.id) : []));
+
+function othersEditing(userId: string): UsersEditor[] {
+  return (editors.value[userId] ?? []).filter((editor) => editor.id !== props.host.currentSessionUser()?.id);
+}
+
+function editorNames(list: UsersEditor[]): string {
+  return list.map((editor) => editor.name).join(', ');
+}
+
+function userFields(user: ManagedUser): UserFields {
+  return { name: user.name, email: user.email, roles: [...user.roles] };
+}
+
+function formFields(): UserFields {
+  return { name: userName.value, email: userEmail.value, roles: [...selectedRoles.value] };
+}
+
+function setFormFields(fields: UserFields): void {
+  userName.value = fields.name;
+  userEmail.value = fields.email;
+  selectedRoles.value = [...fields.roles];
+}
+
+function displayValue(field: keyof UserFields, value: UserFields[keyof UserFields] | undefined): string {
+  if (field === 'roles') return Array.isArray(value) && value.length > 0 ? value.map(roleLabel).join(', ') : 'None';
+  return typeof value === 'string' && value !== '' ? value : 'Empty';
+}
+
+function isStale(response: UpdateUserResponse): response is StaleUserError {
+  return !response.success && response.code === STALE_REVISION && 'current' in response;
+}
+
+/**
+ * Folds a newer saved version of the open account into the form. Fields you
+ * have not touched follow it; fields you both changed are listed as conflicts
+ * until you pick a side.
+ */
+function followSaved(user: ManagedUser): void {
+  if (!editBase.value) return;
+  const theirs = userFields(user);
+  const result = mergeEdit(editBase.value, formFields(), theirs);
+  setFormFields(result.merged);
+  const open = new Set([...conflicts.value, ...result.conflicts]);
+  conflicts.value = [...open].filter((field) => !sameValue(result.merged[field], theirs[field]));
+  editBase.value = theirs;
+  editRevision.value = user.revision;
+  editingUser.value = user;
+  if (result.adopted.length > 0) {
+    mergeNotice.value = `Updated with changes saved elsewhere: ${result.adopted.map((field) => FIELD_LABELS[field]).join(', ')}.`;
+  }
+}
+
+function useTheirs(field: keyof UserFields): void {
+  if (!editBase.value) return;
+  setFormFields({ ...formFields(), [field]: editBase.value[field] });
+  conflicts.value = conflicts.value.filter((open) => open !== field);
+}
+
+function keepMine(field: keyof UserFields): void {
+  conflicts.value = conflicts.value.filter((open) => open !== field);
+}
 
 function mapIssues(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>): Record<string, string[]> {
   const mapped: Record<string, string[]> = {};
@@ -130,6 +211,34 @@ async function loadUsers(nextPage = page.value): Promise<void> {
   }
 }
 
+// Accounts changed elsewhere: refresh the page in place and fold a newer
+// version of the account being edited into its form.
+async function followUserChanges(): Promise<void> {
+  // A search or page change started meanwhile wins over this refresh.
+  const requestId = usersLoadRequestId;
+  try {
+    const response = await usersClient.listUsers({ page: page.value, limit: limit.value, search: search.value });
+    if (requestId !== usersLoadRequestId || !response.success) return;
+    users.value = response.data.users;
+    total.value = response.data.total;
+    const open = editingUser.value;
+    if (!open || !isFormOpen.value || isSubmitting.value) return;
+    const saved = response.data.users.find((user) => user.id === open.id);
+    if (saved && saved.revision > editRevision.value) followSaved(saved);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadEditors(): Promise<void> {
+  try {
+    const response = await usersClient.listEditing();
+    if (response.success) editors.value = response.data.editing;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 async function loadRoles(): Promise<void> {
   roleLoadError.value = '';
   if (!canAssignRoles.value) {
@@ -165,6 +274,12 @@ function goToPage(nextPage: number): void {
 }
 
 function resetForm(): void {
+  stopEditing?.();
+  stopEditing = undefined;
+  editBase.value = null;
+  editRevision.value = 0;
+  conflicts.value = [];
+  mergeNotice.value = '';
   editingUser.value = null;
   userName.value = '';
   userEmail.value = '';
@@ -191,6 +306,9 @@ function openEdit(user: ManagedUser): void {
   userName.value = user.name;
   userEmail.value = user.email;
   selectedRoles.value = [...user.roles];
+  editBase.value = userFields(user);
+  editRevision.value = user.revision;
+  if (canEditUser(user)) stopEditing = keepEditing(user.id, usersClient);
   isFormOpen.value = true;
   actionError.value = '';
 }
@@ -203,6 +321,7 @@ function closeForm(): void {
 
 function validateUser(): UpdateUserInput | undefined {
   const payload = {
+    revision: editRevision.value,
     name: userName.value,
     email: userEmail.value,
     ...(canAssignRoles.value ? { roles: selectedRoles.value } : {}),
@@ -254,6 +373,10 @@ async function submitUser(): Promise<void> {
   formError.value = '';
   fieldErrors.value = {};
   notice.value = '';
+  if (!isCreating.value && conflicts.value.length > 0) {
+    formError.value = 'Choose which version to keep for each field saved elsewhere.';
+    return;
+  }
 
   const payload = isCreating.value
     ? {
@@ -295,11 +418,19 @@ async function submitUser(): Promise<void> {
     return;
   }
 
-  if (!editingUser.value) return;
+  if (!editingUser.value || !('revision' in payload)) return;
   isSubmitting.value = true;
   try {
     const response = await usersClient.updateUser(editingUser.value.id, payload);
     if (!response.success) {
+      if (isStale(response)) {
+        followSaved(response.current);
+        formError.value =
+          conflicts.value.length > 0
+            ? 'Someone saved this account while you were editing. Choose which version to keep below.'
+            : 'Someone saved this account while you were editing. Their changes are merged in; review and save again.';
+        return;
+      }
       formError.value = response.message;
       fieldErrors.value = response.errors ?? {};
       return;
@@ -353,7 +484,15 @@ async function confirmDelete(): Promise<void> {
 }
 
 onMounted(() => {
-  void Promise.all([loadUsers(1), loadRoles()]);
+  void Promise.all([loadUsers(1), loadRoles(), loadEditors()]);
+});
+const unsubscribe = [
+  props.host.onLiveEvent?.(USERS_CHANGED_EVENT, () => void followUserChanges()),
+  props.host.onLiveEvent?.(USERS_EDITING_EVENT, () => void loadEditors()),
+];
+onUnmounted(() => {
+  for (const stop of unsubscribe) stop?.();
+  stopEditing?.();
 });
 </script>
 
@@ -444,6 +583,27 @@ onMounted(() => {
             </div>
 
             <p v-if="formError" role="alert" class="users-alert users-alert--error mt-6">{{ formError }}</p>
+            <p v-if="formEditors.length" role="status" class="users-alert users-alert--live mt-6" data-testid="user-editors">
+              <span class="users-live-dot"></span>{{ editorNames(formEditors) }} {{ formEditors.length === 1 ? 'is' : 'are' }} also editing this account.
+            </p>
+            <p v-if="mergeNotice" role="status" class="users-alert users-alert--ok mt-6" data-testid="user-merge-notice">{{ mergeNotice }}</p>
+            <section v-if="conflicts.length" class="users-conflicts mt-6" data-testid="user-conflicts" aria-labelledby="user-conflicts-title">
+              <h3 id="user-conflicts-title" class="users-conflicts-title">Saved elsewhere while you were editing</h3>
+              <p class="users-hint mt-1">You and someone else both changed these fields. Choose which version to keep.</p>
+              <ul class="mt-3 grid gap-2">
+                <li v-for="field in conflicts" :key="field" class="users-conflict" :data-conflict-field="field">
+                  <span class="users-conflict-label">{{ FIELD_LABELS[field] }}</span>
+                  <span class="users-conflict-values">
+                    <span>Theirs: <strong>{{ displayValue(field, editBase?.[field]) }}</strong></span>
+                    <span>Yours: <strong>{{ displayValue(field, formFields()[field]) }}</strong></span>
+                  </span>
+                  <span class="flex gap-2">
+                    <button type="button" class="users-btn users-btn--sm" :data-testid="`use-theirs-${field}`" @click="useTheirs(field)">Use theirs</button>
+                    <button type="button" class="users-btn users-btn--sm" :data-testid="`keep-mine-${field}`" @click="keepMine(field)">Keep mine</button>
+                  </span>
+                </li>
+              </ul>
+            </section>
             <form class="mt-6 grid gap-5 md:grid-cols-2" data-testid="user-form" @submit.prevent="submitUser">
               <label class="users-field" for="user-name">
                 Name
@@ -503,7 +663,7 @@ onMounted(() => {
               </fieldset>
 
               <div v-if="canEditCurrentForm" class="flex items-center gap-3 border-t border-border pt-5 md:col-span-2">
-                <button type="submit" :disabled="isSubmitting || isResettingPassword" class="users-primary">
+                <button type="submit" :disabled="isSubmitting || isResettingPassword || (!isCreating && conflicts.length > 0)" class="users-primary">
                   {{ isSubmitting ? 'Saving…' : isCreating ? 'Create user' : 'Save changes' }}
                 </button>
                 <button type="button" :disabled="isSubmitting || isResettingPassword" class="users-ghost" @click="closeForm">Cancel</button>
@@ -542,6 +702,7 @@ onMounted(() => {
                           <span class="min-w-0">
                             <span class="block truncate font-heading font-bold tracking-[-0.02em]">{{ user.name }}</span>
                             <span class="block truncate text-[13px] text-muted-foreground">{{ user.email }}</span>
+                            <span v-if="othersEditing(user.id).length" class="users-editing" data-testid="user-editing"><span class="users-live-dot"></span>{{ editorNames(othersEditing(user.id)) }} editing</span>
                           </span>
                         </div>
                       </td>
@@ -602,6 +763,7 @@ onMounted(() => {
 .users-alert { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1px solid; border-radius: 14px; font-size: 14px; }
 .users-alert--error { border-color: color-mix(in srgb, var(--destructive) 30%, transparent); background: color-mix(in srgb, var(--destructive) 8%, transparent); color: var(--nara-danger); }
 .users-alert--ok { border-color: color-mix(in srgb, var(--primary) 30%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); color: var(--primary); }
+.users-alert--live { border-color: var(--border); background: color-mix(in srgb, var(--foreground) 3%, transparent); color: var(--foreground); }
 .users-live-dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent); }
 .users-danger { display: flex; flex-direction: column; gap: 16px; padding: 20px 22px; border: 1px solid color-mix(in srgb, var(--destructive) 35%, transparent); border-radius: 18px; background: var(--card); box-shadow: 0 0 0 4px color-mix(in srgb, var(--destructive) 8%, transparent), var(--nara-shadow); }
 @media (min-width: 768px) { .users-danger { flex-direction: row; align-items: center; justify-content: space-between; } }
@@ -635,6 +797,17 @@ onMounted(() => {
 .users-role-option:has(input:checked) { border-color: color-mix(in srgb, var(--primary) 50%, transparent); background: color-mix(in srgb, var(--primary) 8%, transparent); }
 .users-role-option input { accent-color: var(--primary); }
 .users-role-slug { margin-left: 4px; color: var(--muted-foreground); font-family: var(--nara-mono); font-size: 11px; font-weight: 500; }
+
+/* Conflicts */
+.users-conflicts { padding: 18px 20px; border: 1px solid color-mix(in srgb, var(--destructive) 30%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--destructive) 4%, transparent); }
+.users-conflicts-title { font-size: 14px; font-weight: 800; letter-spacing: -0.02em; }
+.users-conflict { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); font-size: 13.5px; }
+@media (min-width: 768px) { .users-conflict { grid-template-columns: 110px minmax(0, 1fr) auto; align-items: center; } }
+.users-conflict-label { font-weight: 700; }
+.users-conflict-values { display: grid; gap: 2px; min-width: 0; color: var(--muted-foreground); overflow-wrap: anywhere; }
+.users-conflict-values strong { color: var(--foreground); font-weight: 600; }
+.users-editing { display: inline-flex; align-items: center; gap: 7px; margin-top: 4px; color: var(--primary); font-size: 12px; font-weight: 600; }
+.users-editing .users-live-dot { width: 6px; height: 6px; }
 
 /* List window */
 .users-window { overflow: hidden; border: 1px solid var(--border); border-radius: 22px; background: var(--card); box-shadow: 0 0 0 8px color-mix(in srgb, var(--card) 50%, transparent), var(--nara-shadow); }

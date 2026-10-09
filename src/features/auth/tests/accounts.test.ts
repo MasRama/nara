@@ -66,15 +66,30 @@ describe('auth account directory', () => {
     const account = createAccount({ id: randomUUID(), name: 'Atomic Before', email: uniqueEmail(), passwordHash: 'hash' });
     expect(() => updateAccountWithRoles(account.id, { name: 'Atomic After' }, { roleIds: ['missing-role'] })).toThrow();
     expect(findAccountById(account.id)?.name).toBe('Atomic Before');
+
+    // A stale update stops before role assignment: the unknown role is never written.
+    expect(updateAccountWithRoles(account.id, { name: 'Stale After' }, { roleIds: ['missing-role'], revision: 99 })).toMatchObject({
+      status: 'stale',
+      account: { name: 'Atomic Before' },
+    });
   });
 
   it('updates accounts and rejects duplicate emails', () => {
     const first = createAccount({ id: randomUUID(), name: 'First', email: uniqueEmail(), passwordHash: 'hash' });
     const second = createAccount({ id: randomUUID(), name: 'Second', email: uniqueEmail(), passwordHash: 'hash' });
 
-    const updated = updateAccount(first.id, { name: 'First Updated', avatar: '/avatar.webp' });
-    expect(updated).toMatchObject({ id: first.id, name: 'First Updated', avatar: '/avatar.webp' });
-    expect(updateAccount(randomUUID(), { name: 'Nobody' })).toBeUndefined();
+    expect(first.revision).toBe(1);
+    const updated = updateAccount(first.id, { name: 'First Updated', avatar: '/avatar.webp' }, 1);
+    expect(updated).toMatchObject({
+      status: 'updated',
+      account: { id: first.id, name: 'First Updated', avatar: '/avatar.webp', revision: 2 },
+    });
+    expect(updateAccount(first.id, { name: 'First Stale' }, 1)).toMatchObject({
+      status: 'stale',
+      account: { name: 'First Updated', revision: 2 },
+    });
+    expect(updateAccount(first.id, { avatar: null })).toMatchObject({ status: 'updated', account: { revision: 3 } });
+    expect(updateAccount(randomUUID(), { name: 'Nobody' })).toEqual({ status: 'missing' });
 
     for (const write of [
       () => updateAccount(first.id, { email: second.email }),

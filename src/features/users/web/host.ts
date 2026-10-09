@@ -38,4 +38,10 @@ export interface UsersWebHost {
   syncSessionUser(user: UsersWebSessionUser): void;
   listRoles(): Promise<UsersWebRole[]>;
   changePassword(input: UsersPasswordChange): Promise<UsersPasswordChangeResult>;
+  /**
+   * Runs `handler` when the server sends `topic` (`USERS_CHANGED_EVENT`,
+   * `USERS_EDITING_EVENT`); returns the unsubscribe. `resumed` is true after a
+   * dropped connection came back. Without it, pages follow no live changes.
+   */
+  onLiveEvent?(topic: string, handler: (event: { resumed: boolean }) => void): () => void;
 }

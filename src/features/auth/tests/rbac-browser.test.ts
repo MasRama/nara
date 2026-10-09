@@ -265,7 +265,7 @@ describe('roles and permissions browser surfaces', () => {
     expect(container.querySelector(`[data-testid="edit-role-${adminRoleId}"]`)).toBeNull();
     expect(container.querySelector(`[data-testid="delete-role-${adminRoleId}"]`)).toBeNull();
 
-    const updateResponse = await createAccessClient().updateRole(adminRoleId, { name: 'Renamed Administrator' });
+    const updateResponse = await createAccessClient().updateRole(adminRoleId, { revision: 1, name: 'Renamed Administrator' });
     expect(updateResponse).toMatchObject({
       success: false,
       message: 'Cannot edit the admin role',

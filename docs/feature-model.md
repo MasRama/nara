@@ -298,6 +298,16 @@ permission check stays in the route that already makes it.
 The hub lives in one process. Running several server processes behind a load
 balancer would need a shared broadcast channel, which Nara does not ship.
 
+## Concurrent edits
+
+Two people can open the same role or account at once; neither silently
+overwrites the other.
+
+- Each editable row has a `revision` column that every update raises. An update input carries the `revision` it was based on, and the repository writes with `WHERE id = ? AND revision = ?`. When nothing matches, the route answers `409 STALE_REVISION` with the record as it is now in `current`. Writes that are not form edits, such as an avatar upload, apply without a revision but still raise it.
+- In the browser, `mergeEdit(base, mine, theirs)` from `src/shared/realtime/browser` merges three versions of a form: a field only the other side changed follows them, a field only you changed stays yours, and a field you both changed differently is a conflict that keeps your value until you choose. Array fields such as permissions or roles merge as sets and never conflict. Pages run it when a change event announces a newer revision and when a save is refused as stale, and keep Save disabled while a conflict is open.
+- Presence is advisory. `createPresence({ onChange })` from `src/shared/realtime` keeps who is editing what in the process; entries expire after 30 s unless renewed. Pages call `keepEditing(id, client)`, which renews every `PRESENCE_RENEW_MS` (10 s) through `PUT /api/<resource>/:id/editing` and leaves through `DELETE` on close or `pagehide`. `GET /api/<resource>/editing` lists editors for whoever may view the resource, and `onChange` publishes the Feature's editing topic (`auth.roles-editing`, `users.editing`).
+- Users cannot import `src/shared/realtime`, since it is installable: it declares an optional `live` on `UsersServerHost` (publish `users.changed`, track editors) and an optional `onLiveEvent` on `UsersWebHost`, and carries its own copy of the merge in `web/editing.ts`. Without them Users still guards against stale writes; it only stops updating open pages live.
+
 ## Shared code
 
 `src/shared/` is intentionally small infrastructure for concepts owned by no business Feature:

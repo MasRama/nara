@@ -24,6 +24,7 @@ describe('official Users parity', () => {
     'server/input.ts',
     'server/routes.ts',
     'web/client.ts',
+    'web/editing.ts',
     'web/host.ts',
     'web/index.ts',
     'web/pages/ProfilePage.vue',

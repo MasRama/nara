@@ -4,11 +4,15 @@ import type {
   CreateUserInput,
   DeleteUsersInput,
   DeleteUsersResponse,
+  EditingResponse,
   ManagedUserResponse,
   ProfileInput,
   ResetUserPasswordInput,
+  UpdateProfileResponse,
   UpdateUserInput,
+  UpdateUserResponse,
   UserProfileResponse,
+  UsersEditingResponse,
   UsersResponse,
 } from '../contract';
 import type { createAssetRoutes, createUserRoutes } from '..';
@@ -16,13 +20,16 @@ import type { UsersWebCsrf } from './host';
 
 export interface UsersClient {
   me(): Promise<UserProfileResponse>;
-  updateProfile(input: ProfileInput): Promise<UserProfileResponse>;
+  updateProfile(input: ProfileInput): Promise<UpdateProfileResponse>;
   listUsers(input?: { page?: number; limit?: number; search?: string }): Promise<UsersResponse>;
   createUser(input: CreateUserInput): Promise<ManagedUserResponse>;
-  updateUser(id: string, input: UpdateUserInput): Promise<ManagedUserResponse>;
+  updateUser(id: string, input: UpdateUserInput): Promise<UpdateUserResponse>;
   resetPassword(id: string, input: ResetUserPasswordInput): Promise<ManagedUserResponse>;
   deleteUsers(input: DeleteUsersInput): Promise<DeleteUsersResponse>;
   uploadAvatar(file: File): Promise<AvatarUploadResponse>;
+  listEditing(): Promise<UsersEditingResponse>;
+  startEditing(id: string): Promise<EditingResponse>;
+  stopEditing(id: string): Promise<EditingResponse>;
 }
 
 export interface UsersClientOptions {
@@ -59,5 +66,8 @@ export function createUsersClient(options: UsersClientOptions = {}): UsersClient
     resetPassword: async (id, input) => (await users[':id']['reset-password'].$post({ param: { id }, json: input })).json(),
     deleteUsers: async (input) => (await users.index.$delete({ json: input })).json(),
     uploadAvatar: async (file) => (await assets.avatar.$post({ form: { file } })).json(),
+    listEditing: async () => (await users.editing.$get()).json(),
+    startEditing: async (id) => (await users[':id'].editing.$put({ param: { id } })).json(),
+    stopEditing: async (id) => (await users[':id'].editing.$delete({ param: { id } })).json(),
   };
 }

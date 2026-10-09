@@ -7,9 +7,13 @@ export interface Role {
   name: string;
   slug: string;
   description: string | null;
+  revision: number;
   created_at: number;
   updated_at: number;
 }
+
+/** `stale` carries the role as it is now; nothing was written. */
+export type RoleUpdate = { status: 'updated'; role: Role } | { status: 'stale'; role: Role } | { status: 'missing' };
 
 export interface Permission {
   id: string;
@@ -79,10 +83,15 @@ export function createRoleWithPermissions(
   return role;
 }
 
+/**
+ * Applies `data` and raises the revision. With `revision`, writes only while
+ * the role is still at it, so an edit based on stale data is refused.
+ */
 export function updateRole(
   roleId: string,
   data: Partial<Pick<Role, 'name' | 'slug' | 'description'>>,
-): Role | undefined {
+  revision?: number,
+): RoleUpdate {
   const fields: string[] = [];
   const values: unknown[] = [];
   if (data.name !== undefined) {
@@ -97,12 +106,14 @@ export function updateRole(
     fields.push('description = ?');
     values.push(data.description);
   }
-  if (fields.length > 0) {
-    fields.push('updated_at = ?');
-    values.push(Date.now(), roleId);
-    getDatabase().prepare(`UPDATE roles SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-  }
-  return findRoleById(roleId);
+  fields.push('revision = revision + 1', 'updated_at = ?');
+  values.push(Date.now(), roleId);
+  const current = revision === undefined ? '' : ' AND revision = ?';
+  if (revision !== undefined) values.push(revision);
+  const written = getDatabase().prepare(`UPDATE roles SET ${fields.join(', ')} WHERE id = ?${current}`).run(...values).changes;
+  const role = findRoleById(roleId);
+  if (!role) return { status: 'missing' };
+  return written === 0 ? { status: 'stale', role } : { status: 'updated', role };
 }
 
 export function deleteRoles(roleIds: string[]): number {
@@ -212,19 +223,19 @@ export function updateRoleWithPermissions(
   roleId: string,
   data: Partial<Pick<Role, 'name' | 'slug' | 'description'>>,
   permissionIds?: string[],
-): Role | undefined {
+  revision?: number,
+): RoleUpdate {
   const database = getDatabase();
-  const role = database.transaction(() => {
-    const updated = updateRole(roleId, data);
-    if (!updated) return undefined;
-    if (permissionIds !== undefined) replaceRolePermissions(database, roleId, permissionIds);
-    return updated;
+  const update = database.transaction(() => {
+    const result = updateRole(roleId, data, revision);
+    if (result.status === 'updated' && permissionIds !== undefined) replaceRolePermissions(database, roleId, permissionIds);
+    return result;
   })();
-  if (role) {
+  if (update.status === 'updated') {
     accountsChanged(getUsersWithRole(roleId).map((user) => user.id));
     rolesChanged(canViewRoles);
   }
-  return role;
+  return update;
 }
 
 export function syncUserRoles(userId: string, roleIds: string[]): void {

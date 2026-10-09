@@ -25,6 +25,7 @@ interface MockAccount {
   email: string;
   passwordHash: string;
   avatar: string | null;
+  revision: number;
 }
 
 interface MockHostState {
@@ -56,7 +57,13 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
     accounts: new Map(),
     storage: new Map(),
   };
-  const visible = (account: MockAccount) => ({ id: account.id, name: account.name, email: account.email, avatar: account.avatar });
+  const visible = (account: MockAccount) => ({
+    id: account.id,
+    name: account.name,
+    email: account.email,
+    avatar: account.avatar,
+    revision: account.revision,
+  });
   const host: UsersServerHost = {
     sessionCookieName: cookieName,
     assetStorage: {
@@ -99,14 +106,24 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       for (const account of state.accounts.values()) {
         if (account.email.toLowerCase() === input.email.toLowerCase()) throw uniqueViolation();
       }
-      const account: MockAccount = { id: input.id, name: input.name, email: input.email, passwordHash: input.passwordHash, avatar: null };
+      const account: MockAccount = {
+        id: input.id,
+        name: input.name,
+        email: input.email,
+        passwordHash: input.passwordHash,
+        avatar: null,
+        revision: 1,
+      };
       state.accounts.set(account.id, account);
       if (roleIds !== undefined) state.assignments.set(account.id, [...roleIds]);
       return visible(account);
     },
     updateAccount: (userId, patch, options = {}) => {
       const account = state.accounts.get(userId);
-      if (!account) return undefined;
+      if (!account) return { status: 'missing' };
+      if (options.revision !== undefined && options.revision !== account.revision) {
+        return { status: 'stale', account: visible(account) };
+      }
       if (patch.email !== undefined) {
         for (const other of state.accounts.values()) {
           if (other.id !== userId && other.email.toLowerCase() === patch.email.toLowerCase()) throw uniqueViolation();
@@ -116,7 +133,8 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       if (patch.name !== undefined) account.name = patch.name;
       if (patch.avatar !== undefined) account.avatar = patch.avatar;
       if (options.roleIds !== undefined) state.assignments.set(userId, [...options.roleIds]);
-      return visible(account);
+      account.revision += 1;
+      return { status: 'updated', account: visible(account) };
     },
     resetPassword: (userId, passwordHash) => {
       const account = state.accounts.get(userId);
@@ -229,7 +247,7 @@ function isSharedSpecifier(specifier: string): boolean {
   // shared/config, and shared/storage) may be imported.
   // Reference-only modules such as logging or security validation must be
   // feature-owned or host-provided instead.
-  return specifier.includes('shared/logging') || specifier.includes('shared/security');
+  return specifier.includes('shared/logging') || specifier.includes('shared/security') || specifier.includes('shared/realtime');
 }
 
 function accountTableReferences(source: string): string[] {
@@ -396,7 +414,7 @@ describe('users host requirements with an alternative provider', () => {
     const updated = await jsonRequest(app, `/api/users/${targetId}`, {
       method: 'PUT',
       cookie,
-      body: { roles: ['missing-role'] },
+      body: { revision: 1, roles: ['missing-role'] },
     });
     expect(updated.status).toBe(422);
     expect(state.assignments.get(targetId)).toEqual(before);
@@ -429,7 +447,7 @@ describe('users host requirements with an alternative provider', () => {
     const profile = await jsonRequest(app, '/api/users/me', {
       method: 'PATCH',
       cookie: firstCookie,
-      body: { name: 'Conflicting Profile', email: secondEmail },
+      body: { revision: 1, name: 'Conflicting Profile', email: secondEmail },
     });
     expect(profile.status).toBe(409);
     expect(profile.payload).toMatchObject({ success: false, code: 'DUPLICATE_EMAIL' });
@@ -439,7 +457,7 @@ describe('users host requirements with an alternative provider', () => {
     const managed = await jsonRequest(app, `/api/users/${firstId}`, {
       method: 'PUT',
       cookie: adminCookie,
-      body: { email: secondEmail },
+      body: { revision: 1, email: secondEmail },
     });
     expect(managed.status).toBe(409);
     expect(managed.payload).toMatchObject({ success: false, code: 'DUPLICATE_EMAIL' });
@@ -468,7 +486,7 @@ describe('users host requirements with an alternative provider', () => {
     const updated = await jsonRequest(app, `/api/users/${targetId}`, {
       method: 'PUT',
       cookie,
-      body: { name: 'Renamed User' },
+      body: { revision: 1, name: 'Renamed User' },
     });
     expect(updated.status).toBe(200);
     expect(state.accounts.get(targetId)?.passwordHash).toBe(before);
@@ -486,7 +504,7 @@ describe('users host requirements with an alternative provider', () => {
     const emailTakeover = await jsonRequest(app, `/api/users/${targetId}`, {
       method: 'PUT',
       cookie: managerCookie,
-      body: { email: `${randomUUID()}@example.com` },
+      body: { revision: 1, email: `${randomUUID()}@example.com` },
     });
     expect(emailTakeover.status).toBe(403);
     expect(state.accounts.get(targetId)?.email).toBe(targetEmail);
@@ -494,7 +512,7 @@ describe('users host requirements with an alternative provider', () => {
     const passwordViaEdit = await jsonRequest(app, `/api/users/${targetId}`, {
       method: 'PUT',
       cookie: managerCookie,
-      body: { password: 'new delegated password' },
+      body: { revision: 1, password: 'new delegated password' },
     });
     expect(passwordViaEdit.status).toBe(422);
     expect(state.accounts.get(targetId)?.passwordHash).toBe(beforeHash);
@@ -503,7 +521,7 @@ describe('users host requirements with an alternative provider', () => {
     const selfBypass = await jsonRequest(app, `/api/users/${targetId}`, {
       method: 'PUT',
       cookie: selfCookie,
-      body: { password: 'self bypass password' },
+      body: { revision: 1, password: 'self bypass password' },
     });
     expect(selfBypass.status).toBe(422);
     expect(state.accounts.get(targetId)?.passwordHash).toBe(beforeHash);
@@ -530,7 +548,7 @@ describe('users host requirements with an alternative provider', () => {
       loginAs(state, managerId, { permissions: ['users.edit', 'users.reset-password'] }),
     );
 
-    const edit = await jsonRequest(app, `/api/users/${adminId}`, { method: 'PUT', cookie, body: { name: 'Taken Over' } });
+    const edit = await jsonRequest(app, `/api/users/${adminId}`, { method: 'PUT', cookie, body: { revision: 1, name: 'Taken Over' } });
     expect(edit.status).toBe(403);
     expect(edit.payload).toMatchObject({ code: 'PROTECTED_ADMIN' });
 
@@ -553,7 +571,7 @@ describe('users host requirements with an alternative provider', () => {
     const demotion = await jsonRequest(app, `/api/users/${adminId}`, {
       method: 'PUT',
       cookie,
-      body: { roles: ['user'] },
+      body: { revision: 1, roles: ['user'] },
     });
     expect(demotion.status).toBe(400);
     expect(demotion.payload).toMatchObject({ code: 'SELF_DEMOTION' });
@@ -668,7 +686,7 @@ describe('users host requirements with an alternative provider', () => {
     const { host, state } = createMockHost();
     const { id } = seedAccount(host);
     const cookie = cookieFor(host, loginAs(state, id));
-    host.updateAccount = () => undefined;
+    host.updateAccount = () => ({ status: 'missing' });
     const app = buildApp(host);
     const before = getDatabase().prepare('SELECT COUNT(*) AS count FROM assets WHERE user_id = ?').get(id) as { count: number };
     const form = new FormData();
@@ -692,5 +710,95 @@ describe('users host requirements with an alternative provider', () => {
     });
     expect(created.status).toBe(422);
     expect(created.payload).toMatchObject({ success: false, code: 'VALIDATION_ERROR' });
+  });
+
+  it('refuses updates based on an older revision with the account as it is now', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: adminId } = seedAccount(host);
+    const { id: targetId } = seedAccount(host, { name: 'Before' });
+    const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+
+    const first = await jsonRequest(app, `/api/users/${targetId}`, {
+      method: 'PUT',
+      cookie: adminCookie,
+      body: { revision: 1, name: 'First Save' },
+    });
+    expect(first).toMatchObject({ status: 200, payload: { data: { user: { name: 'First Save', revision: 2 } } } });
+
+    const stale = await jsonRequest(app, `/api/users/${targetId}`, {
+      method: 'PUT',
+      cookie: adminCookie,
+      body: { revision: 1, name: 'Stale Save', roles: ['user'] },
+    });
+    expect(stale.status).toBe(409);
+    expect(stale.payload).toEqual({
+      success: false,
+      message: 'Someone else changed this account since you opened it',
+      code: 'STALE_REVISION',
+      current: expect.objectContaining({ id: targetId, name: 'First Save', revision: 2, roles: [] }),
+    });
+    expect(state.accounts.get(targetId)?.name).toBe('First Save');
+    expect(state.assignments.get(targetId)).toBeUndefined();
+
+    const profile = await jsonRequest(app, '/api/users/me', {
+      method: 'PATCH',
+      cookie: cookieFor(host, loginAs(state, targetId)),
+      body: { revision: 1, name: 'Own Stale', email: state.accounts.get(targetId)!.email },
+    });
+    expect(profile.status).toBe(409);
+    expect(profile.payload).toMatchObject({ code: 'STALE_REVISION', current: { name: 'First Save', revision: 2 } });
+    expect(profile.payload).not.toHaveProperty('current.roles');
+  });
+
+  it('tells the live host what changed and who is editing', async () => {
+    const { host, state } = createMockHost();
+    const changed: string[][] = [];
+    const editing = new Map<string, Array<{ id: string; name: string }>>();
+    const app = buildApp({
+      ...host,
+      live: {
+        accountsChanged: (ids) => changed.push(ids),
+        startEditing: (accountId, editor) => editing.set(accountId, [editor]),
+        stopEditing: (accountId) => editing.delete(accountId),
+        editors: () => Object.fromEntries(editing),
+      },
+    });
+    const { id: adminId } = seedAccount(host, { name: 'Ada Admin' });
+    state.assignments.set(adminId, ['mock-role-admin']);
+    const { id: targetId } = seedAccount(host);
+    const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+
+    expect((await jsonRequest(app, `/api/users/${targetId}/editing`, { method: 'PUT', cookie: adminCookie })).status).toBe(200);
+    expect(await jsonRequest(app, '/api/users/editing', { cookie: adminCookie })).toMatchObject({
+      status: 200,
+      payload: { data: { editing: { [targetId]: [{ id: adminId, name: 'Ada Admin' }] } } },
+    });
+    expect((await jsonRequest(app, `/api/users/${randomUUID()}/editing`, { method: 'PUT', cookie: adminCookie })).status).toBe(404);
+
+    await jsonRequest(app, `/api/users/${targetId}`, { method: 'PUT', cookie: adminCookie, body: { revision: 1, name: 'Changed' } });
+    await jsonRequest(app, `/api/users/${targetId}/editing`, { method: 'DELETE', cookie: adminCookie });
+    expect(editing.size).toBe(0);
+    await jsonRequest(app, '/api/users', { method: 'DELETE', cookie: adminCookie, body: { ids: [targetId] } });
+    expect(changed).toEqual([[targetId], [targetId]]);
+
+    // Presence needs users.edit to announce and users.view to read.
+    const viewerCookie = cookieFor(host, loginAs(state, seedAccount(host).id, { permissions: ['users.view'] }));
+    expect((await jsonRequest(app, `/api/users/${adminId}/editing`, { method: 'PUT', cookie: viewerCookie })).status).toBe(403);
+    expect((await jsonRequest(app, '/api/users/editing', { cookie: viewerCookie })).status).toBe(200);
+    const plainCookie = cookieFor(host, loginAs(state, seedAccount(host).id));
+    expect((await jsonRequest(app, '/api/users/editing', { cookie: plainCookie })).status).toBe(403);
+  });
+
+  it('works without a live host and reports nobody editing', async () => {
+    const { host, state } = createMockHost();
+    const app = buildApp(host);
+    const { id: adminId } = seedAccount(host);
+    const adminCookie = cookieFor(host, loginAs(state, adminId, { admin: true }));
+    expect((await jsonRequest(app, `/api/users/${adminId}/editing`, { method: 'PUT', cookie: adminCookie })).status).toBe(200);
+    expect(await jsonRequest(app, '/api/users/editing', { cookie: adminCookie })).toMatchObject({
+      status: 200,
+      payload: { data: { editing: {} } },
+    });
   });
 });

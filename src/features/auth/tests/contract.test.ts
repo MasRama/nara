@@ -144,10 +144,24 @@ describe('auth web client contract', () => {
     expect(schemas.error.parse(await access.createRole({ name: 'Duplicate', slug: roleSlug, permissions: [] }))).toMatchObject({
       code: 'DUPLICATE_SLUG',
     });
-    schemas.roleSaved.parse(await access.updateRole(created.data.role.id, { name: 'Contract Role Renamed' }));
-    expect(schemas.error.parse(await access.updateRole(randomUUID(), { name: 'Missing' }))).toMatchObject({
+    const { id, revision } = created.data.role;
+    expect(schemas.roleSaved.parse(await access.updateRole(id, { revision, name: 'Contract Role Renamed' })).data.role.revision).toBe(
+      revision + 1,
+    );
+    expect(schemas.staleRole.parse(await access.updateRole(id, { revision, name: 'Contract Role Stale' })).current).toMatchObject({
+      name: 'Contract Role Renamed',
+      revision: revision + 1,
+    });
+    expect(schemas.error.parse(await access.updateRole(randomUUID(), { revision, name: 'Missing' }))).toMatchObject({
       code: 'NOT_FOUND',
     });
+    schemas.message.parse(await access.startEditing(id));
+    expect(schemas.rolesEditing.parse(await access.listEditing()).data.editing[id]).toEqual([
+      { id: account.id, name: 'Contract Account' },
+    ]);
+    schemas.message.parse(await access.stopEditing(id));
+    expect(schemas.rolesEditing.parse(await access.listEditing()).data.editing[id]).toBeUndefined();
+    expect(schemas.error.parse(await access.startEditing(randomUUID()))).toMatchObject({ code: 'NOT_FOUND' });
     expect(schemas.rolesDeleted.parse(await access.deleteRoles({ ids: [created.data.role.id] })).data.deleted).toBe(1);
     expect(schemas.error.parse(await access.deleteRoles({ ids: [] }))).toMatchObject({ code: 'VALIDATION_ERROR' });
   });

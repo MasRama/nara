@@ -18,7 +18,15 @@ export interface AccountRecord {
   name: string;
   email: string;
   avatar: string | null;
+  /** Raised by every edit of the account's profile or roles. */
+  revision: number;
 }
+
+/** `stale` carries the account as it is now; nothing was written. */
+export type AccountUpdate =
+  | { status: 'updated'; account: AccountRecord }
+  | { status: 'stale'; account: AccountRecord }
+  | { status: 'missing' };
 
 export interface AccountList {
   data: AccountRecord[];
@@ -52,7 +60,7 @@ function escapeLikeLiteral(value: string): string {
 
 export function findAccountById(userId: string): AccountRecord | undefined {
   return getDatabase()
-    .prepare('SELECT id, name, email, avatar FROM users WHERE id = ?')
+    .prepare('SELECT id, name, email, avatar, revision FROM users WHERE id = ?')
     .get(userId) as AccountRecord | undefined;
 }
 
@@ -66,7 +74,7 @@ export function listAccounts(page: number, limit: number, search = ''): AccountL
     .get(pattern, pattern) as { count: number };
   const data = database
     .prepare(
-      `SELECT id, name, email, avatar
+      `SELECT id, name, email, avatar, revision
        FROM users
        WHERE name LIKE ? ESCAPE '!' OR email LIKE ? ESCAPE '!'
        ORDER BY created_at DESC
@@ -99,7 +107,11 @@ export function createAccountWithRoles(data: AccountCreateInput, roleIds?: strin
   return account;
 }
 
-export function updateAccount(userId: string, data: AccountUpdateInput): AccountRecord | undefined {
+/**
+ * Applies `data` and raises the revision. With `revision`, writes only while
+ * the account is still at it, so an edit based on stale data is refused.
+ */
+export function updateAccount(userId: string, data: AccountUpdateInput, revision?: number): AccountUpdate {
   const fields: string[] = [];
   const values: unknown[] = [];
   if (data.name !== undefined) {
@@ -114,35 +126,39 @@ export function updateAccount(userId: string, data: AccountUpdateInput): Account
     fields.push('avatar = ?');
     values.push(data.avatar);
   }
-  if (fields.length > 0) {
-    fields.push('updated_at = ?');
-    values.push(Date.now(), userId);
-    getDatabase().prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-  }
-  return findAccountById(userId);
+  fields.push('revision = revision + 1', 'updated_at = ?');
+  values.push(Date.now(), userId);
+  const current = revision === undefined ? '' : ' AND revision = ?';
+  if (revision !== undefined) values.push(revision);
+  const written = getDatabase().prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?${current}`).run(...values).changes;
+  const account = findAccountById(userId);
+  if (!account) return { status: 'missing' };
+  return written === 0 ? { status: 'stale', account } : { status: 'updated', account };
 }
 
 export interface AccountManagedUpdateOptions {
   roleIds?: string[];
+  /** Apply only while the account is still at this revision. */
+  revision?: number;
 }
 
 export function updateAccountWithRoles(
   userId: string,
   data: AccountUpdateInput,
   options: AccountManagedUpdateOptions = {},
-): AccountRecord | undefined {
+): AccountUpdate {
   const database = getDatabase();
-  const account = database.transaction(() => {
-    const updated = updateAccount(userId, data);
-    if (!updated) return undefined;
-    if (options.roleIds !== undefined) syncUserRoles(userId, options.roleIds);
-    return findAccountById(userId);
+  const update = database.transaction((): AccountUpdate => {
+    const result = updateAccount(userId, data, options.revision);
+    if (result.status !== 'updated' || options.roleIds === undefined) return result;
+    syncUserRoles(userId, options.roleIds);
+    return result;
   })();
-  if (account) {
+  if (update.status === 'updated') {
     accountsChanged([userId]);
     if (options.roleIds !== undefined) rolesChanged(canViewRoles);
   }
-  return account;
+  return update;
 }
 
 export function resetAccountPassword(userId: string, passwordHash: string): AccountRecord | undefined {

@@ -56,7 +56,9 @@ authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
 The repository root proves Auth/RBAC (including per-device sessions and TOTP
 two-factor sign-in at `/security`), Users, Activity, assets, storage, the
 SQLite lifecycle, and live updates that sign a tab out, apply permission changes,
-and refresh Activity, sessions, and roles without a reload. Additional official capabilities are installed explicitly
+and refresh Activity, sessions, roles, and users without a reload, plus safe
+concurrent editing: an open form shows who else is editing, takes other people's
+saves into the fields you have not touched, and asks only about fields you both changed. Additional official capabilities are installed explicitly
 with `nara add`.
 
 Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves

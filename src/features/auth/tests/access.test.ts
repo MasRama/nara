@@ -107,6 +107,7 @@ describe('auth access capability', () => {
       method: 'PUT',
       headers: { ...csrfHeaders(editState), 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        revision: 1,
         name: 'Renamed Administrator',
         slug: 'renamed-administrator',
         description: 'This mutation must be rejected',
@@ -145,7 +146,7 @@ describe('auth access capability', () => {
     const response = await app.request(`/api/roles/${secondId}`, {
       method: 'PUT',
       headers: { ...csrfHeaders(updateState), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: firstSlug }),
+      body: JSON.stringify({ revision: 1, slug: firstSlug }),
     });
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toMatchObject({ success: false, code: 'DUPLICATE_SLUG' });
@@ -183,7 +184,7 @@ describe('auth access capability', () => {
     const response = await app.request(`/api/roles/${id}`, {
       method: 'PUT',
       headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Must Not Apply', permissions: ['missing.permission'] }),
+      body: JSON.stringify({ revision: 1, name: 'Must Not Apply', permissions: ['missing.permission'] }),
     });
     expect(response.status).toBe(422);
     expect(getDatabase().prepare('SELECT * FROM roles WHERE id = ?').get(id)).toEqual(before);
@@ -210,7 +211,7 @@ describe('auth access capability', () => {
     const response = await app.request(`/api/roles/${roleId}`, {
       method: 'PUT',
       headers: { ...csrfHeaders(state), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ permissions: ['roles.edit', 'users.delete'] }),
+      body: JSON.stringify({ revision: 1, permissions: ['roles.edit', 'users.delete'] }),
     });
     expect(response.status).toBe(403);
     expect(getRolePermissions(roleId).map((permission) => permission.slug)).toEqual(['roles.edit']);
@@ -239,6 +240,27 @@ describe('auth access capability', () => {
     expect(() => updateRoleWithPermissions(role.id, { name: 'Atomic Update After' }, ['missing-permission-id'])).toThrow();
     expect(getDatabase().prepare('SELECT name FROM roles WHERE id = ?').get(role.id)).toEqual({ name: 'Atomic Update Before' });
     expect(getRolePermissions(role.id).map((permission) => permission.slug)).toEqual(['roles.view']);
+  });
+
+  it('refuses a role update based on an older revision without writing anything', () => {
+    const viewId = ensurePermission('roles.view');
+    const editId = ensurePermission('roles.edit');
+    const role = createRoleWithPermissions(
+      { id: randomUUID(), name: 'Revision Before', slug: `revision-${randomUUID()}`, description: null },
+      [viewId],
+    );
+    expect(role.revision).toBe(1);
+
+    const first = updateRoleWithPermissions(role.id, { name: 'Revision First' }, [editId], 1);
+    expect(first).toMatchObject({ status: 'updated', role: { name: 'Revision First', revision: 2 } });
+
+    const stale = updateRoleWithPermissions(role.id, { name: 'Revision Stale' }, [viewId], 1);
+    expect(stale).toMatchObject({ status: 'stale', role: { name: 'Revision First', revision: 2 } });
+    expect(getRolePermissions(role.id).map((permission) => permission.slug)).toEqual(['roles.edit']);
+
+    // Without a revision the write applies, and a permissions-only change still raises it.
+    expect(updateRoleWithPermissions(role.id, {}, [viewId])).toMatchObject({ status: 'updated', role: { revision: 3 } });
+    expect(updateRoleWithPermissions(randomUUID(), { name: 'Nobody' }, undefined, 1)).toEqual({ status: 'missing' });
   });
 
   it('seeds least-privilege default access policy', () => {

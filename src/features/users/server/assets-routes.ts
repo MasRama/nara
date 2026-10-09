@@ -147,8 +147,9 @@ const uploadAvatarHandlerFor = (host: UsersServerHost, guard: Guard<NonNullable<
         storageKey,
         userId: sessionUser.id,
       });
+      // A new photo is not a form edit: it applies whatever the revision, and raises it.
       const updated = host.updateAccount(sessionUser.id, { avatar: url });
-      if (!updated) throw new Error('Account disappeared during avatar update');
+      if (updated.status === 'missing') throw new Error('Account disappeared during avatar update');
     } catch (error) {
       if (asset) {
         try { deleteUserAsset(asset.id); } catch { /* compensation is best-effort */ }
@@ -161,6 +162,7 @@ const uploadAvatarHandlerFor = (host: UsersServerHost, guard: Guard<NonNullable<
     // asset here is unsafe under concurrent uploads: another request may have
     // created its file before committing it as the account avatar.
     await cleanupPreviousUserAvatar(host, sessionUser.id, sessionUser.avatar);
+    host.live?.accountsChanged([sessionUser.id]);
     return context.json({ success: true as const, message: 'Avatar uploaded', data: { asset, url } } satisfies AvatarUploadSuccess);
   } catch (error) {
     return context.json({ success: false as const, message: 'Image processing failed', code: 'UPLOAD_FAILED' }, 400);

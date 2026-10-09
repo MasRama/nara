@@ -8,6 +8,7 @@ import {
   deleteUsersInputSchema,
   profileInputSchema,
   resetUserPasswordInputSchema,
+  STALE_REVISION,
   updateUserInputSchema,
   type CreateUserInput,
   type DeleteUsersInput,
@@ -19,6 +20,8 @@ import {
   type UpdateUserInput,
   type UserProfile,
   type UserProfileSuccess,
+  type UsersEditingSuccess,
+  type UsersMessageSuccess,
   type UsersResponseSuccess,
 } from '../contract';
 import { createGuard, forbidden } from './guard';
@@ -81,7 +84,7 @@ export function createUserRoutes(host: UsersServerHost) {
   // The account provider is application-chosen; copy only declared fields so
   // provider-specific columns never reach the API.
   function toProfile(user: UserProfile): UserProfile {
-    return { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
+    return { id: user.id, name: user.name, email: user.email, avatar: user.avatar, revision: user.revision };
   }
 
   function withRoles(user: UserProfile): ManagedUser {
@@ -103,9 +106,25 @@ export function createUserRoutes(host: UsersServerHost) {
   const updateProfileHandler = async (context: Context, input: ProfileInput) => {
     const sessionUser = guard.actor(context);
 
+    const { revision, ...profile } = input;
     try {
-      const user = host.updateAccount(sessionUser.id, input);
-      if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      const update = host.updateAccount(sessionUser.id, profile, { revision });
+      if (update.status === 'missing') {
+        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      }
+      if (update.status === 'stale') {
+        return context.json(
+          {
+            success: false as const,
+            message: 'Your profile changed elsewhere since you opened it',
+            code: STALE_REVISION,
+            current: toProfile(update.account),
+          },
+          409,
+        );
+      }
+      const user = update.account;
+      host.live?.accountsChanged([user.id]);
       host.recordActivity?.({
         action: 'users.profile-updated',
         resource: 'users',
@@ -167,6 +186,7 @@ export function createUserRoutes(host: UsersServerHost) {
         },
         roleSelection?.ids,
       );
+      host.live?.accountsChanged([user.id]);
       host.recordActivity?.({
         action: 'users.created',
         resource: 'users',
@@ -202,7 +222,7 @@ export function createUserRoutes(host: UsersServerHost) {
     if (!userId) return context.json({ success: false as const, message: 'ID required', code: 'INVALID_ID' }, 400);
     const self = sessionUser.id === userId;
 
-    const { roles, password, ...profile } = input;
+    const { roles, password, revision, ...profile } = input;
     const actorIsAdmin = host.canAssignRoles(sessionUser.id);
 
     const target = host.findAccountById(userId);
@@ -242,8 +262,23 @@ export function createUserRoutes(host: UsersServerHost) {
     }
 
     try {
-      const user = host.updateAccount(userId, profile, roleSelection ? { roleIds: roleSelection.ids } : undefined);
-      if (!user) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      const update = host.updateAccount(userId, profile, { revision, ...(roleSelection ? { roleIds: roleSelection.ids } : {}) });
+      if (update.status === 'missing') {
+        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+      }
+      if (update.status === 'stale') {
+        return context.json(
+          {
+            success: false as const,
+            message: 'Someone else changed this account since you opened it',
+            code: STALE_REVISION,
+            current: withRoles(update.account),
+          },
+          409,
+        );
+      }
+      const user = update.account;
+      host.live?.accountsChanged([user.id]);
       host.recordActivity?.({
         action: 'users.updated',
         resource: 'users',
@@ -326,6 +361,7 @@ export function createUserRoutes(host: UsersServerHost) {
     });
     const deleted = host.deleteAccounts(input.ids);
     await cleanupUserAvatarAssets(host, input.ids);
+    host.live?.accountsChanged(input.ids);
     for (const target of targets) {
       host.recordActivity?.({
         action: 'users.deleted',
@@ -338,8 +374,31 @@ export function createUserRoutes(host: UsersServerHost) {
     return context.json({ success: true as const, message: 'Users deleted', data: { deleted } } satisfies DeleteUsersResponseSuccess);
   };
 
+  const listEditingHandler = (context: Context) =>
+    context.json({ success: true as const, message: 'OK', data: { editing: host.live?.editors() ?? {} } } satisfies UsersEditingSuccess);
+
+  /** Lists the caller as editing the account until the form renews or leaves; unknown accounts answer 404. */
+  const startEditingHandler = (context: Context) => {
+    const actor = guard.actor(context);
+    const userId = context.req.param('id') ?? '';
+    if (!host.findAccountById(userId)) {
+      return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' }, 404);
+    }
+    const name = host.findAccountById(actor.id)?.name ?? '';
+    host.live?.startEditing(userId, { id: actor.id, name });
+    return context.json({ success: true as const, message: 'OK' } satisfies UsersMessageSuccess);
+  };
+
+  const stopEditingHandler = (context: Context) => {
+    host.live?.stopEditing(context.req.param('id') ?? '', guard.actor(context).id);
+    return context.json({ success: true as const, message: 'OK' } satisfies UsersMessageSuccess);
+  };
+
   return new Hono()
     .get('/me', guard.signedIn, currentProfileHandler)
+    .get('/editing', canManage('view'), listEditingHandler)
+    .put('/:id/editing', canManage('edit'), startEditingHandler)
+    .delete('/:id/editing', canManage('edit'), stopEditingHandler)
     .patch('/me', guard.signedIn, jsonInput(profileInputSchema), (context) => updateProfileHandler(context, context.req.valid('json')))
     .get('/', canManage('view'), queryInput(listUsersQuerySchema), (context) => listUsersHandler(context, context.req.valid('query')))
     .post('/', canManage('create'), jsonInput(createUserInputSchema), (context) => createUserHandler(context, context.req.valid('json')))

@@ -198,7 +198,7 @@ describe('CSRF double-submit protection', () => {
     const profileResponse = await app.request('/api/users/me', {
       method: 'PATCH',
       headers: { ...csrfHeaders(rotatedSession), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Ada Updated', email }),
+      body: JSON.stringify({ revision: 1, name: 'Ada Updated', email }),
     });
     expect(profileResponse.status).toBe(200);
 
@@ -213,7 +213,7 @@ describe('CSRF double-submit protection', () => {
     const afterLogout = await app.request('/api/users/me', {
       method: 'PATCH',
       headers: { ...csrfHeaders(rotatedSession), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Ada Again', email }),
+      body: JSON.stringify({ revision: 2, name: 'Ada Again', email }),
     });
     expect(afterLogout.status).toBe(401);
   });

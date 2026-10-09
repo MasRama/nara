@@ -779,7 +779,7 @@ describe('users administration browser surfaces', () => {
     await click(`[data-testid="edit-user-${targetId}"]`);
     expect(container.querySelector('[data-role-slug]')).toBeNull();
 
-    const response = await createUsersClient({ csrf: usersWebHost.csrf }).updateUser(targetId, { roles: ['user'] });
+    const response = await createUsersClient({ csrf: usersWebHost.csrf }).updateUser(targetId, { revision: 1, roles: ['user'] });
     expect(response).toMatchObject({
       success: false,
       code: 'FORBIDDEN',
@@ -836,6 +836,45 @@ describe('users administration browser surfaces', () => {
 
     expect(container.textContent).toContain('Page 1 of 1');
     expect(fetchUrls.some((url) => url.includes(`/api/users?page=1&limit=1&search=${encodeURIComponent(marker)}`))).toBe(true);
+  });
+
+  it('merges a save made elsewhere when the server refuses an edit based on an older revision', async () => {
+    const targetEmail = `${randomUUID()}@example.com`;
+    await registerDirect(targetEmail, 'Shared Account');
+    const targetId = userIdForEmail(targetEmail);
+    await startAuthenticatedAdmin();
+    await mountAt('/users');
+    await settle();
+
+    await click(`[data-testid="edit-user-${targetId}"]`);
+    setInput('#user-name', 'Mine');
+    // Another administrator saves first, changing the name and the email.
+    const theirEmail = `${randomUUID()}@example.com`;
+    getDatabase()
+      .prepare('UPDATE users SET name = ?, email = ?, revision = revision + 1 WHERE id = ?')
+      .run('Theirs', theirEmail, targetId);
+
+    submitForm('[data-testid="user-form"]');
+    await settle();
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Choose which version to keep below');
+    expect((container.querySelector('#user-email') as HTMLInputElement).value).toBe(theirEmail);
+    expect((container.querySelector('#user-name') as HTMLInputElement).value).toBe('Mine');
+    expect(
+      [...container.querySelectorAll('[data-testid="user-conflicts"] [data-conflict-field]')].map((row) => row.getAttribute('data-conflict-field')),
+    ).toEqual(['name']);
+    expect(getDatabase().prepare('SELECT name FROM users WHERE id = ?').get(targetId)).toEqual({ name: 'Theirs' });
+
+    await click('[data-testid="keep-mine-name"]');
+    submitForm('[data-testid="user-form"]');
+    await settle();
+
+    expect(getDatabase().prepare('SELECT name, email, revision FROM users WHERE id = ?').get(targetId)).toEqual({
+      name: 'Mine',
+      email: theirEmail,
+      revision: 3,
+    });
+    expect(tableRowContaining(theirEmail).textContent).toContain('Mine');
   });
 
   it('surfaces last-admin protection through the users browser client', async () => {

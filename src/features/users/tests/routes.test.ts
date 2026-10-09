@@ -39,7 +39,7 @@ describe('users feature', () => {
     });
 
     const updatedEmail = `${randomUUID()}@example.com`;
-    const updateResponse = await patchProfile(cookie, { name: 'Grace Brewster Hopper', email: updatedEmail });
+    const updateResponse = await patchProfile(cookie, { revision: 1, name: 'Grace Brewster Hopper', email: updatedEmail });
     expect(updateResponse.status).toBe(200);
     await expect(updateResponse.json()).resolves.toMatchObject({
       success: true,
@@ -51,7 +51,7 @@ describe('users feature', () => {
     const email = `${randomUUID()}@example.com`;
     const cookie = await registerUser(email);
 
-    const updateResponse = await patchProfile(cookie, { name: 'Grace Brewster Hopper', email: 'not-an-email' });
+    const updateResponse = await patchProfile(cookie, { revision: 1, name: 'Grace Brewster Hopper', email: 'not-an-email' });
     expect(updateResponse.status).toBe(422);
     await expect(updateResponse.json()).resolves.toMatchObject({
       success: false,

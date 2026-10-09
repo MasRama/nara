@@ -54,11 +54,13 @@ describe('users web client contract', () => {
     expect(schemas.error.parse(await client.me())).toMatchObject({ code: 'UNAUTHORIZED' });
 
     const account = await browser.signUp('Profile Owner');
-    expect(schemas.profileSaved.parse(await client.me()).data.user.email).toBe(account.email);
-    expect(schemas.profileSaved.parse(await client.updateProfile({ name: 'Profile Renamed', email: account.email })).data.user.name).toBe(
-      'Profile Renamed',
-    );
-    expect(schemas.error.parse(await client.updateProfile({ name: '', email: account.email }))).toMatchObject({
+    const { revision } = schemas.profileSaved.parse(await client.me()).data.user;
+    const saved = schemas.profileSaved.parse(await client.updateProfile({ revision, name: 'Profile Renamed', email: account.email }));
+    expect(saved.data.user).toMatchObject({ name: 'Profile Renamed', revision: revision + 1 });
+    expect(
+      schemas.staleProfile.parse(await client.updateProfile({ revision, name: 'Profile Stale', email: account.email })).current,
+    ).toMatchObject({ name: 'Profile Renamed', revision: revision + 1 });
+    expect(schemas.error.parse(await client.updateProfile({ revision, name: '', email: account.email }))).toMatchObject({
       code: 'VALIDATION_ERROR',
     });
   });
@@ -92,11 +94,22 @@ describe('users web client contract', () => {
       ),
     ).toMatchObject({ code: 'DUPLICATE_EMAIL' });
 
-    const id = created.data.user.id;
-    schemas.userSaved.parse(await client.updateUser(id, { name: 'Managed Renamed' }));
-    expect(schemas.error.parse(await client.updateUser(randomUUID(), { name: 'Missing' }))).toMatchObject({
+    const { id, revision } = created.data.user;
+    schemas.userSaved.parse(await client.updateUser(id, { revision, name: 'Managed Renamed' }));
+    expect(schemas.staleUser.parse(await client.updateUser(id, { revision, name: 'Managed Stale' })).current).toMatchObject({
+      name: 'Managed Renamed',
+      revision: revision + 1,
+    });
+    expect(schemas.error.parse(await client.updateUser(randomUUID(), { revision, name: 'Missing' }))).toMatchObject({
       code: 'NOT_FOUND',
     });
+    expect(schemas.message.parse(await client.startEditing(id))).toMatchObject({ success: true });
+    expect(schemas.usersEditing.parse(await client.listEditing()).data.editing[id]).toEqual([
+      { id: admin.id, name: 'Users Administrator' },
+    ]);
+    schemas.message.parse(await client.stopEditing(id));
+    expect(schemas.usersEditing.parse(await client.listEditing()).data.editing[id]).toBeUndefined();
+    expect(schemas.error.parse(await client.startEditing(randomUUID()))).toMatchObject({ code: 'NOT_FOUND' });
     schemas.userSaved.parse(await client.resetPassword(id, { password: 'a brand new passphrase' }));
     expect(schemas.error.parse(await client.resetPassword(admin.id, { password: 'a brand new passphrase' }))).toMatchObject({
       code: 'CURRENT_PASSWORD_REQUIRED',

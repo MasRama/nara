@@ -3,7 +3,8 @@ import { streamSSE } from 'hono/streaming';
 import { unauthorized } from '../security';
 import { STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
 
-export { EVENTS_PATH, STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
+export { EVENTS_PATH, PRESENCE_RENEW_MS, STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
+export { createPresence, type Editor, type Presence, type PresenceOptions } from './presence';
 
 /**
  * Business-neutral live updates over Server-Sent Events. A Feature publishes

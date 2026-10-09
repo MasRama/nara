@@ -79,6 +79,7 @@ describe('users administration capability', () => {
       .all(before.id);
 
     const response = await mutate(cookie, `/api/users/${before.id}`, 'PUT', {
+      revision: 1,
       name: 'Rejected Administrator',
       email: `${randomUUID()}@example.com`,
       password: 'rejected new password',
@@ -124,7 +125,7 @@ describe('users administration capability', () => {
     const database = getDatabase();
     const before = database.prepare('SELECT password FROM users WHERE id = ?').get(created.data.user.id) as { password: string };
 
-    const updateResponse = await mutate(cookie, `/api/users/${created.data.user.id}`, 'PUT', { name: 'Updated Password Owner', email });
+    const updateResponse = await mutate(cookie, `/api/users/${created.data.user.id}`, 'PUT', { revision: 1, name: 'Updated Password Owner', email });
     expect(updateResponse.status).toBe(200);
     const after = database.prepare('SELECT password FROM users WHERE id = ?').get(created.data.user.id) as { password: string };
     expect(after.password).toBe(before.password);

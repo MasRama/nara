@@ -5,6 +5,8 @@ export {
   profileInputSchema,
   resetUserPasswordInputSchema,
   updateUserInputSchema,
+  USERS_CHANGED_EVENT,
+  USERS_EDITING_EVENT,
 } from './contract';
 export type {
   AvatarUploadResponse,
@@ -21,5 +23,5 @@ export type {
   UsersResponse,
 } from './contract';
 export { createAssetRoutes } from './server/assets-routes';
-export type { UsersServerHost } from './server/host';
+export type { UsersLiveHost, UsersServerHost } from './server/host';
 export { createUserRoutes } from './server/routes';

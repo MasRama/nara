@@ -127,6 +127,25 @@ async function openTab(cookie: string, path: string): Promise<void> {
   await settle();
 }
 
+/** Types into a form field the way a person would. */
+function type(selector: string, value: string): void {
+  const field = container.querySelector<HTMLInputElement>(selector);
+  expect(field).not.toBeNull();
+  field!.value = value;
+  field!.dispatchEvent(new Event('input'));
+}
+
+function fieldValue(selector: string): string | undefined {
+  return container.querySelector<HTMLInputElement>(selector)?.value;
+}
+
+async function click(selector: string): Promise<void> {
+  const button = container.querySelector<HTMLButtonElement>(selector);
+  expect(button).not.toBeNull();
+  button!.click();
+  await settle();
+}
+
 async function settle(): Promise<void> {
   for (let round = 0; round < 12; round += 1) {
     if (pending.size > 0) await Promise.allSettled([...pending]);
@@ -188,7 +207,7 @@ describe('live updates in the open tab', () => {
     expect(router.currentRoute.value.name).toBe('activity');
 
     const role = getDatabase().prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string };
-    expect((await asDevice(admin.cookie, `/api/roles/${role.id}`, 'PUT', { permissions: [] })).status).toBe(200);
+    expect((await asDevice(admin.cookie, `/api/roles/${role.id}`, 'PUT', { revision: 1, permissions: [] })).status).toBe(200);
     await settle();
 
     expect(router.currentRoute.value.name).toBe('dashboard');
@@ -239,5 +258,89 @@ describe('live updates in the open tab', () => {
     await settle();
 
     expect(container.querySelector('[data-testid="role-list"]')?.textContent).toContain(slug);
+  });
+
+  it("merges another administrator's save into an open role form and asks only about the field both changed", async () => {
+    const admin = await register();
+    grantRole(admin.id, 'admin');
+    const colleague = await register();
+    grantRole(colleague.id, 'admin');
+    const slug = `live-${randomUUID().slice(0, 8)}`;
+    expect((await asDevice(colleague.cookie, '/api/roles', 'POST', { name: 'Live Editors', slug, permissions: [] })).status).toBe(201);
+    const role = getDatabase().prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string };
+
+    await openTab(admin.cookie, '/roles');
+    await click(`[data-testid="edit-role-${role.id}"]`);
+    type('#role-name', 'Mine');
+    await settle();
+
+    const theirSlug = `${slug}-theirs`;
+    expect((await asDevice(colleague.cookie, `/api/roles/${role.id}`, 'PUT', { revision: 1, name: 'Theirs', slug: theirSlug })).status).toBe(200);
+    await settle();
+
+    // The slug only they changed follows their save; the name both changed waits for a choice.
+    expect(fieldValue('#role-slug')).toBe(theirSlug);
+    expect(fieldValue('#role-name')).toBe('Mine');
+    expect(container.querySelector('[data-testid="role-merge-notice"]')?.textContent).toContain('Slug');
+    const conflicts = [...container.querySelectorAll('[data-testid="role-conflicts"] [data-conflict-field]')].map((row) => row.getAttribute('data-conflict-field'));
+    expect(conflicts).toEqual(['name']);
+    expect(container.querySelector<HTMLButtonElement>('[data-testid="role-form"] button[type="submit"]')?.disabled).toBe(true);
+
+    await click('[data-testid="keep-mine-name"]');
+    expect(container.querySelector('[data-testid="role-conflicts"]')).toBeNull();
+    container.querySelector<HTMLFormElement>('[data-testid="role-form"]')!.requestSubmit();
+    await settle();
+
+    expect(getDatabase().prepare('SELECT name, slug, revision FROM roles WHERE id = ?').get(role.id)).toEqual({ name: 'Mine', slug: theirSlug, revision: 3 });
+    expect(container.querySelector('[data-testid="role-form"]')).toBeNull();
+  });
+
+  it('shows who else has the same role open, and drops them when they close it', async () => {
+    const admin = await register();
+    grantRole(admin.id, 'admin');
+    const colleague = await register();
+    grantRole(colleague.id, 'admin');
+    getDatabase().prepare('UPDATE users SET name = ? WHERE id = ?').run('Grace Colleague', colleague.id);
+    const slug = `live-${randomUUID().slice(0, 8)}`;
+    expect((await asDevice(colleague.cookie, '/api/roles', 'POST', { name: 'Live Editors', slug, permissions: [] })).status).toBe(201);
+    const role = getDatabase().prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string };
+
+    await openTab(admin.cookie, '/roles');
+    await click(`[data-testid="edit-role-${role.id}"]`);
+    // The tab's own presence is not news to it.
+    expect(container.querySelector('[data-testid="role-editors"]')).toBeNull();
+
+    expect((await asDevice(colleague.cookie, `/api/roles/${role.id}/editing`, 'PUT')).status).toBe(200);
+    await settle();
+    expect(container.querySelector('[data-testid="role-editors"]')?.textContent).toContain('Grace Colleague is also editing this role');
+    expect(container.querySelector('[data-testid="role-editing"]')?.textContent).toContain('Grace Colleague');
+
+    expect((await asDevice(colleague.cookie, `/api/roles/${role.id}/editing`, 'DELETE')).status).toBe(200);
+    await settle();
+    expect(container.querySelector('[data-testid="role-editors"]')).toBeNull();
+  });
+
+  it("follows an administrator's change to the open profile, keeping what the account is typing", async () => {
+    const admin = await register();
+    grantRole(admin.id, 'admin');
+    const member = await register();
+
+    await openTab(member.cookie, '/profile');
+    expect(fieldValue('#name')).toBe('Live Browser');
+    const renamed = `${randomUUID()}@example.com`;
+    expect((await asDevice(admin.cookie, `/api/users/${member.id}`, 'PUT', { revision: 1, email: renamed })).status).toBe(200);
+    await settle();
+    expect(fieldValue('#email')).toBe(renamed);
+
+    type('#name', 'Typed Here');
+    await settle();
+    expect((await asDevice(admin.cookie, `/api/users/${member.id}`, 'PUT', { revision: 2, name: 'Admin Pick' })).status).toBe(200);
+    await settle();
+
+    expect(fieldValue('#name')).toBe('Typed Here');
+    expect(container.querySelector('[data-testid="profile-conflicts"] [data-conflict-field="name"]')).not.toBeNull();
+    await click('[data-testid="use-theirs-name"]');
+    expect(fieldValue('#name')).toBe('Admin Pick');
+    expect(container.querySelector('[data-testid="profile-conflicts"]')).toBeNull();
   });
 });
