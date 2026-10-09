@@ -1,9 +1,10 @@
 // Users owns its workflow but not identity/RBAC persistence. The application
 // supplies those capabilities through this host; Users never imports Auth.
-import type { UserProfile } from '../contract';
+import type { UserProfile, USERS_PERMISSIONS } from '../contract';
 import type { AssetStorage } from '../../../shared/storage';
 
-export type UsersManageAction = 'view' | 'create' | 'edit' | 'delete';
+/** Password resets are gated by `canResetPasswords`; the rest by `canManageUsers`. */
+export type UsersManageAction = Exclude<(typeof USERS_PERMISSIONS)[number]['action'], 'reset-password'>;
 
 export interface UsersActor {
   id: string;

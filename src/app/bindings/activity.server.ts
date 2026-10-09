@@ -1,5 +1,6 @@
 import type { Hono } from 'hono';
 import {
+  ACTIVITY_PERMISSIONS,
   announceActivity,
   createActivityRoutes,
   recordActivity,
@@ -7,6 +8,7 @@ import {
   type ActivityServerHost,
 } from '../../features/activity';
 import {
+  declarePermissions,
   getCurrentUser,
   hasPermission,
   isAdmin,
@@ -14,6 +16,9 @@ import {
   type AuthActivitySink,
 } from '../../features/auth';
 import { Logger } from '../../shared/logging';
+
+// Auth owns the permission rows; it writes activity.view at startup.
+declarePermissions('activity', ACTIVITY_PERMISSIONS);
 
 // Activity is best-effort: its failure must not turn an already-committed
 // business mutation into an ambiguous 500 response.

@@ -1,4 +1,14 @@
 import { z } from 'zod';
+import type { PermissionDeclaration } from '../../shared/security/permissions';
+
+/** The actions Activity gates; the application's binding declares them to its access-control provider. */
+export const ACTIVITY_PERMISSIONS = [
+  {
+    action: 'view',
+    name: 'View Activity',
+    description: 'View application authentication and administration activity history',
+  },
+] as const satisfies readonly PermissionDeclaration[];
 
 /** Live update topic: an activity event was recorded; viewers refetch the feed. */
 export const ACTIVITY_RECORDED_EVENT = 'activity.recorded';

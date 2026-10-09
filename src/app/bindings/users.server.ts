@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import { resolve } from 'node:path';
 import {
   createAccountWithRoles,
+  declarePermissions,
   deleteAccounts,
   findAccountById,
   findAllRoles,
@@ -16,8 +17,11 @@ import {
   SESSION_COOKIE_NAME,
   updateAccountWithRoles,
 } from '../../features/auth';
-import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../../features/users';
+import { createAssetRoutes, createUserRoutes, USERS_PERMISSIONS, type UsersServerHost } from '../../features/users';
 import { createLocalAssetStorage } from '../../shared/storage';
+
+// Auth owns the permission rows; it writes the users.<action> slugs at startup.
+declarePermissions('users', USERS_PERMISSIONS);
 
 const assetStorage = createLocalAssetStorage({ root: resolve(process.cwd(), 'storage') });
 

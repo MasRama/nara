@@ -1,3 +1,4 @@
+export { ACTIVITY_PERMISSIONS } from './contract';
 export type {
   ActivityRecordInput,
 } from './contract';

@@ -476,10 +476,11 @@ describe('requirements metadata separation', () => {
     projectShell(fixture, {
       // The guaranteed src/shared modules Users imports.
       ...Object.fromEntries(
-        ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+        ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
       ),
       'src/features/auth/index.ts': [
         'export const createAccountWithRoles = (): unknown => ({});',
+        'export const declarePermissions = (): void => {};',
         'export const deleteAccounts = (): number => 0;',
         'export const findAccountById = (): undefined => undefined;',
         'export const findAllRoles = (): Array<{ id: string; slug: string }> => [];',

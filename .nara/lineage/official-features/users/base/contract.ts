@@ -1,9 +1,26 @@
 import { z } from 'zod';
+import type { PermissionDeclaration } from '../../shared/security/permissions';
 import { emailSchema, personNameSchema } from '../../shared/security/input';
 
 export const AVATAR_MAX_FILE_SIZE_MB = 5;
 export const AVATAR_MAX_FILE_SIZE_BYTES = AVATAR_MAX_FILE_SIZE_MB * 1024 * 1024;
 export const AVATAR_ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+
+/**
+ * The actions Users gates. The application's binding declares them to its
+ * access-control provider, which owns the `users.<action>` permission rows.
+ */
+export const USERS_PERMISSIONS = [
+  { action: 'view', name: 'View Users' },
+  { action: 'create', name: 'Create Users' },
+  { action: 'edit', name: 'Edit Users' },
+  {
+    action: 'reset-password',
+    name: 'Reset User Passwords',
+    description: 'Reset another account password and revoke its active sessions',
+  },
+  { action: 'delete', name: 'Delete Users' },
+] as const satisfies readonly PermissionDeclaration[];
 
 /** Live update topic: accounts were created, edited, or deleted through Users; refetch what you show. */
 export const USERS_CHANGED_EVENT = 'users.changed';

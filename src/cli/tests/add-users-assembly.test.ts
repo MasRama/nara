@@ -57,6 +57,7 @@ export default createRouter({
 `;
 
 const AUTH_BOUNDARY = `export const createAccountWithRoles = (): unknown => ({});
+export const declarePermissions = (): void => {};
 export const deleteAccounts = (): number => 0;
 export const findAccountById = (): undefined => undefined;
 export const findAllRoles = (): Array<{ id: string; slug: string }> => [];
@@ -87,7 +88,7 @@ const FIXTURE_PACKAGE_JSON = `{
 
 // The guaranteed src/shared modules Users imports; every Nara application carries them.
 const SHARED_SUBSTRATE: Record<string, string> = Object.fromEntries(
-  ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+  ['database', 'realtime', 'realtime/browser', 'security', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
 );
 
 function projectShell(fixture: string, options: { auth?: string; authWeb?: string; packageJson?: string } = {}): void {
