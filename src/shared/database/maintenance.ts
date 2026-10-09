@@ -36,6 +36,8 @@ export interface MaintenanceHandle {
   stop(): void;
 }
 
+const MAX_TIMER_MS = 2_147_483_647;
+
 export function createMaintenanceRegistry() {
   const declared = new Map<string, readonly MaintenanceTask[]>();
   let running: MaintenanceHandle | undefined;
@@ -47,6 +49,10 @@ export function createMaintenanceRegistry() {
     for (const task of tasks) {
       if (names.has(task.name)) throw new Error(`Maintenance task "${feature}/${task.name}" is declared twice.`);
       if (!(task.everyMs > 0)) throw new Error(`Maintenance task "${feature}/${task.name}" needs a positive interval.`);
+      // A longer delay overflows the timer, which then fires every millisecond.
+      if (!(task.everyMs <= MAX_TIMER_MS)) {
+        throw new Error(`Maintenance task "${feature}/${task.name}" needs an interval of at most ${MAX_TIMER_MS} ms.`);
+      }
       names.add(task.name);
     }
     declared.set(feature, [...tasks]);

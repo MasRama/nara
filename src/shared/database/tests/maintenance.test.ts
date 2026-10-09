@@ -121,6 +121,17 @@ describe('Feature-declared maintenance', () => {
     );
   });
 
+  // Node turns a delay it cannot hold into 1 ms: a monthly prune would run every millisecond.
+  it('refuses an interval a timer cannot hold', () => {
+    const registry = createMaintenanceRegistry();
+    const task: MaintenanceTask = { name: 'monthly', everyMs: 30 * 24 * 60 * 60 * 1000, run: () => undefined };
+    expect(() => registry.declare('activity', [task])).toThrow(
+      'Maintenance task "activity/monthly" needs an interval of at most 2147483647 ms.',
+    );
+    expect(() => registry.declare('activity', [{ ...task, everyMs: Number.POSITIVE_INFINITY }])).toThrow('at most 2147483647 ms');
+    expect(() => registry.declare('activity', [{ ...task, everyMs: 2_147_483_647 }])).not.toThrow();
+  });
+
   it('keeps one running set: starting again stops the previous timers', () => {
     vi.useFakeTimers();
     const registry = createMaintenanceRegistry();
