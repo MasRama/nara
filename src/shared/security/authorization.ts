@@ -1,4 +1,5 @@
 import type { Context, MiddlewareHandler } from 'hono';
+import type { AccessRule } from './access';
 
 /**
  * Business-neutral route guards. Features supply who the caller is and what
@@ -14,8 +15,12 @@ export interface Actor {
 export interface Guard<A extends Actor> {
   /** 401 unless the request resolves to an actor. */
   signedIn: MiddlewareHandler;
-  /** 401 without an actor, 403 when the actor is not allowed. */
-  allow(allowed: (actor: A, context: Context) => boolean): MiddlewareHandler;
+  /**
+   * 401 without an actor, 403 unless the actor satisfies `rule` or `alsoAllow`
+   * admits them (say, someone editing their own account). The rule is recorded
+   * on the middleware, so the routes say what admits a caller.
+   */
+  allow(rule: AccessRule, alsoAllow?: (actor: A, context: Context) => boolean): MiddlewareHandler;
   /** The actor a guard on this route already resolved; throws on unguarded routes. */
   actor(context: Context): A;
 }
@@ -38,6 +43,7 @@ export type RouteAccess = 'public' | 'signed-in' | 'restricted';
 
 const ACCESS_RANK: Record<RouteAccess, number> = { public: 0, 'signed-in': 1, restricted: 2 };
 const declaredAccess = new WeakMap<object, RouteAccess>();
+const declaredRule = new WeakMap<object, AccessRule>();
 
 /** Records the access a handler enforces itself, for handlers that answer 401/403 without a guard. */
 export function declareRouteAccess<H extends object>(handler: H, access: RouteAccess): H {
@@ -50,7 +56,14 @@ export const publicRoute: MiddlewareHandler = declareRouteAccess(async (_context
   await next();
 }, 'public');
 
-export function createGuard<A extends Actor>(resolve: (context: Context) => A | undefined): Guard<A> {
+/**
+ * `satisfies` answers whether an actor meets a rule; guards that only check
+ * sign-in may leave it out.
+ */
+export function createGuard<A extends Actor>(
+  resolve: (context: Context) => A | undefined,
+  satisfies?: (actor: A, rule: AccessRule) => boolean,
+): Guard<A> {
   // Keyed by the request's Context so one resolution serves the guard and handler.
   const resolved = new WeakMap<Context, A>();
 
@@ -65,7 +78,15 @@ export function createGuard<A extends Actor>(resolve: (context: Context) => A | 
 
   return {
     signedIn: declareRouteAccess(guard(() => true), 'signed-in'),
-    allow: (allowed) => declareRouteAccess(guard(allowed), 'restricted'),
+    allow(rule, alsoAllow) {
+      if (!satisfies) throw new Error('This guard checks sign-in only; create it with a way to check rules');
+      const middleware = declareRouteAccess(
+        guard((actor, context) => satisfies(actor, rule) || alsoAllow?.(actor, context) === true),
+        'restricted',
+      );
+      declaredRule.set(middleware, rule);
+      return middleware;
+    },
     actor(context) {
       const actor = resolved.get(context);
       if (!actor) throw new Error('Route reads the actor without a guard');
@@ -79,6 +100,8 @@ export interface ApiRoute {
   path: string;
   /** The strictest access its handlers declare; undefined when none does. */
   access: RouteAccess | undefined;
+  /** What admits a caller to a restricted route, as its guard records it. */
+  rule?: AccessRule;
 }
 
 /** What these checks read from a Hono application: its flattened route table. */
@@ -90,9 +113,9 @@ interface RouteTable {
 // handler, keeping the original under this key.
 const COMPOSED_HANDLER = '__COMPOSED_HANDLER';
 
-function accessOf(handler: unknown): RouteAccess | undefined {
+function declaredOn<T>(declarations: WeakMap<object, T>, handler: unknown): T | undefined {
   if (typeof handler !== 'function') return undefined;
-  return declaredAccess.get(handler) ?? accessOf((handler as unknown as Record<string, unknown>)[COMPOSED_HANDLER]);
+  return declarations.get(handler) ?? declaredOn(declarations, (handler as unknown as Record<string, unknown>)[COMPOSED_HANDLER]);
 }
 
 /** Every route under `prefix`, as mounted, with the access its handlers declare. */
@@ -104,8 +127,10 @@ export function apiRoutes(app: RouteTable, prefix = '/api'): ApiRoute[] {
     if (route.path !== prefix && !route.path.startsWith(`${prefix}/`)) continue;
     const key = `${route.method} ${route.path}`;
     const entry = routes.get(key) ?? { method: route.method, path: route.path, access: undefined };
-    const access = accessOf(route.handler);
+    const access = declaredOn(declaredAccess, route.handler);
     if (access && (!entry.access || ACCESS_RANK[access] > ACCESS_RANK[entry.access])) entry.access = access;
+    const rule = declaredOn(declaredRule, route.handler);
+    if (rule) entry.rule = rule;
     routes.set(key, entry);
   }
   return [...routes.values()];

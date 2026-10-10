@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { getDatabase } from '../../../shared/database';
 import { Logger } from '../../../shared/logging';
 import type { PermissionDeclaration } from '../../../shared/security';
+import { ROLES_PERMISSIONS } from '../contract';
 
 export interface PermissionSyncResult {
   inserted: string[];
@@ -103,14 +104,6 @@ export function createPermissionRegistry(
   for (const [resource, permissions] of initial) declare(resource, permissions);
   return { declare, sync };
 }
-
-/** Auth gates role management itself. */
-const ROLES_PERMISSIONS = [
-  { action: 'view', name: 'View Roles' },
-  { action: 'create', name: 'Create Roles' },
-  { action: 'edit', name: 'Edit Roles' },
-  { action: 'delete', name: 'Delete Roles' },
-] as const satisfies readonly PermissionDeclaration[];
 
 const registry = createPermissionRegistry([['roles', ROLES_PERMISSIONS]]);
 

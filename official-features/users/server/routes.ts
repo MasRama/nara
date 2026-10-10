@@ -22,6 +22,7 @@ import {
   type UserProfileSuccess,
   type UsersEditingSuccess,
   type UsersMessageSuccess,
+  type UsersManageAction,
   type UsersResponseSuccess,
   USERS_EDITING_EVENT,
 } from '../contract';
@@ -85,7 +86,7 @@ function normalizedQueryInteger(raw: string | undefined, fallback: number, maxim
 export function createUserRoutes(host: UsersServerHost) {
   // Who has which account open, for whoever may view the directory.
   const editors = createPresence({
-    onChange: () => publish(USERS_EDITING_EVENT, (listener) => host.canManageUsers(listener.userId, 'view')),
+    onChange: () => publish(USERS_EDITING_EVENT, (listener) => host.allows(listener.userId, host.access.manage('view'))),
   });
 
   // The account provider is application-chosen; copy only declared fields so
@@ -98,9 +99,12 @@ export function createUserRoutes(host: UsersServerHost) {
     return { ...toProfile(user), roles: host.rolesForUser(user.id) };
   }
 
-  const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
-  const canManage = (action: Parameters<UsersServerHost['canManageUsers']>[1]) =>
-    guard.allow((actor) => host.canManageUsers(actor.id, action));
+  const guard = createGuard(
+    (context) => host.resolveActor(getCookie(context, host.sessionCookieName)),
+    (actor, rule) => host.allows(actor.id, rule),
+  );
+  const canManage = (action: UsersManageAction) => guard.allow(host.access.manage(action));
+  const mayAssignRoles = (actorId: string) => host.allows(actorId, host.access.assignRoles);
 
   const currentProfileHandler = (context: Context) => {
     const sessionUser = guard.actor(context);
@@ -172,7 +176,7 @@ export function createUserRoutes(host: UsersServerHost) {
   const createUserHandler = async (context: Context, input: CreateUserInput) => {
     const sessionUser = guard.actor(context);
 
-    const canAssignRoles = host.canAssignRoles(sessionUser.id);
+    const canAssignRoles = mayAssignRoles(sessionUser.id);
     if (input.roles !== undefined && !canAssignRoles) return forbidden(context);
     const roleSelection = input.roles === undefined ? undefined : resolveRoleIds(host, input.roles);
     if (roleSelection && roleSelection.unknown.length > 0) {
@@ -214,12 +218,10 @@ export function createUserRoutes(host: UsersServerHost) {
     }
   };
 
-  // Accounts may edit themselves; anyone else needs users.edit. Checked before
-  // the body is validated, so callers without access learn nothing from 422s.
-  // Anyone may edit their own account here; another account needs users.edit.
-  const canEditTarget = guard.allow(
-    (actor, context) => actor.id === context.req.param('id') || host.canManageUsers(actor.id, 'edit'),
-  );
+  // Accounts may edit themselves; anyone else needs the edit rule. Checked
+  // before the body is validated, so callers without access learn nothing
+  // from 422s.
+  const canEditTarget = guard.allow(host.access.manage('edit'), (actor, context) => actor.id === context.req.param('id'));
 
   const updateUserHandler = async (context: Context, input: UpdateUserInput) => {
     const sessionUser = guard.actor(context);
@@ -229,7 +231,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const self = sessionUser.id === userId;
 
     const { roles, password, revision, ...profile } = input;
-    const actorIsAdmin = host.canAssignRoles(sessionUser.id);
+    const actorIsAdmin = mayAssignRoles(sessionUser.id);
 
     const target = host.findAccountById(userId);
     if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
@@ -325,7 +327,7 @@ export function createUserRoutes(host: UsersServerHost) {
 
     const target = host.findAccountById(userId);
     if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
-    const actorIsAdmin = host.canAssignRoles(sessionUser.id);
+    const actorIsAdmin = mayAssignRoles(sessionUser.id);
     if (host.rolesForUser(userId).includes('admin') && !actorIsAdmin) {
       return forbidden(context, 'Only administrators may reset an administrator password', 'PROTECTED_ADMIN');
     }
@@ -413,7 +415,7 @@ export function createUserRoutes(host: UsersServerHost) {
     )
     .post(
       '/:id/reset-password',
-      guard.allow((actor) => host.canResetPasswords(actor.id)),
+      guard.allow(host.access.resetPasswords),
       jsonInput(resetUserPasswordInputSchema),
       (context) => resetPasswordHandler(context, context.req.valid('json')),
     )

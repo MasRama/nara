@@ -49,6 +49,7 @@ export {
   getUsersWithRole,
   hasPermission,
   isAdmin,
+  isAllowed,
   syncUserRoles,
 } from './server/access';
 export { createAccessRoutes } from './server/access-routes';

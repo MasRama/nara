@@ -1,5 +1,6 @@
 import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue';
 import type { AuthError, AuthSuccess, CurrentUser, PublicUser } from '../contract';
+import type { AccessRule } from '../../../shared/security/access';
 import { createAuthClient, type AuthClient } from './client';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -16,6 +17,8 @@ export interface AuthSession {
   refresh(): Promise<boolean>;
   setAuthenticated(user: PublicUser | CurrentUser): void;
   can(permission: string): boolean;
+  /** Whether the signed-in account meets the rule, as the server decides it; `admin` meets every rule. */
+  allows(rule: AccessRule): boolean;
   hasRole(role: string): boolean;
   logout(): Promise<AuthSuccess | AuthError>;
 }
@@ -94,6 +97,10 @@ export function createAuthSession(client: AuthClient = createAuthClient()): Auth
     return currentUser?.roles.includes('admin') === true || currentUser?.permissions.includes(permission) === true;
   }
 
+  function allows(rule: AccessRule): boolean {
+    return 'permission' in rule ? can(rule.permission) : hasRole('admin');
+  }
+
   function hasRole(role: string): boolean {
     return user.value?.roles.includes(role) === true;
   }
@@ -113,6 +120,7 @@ export function createAuthSession(client: AuthClient = createAuthClient()): Auth
     refresh,
     setAuthenticated,
     can,
+    allows,
     hasRole,
     logout,
   };

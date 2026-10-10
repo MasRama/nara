@@ -2,6 +2,7 @@ import type { Hono } from 'hono';
 import {
   ACTIVITY_MAINTENANCE,
   ACTIVITY_PERMISSIONS,
+  activityAccess,
   announceActivity,
   createActivityRoutes,
   declareActivity,
@@ -12,8 +13,7 @@ import {
 import {
   declarePermissions,
   getCurrentUser,
-  hasPermission,
-  isAdmin,
+  isAllowed,
   SESSION_COOKIE_NAME,
 } from '../../features/auth';
 import { declareMaintenance } from '../../shared/database';
@@ -54,7 +54,8 @@ const activityServerHost: ActivityServerHost = {
     const user = getCurrentUser(sessionToken);
     return user ? { id: user.id } : undefined;
   },
-  canViewActivity: (actorId) => isAdmin(actorId) || hasPermission(actorId, 'activity.view'),
+  access: activityAccess('activity'),
+  allows: (actorId, rule) => isAllowed(actorId, rule),
 };
 
 const activityRoutes = createActivityRoutes(activityServerHost);

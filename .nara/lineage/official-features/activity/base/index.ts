@@ -1,5 +1,6 @@
-export { ACTIVITY_PERMISSIONS } from './contract';
+export { ACTIVITY_PERMISSIONS, activityAccess } from './contract';
 export type {
+  ActivityAccess,
   ActivityRecordInput,
   DeclaredActivity,
 } from './contract';

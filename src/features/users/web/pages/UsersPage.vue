@@ -57,11 +57,11 @@ const mergeNotice = ref('');
 const editors = ref<Record<string, UsersEditor[]>>({});
 let stopEditing: (() => void) | undefined;
 
-const canCreate = computed(() => props.host.canManageUsers('create'));
-const canEdit = computed(() => props.host.canManageUsers('edit'));
-const canDelete = computed(() => props.host.canManageUsers('delete'));
-const canAssignRoles = computed(() => props.host.canAssignRoles());
-const canResetPasswords = computed(() => props.host.canResetPasswords());
+const canCreate = computed(() => props.host.allows(props.host.access.manage('create')));
+const canEdit = computed(() => props.host.allows(props.host.access.manage('edit')));
+const canDelete = computed(() => props.host.allows(props.host.access.manage('delete')));
+const canAssignRoles = computed(() => props.host.allows(props.host.access.assignRoles));
+const canResetPasswords = computed(() => props.host.allows(props.host.access.resetPasswords));
 const editingSelf = computed(() => editingUser.value?.id === props.host.currentSessionUser()?.id);
 const editingAdmin = computed(() => editingUser.value?.roles.includes('admin') === true);
 const canEditCurrentForm = computed(

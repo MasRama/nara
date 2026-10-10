@@ -10,8 +10,7 @@ import {
   getUserRoles,
   getUsersWithRole,
   hashPassword,
-  hasPermission,
-  isAdmin,
+  isAllowed,
   listAccounts,
   resetAccountPassword,
   SESSION_COOKIE_NAME,
@@ -24,6 +23,7 @@ import {
   USERS_ACTIVITY,
   USERS_ASSET_ROUTE_POLICIES,
   USERS_PERMISSIONS,
+  usersAccess,
   type UsersServerHost,
 } from '../../features/users';
 import { declareMaintenance } from '../../shared/database';
@@ -61,11 +61,11 @@ function createUsersServerHost(recordActivity?: UsersServerHost['recordActivity'
 
     deleteAccounts: (userIds) => deleteAccounts(userIds),
 
-    canManageUsers: (actorId, action) => isAdmin(actorId) || hasPermission(actorId, `users.${action}`),
+    // Users' rules for the permissions declared above; the browser binding
+    // hands its pages the same ones.
+    access: usersAccess('users'),
 
-    canAssignRoles: (actorId) => isAdmin(actorId),
-
-    canResetPasswords: (actorId) => isAdmin(actorId) || hasPermission(actorId, 'users.reset-password'),
+    allows: (actorId, rule) => isAllowed(actorId, rule),
 
     availableRoles: () => findAllRoles().map((role) => ({ id: role.id, slug: role.slug })),
 

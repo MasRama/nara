@@ -1,6 +1,7 @@
 // Users owns its workflow but not identity/RBAC persistence. The application
 // supplies those capabilities through this host; Users never imports Auth.
-import type { UserProfile, USERS_ACTIVITY, UsersManageAction } from '../contract';
+import type { UserProfile, USERS_ACTIVITY, UsersAccess } from '../contract';
+import type { AccessRule } from '../../../shared/security/access';
 import type { ReportedActivity } from '../../../shared/security/activity';
 import type { AssetStorage } from '../../../shared/storage';
 
@@ -62,9 +63,9 @@ export interface UsersIdentityHost {
 }
 
 export interface UsersAuthorizationHost {
-  canManageUsers(actorId: string, action: UsersManageAction): boolean;
-  canAssignRoles(actorId: string): boolean;
-  canResetPasswords(actorId: string): boolean;
+  /** The rule each capability requires; Users enforces them through `allows`. */
+  readonly access: UsersAccess;
+  allows(actorId: string, rule: AccessRule): boolean;
   availableRoles(): UsersRoleRef[];
   rolesForUser(userId: string): string[];
   usersWithRole(roleId: string): Array<{ id: string }>;

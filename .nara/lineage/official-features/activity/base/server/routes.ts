@@ -7,8 +7,11 @@ import { listActivity } from './repository';
 import { createGuard, queryInput } from '../../../shared/security';
 
 export function createActivityRoutes(host: ActivityServerHost) {
-  const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
-  return new Hono().get('/', guard.allow((actor) => host.canViewActivity(actor.id)), queryInput(activityQuerySchema), (context) => {
+  const guard = createGuard(
+    (context) => host.resolveActor(getCookie(context, host.sessionCookieName)),
+    (actor, rule) => host.allows(actor.id, rule),
+  );
+  return new Hono().get('/', guard.allow(host.access.view), queryInput(activityQuerySchema), (context) => {
     const query = context.req.valid('query');
     const result = listActivity(query);
     return context.json({

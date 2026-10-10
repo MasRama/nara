@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import { CONTROL_MESSAGE, emailSchema, hasNoControlChars, personNameSchema } from '../../shared/security/input';
 import type { ActivityDeclaration } from '../../shared/security/activity';
+import { permissionRules } from '../../shared/security/access';
+import type { PermissionDeclaration } from '../../shared/security/permissions';
 
 /** Live update topic: the signed-in account's profile, roles, or permissions changed; refetch it. */
 export const AUTH_ACCOUNT_CHANGED_EVENT = 'auth.account-changed';
@@ -50,6 +52,17 @@ export const AUTH_ACTIVITY = [
   { action: 'two-factor-disabled', label: 'Two-factor turned off', kind: 'access' },
   { action: 'recovery-codes-regenerated', label: 'Recovery codes regenerated', kind: 'access' },
 ] as const satisfies readonly ActivityDeclaration[];
+
+/** Auth gates role management itself. */
+export const ROLES_PERMISSIONS = [
+  { action: 'view', name: 'View Roles' },
+  { action: 'create', name: 'Create Roles' },
+  { action: 'edit', name: 'Edit Roles' },
+  { action: 'delete', name: 'Delete Roles' },
+] as const satisfies readonly PermissionDeclaration[];
+
+/** The rule each role-management action requires; routes, pages, and navigation read the same one. */
+export const rolesAccess = permissionRules('roles', ROLES_PERMISSIONS);
 
 /** What Auth reports about roles, as `roles.<action>`. */
 export const ROLES_ACTIVITY = [

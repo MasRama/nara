@@ -1,5 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router';
-import { ProfilePage, UsersPage, type UsersWebHost } from '../../features/users/web';
+import { ProfilePage, usersAccess, UsersPage, type UsersWebHost } from '../../features/users/web';
 import {
   createAccessClient,
   createAuthClient,
@@ -12,6 +12,8 @@ import {
 const authSession = useAuthSession();
 const authClient = createAuthClient();
 const accessClient = createAccessClient();
+// The rules the server binding enforces, under the resource it declared.
+const access = usersAccess('users');
 
 function translatePasswordErrors(errors: Record<string, string[]> = {}): Record<string, string[]> {
   // Auth owns snake_case API fields; Users renders camelCase form fields.
@@ -35,11 +37,9 @@ export const usersWebHost: UsersWebHost = {
     return user ? { id: user.id, name: user.name, email: user.email, avatar: user.avatar } : null;
   },
 
-  canManageUsers: (action) => authSession.can(`users.${action}`),
+  access,
 
-  canAssignRoles: () => authSession.hasRole('admin'),
-
-  canResetPasswords: () => authSession.hasRole('admin') || authSession.can('users.reset-password'),
+  allows: (rule) => authSession.allows(rule),
 
   refreshSession: () => authSession.refresh(),
 
@@ -78,6 +78,6 @@ export default [
     name: 'users',
     component: UsersPage,
     props: { host: usersWebHost },
-    meta: { requiresAuth: true, requiresPermission: 'users.view', nav: { label: 'Users' } },
+    meta: { requiresAuth: true, requiresAccess: access.manage('view'), nav: { label: 'Users' } },
   },
 ] satisfies RouteRecordRaw[];

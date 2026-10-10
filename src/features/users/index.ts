@@ -9,6 +9,7 @@ export {
   USERS_EDITING_EVENT,
   USERS_ACTIVITY,
   USERS_PERMISSIONS,
+  usersAccess,
 } from './contract';
 export type {
   AvatarUploadResponse,
@@ -22,6 +23,7 @@ export type {
   UpdateUserInput,
   UserProfile,
   UserProfileResponse,
+  UsersAccess,
   UsersResponse,
 } from './contract';
 export { createAssetRoutes, USERS_ASSET_ROUTE_POLICIES } from './server/assets-routes';

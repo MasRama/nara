@@ -476,7 +476,7 @@ describe('requirements metadata separation', () => {
     projectShell(fixture, {
       // The guaranteed src/shared modules Users imports.
       ...Object.fromEntries(
-        ['database', 'realtime', 'realtime/browser', 'security', 'security/activity', 'security/codes', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
+        ['database', 'realtime', 'realtime/browser', 'security', 'security/access', 'security/activity', 'security/codes', 'security/input', 'security/permissions', 'storage'].map((entry) => [`src/shared/${entry}.ts`, 'export {};\n']),
       ),
       'src/features/auth/index.ts': [
         'export const createAccountWithRoles = (): unknown => ({});',
@@ -488,8 +488,7 @@ describe('requirements metadata separation', () => {
         'export const getUserRoles = (): Array<{ slug: string }> => [];',
         'export const getUsersWithRole = (): Array<{ id: string }> => [];',
         'export const hashPassword = async (password: string): Promise<string> => password;',
-        'export const hasPermission = (): boolean => false;',
-        'export const isAdmin = (): boolean => false;',
+        'export const isAllowed = (): boolean => false;',
         'export const listAccounts = (): { data: unknown[]; total: number } => ({ data: [], total: 0 });',
         'export const resetAccountPassword = (): undefined => undefined;',
         "export const SESSION_COOKIE_NAME = 'auth_id';",

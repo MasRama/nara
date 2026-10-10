@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { AUTH_ROLES_CHANGED_EVENT, AUTH_ROLES_EDITING_EVENT, createRoleInputSchema, STALE_REVISION } from '../../contract';
+import {
+  AUTH_ROLES_CHANGED_EVENT,
+  AUTH_ROLES_EDITING_EVENT,
+  createRoleInputSchema,
+  rolesAccess,
+  STALE_REVISION,
+} from '../../contract';
 import type { Editor, PermissionData, RoleData, StaleRoleError, UpdateRoleResponse } from '../../contract';
 import { createAccessClient } from '../access-client';
 import { useAuthSession } from '../session';
@@ -50,9 +56,9 @@ const editingGone = ref(false);
 const editors = ref<Record<string, Editor[]>>({});
 let stopEditing: (() => void) | undefined;
 
-const canCreate = computed(() => authSession.can('roles.create'));
-const canEdit = computed(() => authSession.can('roles.edit'));
-const canDelete = computed(() => authSession.can('roles.delete'));
+const canCreate = computed(() => authSession.allows(rolesAccess('create')));
+const canEdit = computed(() => authSession.allows(rolesAccess('edit')));
+const canDelete = computed(() => authSession.allows(rolesAccess('delete')));
 const formEditors = computed(() => (editingRole.value ? othersEditing(editingRole.value.id) : []));
 const permissionGroups = computed(() => Object.entries(permissionsByResource.value).sort(([left], [right]) => left.localeCompare(right)));
 

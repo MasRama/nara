@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getDatabase } from '../../../shared/database';
+import type { AccessRule } from '../../../shared/security';
+import { rolesAccess } from '../contract';
 import { accountsChanged, rolesChanged } from './live';
 
 export interface Role {
@@ -198,9 +200,14 @@ export function isAdmin(userId: string): boolean {
   return hasRole(userId, 'admin');
 }
 
-/** Who may read the role list: the rule `requirePermission('roles.view')` applies. */
+/** Whether the account meets the rule; `admin` meets every rule. */
+export function isAllowed(userId: string, rule: AccessRule): boolean {
+  return isAdmin(userId) || ('permission' in rule && hasPermission(userId, rule.permission));
+}
+
+/** Who may read the role list, as the role routes decide it. */
 export function canViewRoles(userId: string): boolean {
-  return isAdmin(userId) || hasPermission(userId, 'roles.view');
+  return isAllowed(userId, rolesAccess('view'));
 }
 
 export function getUserCountsForRoles(roleIds: string[]): Map<string, number> {

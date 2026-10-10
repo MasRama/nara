@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import type { PermissionDeclaration } from '../../shared/security/permissions';
+import { permissionRules, type AccessRule } from '../../shared/security/access';
 import { ACTIVITY_KINDS, type ActivityKind, type ActivityMetadataValue } from '../../shared/security/activity';
 
 /** The actions Activity gates; the application's binding declares them to its access-control provider. */
@@ -11,6 +12,16 @@ export const ACTIVITY_PERMISSIONS = [
     description: 'View application authentication and administration activity history',
   },
 ] as const satisfies readonly PermissionDeclaration[];
+
+/** The rule each Activity capability requires: its route enforces it, the application's navigation reads it. */
+export interface ActivityAccess {
+  readonly view: AccessRule;
+}
+
+/** Activity's policy for the permissions its binding declared under `resource`. */
+export function activityAccess(resource: string): ActivityAccess {
+  return { view: permissionRules(resource, ACTIVITY_PERMISSIONS)('view') };
+}
 
 /** Live update topic: an activity event was recorded; viewers refetch the feed. */
 export const ACTIVITY_RECORDED_EVENT = 'activity.recorded';

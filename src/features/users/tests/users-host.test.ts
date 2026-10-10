@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { getDatabase } from '../../../shared/database';
 import { closeEventStreams, createEventStream, STREAM_READY_EVENT } from '../../../shared/realtime';
 import { readEvents, type EventReader } from '../../../shared/realtime/tests/helpers';
-import { createAssetRoutes, createUserRoutes, type UsersServerHost } from '../index';
+import { createAssetRoutes, createUserRoutes, usersAccess, type UsersServerHost } from '../index';
 
 const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -155,11 +155,9 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       }
       return removed;
     },
-    canManageUsers: (actorId, action) =>
-      state.admins.has(actorId) || (state.permissions.get(actorId)?.has(`users.${action}`) ?? false),
-    canAssignRoles: (actorId) => state.admins.has(actorId),
-    canResetPasswords: (actorId) =>
-      state.admins.has(actorId) || (state.permissions.get(actorId)?.has('users.reset-password') ?? false),
+    access: usersAccess('users'),
+    allows: (actorId, rule) =>
+      state.admins.has(actorId) || ('permission' in rule && (state.permissions.get(actorId)?.has(rule.permission) ?? false)),
     availableRoles: () => state.roles.map((role) => ({ ...role })),
     rolesForUser: (userId) =>
       (state.assignments.get(userId) ?? []).map((id) => state.roles.find((role) => role.id === id)?.slug ?? id),

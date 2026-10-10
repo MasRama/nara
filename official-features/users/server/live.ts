@@ -8,5 +8,5 @@ import type { UsersServerHost } from './host';
  */
 export function announceAccountsChanged(host: UsersServerHost, accountIds: string[]): void {
   const affected = new Set(accountIds);
-  publish(USERS_CHANGED_EVENT, (listener) => affected.has(listener.userId) || host.canManageUsers(listener.userId, 'view'));
+  publish(USERS_CHANGED_EVENT, (listener) => affected.has(listener.userId) || host.allows(listener.userId, host.access.manage('view')));
 }

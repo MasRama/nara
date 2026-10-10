@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { PermissionDeclaration } from '../../shared/security/permissions';
+import { ADMINISTRATOR, permissionRules, type AccessRule } from '../../shared/security/access';
 import type { ActivityDeclaration } from '../../shared/security/activity';
 import { API_REFUSAL_CODES } from '../../shared/security/codes';
 import { emailSchema, personNameSchema } from '../../shared/security/input';
@@ -24,8 +25,30 @@ export const USERS_PERMISSIONS = [
   { action: 'delete', name: 'Delete Users' },
 ] as const satisfies readonly PermissionDeclaration[];
 
-/** Password resets are gated by `canResetPasswords`; the rest by `canManageUsers`. */
+/** Password resets are gated by `resetPasswords`; the rest by `manage`. */
 export type UsersManageAction = Exclude<(typeof USERS_PERMISSIONS)[number]['action'], 'reset-password'>;
+
+/**
+ * The rule each Users capability requires. Its routes enforce these, its
+ * pages hide what they would refuse, and the application's navigation and
+ * authorization matrix read the same values.
+ */
+export interface UsersAccess {
+  manage(action: UsersManageAction): AccessRule;
+  readonly resetPasswords: AccessRule;
+  /** Choosing an account's roles; also who may change or reset an administrator. */
+  readonly assignRoles: AccessRule;
+}
+
+/**
+ * Users' policy for the permissions its binding declared under `resource`:
+ * each action needs its own permission, and only administrators assign roles.
+ * A binding may replace any rule before handing it to the hosts.
+ */
+export function usersAccess(resource: string): UsersAccess {
+  const permission = permissionRules(resource, USERS_PERMISSIONS);
+  return { manage: permission, resetPasswords: permission('reset-password'), assignRoles: ADMINISTRATOR };
+}
 
 /** What Users reports happened, as `users.<action>`; the application hands it to its activity trail. */
 export const USERS_ACTIVITY = [

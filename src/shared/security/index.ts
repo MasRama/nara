@@ -17,6 +17,8 @@ export {
 export type { Actor, ApiRoute, Guard, RouteAccess } from './authorization';
 export { jsonInput, queryInput, validationErrors, validationFailed } from './validation';
 export type { PermissionDeclaration } from './permissions';
+export { ADMINISTRATOR, permissionRules } from './access';
+export type { AccessRule } from './access';
 export { ACTIVITY_KINDS } from './activity';
 export type {
   ActivityDeclaration,

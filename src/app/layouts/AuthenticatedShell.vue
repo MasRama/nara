@@ -10,7 +10,7 @@ const router = useRouter();
 const isLoggingOut = ref(false);
 const logoutError = ref('');
 const user = computed(() => authSession.user.value);
-const links = computed(() => navigationLinks(router.options.routes, authSession.can));
+const links = computed(() => navigationLinks(router.options.routes, authSession.allows));
 const initials = computed(() => {
   const name = user.value?.name.trim() ?? '';
   return name

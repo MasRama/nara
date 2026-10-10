@@ -50,7 +50,7 @@ export function startLiveUpdates(router: Router): () => void {
 
   async function accountChanged(): Promise<void> {
     await refreshSession();
-    if (session.isAuthenticated.value && !canEnter(router.currentRoute.value.meta, session.can)) {
+    if (session.isAuthenticated.value && !canEnter(router.currentRoute.value.meta, session.allows)) {
       await router.replace({ name: 'dashboard' });
     }
   }

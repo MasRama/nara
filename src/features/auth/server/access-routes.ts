@@ -4,6 +4,7 @@ import type { Context } from 'hono';
 import {
   AUTH_ROLES_EDITING_EVENT,
   createRoleInputSchema,
+  rolesAccess,
   deleteRolesInputSchema,
   STALE_REVISION,
   updateRoleInputSchema,
@@ -35,7 +36,7 @@ import {
 } from './access';
 import { forbidden, jsonInput } from '../../../shared/security';
 import { createPresence, publish, type Presence } from '../../../shared/realtime';
-import { requirePermission, sessionGuard } from './guard';
+import { sessionGuard } from './guard';
 import { Logger } from '../../../shared/logging';
 import type { RolesActivitySink } from './activity';
 
@@ -262,18 +263,18 @@ export function createAccessRoutes(activity?: RolesActivitySink) {
   });
 
   return new Hono()
-    .get('/', requirePermission('roles.view'), listRolesHandler)
-    .get('/permissions', requirePermission('roles.view'), listPermissionsHandler)
-    .get('/editing', requirePermission('roles.view'), (context) => listEditingHandler(context, editors))
-    .put('/:id/editing', requirePermission('roles.edit'), (context) => enterEditingHandler(context, editors))
-    .delete('/:id/editing', requirePermission('roles.edit'), (context) => leaveEditingHandler(context, editors))
-    .post('/', requirePermission('roles.create'), jsonInput(createRoleInputSchema), (context) =>
+    .get('/', sessionGuard.allow(rolesAccess('view')), listRolesHandler)
+    .get('/permissions', sessionGuard.allow(rolesAccess('view')), listPermissionsHandler)
+    .get('/editing', sessionGuard.allow(rolesAccess('view')), (context) => listEditingHandler(context, editors))
+    .put('/:id/editing', sessionGuard.allow(rolesAccess('edit')), (context) => enterEditingHandler(context, editors))
+    .delete('/:id/editing', sessionGuard.allow(rolesAccess('edit')), (context) => leaveEditingHandler(context, editors))
+    .post('/', sessionGuard.allow(rolesAccess('create')), jsonInput(createRoleInputSchema), (context) =>
       createRoleHandler(context, context.req.valid('json'), activity),
     )
-    .put('/:id', requirePermission('roles.edit'), jsonInput(updateRoleInputSchema), (context) =>
+    .put('/:id', sessionGuard.allow(rolesAccess('edit')), jsonInput(updateRoleInputSchema), (context) =>
       updateRoleHandler(context, context.req.valid('json'), activity),
     )
-    .delete('/', requirePermission('roles.delete'), jsonInput(deleteRolesInputSchema), (context) =>
+    .delete('/', sessionGuard.allow(rolesAccess('delete')), jsonInput(deleteRolesInputSchema), (context) =>
       deleteRolesHandler(context, context.req.valid('json'), activity),
     );
 }

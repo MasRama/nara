@@ -22,8 +22,7 @@ function writeFiles(directory: string, files: Record<string, string>): void {
 
 const AUTH_BOUNDARY = `export const declarePermissions = (): void => {};
 export const getCurrentUser = (): undefined => undefined;
-export const hasPermission = (): boolean => false;
-export const isAdmin = (): boolean => false;
+export const isAllowed = (): boolean => false;
 export const SESSION_COOKIE_NAME = 'auth_id';
 `;
 
@@ -53,7 +52,7 @@ function createApplication(auth = AUTH_BOUNDARY): string {
   fixtures.push(fixture);
   writeFiles(fixture, {
     ...Object.fromEntries(
-      ['config', 'database', 'realtime', 'realtime/browser', 'security', 'security/activity', 'security/codes', 'security/permissions'].map((entry) => [
+      ['config', 'database', 'realtime', 'realtime/browser', 'security', 'security/access', 'security/activity', 'security/codes', 'security/permissions'].map((entry) => [
         `src/shared/${entry}.ts`,
         'export {};\n',
       ]),
@@ -108,7 +107,7 @@ describe('activity feature assembly', () => {
   });
 
   it('refuses an application whose Auth lacks what the binding uses', () => {
-    const fixture = createApplication(AUTH_BOUNDARY.replace(/^export const isAdmin.*\n/m, ''));
+    const fixture = createApplication(AUTH_BOUNDARY.replace(/^export const isAllowed.*\n/m, ''));
 
     const result = installOfficialFeature('activity', fixture);
 

@@ -1,4 +1,5 @@
 export { createUsersClient, type UsersClient, type UsersClientOptions } from './client';
+export { usersAccess, type UsersAccess } from '../contract';
 export type {
   UsersPasswordChange,
   UsersPasswordChangeResult,

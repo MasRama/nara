@@ -1,5 +1,13 @@
 import { createRouter, createWebHistory, type RouteRecordRaw, type RouterScrollBehavior } from 'vue-router';
-import { ChangePasswordPage, LoginPage, RegisterPage, RolesPage, SecurityPage, useAuthSession } from '../features/auth/web';
+import {
+  ChangePasswordPage,
+  LoginPage,
+  RegisterPage,
+  rolesAccess,
+  RolesPage,
+  SecurityPage,
+  useAuthSession,
+} from '../features/auth/web';
 import activityWebRoutes from './bindings/activity.web';
 import usersWebRoutes from './bindings/users.web';
 import { canEnter } from './navigation';
@@ -43,7 +51,7 @@ export const appRoutes = [
     path: '/roles',
     name: 'roles',
     component: RolesPage,
-    meta: { requiresAuth: true, requiresPermission: 'roles.view', nav: { label: 'Roles' } },
+    meta: { requiresAuth: true, requiresAccess: rolesAccess('view'), nav: { label: 'Roles' } },
   },
   ...activityWebRoutes,
   {
@@ -102,7 +110,7 @@ router.beforeEach(async (to) => {
   ) {
     return { name: 'change-password' };
   }
-  if (!canEnter(to.meta, authSession.can)) {
+  if (!canEnter(to.meta, authSession.allows)) {
     return { name: 'dashboard' };
   }
 
