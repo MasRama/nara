@@ -50,18 +50,6 @@ describe('add command', () => {
     expect(doctorIO.output.join('')).toBe('Architecture looks healthy.\n');
   });
 
-  it('installs a materially different pure TypeScript feature through the same mechanism', () => {
-    const fixture = createFixture();
-    const io = createIO();
-
-    const result = runCli(['add', 'audit'], io, { cwd: fixture });
-
-    expect(result.exitCode).toBe(0);
-    expect(io.output.join('')).toContain('src/features/audit/contract.ts');
-    expect(io.output.join('')).toContain('src/features/audit/index.ts');
-    expect(io.output.join('')).toContain('src/features/audit/tests/audit.test.ts');
-  });
-
   it('refuses a collision without merging or overwriting local source', () => {
     const fixture = createFixture();
     const target = path.join(fixture, 'src/features/health');

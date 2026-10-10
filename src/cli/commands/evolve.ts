@@ -14,6 +14,7 @@ import {
   featureFilesEqual,
   lineageDirectory,
   readFeatureFiles,
+  readOfficialFeatureFiles,
   readFeatureLineage,
   stageFeatureLineage,
   type FeatureLineageSnapshot,
@@ -297,7 +298,7 @@ export function evolveFeature(options: EvolveFeatureOptions): EvolveFeatureOutco
       return evolutionError(feature, 'missing-local', `Feature "${feature}" is not installed at ${localDirectory}.`);
     }
     const local = readFeatureFiles(localDirectory);
-    const incoming = readFeatureFiles(officialDirectory, false);
+    const incoming = readOfficialFeatureFiles(officialDirectory);
     const incomingDigest = digestFeatureFiles(incoming);
     const requirementsNotice = checkInstalledRequirements(root, feature, officialDirectory);
     let lineage: FeatureLineageSnapshot | undefined;

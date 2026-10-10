@@ -13,7 +13,6 @@ src/features/<feature>/   contract.ts · index.ts · server/ · web/ (optional) 
 src/app/                  server.ts · router.ts · App.vue · pages/ · layouts/
 src/shared/               config/ · database/ · logging/ · realtime/ · security/ · storage/
 resources/app.ts          thin Vite entry mounting the app shell
-official-features/        installable open-code features (health, audit, users, activity)
 ```
 
 - `src/features/<feature>/index.ts` is the general/server-facing public boundary. Cross-feature server use imports only from there.
@@ -41,8 +40,8 @@ official-features/        installable open-code features (health, audit, users, 
 | Business capability | owning `src/features/<feature>/` (`contract.ts`, `server/`, `web/`, `tests/`) |
 | HTTP composition, browser routes, app shell | `src/app/` (`server.ts`, `router.ts`, pages/layouts) |
 | Business-neutral infra only | `src/shared/` (config, database engine, errors, logging, security) |
-| Reusable installable feature | `official-features/<name>/` + `nara add` wiring |
-| Users / Activity runtime code | `official-features/<name>/`, then `npm run nara -- evolve <name>`; never edit `src/features/{users,activity}/` copies of official files (their extra `tests/` are local) |
+| Reusable installable feature | `src/features/<name>/` with a `.nara/` folder (assembly templates, `requirements.json`); shipped by `stage:package` |
+| Official Feature code (health, users, activity) | edit `src/features/<name>/` in place, then `npm run nara -- evolve <name>` to record lineage; tests needing the reference app go in its `tests/app/` (not shipped) |
 | CLI / architecture engine | `src/cli/` with fixture-backed tests |
 
 ## Inspect before editing

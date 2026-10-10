@@ -93,7 +93,7 @@ but Nara never hides those relationships behind a runtime registry.
 
 Assembly templates are an installation recipe, not architecture truth.
 Hidden-file exclusion keeps them out of Feature source and lineage `BASE`;
-the architecture engine never treats `official-features/*/.nara` as
+the architecture engine never treats a Feature's `.nara/` folder as
 application architecture. After installation, Nara understands the
 application solely from `src/features` and `src/app`, and a binding file
 that is not explicitly consumed by its canonical root is reported as
@@ -138,18 +138,25 @@ source, and fail with a precise message when it is absent — or bundle
 the tightly coupled capabilities as one package. Automatic dependency
 installation and manifest resolution are non-goals.
 
-This is why the catalog stays small: a capability joins
-`official-features/` only when `nara add` produces explicit,
+This is why the catalog stays small: a capability becomes official
+only when `nara add` produces explicit,
 deterministic, application-owned composition with zero hidden
 application-level changes: every file outside the new Feature directory
 is visible, ownership is clear, existing source is never silently
 replaced, and the architecture engine verifies the resulting integration
-before anything is applied. Auth remains a reference implementation
-rather than a package: it is one valid Users provider, not a capability
-that itself needs packaging.
+before anything is applied.
 
-The reference app consumes its own catalog the same way: `src/features/users`
-and `src/features/activity` are installed copies of their `official-features/`
-source with lineage committed under `.nara/lineage/`, so every change to an
-official Feature reaches the reference app through `nara evolve`, and the
-reference app's own tests stay as local additions.
+## Where official Features live
+
+Each official Feature has one copy, in the reference app's
+`src/features/<name>`. The `.nara/` folder inside it marks it official and
+holds its distribution-only files; `npm run stage:package` copies every such
+Feature into the published package's `official-features/<name>`, leaving out
+`tests/app/`. That folder holds the tests that need the whole reference app
+(personas, its composed server, other Features) rather than the Feature alone.
+
+The reference app keeps its committed lineage under
+`.nara/lineage/official-features/<name>/` like any application. After
+editing an official Feature, `npm run nara -- evolve <name>` records the new
+source as that lineage's base; `tests/v3/official-features.test.ts` fails
+until it does.

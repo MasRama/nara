@@ -40,6 +40,20 @@ function installHealth(fixture: string): void {
   expect(result.ok).toBe(true);
 }
 
+/** A second, local Feature for health to depend on. */
+function writeAuditFeature(fixture: string): void {
+  const directory = path.join(fixture, 'src/features/audit');
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    path.join(directory, 'contract.ts'),
+    'export interface AuditEvent {\n  action: string;\n}\n\nexport function createAuditEvent(action: string): AuditEvent {\n  return { action };\n}\n',
+  );
+  writeFileSync(
+    path.join(directory, 'index.ts'),
+    "export { createAuditEvent } from './contract';\nexport type { AuditEvent } from './contract';\n",
+  );
+}
+
 function copyOfficialHealth(): string {
   const root = createFixture();
   const directory = path.join(root, 'health');
@@ -233,7 +247,7 @@ describe('evolve command', () => {
   it('blocks a newly introduced architecture diagnostic', () => {
     const fixture = createFixture();
     installHealth(fixture);
-    expect(installOfficialFeature('audit', fixture).ok).toBe(true);
+    writeAuditFeature(fixture);
     const incoming = copyOfficialHealth();
     writeFileSync(
       path.join(incoming, 'index.ts'),
@@ -256,7 +270,7 @@ describe('evolve command', () => {
   it('reports a valid official dependency change without blocking the apply', () => {
     const fixture = createFixture();
     installHealth(fixture);
-    expect(installOfficialFeature('audit', fixture).ok).toBe(true);
+    writeAuditFeature(fixture);
     const incoming = copyOfficialHealth();
     writeFileSync(
       path.join(incoming, 'index.ts'),
@@ -276,7 +290,7 @@ describe('evolve command', () => {
   it('tolerates an existing baseline diagnostic while reporting the candidate architecture change', () => {
     const fixture = createFixture();
     installHealth(fixture);
-    expect(installOfficialFeature('audit', fixture).ok).toBe(true);
+    writeAuditFeature(fixture);
     const localIndex = healthIndex(fixture);
     writeFileSync(
       localIndex,

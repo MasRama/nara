@@ -50,7 +50,7 @@ function writesAuthTables(): RegExp {
 describe('test personas', () => {
   it('leave writing Auth tables to Auth: tests elsewhere use these helpers', () => {
     const write = writesAuthTables();
-    const offenders = ['src', 'official-features', 'tests']
+    const offenders = ['src', 'tests']
       .flatMap((directory) => testFiles(join(ROOT, directory)))
       .filter((file) => write.test(readFileSync(file, 'utf8')))
       .map((file) => relative(ROOT, file))

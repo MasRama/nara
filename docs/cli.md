@@ -54,7 +54,7 @@ Install an official open-code Feature package into `src/features/<feature>`:
 
 ```bash
 npx nara add health
-npx nara add audit
+npx nara add activity
 ```
 
 Packages resolve from the installed `@nara-web/cli` package's `official-features/`
@@ -90,7 +90,7 @@ source while leaving application bindings untouched. See
 ### Explicit prerequisites
 
 An official Feature may declare distribution-time requirements in
-`official-features/<feature>/.nara/requirements.json` (never installed,
+`<feature>/.nara/requirements.json` (never installed,
 never architecture truth):
 
 ```json
@@ -168,9 +168,9 @@ Reconcile an installed official Feature with the current official source
 bundled in the local Nara CLI:
 
 ```bash
-npx nara evolve audit --dry-run
-npx nara evolve audit --dry-run --json
-npx nara evolve audit
+npx nara evolve health --dry-run
+npx nara evolve health --dry-run --json
+npx nara evolve health
 ```
 
 `nara add` records the exact official source as `BASE` under
@@ -217,7 +217,7 @@ JSON success output has this shape:
 ```json
 {
   "schemaVersion": 1,
-  "feature": "audit",
+  "feature": "health",
   "status": "dry-run",
   "lineage": { "baseDigest": "...", "incomingDigest": "..." },
   "files": [{ "path": "index.ts", "action": "update", "reason": "..." }],

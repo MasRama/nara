@@ -6,8 +6,8 @@ import { describe, expect, it } from 'vitest';
  * Official Users assembly: host-requirement proof that runs anywhere the
  * Feature source lands. It imports no Feature or shared modules — only the
  * file tree itself — so the same file passes inside
- * `official-features/users/` and inside an installed
- * `src/features/users/` without resolving host application code.
+ * the reference app, the published package's `official-features/users/`,
+ * and an installed `src/features/users/` without resolving host application code.
  *
  * The directory resolves from `__dirname` so the test checks its own
  * Feature copy under both the repo and installed layouts and under both

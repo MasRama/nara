@@ -64,6 +64,16 @@ export function readNaraCliVersion(startDirectory: string = __dirname): string {
   return manifest.version;
 }
 
+/**
+ * Where an official Feature's source lives. The published package ships each
+ * one under `official-features/<name>`; the reference repository keeps it
+ * installed in `src/features/<name>`, marked official by its `.nara/`
+ * distribution folder. A name that is neither resolves to a path that does
+ * not exist, which callers report as an unknown official Feature.
+ */
 export function resolveOfficialFeatureDirectory(name: string, startDirectory: string = __dirname): string {
-  return path.join(resolveNaraPackageRoot(startDirectory), 'official-features', name);
+  const root = resolveNaraPackageRoot(startDirectory);
+  const reference = path.join(root, 'src', 'features', name);
+  if (existsSync(path.join(reference, '.nara'))) return reference;
+  return path.join(root, 'official-features', name);
 }

@@ -158,7 +158,7 @@ const endpoints = computed(() => [
   { path: '/ready', detail: 'Schema-aware' },
 ]);
 
-const officialFeatures = ['health', 'audit', 'users', 'activity'] as const;
+const officialFeatures = ['health', 'users', 'activity'] as const;
 
 const foundationLanes = computed(() => [
   {
@@ -186,7 +186,7 @@ const foundationLanes = computed(() => [
     label: 'product surface',
     title: 'src/features/*',
     chips: ['users', 'activity', 'assets', '+ your feature'],
-    status: 'nara add audit',
+    status: 'nara add activity',
     caption: 'The product grows by adding visible source.',
   },
 ]);

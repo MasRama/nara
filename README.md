@@ -28,7 +28,7 @@ generate a second, smaller starter shape.
 npm run check
 npm run nara -- doctor
 npm run nara -- context auth --json
-npm run nara -- add audit
+npm run nara -- inspect users --json
 ```
 
 `npm run nara --` runs the CLI from this checkout. Do not use `npx nara`
@@ -124,16 +124,11 @@ src/
 ├── app/                 application composition
 ├── cli/                 CLI and architecture engine
 ├── features/
-│   ├── activity/
+│   ├── activity/        official (has .nara/)
 │   ├── auth/
-│   └── users/
+│   ├── health/          official (has .nara/)
+│   └── users/           official (has .nara/)
 └── shared/              business-neutral infrastructure
-
-official-features/
-├── activity/
-├── audit/
-├── health/
-└── users/
 
 resources/               Vue/Vite application shell
 scripts/                 setup, database, build, release helpers
@@ -231,10 +226,14 @@ The current installable catalog is intentionally small:
 
 ```text
 health
-audit
 users
 activity
 ```
+
+There is one copy of each: the Feature in `src/features/<name>`, marked
+official by its `.nara/` folder and shipped from there by
+`npm run stage:package`. Tests that need this reference app rather than the
+Feature alone live in its `tests/app/` and are not shipped.
 
 Activity records what other Features report. `nara add activity` mounts its
 page, API, permission and retention; the application then creates a reporter

@@ -8,7 +8,7 @@ import { discoverFeatureIntegrations } from '../architecture/discover-integratio
 import { inspectFeature } from '../architecture/inspect';
 import { resolveOfficialFeatureDirectory } from '../package-root';
 import { discoverMigrations } from '../../shared/database/migrator';
-import { featureFilesEqual, readFeatureFiles, readFeatureLineage } from '../evolution/lineage';
+import { featureFilesEqual, readFeatureFiles, readFeatureLineage, readOfficialFeatureFiles } from '../evolution/lineage';
 import { evolveFeature } from '../commands/evolve';
 import { installOfficialFeature } from '../composition/install-feature';
 
@@ -290,7 +290,7 @@ describe('users feature assembly', () => {
 
     const incoming = mkdtempSync(path.join(os.tmpdir(), 'nara-users-incoming-'));
     fixtures.push(incoming);
-    const officialFiles = readFeatureFiles(officialSource(), false);
+    const officialFiles = readOfficialFeatureFiles(officialSource());
     for (const [relative, bytes] of officialFiles) {
       const file = path.join(incoming, ...relative.split('/'));
       mkdirSync(path.dirname(file), { recursive: true });

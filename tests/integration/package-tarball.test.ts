@@ -27,7 +27,6 @@ describe('nara publishable tarball integrity', () => {
       'package/LICENSE',
       'package/dist/index.js',
       'package/official-features/health/index.ts',
-      'package/official-features/audit/index.ts',
       'package/official-features/users/index.ts',
       'package/official-features/users/.nara/assembly/server.ts',
       'package/official-features/users/.nara/assembly/web.ts',
@@ -36,6 +35,8 @@ describe('nara publishable tarball integrity', () => {
       'package/official-features/activity/.nara/assembly/web.ts',
     ]) expect(files.has(required)).toBe(true);
     expect([...files].some((file) => file.startsWith('package/substrate/'))).toBe(false);
+    // The reference app's own tests stay behind.
+    expect([...files].filter((file) => file.includes('/tests/app/'))).toEqual([]);
     expect(files.has('package/dist/commands/new-project.js')).toBe(false);
     const allowedPrefixes = ['package/dist/', 'package/official-features/'];
     const allowedRoots = new Set(['package/package.json', 'package/README.md', 'package/LICENSE']);

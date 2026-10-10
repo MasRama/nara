@@ -20,7 +20,7 @@ npx nara guard --base origin/main  # fail only on newly introduced violations
 npx nara context health --json
 npx nara impact health --json
 npx nara diff --base main      # how the architecture is changing
-npx nara add audit             # install an official open-code feature
+npx nara add activity          # install an official open-code feature
 ```
 
 The underlying stack stays transparent: Hono handles HTTP, TypeScript defines

@@ -22,6 +22,7 @@ import {
   featureFilesEqual,
   lineageDirectory,
   readFeatureFiles,
+  readOfficialFeatureFiles,
   readFeatureLineage,
   stageFeatureLineage,
   type StagedLineage,
@@ -216,7 +217,7 @@ export function planTransition(options: PlanTransitionOptions): PlanTransitionOu
       return commandError(feature, 'missing-local', `Feature "${feature}" is not installed at ${localDirectory}.`);
     }
     const local = readFeatureFiles(localDirectory);
-    const incoming = readFeatureFiles(officialDirectory, false);
+    const incoming = readOfficialFeatureFiles(officialDirectory);
     const incomingDigest = digestFeatureFiles(incoming);
     const localStartDigest = digestFeatureFiles(local);
     const incomingTransitionDigest = digestIncomingTransition(officialDirectory, incoming);
@@ -351,7 +352,7 @@ export function acceptTransition(options: { feature: string; cwd?: string; offic
       return commandError(feature, 'missing-lineage', `Cannot accept a transition for "${feature}": lineage is missing.`);
     }
     const local = readFeatureFiles(localDirectory);
-    const incoming = readFeatureFiles(officialDirectory, false);
+    const incoming = readOfficialFeatureFiles(officialDirectory);
     const incomingDigest = digestFeatureFiles(incoming);
     const incomingTransitionDigest = digestIncomingTransition(officialDirectory, incoming);
     const localStartDigest = digestFeatureFiles(local);

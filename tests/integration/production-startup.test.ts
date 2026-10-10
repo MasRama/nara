@@ -174,7 +174,7 @@ describe('production startup failures', () => {
     // cannot run there (no package.json), so invoke the same binary it
     // runs — `node build/server.js` — with the temp dir as cwd.
     const stage = path.join(isolationRoot, 'missing-frontend');
-    for (const entry of ['server.js', 'src', 'official-features']) {
+    for (const entry of ['server.js', 'src']) {
       cpSync(path.join(projectRoot, 'build', entry), path.join(stage, 'build', entry), { recursive: true });
     }
     // The staged server is the same compiled output; it still resolves

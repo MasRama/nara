@@ -40,7 +40,7 @@ import {
   copyFeatureFiles,
   digestFeatureFiles,
   lineageDirectory,
-  readFeatureFiles,
+  readOfficialFeatureFiles,
   stageFeatureLineage,
   type StagedLineage,
 } from '../evolution/lineage';
@@ -541,7 +541,7 @@ export function installOfficialFeature(
       };
     }
 
-    const sourceFiles = readFeatureFiles(source, false);
+    const sourceFiles = readOfficialFeatureFiles(source);
     if (sourceFiles.size === 0) {
       return {
         ok: false,

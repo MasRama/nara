@@ -44,7 +44,7 @@ import {
 } from '../shared/database';
 import composeUsersServer from './bindings/users.server';
 import composeActivityServer, { createActivityRecorder } from './bindings/activity.server';
-import { healthRoutes } from '../../official-features/health';
+import { healthRoutes } from '../features/health';
 
 const frontendBuildDirectory = resolve(process.cwd(), 'build', 'client');
 const frontendIndex = join(frontendBuildDirectory, 'index.html');

@@ -79,6 +79,21 @@ export function readFeatureFiles(directory: string, includeHidden = true): Map<s
   return files;
 }
 
+/** Tests under `tests/app/` exercise the reference application and are never distributed. */
+const APPLICATION_TESTS = 'tests/app/';
+
+/**
+ * Read an official Feature's distributable source: no hidden distribution
+ * metadata, and none of the reference application's own tests.
+ */
+export function readOfficialFeatureFiles(directory: string): Map<string, Buffer> {
+  const files = readFeatureFiles(directory, false);
+  for (const relativePath of [...files.keys()]) {
+    if (relativePath.startsWith(APPLICATION_TESTS)) files.delete(relativePath);
+  }
+  return files;
+}
+
 /** Copy a Feature file map while preserving exact file bytes. */
 export function copyFeatureFiles(files: ReadonlyMap<string, Buffer>, targetDirectory: string): void {
   for (const relativePath of [...files.keys()].sort(comparePaths)) {

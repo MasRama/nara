@@ -67,12 +67,14 @@ The important defaults are:
 - prefer explicit TypeScript and ordinary platform primitives over hidden runtime
   frameworks, DI containers, or generated RPC layers.
 
-The reference app installs Users and Activity from `official-features/<name>/`
-through lineage (`.nara/lineage/`), like any Nara application. Change them
-there, then run `npm run nara -- evolve <name>` to bring the change into
-`src/features/<name>/`; extra tests under `src/features/<name>/tests/` are
-local to the reference app and stay put. `tests/v3/official-features-parity.test.ts`
-fails when the evolve step was skipped or an installed file was edited in place.
+Official Features (Health, Users, Activity) have one copy: their
+`src/features/<name>/`, marked official by its `.nara/` folder and shipped from
+there by `npm run stage:package`. Change them in place, then run
+`npm run nara -- evolve <name>` to record the change as the committed lineage
+base (`.nara/lineage/`) that applications started from this repository evolve
+from. Tests that need the whole reference app (personas, the composed server,
+other Features) go in the Feature's `tests/app/`, which is not shipped.
+`tests/v3/official-features.test.ts` fails when the evolve step was skipped.
 
 If a change intentionally alters one of these rules, explain why in the issue and
 pull request instead of working around the architecture checks.

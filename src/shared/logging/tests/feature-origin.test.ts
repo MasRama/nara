@@ -17,7 +17,6 @@ describe('Feature origin from stack frames', () => {
     expect(errorOriginFeature(withStack('x', '    at fn (C:\\repo\\src\\features\\multi-tenant\\server\\a.ts:1:1)'))).toBe(
       'multi-tenant',
     );
-    expect(errorOriginFeature(withStack('x', '    at /repo/official-features/health/index.ts:5:20'))).toBe('health');
   });
 
   it('skips shared, framework, and dependency frames above the Feature frame', () => {

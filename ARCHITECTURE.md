@@ -56,7 +56,7 @@ Details: [`docs/feature-model.md`](./docs/feature-model.md).
 
 - `src/app/` composes features: `server.ts` (Hono composition, production static/SPA delivery), `router.ts` (Vue Router: app pages + feature pages via `web/index.ts` barrels), `bindings/` (application-owned Feature assembly bindings: ordinary Hono/Vue Router code activated explicitly from the canonical roots), `App.vue`, `pages/`, `layouts/` (the authenticated shell lists the routes that declare `meta.nav`). The CLI keeps application composition facts separate from cross-Feature public API consumer evidence and reports server/web routes only when their framework composition is statically proven; it does not add an application graph node or claim runtime reachability.
 - `src/shared/` is small business-neutral infrastructure only: `config/` (business-neutral settings plus `readFeatureEnv`, through which each feature's `server/config.ts` reads and validates the environment variables it owns), `database/` (connection, migration/seed engines, and the runner for the maintenance Features declare on their own tables — features own their SQL), `storage/` (provider-neutral binary-object contract plus the local default), `realtime/` (in-process Server-Sent Events hub and its browser connection, editing presence, and the three-way form merge; Features declare each topic's audience), `logging/`, `security/` (headers, CSRF, rate limits, and body budgets that read the route policy Features declare where their routers are mounted). Never a second global services/repositories layer. The canonical reference application guarantees the stack, canonical roots, Feature structure, plus `src/shared/config/`, `database/`, `realtime/`, `security/`, and `storage/`; official Features and their assembly templates may rely on that substrate, while `logging/` and anything else under `src/shared/` is reference-only. `nara add` and `nara evolve` derive which modules a package imports and refuse anything outside the substrate or missing from the application.
-- `resources/app.ts` is a thin Vite entry mounting the app shell. `official-features/` holds installable open-code features (`health`, `audit`, `users`, `activity`, each optionally with assembly templates and a distribution-only `.nara/requirements.json` describing provider and npm prerequisites).
+- `resources/app.ts` is a thin Vite entry mounting the app shell. Official Features (`health`, `users`, `activity`) live in `src/features/<name>` like any other; a `.nara/` folder inside marks one official and holds its optional assembly templates and distribution-only `.nara/requirements.json` describing provider and npm prerequisites.
 
 ## HTTP and contracts
 
@@ -97,10 +97,10 @@ Five distinct things; do not conflate them:
    companion, not a production runtime abstraction. Its publishable npm
    package is `@nara-web/cli` at `packages/nara` (`bin`
    exposes the `nara` executable from the staged CLI, `files` includes
-   only the staged `dist/` and `official-features/` source). The source release
+   only the staged `dist/` and `official-features/` source, which `npm run stage:package` copies from each official `src/features/<name>` without its `tests/app/`). The source release
    may be tagged independently; the npm package has not yet had its first
    registry publication and will be acquired from the registry once published.
-4. **Official open-code features** — installable source (`health`, `audit`, `users`, `activity`).
+4. **Official open-code features** — installable source (`health`, `users`, `activity`).
    `nara add` installs official package source into
    `src/features/<name>` plus explicit application-owned bindings; the result is ordinary project code. A package
    may also ship assembly templates (`.nara/assembly/`) that install
@@ -122,9 +122,12 @@ Five distinct things; do not conflate them:
    to pure INCOMING bytes while application-owned bindings stay untouched.
 
 The repository root is both the development reference and the canonical
-starting application. It installs official Users and Activity through lineage like
-any application: `official-features/<name>` is the source, and
-`src/features/<name>` follows it through `nara evolve`. New products start from that codebase and keep or remove
+starting application. Each official Feature has
+one copy, its `src/features/<name>`, with lineage committed under
+`.nara/lineage/` like any application; after editing one,
+`npm run nara -- evolve <name>` records it as the new base. Tests that need
+the whole reference app live in the Feature's `tests/app/` and are not
+shipped. New products start from that codebase and keep or remove
 Git history according to their own repository workflow.
 
 ## Versioning

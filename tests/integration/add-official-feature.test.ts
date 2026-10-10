@@ -33,7 +33,7 @@ async function runProcess(command: string, args: string[], cwd: string): Promise
 }
 
 describe('nara add official feature', () => {
-  it('installs audit into an existing Nara project and validates it', { timeout: 300_000 }, async () => {
+  it('installs health into an existing Nara project and validates it', { timeout: 300_000 }, async () => {
     const root = mkdtempSync(path.join(os.tmpdir(), 'nara-add-integration-'));
     try {
       const projectDirectory = path.join(root, 'existing-app');
@@ -58,13 +58,13 @@ describe('nara add official feature', () => {
       await runProcess(npmCommand, ['install', '--no-audit', '--no-fund'], projectDirectory);
 
       // `nara add` and `nara doctor` run from the existing project's own tooling.
-      const addResult = await runLocalNara(projectDirectory, ['add', 'audit']);
-      expect(addResult.stdout).toContain('src/features/audit/index.ts');
+      const addResult = await runLocalNara(projectDirectory, ['add', 'health']);
+      expect(addResult.stdout).toContain('src/features/health/index.ts');
 
-      const auditDirectory = path.join(projectDirectory, 'src', 'features', 'audit');
-      expect(existsSync(auditDirectory)).toBe(true);
-      expect(readFileSync(path.join(auditDirectory, 'index.ts'), 'utf8')).toContain('createAuditEvent');
-      expect(existsSync(path.join(auditDirectory, 'tests', 'audit.test.ts'))).toBe(true);
+      const healthDirectory = path.join(projectDirectory, 'src', 'features', 'health');
+      expect(existsSync(healthDirectory)).toBe(true);
+      expect(readFileSync(path.join(healthDirectory, 'index.ts'), 'utf8')).toContain('healthRoutes');
+      expect(existsSync(path.join(healthDirectory, 'tests', 'health.test.ts'))).toBe(true);
 
       const doctorResult = await runLocalNara(projectDirectory, ['doctor']);
       expect(doctorResult.stdout).toBe('Architecture looks healthy.\n');

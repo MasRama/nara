@@ -1,7 +1,6 @@
 // A stack frame inside a Feature directory, in source (ts-node, Vitest) or tsc
-// output (build/src/features/...). Official Features imported in place live
-// under official-features/.
-const FEATURE_FRAME_PATTERN = /[\\/](?:src[\\/]features|official-features)[\\/]([a-z0-9]+(?:-[a-z0-9]+)*)[\\/]/;
+// output (build/src/features/...).
+const FEATURE_FRAME_PATTERN = /[\\/]src[\\/]features[\\/]([a-z0-9]+(?:-[a-z0-9]+)*)[\\/]/;
 
 /**
  * The Feature that owns the innermost stack frame inside a Feature directory,
