@@ -24,6 +24,7 @@ import {
   AUTH_ROUTE_POLICIES,
   createAuthRoutes,
   createAccessRoutes,
+  isAllowed,
   liveListener,
   passwordChangeGate,
   resetLoginThrottle,
@@ -230,8 +231,12 @@ app.route('/api/auth', createAuthRoutes(activity.declare('auth', AUTH_ACTIVITY))
 app.route('/api/roles', createAccessRoutes(activity.declare('roles', ROLES_ACTIVITY)));
 composeUsersServer(app, { activity });
 composeActivityServer(app);
-// Live updates for signed-in browsers; Auth decides who is listening.
-app.get(EVENTS_PATH, createEventStream({ resolve: liveListener }));
+// Live updates for signed-in browsers; Auth decides who is listening and
+// whether they meet a topic's rule, as it does for every guarded route.
+app.get(
+  EVENTS_PATH,
+  createEventStream({ resolve: liveListener, allows: (listener, rule) => isAllowed(listener.userId, rule) }),
+);
 
 app.get('*', async (context, next) => {
   const requested = requestPath(context);

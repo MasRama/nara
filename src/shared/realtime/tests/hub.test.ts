@@ -3,18 +3,34 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   closeEventStreams,
   createEventStream,
+  liveTopic,
+  liveTopics,
   openEventStreamCount,
   publish,
   revalidate,
   type Listener,
 } from '../index';
+import type { AccessRule } from '../../security/access';
 import { readEvents } from './helpers';
 
 const signedIn = new Map<string, Listener>();
+/** Permissions per user; `*` stands for an administrator. */
+const granted = new Map<string, Set<string>>();
+
+function allows(listener: Listener, rule: AccessRule): boolean {
+  const held = granted.get(listener.userId) ?? new Set();
+  return held.has('*') || ('permission' in rule && held.has(rule.permission));
+}
+
+const billingChanged = liveTopic('billing.changed', { rule: { permission: 'billing.view' }, affected: true });
+const invoicesExported = liveTopic('invoices.exported', { rule: { permission: 'billing.view' } });
 
 function streamApp(options: { heartbeatMs?: number; maxPerUser?: number; maxConnections?: number } = {}) {
   const app = new Hono();
-  app.get('/events', createEventStream({ resolve: (context) => signedIn.get(context.req.header('x-session') ?? ''), ...options }));
+  app.get(
+    '/events',
+    createEventStream({ resolve: (context) => signedIn.get(context.req.header('x-session') ?? ''), allows, ...options }),
+  );
   return app;
 }
 
@@ -31,6 +47,7 @@ async function connect(app: Hono, sessionId: string, userId = `user-of-${session
 afterEach(() => {
   closeEventStreams();
   signedIn.clear();
+  granted.clear();
 });
 
 describe('live update hub', () => {
@@ -40,15 +57,46 @@ describe('live update hub', () => {
     await expect(response.json()).resolves.toMatchObject({ success: false, code: 'UNAUTHORIZED' });
   });
 
-  it('sends a topic only to the listeners the publisher picks', async () => {
+  it("sends a topic to its audience only: its rule's holders and the accounts a publication names", async () => {
     const app = streamApp();
-    const alice = await connect(app, 'alice-laptop', 'alice');
-    const bob = await connect(app, 'bob-phone', 'bob');
+    granted.set('alice', new Set(['billing.view']));
+    granted.set('root', new Set(['*']));
+    granted.set('erin', new Set(['billing.edit']));
+    const [alice, root, erin, bob, carol] = await Promise.all(
+      ['alice', 'root', 'erin', 'bob', 'carol'].map((user) => connect(app, `${user}-tab`, user)),
+    );
 
-    publish('billing.changed', (listener) => listener.userId === 'alice');
+    publish(billingChanged, ['bob']);
 
     expect(await alice.next()).toBe('billing.changed');
-    expect(await bob.next(100)).toBe('timeout');
+    expect(await root.next()).toBe('billing.changed');
+    expect(await bob.next()).toBe('billing.changed');
+    expect(await erin.next(100)).toBe('timeout');
+    expect(await carol.next(100)).toBe('timeout');
+  });
+
+  it('asks whether a listener meets the rule at each publication, not once at connect', async () => {
+    const app = streamApp();
+    granted.set('alice', new Set(['billing.view']));
+    const alice = await connect(app, 'alice-tab', 'alice');
+
+    granted.delete('alice');
+    publish(invoicesExported);
+    expect(await alice.next(100)).toBe('timeout');
+
+    granted.set('alice', new Set(['billing.view']));
+    publish(invoicesExported);
+    expect(await alice.next()).toBe('invoices.exported');
+  });
+
+  it('keeps one audience per topic and publishes only declared topics', () => {
+    expect(liveTopic('billing.changed', { rule: { permission: 'billing.view' }, affected: true })).toBe(billingChanged);
+    expect(liveTopics()).toEqual(expect.arrayContaining([billingChanged, invoicesExported]));
+    expect(() => liveTopic('billing.changed', { rule: { permission: 'billing.view' } })).toThrow('already declared');
+    expect(() => liveTopic('billing.changed', { rule: { administrator: true }, affected: true })).toThrow('already declared');
+
+    expect(() => publish({ name: 'billing.changed', audience: { affected: true } }, ['bob'])).toThrow('was not declared');
+    expect(() => publish(invoicesExported, ['bob'])).toThrow('does not reach affected accounts');
   });
 
   it('ends a stream whose session no longer resolves when its owner revalidates', async () => {

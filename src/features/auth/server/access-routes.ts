@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import {
-  AUTH_ROLES_EDITING_EVENT,
   createRoleInputSchema,
   rolesAccess,
   deleteRolesInputSchema,
@@ -21,7 +20,6 @@ import {
   type UpdateRoleInput,
 } from '../contract';
 import {
-  canViewRoles,
   createRoleWithPermissions,
   deleteRoles,
   findAllPermissions,
@@ -37,6 +35,7 @@ import {
 import { forbidden, jsonInput } from '../../../shared/security';
 import { createPresence, publish, type Presence } from '../../../shared/realtime';
 import { sessionGuard } from './guard';
+import { rolesEditingTopic } from './live';
 import { Logger } from '../../../shared/logging';
 import type { RolesActivitySink } from './activity';
 
@@ -259,7 +258,7 @@ const leaveEditingHandler = (context: Context, editors: Presence) => {
 
 export function createAccessRoutes(activity?: RolesActivitySink) {
   const editors = createPresence({
-    onChange: () => publish(AUTH_ROLES_EDITING_EVENT, (listener) => canViewRoles(listener.userId)),
+    onChange: () => publish(rolesEditingTopic),
   });
 
   return new Hono()

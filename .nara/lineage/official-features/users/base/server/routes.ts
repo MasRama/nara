@@ -24,13 +24,12 @@ import {
   type UsersMessageSuccess,
   type UsersManageAction,
   type UsersResponseSuccess,
-  USERS_EDITING_EVENT,
 } from '../contract';
 import { createPresence, publish } from '../../../shared/realtime';
 import { ADMINISTRATOR, createGuard, forbidden, jsonInput, queryInput } from '../../../shared/security';
 import { cleanupUserAvatarAssets } from './assets-routes';
 import type { UsersServerHost } from './host';
-import { announceAccountsChanged } from './live';
+import { announceAccountsChanged, usersTopics } from './live';
 
 const MAX_PAGE = 1_000_000;
 const MAX_PAGE_SIZE = 100;
@@ -84,10 +83,10 @@ function normalizedQueryInteger(raw: string | undefined, fallback: number, maxim
  * Auth-owned account rows with SQL.
  */
 export function createUserRoutes(host: UsersServerHost) {
+  // Declared with the routes, so the application knows both topics' audiences.
+  const topics = usersTopics(host.access);
   // Who has which account open, for whoever may view the directory.
-  const editors = createPresence({
-    onChange: () => publish(USERS_EDITING_EVENT, (listener) => host.allows(listener.userId, host.access.manage('view'))),
-  });
+  const editors = createPresence({ onChange: () => publish(topics.editing) });
 
   // The account provider is application-chosen; copy only declared fields so
   // provider-specific columns never reach the API.

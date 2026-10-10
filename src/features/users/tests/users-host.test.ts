@@ -766,6 +766,7 @@ describe('users host requirements with an alternative provider', () => {
           const userId = token === undefined ? undefined : state.actors.get(token);
           return userId === undefined ? undefined : { userId, sessionId: token! };
         },
+        allows: (listener, rule) => host.allows(listener.userId, rule),
       }),
     );
     const { id: adminId } = seedAccount(host, { name: 'Ada Admin' });

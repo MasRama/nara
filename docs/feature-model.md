@@ -305,7 +305,9 @@ listening. Events are signals, not data: a topic such as `activity.recorded`
 tells the page to refetch through its Feature's own client, so every
 permission check stays in the route that already makes it.
 
-- A Feature names its topics in `contract.ts` and publishes from its own server code with `publish(topic, listener => …)` from `src/shared/realtime`, choosing the recipients: Auth tells an account's other devices when its session list changes and tells accounts that may read roles when roles change; Activity announces only to accounts that may read Activity.
+- A Feature names its topics in `contract.ts` (`<NAME>_EVENT`) and declares each one with its audience through `liveTopic(name, { rule, affected })` from `src/shared/realtime`, when its routes are created: listeners meeting `rule` (the same `AccessRule` a route carries) receive every publication, and with `affected: true` so do the accounts a publication names. `publish(topic, affectedIds?)` takes only a declared topic, so a publisher picks who is affected but never widens the audience. Auth's session and account topics reach the accounts they name, its role topics reach `roles.view` holders, Users' reach whoever may view the directory plus the changed accounts, and Activity's reach whoever may read the feed.
+- The application's event stream asks Auth whether a listener meets a topic's rule, at every publication, with the check its guards make; a revoked grant stops events at once. A name declared again with the same audience returns the same topic, and with another audience throws.
+- The realtime matrix test (`src/app/realtime-matrix.test.ts`) is generated from the declared topics, as the authorization matrix is from the routes: it publishes each topic to an account without grants, a holder of its permission, an administrator, and an account the publication names, and fails when anyone outside the audience receives it, or anyone inside it does not. It also fails when a contract names a topic the composed application never declared.
 - Ending a session calls `revalidate`; a stream whose session no longer resolves gets `stream.ended` and closes. Each heartbeat (25 s) re-resolves the session too, so an expired session is noticed without a mutation.
 - In the browser, `onServerEvent(topic, handler)` from `src/shared/realtime/browser` subscribes and returns the unsubscribe function. After a dropped connection comes back, every handler runs again with `resumed: true`, because events sent meanwhile are lost.
 - `src/app/live-updates.ts` opens the stream while someone is signed in, sends the tab to the login page with a notice when its session ends elsewhere, and re-reads the account when `auth.account-changed` arrives, leaving a page whose permission is gone.
@@ -321,7 +323,7 @@ overwrites the other.
 - Each editable row has a `revision` column that every update raises. An update input carries the `revision` it was based on, and the repository writes with `WHERE id = ? AND revision = ?`. When nothing matches, the route answers `409 STALE_REVISION` with the record as it is now in `current`. Writes that are not form edits, such as an avatar upload, apply without a revision but still raise it.
 - In the browser, `mergeEdit(base, mine, theirs)` from `src/shared/realtime/browser` merges three versions of a form: a field only the other side changed follows them, a field only you changed stays yours, and a field you both changed differently is a conflict that keeps your value until you choose. Array fields such as permissions or roles merge as sets and never conflict. Pages run it when a change event announces a newer revision and when a save is refused as stale, and keep Save disabled while a conflict is open.
 - Presence is advisory. `createPresence({ onChange })` from `src/shared/realtime` keeps who is editing what in the process; entries expire after 30 s unless renewed. Pages call `keepEditing(id, client)`, which renews every `PRESENCE_RENEW_MS` (10 s) through `PUT /api/<resource>/:id/editing` and leaves through `DELETE` on close or `pagehide`. `GET /api/<resource>/editing` lists editors for whoever may view the resource, and `onChange` publishes the Feature's editing topic (`auth.roles-editing`, `users.editing`).
-- Users, though installable, uses all of this directly, since `src/shared/realtime` is part of the guaranteed substrate. Who hears its topics is the host's own rule: whoever `allows(id, access.manage('view'))` admits, plus the changed account for `users.changed`.
+- Users, though installable, uses all of this directly, since `src/shared/realtime` is part of the guaranteed substrate. Its topics carry the rule its binding chose, `access.manage('view')`, and `users.changed` also reaches the changed accounts.
 
 ## Shared code
 
@@ -347,7 +349,7 @@ installable Features can rely on it:
 - the Feature structure itself (`src/features/<feature>/`),
 - `src/shared/database/` (SQLite persistence engine),
 - `src/shared/config/` (environment and constants it reads),
-- `src/shared/realtime/` (Server-Sent Events `publish`, editing presence, and the browser's `onServerEvent`, `mergeEdit`, and `keepEditing`),
+- `src/shared/realtime/` (Server-Sent Events `liveTopic` and `publish`, editing presence, and the browser's `onServerEvent`, `mergeEdit`, and `keepEditing`),
 - `src/shared/security/` (route guards, `jsonInput`/`queryInput`, and the generic person and email input schemas),
 - `src/shared/storage/` (provider-neutral `AssetStorage` contract plus the local filesystem adapter).
 

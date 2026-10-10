@@ -1,5 +1,5 @@
 import { getDatabase } from '../../../shared/database';
-import { canViewRoles, syncUserRoles } from './access';
+import { syncUserRoles } from './access';
 import { accountsChanged, rolesChanged, sessionsChanged } from './live';
 
 /**
@@ -123,7 +123,7 @@ export function createAccountWithRoles(data: AccountCreateInput, roleIds?: strin
     return created;
   })();
   // Role member counts changed.
-  if (roleIds !== undefined && roleIds.length > 0) rolesChanged(canViewRoles);
+  if (roleIds !== undefined && roleIds.length > 0) rolesChanged();
   return account;
 }
 
@@ -176,7 +176,7 @@ export function updateAccountWithRoles(
   })();
   if (update.status === 'updated') {
     accountsChanged([userId]);
-    if (options.roleIds !== undefined) rolesChanged(canViewRoles);
+    if (options.roleIds !== undefined) rolesChanged();
   }
   return update;
 }
@@ -200,6 +200,6 @@ export function deleteAccounts(userIds: string[]): number {
   const placeholders = userIds.map(() => '?').join(', ');
   const deleted = getDatabase().prepare(`DELETE FROM users WHERE id IN (${placeholders})`).run(...userIds).changes;
   sessionsChanged(userIds);
-  if (deleted > 0) rolesChanged(canViewRoles);
+  if (deleted > 0) rolesChanged();
   return deleted;
 }

@@ -3,10 +3,14 @@ import { Hono } from 'hono';
 import { activityQuerySchema, type ActivityListSuccess } from '../contract';
 import type { ActivityServerHost } from './host';
 import { declaredActivity } from './catalog';
+import { activityRecordedTopic } from './live';
 import { listActivity } from './repository';
 import { createGuard, queryInput } from '../../../shared/security';
 
 export function createActivityRoutes(host: ActivityServerHost) {
+  // Declared with the route, before anything is recorded, so the application
+  // knows the feed's audience once it is composed.
+  activityRecordedTopic(host.access);
   const guard = createGuard(
     (context) => host.resolveActor(getCookie(context, host.sessionCookieName)),
     (actor, rule) => host.allows(actor.id, rule),

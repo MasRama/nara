@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getDatabase } from '../../../shared/database';
 import type { AccessRule } from '../../../shared/security';
-import { ADMIN_ROLE_SLUG, rolesAccess } from '../contract';
+import { ADMIN_ROLE_SLUG } from '../contract';
 import { accountsChanged, rolesChanged } from './live';
 
 export interface Role {
@@ -81,7 +81,7 @@ export function createRoleWithPermissions(
     replaceRolePermissions(database, created.id, permissionIds);
     return created;
   })();
-  rolesChanged(canViewRoles);
+  rolesChanged();
   return role;
 }
 
@@ -124,7 +124,7 @@ export function deleteRoles(roleIds: string[]): number {
   const placeholders = roleIds.map(() => '?').join(', ');
   const result = getDatabase().prepare(`DELETE FROM roles WHERE id IN (${placeholders})`).run(...roleIds);
   accountsChanged(members);
-  rolesChanged(canViewRoles);
+  rolesChanged();
   return result.changes;
 }
 
@@ -205,11 +205,6 @@ export function isAllowed(userId: string, rule: AccessRule): boolean {
   return isAdmin(userId) || ('permission' in rule && hasPermission(userId, rule.permission));
 }
 
-/** Who may read the role list, as the role routes decide it. */
-export function canViewRoles(userId: string): boolean {
-  return isAllowed(userId, rolesAccess('view'));
-}
-
 export function getUserCountsForRoles(roleIds: string[]): Map<string, number> {
   const counts = new Map(roleIds.map((roleId) => [roleId, 0]));
   if (roleIds.length === 0) return counts;
@@ -240,7 +235,7 @@ export function updateRoleWithPermissions(
   })();
   if (update.status === 'updated') {
     accountsChanged(getUsersWithRole(roleId).map((user) => user.id));
-    rolesChanged(canViewRoles);
+    rolesChanged();
   }
   return update;
 }

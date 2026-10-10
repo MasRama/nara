@@ -1,16 +1,17 @@
 import type { Context, Handler } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { declareRouteAccess, unauthorized } from '../security';
+import type { AccessRule } from '../security/access';
 import { STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
 
 export { EVENTS_PATH, PRESENCE_RENEW_MS, STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
 export { createPresence, type Editor, type Presence, type PresenceOptions } from './presence';
 
 /**
- * Business-neutral live updates over Server-Sent Events. A Feature publishes
- * a topic to the listeners it picks; the browser then refetches through that
- * Feature's own routes. Events carry no data, so every permission check stays
- * in the route that already makes it.
+ * Business-neutral live updates over Server-Sent Events. A Feature declares
+ * each topic with its audience and publishes it; the browser then refetches
+ * through that Feature's own routes. Events carry no data, so every
+ * permission check on what is shown stays in the route that already makes it.
  *
  * The hub lives in this process only: listeners connected to another server
  * process are not reached.
@@ -20,8 +21,55 @@ export interface Listener {
   sessionId: string;
 }
 
+/**
+ * Who receives a topic: listeners meeting `rule` receive every publication,
+ * and with `affected`, so do the accounts a publication names. It is stated
+ * once, with the topic, so every publication reaches the same people and the
+ * application's realtime matrix can check who that is.
+ */
+export type Audience =
+  | { readonly rule: AccessRule; readonly affected?: boolean }
+  | { readonly rule?: undefined; readonly affected: true };
+
+export interface Topic {
+  readonly name: string;
+  readonly audience: Audience;
+}
+
+const topics = new Map<string, Topic>();
+
+function audienceKey(audience: Audience): string {
+  const { rule } = audience;
+  const reach = rule === undefined ? 'no rule' : 'permission' in rule ? `permission ${rule.permission}` : 'administrator';
+  return `${reach}${audience.affected ? ' + affected' : ''}`;
+}
+
+/**
+ * Declares the topic `name` with its audience; declaring it again with the
+ * same audience returns the same topic, with another one throws. A Feature
+ * declares its topics when its routes are created, so they are all known
+ * once the application is composed.
+ */
+export function liveTopic(name: string, audience: Audience): Topic {
+  const declared = topics.get(name);
+  if (declared) {
+    if (audienceKey(declared.audience) === audienceKey(audience)) return declared;
+    throw new Error(`Live topic "${name}" is already declared for another audience`);
+  }
+  const topic: Topic = Object.freeze({ name, audience: Object.freeze({ ...audience }) });
+  topics.set(name, topic);
+  return topic;
+}
+
+/** Every topic declared in this process, in declaration order. */
+export function liveTopics(): Topic[] {
+  return [...topics.values()];
+}
+
 interface Connection {
   readonly listener: Listener;
+  /** Whether the listener meets the rule now; asked on every publication. */
+  allows(rule: AccessRule): boolean;
   /** Resolves the listener again from the original request (cookie), as on connect. */
   resolve(): Listener | undefined;
   /** Settles once the event is written or the stream failed. */
@@ -33,10 +81,23 @@ const connections = new Set<Connection>();
 
 const ending = new WeakSet<Connection>();
 
-/** Sends `topic` to every connected listener `to` selects, except streams already ending. */
-export function publish(topic: string, to: (listener: Listener) => boolean): void {
+/**
+ * Sends `topic` to its audience: listeners meeting its rule at this moment,
+ * and the `affected` accounts when the topic reaches them. Streams already
+ * ending are skipped.
+ */
+export function publish(topic: Topic, affected: Iterable<string> = []): void {
+  if (topics.get(topic.name) !== topic) throw new Error(`Live topic "${topic.name}" was not declared through liveTopic`);
+  const accounts = new Set(affected);
+  if (accounts.size > 0 && !topic.audience.affected) {
+    throw new Error(`Live topic "${topic.name}" does not reach affected accounts`);
+  }
+  const { rule } = topic.audience;
   for (const connection of connections) {
-    if (!ending.has(connection) && to(connection.listener)) void connection.send(topic);
+    if (ending.has(connection)) continue;
+    if (accounts.has(connection.listener.userId) || (rule !== undefined && connection.allows(rule))) {
+      void connection.send(topic.name);
+    }
   }
 }
 
@@ -75,6 +136,8 @@ export function openEventStreamCount(): number {
 export interface EventStreamOptions {
   /** Who is listening; `undefined` answers 401. Also re-run on every heartbeat. */
   resolve(context: Context): Listener | undefined;
+  /** Whether the listener meets a topic's rule; the same check the application's guards make. */
+  allows(listener: Listener, rule: AccessRule): boolean;
   /** Keep-alive comment and re-resolution interval. */
   heartbeatMs?: number;
   /** Open streams per user; connecting beyond it closes that user's oldest. */
@@ -112,6 +175,7 @@ export function createEventStream(options: EventStreamOptions): Handler {
       const write = (chunk: Promise<unknown>) => chunk.then(() => undefined, close);
       const connection: Connection = {
         listener,
+        allows: (rule) => options.allows(listener, rule),
         resolve: () => options.resolve(context),
         send: (event) => write(stream.writeSSE({ event, data: event })),
         close,
