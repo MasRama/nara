@@ -132,7 +132,8 @@ change before normal authenticated access. `NARA_ADMIN_NAME`,
 explicit password is treated as intentional and is not marked temporary.
 Existing administrator credentials are never reset by setup/bootstrap, and a
 non-admin collision on the requested bootstrap email is rejected without
-changes. Managed password resets are also temporary: sessions are revoked and
+changes. The bootstrap writes no SQL itself: Auth owns accounts and roles, and
+its `ensureAdministrator` makes the account. Managed password resets are also temporary: sessions are revoked and
 the target must choose a new password after the next login.
 
 ## Backup and integrity

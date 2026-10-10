@@ -38,6 +38,8 @@ export interface AccountCreateInput {
   name: AccountRecord['name'];
   email: AccountRecord['email'];
   passwordHash: string;
+  /** The password is temporary: the account must replace it before using the API. */
+  mustChangePassword?: boolean;
 }
 
 export interface AccountUpdateInput {
@@ -56,6 +58,11 @@ function boundedInteger(value: number, fallback: number, minimum: number, maximu
 
 function escapeLikeLiteral(value: string): string {
   return value.replace(/[!%_]/g, (character) => `!${character}`);
+}
+
+/** Whether any account uses the email, ignoring case. */
+export function accountEmailTaken(email: string): boolean {
+  return getDatabase().prepare('SELECT 1 FROM users WHERE lower(email) = lower(?)').get(email) !== undefined;
 }
 
 export function findAccountById(userId: string): AccountRecord | undefined {
@@ -88,10 +95,10 @@ export function createAccount(data: AccountCreateInput): AccountRecord {
   const now = Date.now();
   getDatabase()
     .prepare(
-      `INSERT INTO users (id, name, email, password, avatar, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, name, email, password, avatar, must_change_password, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(data.id, data.name, data.email, data.passwordHash, null, now, now);
+    .run(data.id, data.name, data.email, data.passwordHash, null, data.mustChangePassword ? 1 : 0, now, now);
   return findAccountById(data.id)!;
 }
 

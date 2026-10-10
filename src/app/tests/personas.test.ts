@@ -41,16 +41,30 @@ function testFiles(directory: string): string[] {
   });
 }
 
+function writesAuthTables(): RegExp {
+  const tables = authTables();
+  expect(tables).toEqual(expect.arrayContaining(['users', 'roles', 'user_roles', 'sessions']));
+  return new RegExp(`\\b(?:INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO|UPDATE|DELETE\\s+FROM)\\s+["\`]?(?:${tables.join('|')})\\b`, 'i');
+}
+
 describe('test personas', () => {
   it('leave writing Auth tables to Auth: tests elsewhere use these helpers', () => {
-    const tables = authTables();
-    expect(tables).toEqual(expect.arrayContaining(['users', 'roles', 'user_roles', 'sessions']));
-    const write = new RegExp(`\\b(?:INSERT\\s+(?:OR\\s+\\w+\\s+)?INTO|UPDATE|DELETE\\s+FROM)\\s+["\`]?(?:${tables.join('|')})\\b`, 'i');
+    const write = writesAuthTables();
     const offenders = ['src', 'official-features', 'tests']
       .flatMap((directory) => testFiles(join(ROOT, directory)))
       .filter((file) => write.test(readFileSync(file, 'utf8')))
       .map((file) => relative(ROOT, file))
       .filter((file) => !EXEMPT.has(file));
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('leave writing Auth tables to Auth in setup scripts too, which make the first administrator through it', () => {
+    const write = writesAuthTables();
+    const directory = join(ROOT, 'scripts');
+    const offenders = readdirSync(directory)
+      .filter((name) => name.endsWith('.ts') && write.test(readFileSync(join(directory, name), 'utf8')))
+      .map((name) => `scripts/${name}`);
 
     expect(offenders).toEqual([]);
   });

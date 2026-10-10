@@ -1,6 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import { getDatabase, migrate, seed } from '../src/shared/database';
-import { hashPassword, registerInputSchema } from '../src/features/auth';
+import { migrate, seed } from '../src/shared/database';
+import { ensureAdministrator, registerInputSchema } from '../src/features/auth';
 
 export const DEFAULT_ADMIN_NAME = 'Admin';
 export const DEFAULT_ADMIN_EMAIL = 'admin@nara.local';
@@ -37,63 +36,17 @@ export interface BootstrapAdminResult {
   password?: string;
 }
 
+/** Accounts and roles are Auth's; the first administrator is made through it. */
 export async function bootstrapAdmin(credentials = bootstrapCredentials()): Promise<BootstrapAdminResult> {
-  const database = getDatabase();
-  const existingAdmin = database
-    .prepare(
-      `SELECT users.email
-       FROM users
-       INNER JOIN user_roles ON user_roles.user_id = users.id
-       INNER JOIN roles ON roles.id = user_roles.role_id
-       WHERE roles.slug = 'admin'
-       ORDER BY users.created_at ASC
-       LIMIT 1`,
-    )
-    .get() as { email: string } | undefined;
-  if (existingAdmin) {
-    return { status: 'skipped', email: existingAdmin.email, temporaryPassword: false };
+  let administrator;
+  try {
+    administrator = await ensureAdministrator(credentials);
+  } catch (error) {
+    throw new Error(`Admin bootstrap refused: ${error instanceof Error ? error.message : String(error)}`);
   }
-
-  const existing = database
-    .prepare('SELECT id FROM users WHERE lower(email) = ?')
-    .get(credentials.email) as { id: string } | undefined;
-  if (existing) {
-    throw new Error(`Admin bootstrap refused: a non-admin user with email "${credentials.email}" already exists.`);
+  if (administrator.status === 'existing') {
+    return { status: 'skipped', email: administrator.email, temporaryPassword: false };
   }
-
-  const adminRole = database
-    .prepare('SELECT id FROM roles WHERE slug = ?')
-    .get('admin') as { id: string } | undefined;
-  if (!adminRole) {
-    throw new Error('Admin bootstrap could not find the admin role after reference seeding.');
-  }
-
-  const userId = randomUUID();
-  const now = Date.now();
-  const passwordHash = await hashPassword(credentials.password);
-  const insert = database.transaction(() => {
-    database
-      .prepare(
-        `INSERT INTO users (id, name, email, password, must_change_password, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        userId,
-        credentials.name,
-        credentials.email,
-        passwordHash,
-        credentials.temporaryPassword ? 1 : 0,
-        now,
-        now,
-      );
-    database
-      .prepare(
-        `INSERT INTO user_roles (id, user_id, role_id, created_at)
-         VALUES (?, ?, ?, ?)`,
-      )
-      .run(randomUUID(), userId, adminRole.id, now);
-  });
-  insert();
   return {
     status: 'created',
     email: credentials.email,
