@@ -7,6 +7,7 @@ import { Hono } from 'hono';
 import { MAINTENANCE, env } from '../shared/config';
 import {
   apiBodyLimit,
+  assertApiRoutesDeclareAccess,
   createRateLimiter,
   csrfProtection,
   declareRoutePolicies,
@@ -304,6 +305,8 @@ export function stopApplicationRuntime(): void {
 }
 
 export function initializeApplicationRuntime(): RuntimeHandle {
+  // An API route that forgot its guard would answer anyone; refuse to start instead.
+  assertApiRoutesDeclareAccess(app);
   const migrationResult = migrate();
   Logger.info('Database migrations ready', {
     applied: migrationResult.applied,

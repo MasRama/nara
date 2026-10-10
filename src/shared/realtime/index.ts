@@ -1,6 +1,6 @@
 import type { Context, Handler } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { unauthorized } from '../security';
+import { declareRouteAccess, unauthorized } from '../security';
 import { STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
 
 export { EVENTS_PATH, PRESENCE_RENEW_MS, STREAM_ENDED_EVENT, STREAM_READY_EVENT } from './protocol';
@@ -88,7 +88,8 @@ export function createEventStream(options: EventStreamOptions): Handler {
   const maxPerUser = options.maxPerUser ?? 10;
   const maxConnections = options.maxConnections ?? 10_000;
 
-  return (context) => {
+  // It answers 401 itself, so it declares the access a guard would.
+  return declareRouteAccess<Handler>((context) => {
     const listener = options.resolve(context);
     if (!listener) return unauthorized(context);
 
@@ -132,5 +133,5 @@ export function createEventStream(options: EventStreamOptions): Handler {
         connections.delete(connection);
       }
     });
-  };
+  }, 'signed-in');
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getCookie } from 'hono/cookie';
 import { Hono } from 'hono';
-import type { Context, MiddlewareHandler } from 'hono';
+import type { Context } from 'hono';
 import { z } from 'zod';
 import {
   createUserInputSchema,
@@ -216,11 +216,10 @@ export function createUserRoutes(host: UsersServerHost) {
 
   // Accounts may edit themselves; anyone else needs users.edit. Checked before
   // the body is validated, so callers without access learn nothing from 422s.
-  const canEditTarget: MiddlewareHandler = async (context, next) => {
-    const actor = guard.actor(context);
-    if (actor.id !== context.req.param('id') && !host.canManageUsers(actor.id, 'edit')) return forbidden(context);
-    await next();
-  };
+  // Anyone may edit their own account here; another account needs users.edit.
+  const canEditTarget = guard.allow(
+    (actor, context) => actor.id === context.req.param('id') || host.canManageUsers(actor.id, 'edit'),
+  );
 
   const updateUserHandler = async (context: Context, input: UpdateUserInput) => {
     const sessionUser = guard.actor(context);
@@ -409,7 +408,7 @@ export function createUserRoutes(host: UsersServerHost) {
     .patch('/me', guard.signedIn, jsonInput(profileInputSchema), (context) => updateProfileHandler(context, context.req.valid('json')))
     .get('/', canManage('view'), queryInput(listUsersQuerySchema), (context) => listUsersHandler(context, context.req.valid('query')))
     .post('/', canManage('create'), jsonInput(createUserInputSchema), (context) => createUserHandler(context, context.req.valid('json')))
-    .put('/:id', guard.signedIn, canEditTarget, jsonInput(updateUserInputSchema), (context) =>
+    .put('/:id', canEditTarget, jsonInput(updateUserInputSchema), (context) =>
       updateUserHandler(context, context.req.valid('json')),
     )
     .post(

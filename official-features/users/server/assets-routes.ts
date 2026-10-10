@@ -10,7 +10,7 @@ import {
   type AvatarUploadSuccess,
 } from '../contract';
 import { createUserAsset, deleteUserAsset, findUserAssetByUrl, findUserAssets } from './assets';
-import { createGuard, type Guard, type RoutePolicy } from '../../../shared/security';
+import { createGuard, publicRoute, type Guard, type RoutePolicy } from '../../../shared/security';
 import type { UsersServerHost } from './host';
 import { announceAccountsChanged } from './live';
 
@@ -215,5 +215,5 @@ export function createAssetRoutes(host: UsersServerHost) {
   const guard = createGuard((context) => host.resolveActor(getCookie(context, host.sessionCookieName)));
   return new Hono()
     .post('/avatar', guard.signedIn, uploadAvatarHandlerFor(host, guard))
-    .get('/avatar/:filename', serveAvatarHandlerFor(host));
+    .get('/avatar/:filename', publicRoute, serveAvatarHandlerFor(host));
 }

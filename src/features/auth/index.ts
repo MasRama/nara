@@ -49,7 +49,7 @@ export {
   isAdmin,
 } from './server/access';
 export { createAccessRoutes } from './server/access-routes';
-export { passwordChangeGate } from './server/password-change-gate';
+export { passwordChangeGate, TEMPORARY_PASSWORD_PATHS } from './server/password-change-gate';
 export type { AuthActivitySink, RolesActivitySink } from './server/activity';
 export { declarePermissions, syncDeclaredPermissions } from './server/permissions';
 export type { PermissionSyncResult } from './server/permissions';

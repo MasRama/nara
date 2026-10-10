@@ -5,8 +5,16 @@ export { apiBodyLimit } from './body-limit';
 export { declareRoutePolicies, routePolicyFor } from './route-policy';
 export type { RoutePolicy, RoutePolicyRegistry } from './route-policy';
 export { clientIp } from './ip';
-export { createGuard, forbidden, unauthorized } from './authorization';
-export type { Actor, Guard } from './authorization';
+export {
+  apiRoutes,
+  assertApiRoutesDeclareAccess,
+  createGuard,
+  declareRouteAccess,
+  forbidden,
+  publicRoute,
+  unauthorized,
+} from './authorization';
+export type { Actor, ApiRoute, Guard, RouteAccess } from './authorization';
 export { jsonInput, queryInput, validationErrors, validationFailed } from './validation';
 export type { PermissionDeclaration } from './permissions';
 export { ACTIVITY_KINDS } from './activity';

@@ -16,7 +16,7 @@ import {
   type TwoFactorStatusSuccess,
 } from '../contract';
 import { env } from '../../../shared/config';
-import { clientIp, createGuard, jsonInput } from '../../../shared/security';
+import { clientIp, createGuard, jsonInput, publicRoute } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import type { AuthActivitySink } from './activity';
 import { AUTH } from './config';
@@ -185,7 +185,7 @@ export function createSecurityRoutes(activity?: AuthActivitySink) {
     activity?.({ action, resource: 'auth', actorId: user.id, targetId: user.id, targetLabel: user.name, metadata });
 
   return new Hono()
-    .post('/two-factor/challenge', jsonInput(twoFactorChallengeInputSchema), (context) =>
+    .post('/two-factor/challenge', publicRoute, jsonInput(twoFactorChallengeInputSchema), (context) =>
       challengeHandler(context, context.req.valid('json'), activity),
     )
     .get('/sessions', accountGuard.signedIn, (context) => {

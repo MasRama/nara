@@ -1,56 +1,54 @@
 import { randomUUID } from 'node:crypto';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { app } from './server';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { app, resetSecurityState } from './server';
+import { TEMPORARY_PASSWORD_PATHS } from '../features/auth';
 import { getDatabase } from '../shared/database';
+import { closeEventStreams } from '../shared/realtime';
+import { apiRoutes, type ApiRoute } from '../shared/security';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../shared/security/tests/helpers';
 
 /**
- * Who may reach which API endpoint, pinned per endpoint and persona.
+ * Who may reach which API endpoint, derived from the routes the application
+ * actually mounts and the access their guards declare, so a Feature's new
+ * route is covered without editing this file.
  *
  * "Allowed" means authorization let the request through: the handler may still
- * answer 2xx, 404, 409, or 422, but never 401 or 403. Requests in the allowed
- * column use empty or unknown targets so they cannot change the personas.
+ * answer 2xx, 404, 409, or 422, but never 401 or 403. Requests use empty
+ * bodies and unknown targets so they cannot change the personas.
  */
-type Access = { kind: 'session' } | { kind: 'permission'; slug: string };
-
-interface Endpoint {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  path: string;
-  access: Access;
-  /** Reachable while the account still has to replace a temporary password. */
-  temporaryPasswordAllowed?: boolean;
-}
-
-const session: Access = { kind: 'session' };
-const permission = (slug: string): Access => ({ kind: 'permission', slug });
 const UNKNOWN_ID = 'f2a1c7de-0000-4000-8000-000000000000';
 
-const ENDPOINTS: Endpoint[] = [
-  { method: 'GET', path: '/api/auth/me', access: session, temporaryPasswordAllowed: true },
-  { method: 'POST', path: '/api/auth/change-password', access: session, temporaryPasswordAllowed: true },
-  { method: 'GET', path: '/api/auth/sessions', access: session },
-  { method: 'POST', path: '/api/auth/sessions/revoke-others', access: session },
-  { method: 'DELETE', path: `/api/auth/sessions/${UNKNOWN_ID}`, access: session },
-  { method: 'GET', path: '/api/auth/two-factor', access: session },
-  { method: 'POST', path: '/api/auth/two-factor/setup', access: session },
-  { method: 'POST', path: '/api/auth/two-factor/enable', access: session },
-  { method: 'POST', path: '/api/auth/two-factor/disable', access: session },
-  { method: 'POST', path: '/api/auth/two-factor/recovery-codes', access: session },
-  { method: 'GET', path: '/api/roles', access: permission('roles.view') },
-  { method: 'GET', path: '/api/roles/permissions', access: permission('roles.view') },
-  { method: 'POST', path: '/api/roles', access: permission('roles.create') },
-  { method: 'PUT', path: `/api/roles/${UNKNOWN_ID}`, access: permission('roles.edit') },
-  { method: 'DELETE', path: '/api/roles', access: permission('roles.delete') },
-  { method: 'GET', path: '/api/users/me', access: session },
-  { method: 'PATCH', path: '/api/users/me', access: session },
-  { method: 'GET', path: '/api/users', access: permission('users.view') },
-  { method: 'POST', path: '/api/users', access: permission('users.create') },
-  { method: 'PUT', path: `/api/users/${UNKNOWN_ID}`, access: permission('users.edit') },
-  { method: 'POST', path: `/api/users/${UNKNOWN_ID}/reset-password`, access: permission('users.reset-password') },
-  { method: 'DELETE', path: '/api/users', access: permission('users.delete') },
-  { method: 'POST', path: '/api/assets/avatar', access: session },
-  { method: 'GET', path: '/api/activity', access: permission('activity.view') },
-];
+/**
+ * Which permission admits each restricted route. Features leave the rule to
+ * their host, so the slug is the application's binding policy and is pinned
+ * here; a restricted route missing from this table fails the run.
+ */
+const PERMISSION_FOR: Record<string, string> = {
+  'GET /api/roles': 'roles.view',
+  'GET /api/roles/permissions': 'roles.view',
+  'GET /api/roles/editing': 'roles.view',
+  'PUT /api/roles/:id/editing': 'roles.edit',
+  'DELETE /api/roles/:id/editing': 'roles.edit',
+  'POST /api/roles': 'roles.create',
+  'PUT /api/roles/:id': 'roles.edit',
+  'DELETE /api/roles': 'roles.delete',
+  'GET /api/users/editing': 'users.view',
+  'PUT /api/users/:id/editing': 'users.edit',
+  'DELETE /api/users/:id/editing': 'users.edit',
+  'GET /api/users': 'users.view',
+  'POST /api/users': 'users.create',
+  'PUT /api/users/:id': 'users.edit',
+  'POST /api/users/:id/reset-password': 'users.reset-password',
+  'DELETE /api/users': 'users.delete',
+  'GET /api/activity': 'activity.view',
+};
+
+const AUTH_MOUNT = '/api/auth';
+const temporaryPasswordPaths = new Set(TEMPORARY_PASSWORD_PATHS.map((path) => `${AUTH_MOUNT}${path}`));
+
+const routes = apiRoutes(app);
+const label = (route: ApiRoute) => `${route.method} ${route.path}`;
+const target = (route: ApiRoute) => route.path.replace(/:[^/]+/g, UNKNOWN_ID);
 
 interface Persona {
   id: string;
@@ -99,16 +97,21 @@ function assignRole(userId: string, slug: string, permissionSlugs: string[]): vo
     .run(randomUUID(), userId, roleId, now);
 }
 
-async function call(endpoint: Endpoint, persona?: Persona): Promise<{ status: number; code?: string }> {
+async function call(route: ApiRoute, persona?: Persona): Promise<{ status: number; code?: string }> {
   const headers: Record<string, string> = {};
   let body: string | undefined;
-  if (endpoint.method === 'GET') {
+  if (route.method === 'GET') {
     if (persona) headers.Cookie = persona.cookie;
   } else {
     Object.assign(headers, csrfHeaders(await issueCsrf(app, persona?.cookie)), { 'Content-Type': 'application/json' });
     body = '{}';
   }
-  const response = await app.request(endpoint.path, { method: endpoint.method, headers, body });
+  const response = await app.request(target(route), { method: route.method, headers, body });
+  if (!response.headers.get('Content-Type')?.includes('application/json')) {
+    // An admitted live-update stream stays open; the status is the answer.
+    await response.body?.cancel();
+    return { status: response.status };
+  }
   const payload = (await response.json().catch(() => ({}))) as { code?: string };
   return { status: response.status, code: payload.code };
 }
@@ -133,39 +136,63 @@ describe('API authorization matrix', () => {
     getDatabase().prepare('UPDATE users SET must_change_password = 1 WHERE id = ?').run(temporary.id);
   });
 
-  for (const endpoint of ENDPOINTS) {
-    const label = `${endpoint.method} ${endpoint.path.replace(UNKNOWN_ID, ':id')}`;
+  // Public routes share the strict per-client limit; each case starts afresh.
+  beforeEach(() => resetSecurityState());
+  afterAll(() => closeEventStreams());
 
-    it(`${label} rejects anonymous callers with 401`, async () => {
-      expect(await call(endpoint)).toEqual({ status: 401, code: 'UNAUTHORIZED' });
+  it('covers every mounted API route, each declaring its access', () => {
+    expect(routes.length).toBeGreaterThan(0);
+    expect(routes.filter((route) => !route.access).map(label)).toEqual([]);
+  });
+
+  it('names the permission for exactly the restricted routes', () => {
+    const restricted = routes.filter((route) => route.access === 'restricted').map(label).sort();
+    expect(Object.keys(PERMISSION_FOR).sort()).toEqual(restricted);
+  });
+
+  for (const route of routes) {
+    if (route.access === 'public') {
+      // No sign-in is asked for; the handler may still refuse its input (an
+      // avatar filename it does not recognise answers 403).
+      it(`${label(route)} admits anonymous callers`, async () => {
+        const result = await call(route);
+        expect(result.status, `unexpected ${result.code ?? 'response'}`).not.toBe(401);
+        expect(result.status).toBeLessThan(500);
+      });
+      continue;
+    }
+
+    it(`${label(route)} rejects anonymous callers with 401`, async () => {
+      expect(await call(route)).toEqual({ status: 401, code: 'UNAUTHORIZED' });
     });
 
-    if (endpoint.access.kind === 'session') {
-      it(`${label} admits any signed-in account`, async () => {
-        expectAllowed(await call(endpoint, member));
+    if (route.access === 'signed-in') {
+      it(`${label(route)} admits any signed-in account`, async () => {
+        expectAllowed(await call(route, member));
       });
     } else {
-      const slug = endpoint.access.slug;
-      it(`${label} requires ${slug}`, async () => {
-        expect(await call(endpoint, member)).toEqual({ status: 403, code: 'FORBIDDEN' });
+      const slug = PERMISSION_FOR[label(route)];
+      it(`${label(route)} requires ${slug ?? 'a declared permission'}`, async () => {
+        expect(slug, 'name the permission in PERMISSION_FOR').toBeDefined();
+        expect(await call(route, member)).toEqual({ status: 403, code: 'FORBIDDEN' });
 
         const granted = await register(`Matrix ${slug}`);
         assignRole(granted.id, `matrix-${randomUUID()}`, [slug]);
-        expectAllowed(await call(endpoint, granted));
+        expectAllowed(await call(route, granted));
       });
     }
 
-    it(`${label} admits administrators`, async () => {
-      expectAllowed(await call(endpoint, admin));
+    it(`${label(route)} admits administrators`, async () => {
+      expectAllowed(await call(route, admin));
     });
 
-    if (endpoint.temporaryPasswordAllowed) {
-      it(`${label} stays reachable with a temporary password`, async () => {
-        expectAllowed(await call(endpoint, temporary));
+    if (temporaryPasswordPaths.has(route.path)) {
+      it(`${label(route)} stays reachable with a temporary password`, async () => {
+        expectAllowed(await call(route, temporary));
       });
     } else {
-      it(`${label} is blocked until a temporary password is replaced`, async () => {
-        expect(await call(endpoint, temporary)).toEqual({ status: 403, code: 'PASSWORD_CHANGE_REQUIRED' });
+      it(`${label(route)} is blocked until a temporary password is replaced`, async () => {
+        expect(await call(route, temporary)).toEqual({ status: 403, code: 'PASSWORD_CHANGE_REQUIRED' });
       });
     }
   }

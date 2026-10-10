@@ -17,7 +17,7 @@ import {
   type RegisterSuccess,
 } from '../contract';
 import { getUserPermissions, getUserRoles } from './access';
-import { clientIp, jsonInput, requestCsrfToken, type RoutePolicy } from '../../../shared/security';
+import { clientIp, jsonInput, publicRoute, requestCsrfToken, type RoutePolicy } from '../../../shared/security';
 import { Logger } from '../../../shared/logging';
 import {
   createUser,
@@ -242,14 +242,14 @@ export const AUTH_ROUTE_POLICIES = [
 
 export function createAuthRoutes(activity?: AuthActivitySink) {
   return new Hono()
-    .get('/csrf', csrfHandler)
-    .post('/register', jsonInput(registerInputSchema), (context) => registerHandler(context, context.req.valid('json'), activity))
-    .post('/login', jsonInput(loginInputSchema), (context) => loginHandler(context, context.req.valid('json'), activity))
+    .get('/csrf', publicRoute, csrfHandler)
+    .post('/register', publicRoute, jsonInput(registerInputSchema), (context) => registerHandler(context, context.req.valid('json'), activity))
+    .post('/login', publicRoute, jsonInput(loginInputSchema), (context) => loginHandler(context, context.req.valid('json'), activity))
     .post('/change-password', sessionGuard.signedIn, jsonInput(changePasswordInputSchema), (context) =>
       changePasswordHandler(context, context.req.valid('json'), activity),
     )
     .get('/me', sessionGuard.signedIn, currentUserHandler)
-    .post('/logout', (context) => logoutHandler(context, activity))
+    .post('/logout', publicRoute, (context) => logoutHandler(context, activity))
     .route('/', createSecurityRoutes(activity));
 }
 
