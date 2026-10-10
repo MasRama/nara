@@ -13,6 +13,7 @@ import { getDatabase, seed } from '../../../shared/database';
 import { syncDeclaredPermissions } from '../../auth';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
 import { usersWebHost } from '../../../app/bindings/users.web';
+import { grantAdmin, grantPermissions, revokeRoleFromEveryone, signUp } from '../../../app/tests/personas';
 import { createUsersClient } from '../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
@@ -197,58 +198,15 @@ function userIdForEmail(email: string): string {
   return row.id;
 }
 
-function roleIdForSlug(slug: string): string {
-  const row = getDatabase().prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string } | undefined;
-  if (!row) throw new Error(`Missing test role ${slug}`);
-  return row.id;
-}
-
-function assignRole(userId: string, slug: string): void {
-  getDatabase()
-    .prepare('INSERT OR IGNORE INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(randomUUID(), userId, roleIdForSlug(slug), Date.now());
-}
-
-function ensureTestRole(slug: string, permissionSlugs: string[]): string {
-  const database = getDatabase();
-  const existing = database.prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string } | undefined;
-  const roleId = existing?.id ?? randomUUID();
-  if (!existing) {
-    const now = Date.now();
-    database
-      .prepare(
-        `INSERT INTO roles (id, name, slug, description, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(roleId, slug, slug, 'Browser test role', now, now);
-  }
-  const permission = database.prepare('SELECT id FROM permissions WHERE slug = ?');
-  const insert = database.prepare(
-    'INSERT OR IGNORE INTO role_permissions (id, role_id, permission_id, created_at) VALUES (?, ?, ?, ?)',
-  );
-  for (const permissionSlug of permissionSlugs) {
-    const row = permission.get(permissionSlug) as { id: string } | undefined;
-    if (!row) throw new Error(`Missing test permission ${permissionSlug}`);
-    insert.run(randomUUID(), roleId, row.id, Date.now());
-  }
-  return roleId;
-}
-
 async function startAuthenticatedAdmin(email = `${randomUUID()}@example.com`): Promise<void> {
   adoptCookieString(await registerDirect(email, 'Browser Administrator'));
-  assignRole(userIdForEmail(email), 'admin');
+  grantAdmin(userIdForEmail(email));
   await usersWebHost.refreshSession();
 }
 
 async function startAuthenticatedManager(email = `${randomUUID()}@example.com`): Promise<void> {
-  const roleSlug = `browser-manager-${randomUUID()}`;
-  ensureTestRole(roleSlug, ['users.view', 'users.edit']);
   adoptCookieString(await registerDirect(email, 'Browser Manager'));
-  const userId = userIdForEmail(email);
-  const roleId = roleIdForSlug(roleSlug);
-  getDatabase()
-    .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(randomUUID(), userId, roleId, Date.now());
+  grantPermissions(userIdForEmail(email), ['users.view', 'users.edit']);
   await usersWebHost.refreshSession();
 }
 
@@ -856,9 +814,15 @@ describe('users administration browser surfaces', () => {
     setInput('#user-name', 'Mine');
     // Another administrator saves first, changing the name and the email.
     const theirEmail = `${randomUUID()}@example.com`;
-    getDatabase()
-      .prepare('UPDATE users SET name = ?, email = ?, revision = revision + 1 WHERE id = ?')
-      .run('Theirs', theirEmail, targetId);
+    const colleague = await signUp('Other Administrator');
+    grantAdmin(colleague.id);
+    const colleagueCsrf = await issueCsrf(serverApp, colleague.cookie);
+    const theirSave = await serverApp.request(`/api/users/${targetId}`, {
+      method: 'PUT',
+      headers: { ...csrfHeaders(colleagueCsrf), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ revision: 1, name: 'Theirs', email: theirEmail }),
+    });
+    expect(theirSave.status).toBe(200);
 
     submitForm('[data-testid="user-form"]');
     await settle();
@@ -884,22 +848,16 @@ describe('users administration browser surfaces', () => {
   });
 
   it('surfaces last-admin protection through the users browser client', async () => {
-    const adminRoleId = roleIdForSlug('admin');
-    getDatabase().prepare('DELETE FROM user_roles WHERE role_id = ?').run(adminRoleId);
+    revokeRoleFromEveryone('admin');
 
-    const managerRoleSlug = `browser-delete-manager-${randomUUID()}`;
-    ensureTestRole(managerRoleSlug, ['users.view', 'users.delete']);
     const managerEmail = `${randomUUID()}@example.com`;
     const managerCookie = await registerDirect(managerEmail, 'Delete Manager');
-    const managerId = userIdForEmail(managerEmail);
-    getDatabase()
-      .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-      .run(randomUUID(), managerId, roleIdForSlug(managerRoleSlug), Date.now());
+    grantPermissions(userIdForEmail(managerEmail), ['users.view', 'users.delete']);
 
     const adminEmail = `${randomUUID()}@example.com`;
     await registerDirect(adminEmail, 'Sole Administrator');
     const adminId = userIdForEmail(adminEmail);
-    assignRole(adminId, 'admin');
+    grantAdmin(adminId);
 
     setJar(managerCookie);
     await usersWebHost.refreshSession();

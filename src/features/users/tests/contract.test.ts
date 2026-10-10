@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app } from '../../../app/server';
 import { usersWebHost } from '../../../app/bindings/users.web';
-import { getDatabase } from '../../../shared/database';
+import { grantAdmin } from '../../../app/tests/personas';
 import { installBrowser, type TestBrowser } from '../../../shared/security/tests/browser';
 import { usersResponseSchemas } from '../contract';
 import { createUsersClient } from '../web/client';
@@ -18,23 +18,6 @@ const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
   'base64',
 );
-
-function makeAdmin(userId: string): void {
-  const database = getDatabase();
-  const existing = database.prepare("SELECT id FROM roles WHERE slug = 'admin'").get() as { id: string } | undefined;
-  const roleId = existing?.id ?? randomUUID();
-  if (!existing) {
-    database
-      .prepare(
-        `INSERT INTO roles (id, name, slug, description, created_at, updated_at)
-         VALUES (?, 'Administrator', 'admin', NULL, ?, ?)`,
-      )
-      .run(roleId, Date.now(), Date.now());
-  }
-  database
-    .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(randomUUID(), userId, roleId, Date.now());
-}
 
 const schemas = usersResponseSchemas();
 
@@ -81,7 +64,7 @@ describe('users web client contract', () => {
     const admin = await browser.signUp('Users Administrator');
     expect(schemas.error.parse(await client.listUsers())).toMatchObject({ code: 'FORBIDDEN' });
 
-    makeAdmin(admin.id);
+    grantAdmin(admin.id);
     schemas.users.parse(await client.listUsers({ page: 1, limit: 5, search: 'Administrator' }));
 
     const email = `${randomUUID()}@example.com`;

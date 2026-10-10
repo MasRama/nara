@@ -10,6 +10,7 @@ import { getDatabase, seed } from '../../shared/database';
 import { closeEventStreams } from '../../shared/realtime';
 import { readEvents, type EventReader } from '../../shared/realtime/tests/helpers';
 import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../shared/security/tests/helpers';
+import { grantRole } from './personas';
 
 /**
  * The open tab follows the server: the real application streams events and a
@@ -100,19 +101,12 @@ async function asDevice(cookie: string, path: string, method: string, body?: unk
   return { status: response.status, cookie: mergeResponseCookies(state.cookie, response) };
 }
 
-async function register(): Promise<{ id: string; email: string; cookie: string }> {
+async function register(name = 'Live Browser'): Promise<{ id: string; email: string; cookie: string }> {
   const email = `${randomUUID()}@example.com`;
-  const { status, cookie } = await asDevice('', '/api/auth/register', 'POST', { name: 'Live Browser', email, password: PASSWORD });
+  const { status, cookie } = await asDevice('', '/api/auth/register', 'POST', { name, email, password: PASSWORD });
   expect(status).toBe(201);
   const row = getDatabase().prepare('SELECT id FROM users WHERE email = ?').get(email) as { id: string };
   return { id: row.id, email, cookie };
-}
-
-function grantRole(userId: string, slug: string): void {
-  const role = getDatabase().prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string };
-  getDatabase()
-    .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(randomUUID(), userId, role.id, Date.now());
 }
 
 /** Opens the app in this tab as the account behind `cookie`. */
@@ -298,9 +292,8 @@ describe('live updates in the open tab', () => {
   it('shows who else has the same role open, and drops them when they close it', async () => {
     const admin = await register();
     grantRole(admin.id, 'admin');
-    const colleague = await register();
+    const colleague = await register('Grace Colleague');
     grantRole(colleague.id, 'admin');
-    getDatabase().prepare('UPDATE users SET name = ? WHERE id = ?').run('Grace Colleague', colleague.id);
     const slug = `live-${randomUUID().slice(0, 8)}`;
     expect((await asDevice(colleague.cookie, '/api/roles', 'POST', { name: 'Live Editors', slug, permissions: [] })).status).toBe(201);
     const role = getDatabase().prepare('SELECT id FROM roles WHERE slug = ?').get(slug) as { id: string };

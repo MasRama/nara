@@ -4,40 +4,8 @@ import { app } from '../../../app/server';
 import { pruneExpiredActivity, recordActivity } from '../index';
 import { pruneActivityBefore } from '../server/repository';
 import { getDatabase } from '../../../shared/database';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-
-async function registerUser(name: string): Promise<{ cookie: string; id: string }> {
-  const bootstrap = await issueCsrf(app);
-  const response = await app.request('/api/auth/register', {
-    method: 'POST',
-    headers: { ...csrfHeaders(bootstrap), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name,
-      email: `${randomUUID()}@example.com`,
-      password: 'correct horse battery staple',
-    }),
-  });
-  expect(response.status).toBe(201);
-  const payload = (await response.json()) as { data: { user: { id: string } } };
-  return { cookie: mergeResponseCookies(bootstrap.cookie, response), id: payload.data.user.id };
-}
-
-function makeAdmin(userId: string): void {
-  const database = getDatabase();
-  const existing = database.prepare('SELECT id FROM roles WHERE slug = ?').get('admin') as { id: string } | undefined;
-  const roleId = existing?.id ?? randomUUID();
-  if (!existing) {
-    database
-      .prepare(
-        `INSERT INTO roles (id, name, slug, description, created_at, updated_at)
-         VALUES (?, 'Administrator', 'admin', 'Test administrator', ?, ?)`,
-      )
-      .run(roleId, Date.now(), Date.now());
-  }
-  database
-    .prepare('INSERT OR IGNORE INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(randomUUID(), userId, roleId, Date.now());
-}
+import { csrfHeaders, issueCsrf } from '../../../shared/security/tests/helpers';
+import { grantAdmin, signUp } from '../../../app/tests/personas';
 
 describe('activity capability', () => {
   it('prunes old activity in bounded batches without touching recent events', () => {
@@ -77,11 +45,11 @@ describe('activity capability', () => {
     const anonymous = await app.request('/api/activity');
     expect(anonymous.status).toBe(401);
 
-    const actor = await registerUser('Activity Administrator');
+    const actor = await signUp('Activity Administrator');
     const forbidden = await app.request('/api/activity', { headers: { Cookie: actor.cookie } });
     expect(forbidden.status).toBe(403);
 
-    makeAdmin(actor.id);
+    grantAdmin(actor.id);
     const registration = await app.request(
       `/api/activity?action=auth.registered&actorId=${encodeURIComponent(actor.id)}`,
       { headers: { Cookie: actor.cookie } },
@@ -132,8 +100,8 @@ describe('activity capability', () => {
   });
 
   it('records managed user mutations through the application-owned Users binding', async () => {
-    const actor = await registerUser('User Activity Administrator');
-    makeAdmin(actor.id);
+    const actor = await signUp('User Activity Administrator');
+    grantAdmin(actor.id);
 
     const targetName = `Managed ${randomUUID().slice(0, 8)}`;
     const csrf = await issueCsrf(app, actor.cookie);
@@ -171,8 +139,8 @@ describe('activity capability', () => {
   });
 
   it('serves the actions reporting Features declared, so the feed labels them without listing them', async () => {
-    const actor = await registerUser('Declared Activity Reader');
-    makeAdmin(actor.id);
+    const actor = await signUp('Declared Activity Reader');
+    grantAdmin(actor.id);
 
     const response = await app.request('/api/activity', { headers: { Cookie: actor.cookie } });
     expect(response.status).toBe(200);

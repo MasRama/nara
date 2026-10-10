@@ -42,11 +42,14 @@ export type {
   UpdateRoleInput,
 } from './contract';
 export {
+  createRoleWithPermissions,
+  findAllPermissions,
   findAllRoles,
   getUserRoles,
   getUsersWithRole,
   hasPermission,
   isAdmin,
+  syncUserRoles,
 } from './server/access';
 export { createAccessRoutes } from './server/access-routes';
 export { passwordChangeGate, TEMPORARY_PASSWORD_PATHS } from './server/password-change-gate';

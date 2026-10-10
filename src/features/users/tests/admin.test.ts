@@ -2,40 +2,13 @@ import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { app } from '../../../app/server';
 import { getDatabase } from '../../../shared/database';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
+import { csrfHeaders, issueCsrf } from '../../../shared/security/tests/helpers';
+import { grantAdmin, signUp } from '../../../app/tests/personas';
 
-async function registerAdmin(email = `${randomUUID()}@example.com`, name = 'User Administrator'): Promise<string> {
-  const bootstrap = await issueCsrf(app);
-  const response = await app.request('/api/auth/register', {
-    method: 'POST',
-    headers: { ...csrfHeaders(bootstrap), 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name,
-      email,
-      password: 'correct horse battery staple',
-    }),
-  });
-  const cookie = mergeResponseCookies(bootstrap.cookie, response);
-  if (!cookie.includes('auth_id=')) throw new Error('Registration did not return a session cookie');
-  const payload = (await response.json()) as { data: { user: { id: string } } };
-  const database = getDatabase();
-  const existingRole = database.prepare('SELECT id FROM roles WHERE slug = ?').get('admin') as { id: string } | undefined;
-  const roleId = existingRole?.id ?? randomUUID();
-  if (!existingRole) {
-    database
-      .prepare(
-        `INSERT INTO roles (id, name, slug, description, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(roleId, 'Administrator', 'admin', 'Test administrator', Date.now(), Date.now());
-  }
-  database.prepare('INSERT OR IGNORE INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)').run(
-    randomUUID(),
-    payload.data.user.id,
-    roleId,
-    Date.now(),
-  );
-  return cookie;
+async function registerAdmin(email?: string, name = 'User Administrator'): Promise<string> {
+  const admin = await signUp(name, email);
+  grantAdmin(admin.id);
+  return admin.cookie;
 }
 
 async function mutate(cookie: string, path: string, method: string, body: unknown) {

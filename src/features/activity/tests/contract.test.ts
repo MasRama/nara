@@ -1,27 +1,9 @@
-import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { app } from '../../../app/server';
-import { getDatabase } from '../../../shared/database';
+import { grantPermissions } from '../../../app/tests/personas';
 import { installBrowser, type TestBrowser } from '../../../shared/security/tests/browser';
 import { activityResponseSchemas } from '../contract';
 import { createActivityClient } from '../web';
-
-function grantActivityView(userId: string): void {
-  const database = getDatabase();
-  const existing = database.prepare("SELECT id FROM roles WHERE slug = 'admin'").get() as { id: string } | undefined;
-  const roleId = existing?.id ?? randomUUID();
-  if (!existing) {
-    database
-      .prepare(
-        `INSERT INTO roles (id, name, slug, description, created_at, updated_at)
-         VALUES (?, 'Administrator', 'admin', NULL, ?, ?)`,
-      )
-      .run(roleId, Date.now(), Date.now());
-  }
-  database
-    .prepare('INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)')
-    .run(randomUUID(), userId, roleId, Date.now());
-}
 
 const { error: activityErrorSchema, listSuccess: activityListSuccessSchema } = activityResponseSchemas();
 
@@ -38,7 +20,7 @@ describe('activity web client contract', () => {
   });
 
   it('lists activity in the declared success shape', async () => {
-    grantActivityView((await browser.signUp()).id);
+    grantPermissions((await browser.signUp()).id, ['activity.view']);
     expect(browser.cookieHeader()).toContain('auth_id=');
 
     const all = activityListSuccessSchema.parse(await client.list());
@@ -57,7 +39,7 @@ describe('activity web client contract', () => {
     const { id: userId } = await browser.signUp();
     expect(activityErrorSchema.parse(await client.list())).toMatchObject({ code: 'FORBIDDEN' });
 
-    grantActivityView(userId);
+    grantPermissions(userId, ['activity.view']);
     expect(activityErrorSchema.parse(await client.list({ limit: 1000 }))).toMatchObject({
       code: 'VALIDATION_ERROR',
       errors: { limit: expect.any(Array) },
