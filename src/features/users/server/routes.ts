@@ -27,7 +27,7 @@ import {
   USERS_EDITING_EVENT,
 } from '../contract';
 import { createPresence, publish } from '../../../shared/realtime';
-import { createGuard, forbidden, jsonInput, queryInput } from '../../../shared/security';
+import { ADMINISTRATOR, createGuard, forbidden, jsonInput, queryInput } from '../../../shared/security';
 import { cleanupUserAvatarAssets } from './assets-routes';
 import type { UsersServerHost } from './host';
 import { announceAccountsChanged } from './live';
@@ -35,8 +35,8 @@ import { announceAccountsChanged } from './live';
 const MAX_PAGE = 1_000_000;
 const MAX_PAGE_SIZE = 100;
 
-function isUniqueConstraintError(error: unknown): boolean {
-  return error instanceof Error && 'code' in error && error.code === 'SQLITE_CONSTRAINT_UNIQUE';
+function duplicateEmail(context: Context) {
+  return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
 }
 
 function validationFailure(context: Context, field: string, messages: string[]) {
@@ -46,8 +46,8 @@ function validationFailure(context: Context, field: string, messages: string[]) 
   );
 }
 
-function adminRoleId(host: UsersServerHost): string | undefined {
-  return host.availableRoles().find((role) => role.slug === 'admin')?.id;
+function administratorRoleIds(host: UsersServerHost): Set<string> {
+  return new Set(host.availableRoles().flatMap((role) => (role.administrator ? [role.id] : [])));
 }
 
 function resolveRoleIds(host: UsersServerHost, slugs: string[]): { ids: string[]; unknown: string[] } {
@@ -118,42 +118,36 @@ export function createUserRoutes(host: UsersServerHost) {
     const sessionUser = guard.actor(context);
 
     const { revision, ...profile } = input;
-    try {
-      const update = host.updateAccount(sessionUser.id, profile, { revision });
-      if (update.status === 'missing') {
-        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
-      }
-      if (update.status === 'stale') {
-        return context.json(
-          {
-            success: false as const,
-            message: 'Your profile changed elsewhere since you opened it',
-            code: STALE_REVISION,
-            current: toProfile(update.account),
-          },
-          409,
-        );
-      }
-      const user = update.account;
-      announceAccountsChanged(host, [user.id]);
-      host.recordActivity?.({
-        action: 'users.profile-updated',
-        resource: 'users',
-        actorId: sessionUser.id,
-        targetId: user.id,
-        targetLabel: user.name,
-      });
-      return context.json({
-        success: true as const,
-        message: 'Profile updated',
-        data: { user: toProfile(user) },
-      } satisfies UserProfileSuccess);
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
-      }
-      throw error;
+    const update = host.updateAccount(sessionUser.id, profile, { revision });
+    if (update.status === 'duplicate-email') return duplicateEmail(context);
+    if (update.status === 'missing') {
+      return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     }
+    if (update.status === 'stale') {
+      return context.json(
+        {
+          success: false as const,
+          message: 'Your profile changed elsewhere since you opened it',
+          code: STALE_REVISION,
+          current: toProfile(update.account),
+        },
+        409,
+      );
+    }
+    const user = update.account;
+    announceAccountsChanged(host, [user.id]);
+    host.recordActivity?.({
+      action: 'users.profile-updated',
+      resource: 'users',
+      actorId: sessionUser.id,
+      targetId: user.id,
+      targetLabel: user.name,
+    });
+    return context.json({
+      success: true as const,
+      message: 'Profile updated',
+      data: { user: toProfile(user) },
+    } satisfies UserProfileSuccess);
   };
 
   const listUsersHandler = (context: Context, query: z.output<typeof listUsersQuerySchema>) => {
@@ -187,35 +181,30 @@ export function createUserRoutes(host: UsersServerHost) {
       );
     }
 
-    try {
-      const user = host.createAccount(
-        {
-          id: randomUUID(),
-          name: input.name,
-          email: input.email,
-          passwordHash: await host.hashPassword(input.password),
-        },
-        roleSelection?.ids,
-      );
-      announceAccountsChanged(host, [user.id]);
-      host.recordActivity?.({
-        action: 'users.created',
-        resource: 'users',
-        actorId: sessionUser.id,
-        targetId: user.id,
-        targetLabel: user.name,
-        metadata: { rolesAssigned: roleSelection?.ids.length ?? 0 },
-      });
-      return context.json(
-        { success: true as const, message: 'User created', data: { user: withRoles(user) } } satisfies ManagedUserResponseSuccess,
-        201,
-      );
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
-      }
-      throw error;
-    }
+    const created = host.createAccount(
+      {
+        id: randomUUID(),
+        name: input.name,
+        email: input.email,
+        passwordHash: await host.hashPassword(input.password),
+      },
+      roleSelection?.ids,
+    );
+    if (created.status === 'duplicate-email') return duplicateEmail(context);
+    const user = created.account;
+    announceAccountsChanged(host, [user.id]);
+    host.recordActivity?.({
+      action: 'users.created',
+      resource: 'users',
+      actorId: sessionUser.id,
+      targetId: user.id,
+      targetLabel: user.name,
+      metadata: { rolesAssigned: roleSelection?.ids.length ?? 0 },
+    });
+    return context.json(
+      { success: true as const, message: 'User created', data: { user: withRoles(user) } } satisfies ManagedUserResponseSuccess,
+      201,
+    );
   };
 
   // Accounts may edit themselves; anyone else needs the edit rule. Checked
@@ -235,7 +224,7 @@ export function createUserRoutes(host: UsersServerHost) {
 
     const target = host.findAccountById(userId);
     if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
-    const targetIsAdmin = host.rolesForUser(userId).includes('admin');
+    const targetIsAdmin = host.allows(userId, ADMINISTRATOR);
     if (!self && targetIsAdmin && !actorIsAdmin) {
       return forbidden(context, 'Only administrators may modify an administrator account', 'PROTECTED_ADMIN');
     }
@@ -255,9 +244,9 @@ export function createUserRoutes(host: UsersServerHost) {
       );
     }
 
-    if (self && roleSelection !== undefined) {
-      const adminId = adminRoleId(host);
-      if (adminId && !roleSelection.ids.includes(adminId)) {
+    if (self && roleSelection !== undefined && targetIsAdmin) {
+      const administratorRoles = administratorRoleIds(host);
+      if (!roleSelection.ids.some((id) => administratorRoles.has(id))) {
         return context.json(
           { success: false as const, message: 'Cannot remove admin role from yourself', code: 'SELF_DEMOTION' as const },
           400,
@@ -269,47 +258,41 @@ export function createUserRoutes(host: UsersServerHost) {
       return validationFailure(context, 'password', ['Use the dedicated reset-password endpoint for managed credentials']);
     }
 
-    try {
-      const update = host.updateAccount(userId, profile, { revision, ...(roleSelection ? { roleIds: roleSelection.ids } : {}) });
-      if (update.status === 'missing') {
-        return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
-      }
-      if (update.status === 'stale') {
-        return context.json(
-          {
-            success: false as const,
-            message: 'Someone else changed this account since you opened it',
-            code: STALE_REVISION,
-            current: withRoles(update.account),
-          },
-          409,
-        );
-      }
-      const user = update.account;
-      announceAccountsChanged(host, [user.id]);
-      host.recordActivity?.({
-        action: 'users.updated',
-        resource: 'users',
-        actorId: sessionUser.id,
-        targetId: user.id,
-        targetLabel: user.name,
-        metadata: {
-          self: self,
-          rolesChanged: roleSelection !== undefined,
-          emailChanged: profile.email !== undefined,
-        },
-      });
-      return context.json({
-        success: true as const,
-        message: 'User updated',
-        data: { user: withRoles(user) },
-      } satisfies ManagedUserResponseSuccess);
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        return context.json({ success: false as const, message: 'Email already in use', code: 'DUPLICATE_EMAIL' as const }, 409);
-      }
-      throw error;
+    const update = host.updateAccount(userId, profile, { revision, ...(roleSelection ? { roleIds: roleSelection.ids } : {}) });
+    if (update.status === 'duplicate-email') return duplicateEmail(context);
+    if (update.status === 'missing') {
+      return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     }
+    if (update.status === 'stale') {
+      return context.json(
+        {
+          success: false as const,
+          message: 'Someone else changed this account since you opened it',
+          code: STALE_REVISION,
+          current: withRoles(update.account),
+        },
+        409,
+      );
+    }
+    const user = update.account;
+    announceAccountsChanged(host, [user.id]);
+    host.recordActivity?.({
+      action: 'users.updated',
+      resource: 'users',
+      actorId: sessionUser.id,
+      targetId: user.id,
+      targetLabel: user.name,
+      metadata: {
+        self: self,
+        rolesChanged: roleSelection !== undefined,
+        emailChanged: profile.email !== undefined,
+      },
+    });
+    return context.json({
+      success: true as const,
+      message: 'User updated',
+      data: { user: withRoles(user) },
+    } satisfies ManagedUserResponseSuccess);
   };
 
   const resetPasswordHandler = async (context: Context, input: ResetUserPasswordInput) => {
@@ -328,7 +311,7 @@ export function createUserRoutes(host: UsersServerHost) {
     const target = host.findAccountById(userId);
     if (!target) return context.json({ success: false as const, message: 'User not found', code: 'NOT_FOUND' as const }, 404);
     const actorIsAdmin = mayAssignRoles(sessionUser.id);
-    if (host.rolesForUser(userId).includes('admin') && !actorIsAdmin) {
+    if (host.allows(userId, ADMINISTRATOR) && !actorIsAdmin) {
       return forbidden(context, 'Only administrators may reset an administrator password', 'PROTECTED_ADMIN');
     }
 
@@ -355,12 +338,9 @@ export function createUserRoutes(host: UsersServerHost) {
       return context.json({ success: false as const, message: 'Cannot delete your own account', code: 'SELF_DELETE' as const }, 400);
     }
 
-    const adminId = adminRoleId(host);
-    if (adminId) {
-      const remainingAdmins = host.usersWithRole(adminId).filter((user) => !input.ids.includes(user.id));
-      if (remainingAdmins.length === 0) {
-        return context.json({ success: false as const, message: 'Cannot delete the last admin', code: 'LAST_ADMIN' as const }, 400);
-      }
+    const administrators = host.administrators();
+    if (administrators.length > 0 && administrators.every((administrator) => input.ids.includes(administrator.id))) {
+      return context.json({ success: false as const, message: 'Cannot delete the last admin', code: 'LAST_ADMIN' as const }, 400);
     }
 
     const targets = input.ids.flatMap((userId) => {

@@ -56,22 +56,25 @@ export default createRouter({
 });
 `;
 
-const AUTH_BOUNDARY = `export const createAccountWithRoles = (): unknown => ({});
+const AUTH_BOUNDARY = `export const ADMIN_ROLE_SLUG = 'admin';
+export const createAccountWithRoles = (): unknown => ({});
 export const declarePermissions = (): void => {};
 export const deleteAccounts = (): number => 0;
 export const findAccountById = (): undefined => undefined;
+export const findAdministrators = (): Array<{ id: string }> => [];
 export const findAllRoles = (): Array<{ id: string; slug: string }> => [];
 export const getCurrentUser = (): undefined => undefined;
 export const getUserRoles = (): Array<{ slug: string }> => [];
-export const getUsersWithRole = (): Array<{ id: string }> => [];
 export const hashPassword = async (password: string): Promise<string> => password;
 export const isAllowed = (): boolean => false;
+export const isDuplicateEmailError = (): boolean => false;
 export const listAccounts = (): { data: unknown[]; total: number } => ({ data: [], total: 0 });
 export const resetAccountPassword = (): undefined => undefined;
 export const SESSION_COOKIE_NAME = 'auth_id';
 export const updateAccountWithRoles = (): undefined => undefined;
 `;
-const AUTH_WEB_BOUNDARY = `export const createAccessClient = (): unknown => ({});
+const AUTH_WEB_BOUNDARY = `export const ADMIN_ROLE_SLUG = 'admin';
+export const createAccessClient = (): unknown => ({});
 export const createAuthClient = (): unknown => ({});
 export const csrfHeaders = (): Record<string, string> => ({});
 export const ensureCsrfToken = async (): Promise<void> => {};

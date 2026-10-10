@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { Hono } from 'hono';
@@ -9,6 +9,7 @@ import { getDatabase } from '../../../shared/database';
 import { closeEventStreams, createEventStream, STREAM_READY_EVENT } from '../../../shared/realtime';
 import { readEvents, type EventReader } from '../../../shared/realtime/tests/helpers';
 import { createAssetRoutes, createUserRoutes, usersAccess, type UsersServerHost } from '../index';
+import { describeUsersHost } from './host-conformance';
 
 const ONE_PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
@@ -22,6 +23,11 @@ const ONE_PIXEL_PNG = Buffer.from(
  * past this host — through an import or through SQL on account rows — these
  * tests fail.
  */
+/** The mock provider's own password hash; like any provider's, it never contains the password. */
+function mockHash(password: string): string {
+  return `mock-hash:${createHash('sha256').update(password).digest('hex')}`;
+}
+
 interface MockAccount {
   id: string;
   name: string;
@@ -33,33 +39,27 @@ interface MockAccount {
 
 interface MockHostState {
   actors: Map<string, string>;
-  admins: Set<string>;
   permissions: Map<string, Set<string>>;
-  roles: Array<{ id: string; slug: string }>;
+  roles: Array<{ id: string; slug: string; administrator: boolean }>;
   assignments: Map<string, string[]>;
   accounts: Map<string, MockAccount>;
   storage: Map<string, { data: Uint8Array; contentType: string }>;
 }
 
-function uniqueViolation(): Error {
-  return Object.assign(new Error('UNIQUE constraint failed: mock accounts.email'), {
-    code: 'SQLITE_CONSTRAINT_UNIQUE',
-  });
-}
-
 function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; state: MockHostState } {
   const state: MockHostState = {
     actors: new Map(),
-    admins: new Set(),
     permissions: new Map(),
     roles: [
-      { id: 'mock-role-admin', slug: 'admin' },
-      { id: 'mock-role-user', slug: 'user' },
+      { id: 'mock-role-admin', slug: 'admin', administrator: true },
+      { id: 'mock-role-user', slug: 'user', administrator: false },
     ],
     assignments: new Map(),
     accounts: new Map(),
     storage: new Map(),
   };
+  const isAdministrator = (accountId: string) =>
+    (state.assignments.get(accountId) ?? []).some((roleId) => state.roles.find((role) => role.id === roleId)?.administrator);
   const visible = (account: MockAccount) => ({
     id: account.id,
     name: account.name,
@@ -88,7 +88,7 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       const account = state.accounts.get(id);
       return account ? { id: account.id, avatar: account.avatar } : undefined;
     },
-    hashPassword: async (password) => `mock-hash:${password}`,
+    hashPassword: async (password) => mockHash(password),
     findAccountById: (userId) => {
       const account = state.accounts.get(userId);
       return account ? visible(account) : undefined;
@@ -107,7 +107,7 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
     },
     createAccount: (input, roleIds) => {
       for (const account of state.accounts.values()) {
-        if (account.email.toLowerCase() === input.email.toLowerCase()) throw uniqueViolation();
+        if (account.email.toLowerCase() === input.email.toLowerCase()) return { status: 'duplicate-email' };
       }
       const account: MockAccount = {
         id: input.id,
@@ -119,7 +119,7 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       };
       state.accounts.set(account.id, account);
       if (roleIds !== undefined) state.assignments.set(account.id, [...roleIds]);
-      return visible(account);
+      return { status: 'created', account: visible(account) };
     },
     updateAccount: (userId, patch, options = {}) => {
       const account = state.accounts.get(userId);
@@ -129,7 +129,7 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
       }
       if (patch.email !== undefined) {
         for (const other of state.accounts.values()) {
-          if (other.id !== userId && other.email.toLowerCase() === patch.email.toLowerCase()) throw uniqueViolation();
+          if (other.id !== userId && other.email.toLowerCase() === patch.email.toLowerCase()) return { status: 'duplicate-email' };
         }
         account.email = patch.email;
       }
@@ -157,12 +157,11 @@ function createMockHost(cookieName = 'mock_session'): { host: UsersServerHost; s
     },
     access: usersAccess('users'),
     allows: (actorId, rule) =>
-      state.admins.has(actorId) || ('permission' in rule && (state.permissions.get(actorId)?.has(rule.permission) ?? false)),
+      isAdministrator(actorId) || ('permission' in rule && (state.permissions.get(actorId)?.has(rule.permission) ?? false)),
     availableRoles: () => state.roles.map((role) => ({ ...role })),
     rolesForUser: (userId) =>
       (state.assignments.get(userId) ?? []).map((id) => state.roles.find((role) => role.id === id)?.slug ?? id),
-    usersWithRole: (roleId) =>
-      [...state.assignments.entries()].filter(([, ids]) => ids.includes(roleId)).map(([id]) => ({ id })),
+    administrators: () => [...state.accounts.keys()].filter(isAdministrator).map((id) => ({ id })),
   };
   return { host, state };
 }
@@ -171,19 +170,23 @@ function seedAccount(
   host: UsersServerHost,
   overrides: { name?: string; email?: string; password?: string } = {},
 ): { id: string; email: string } {
-  const account = host.createAccount({
+  const created = host.createAccount({
     id: randomUUID(),
     name: overrides.name ?? 'Mock User',
     email: overrides.email ?? `${randomUUID()}@example.com`,
-    passwordHash: `mock-hash:${overrides.password ?? `password-${randomUUID()}`}`,
+    passwordHash: mockHash(overrides.password ?? `password-${randomUUID()}`),
   });
-  return { id: account.id, email: account.email };
+  if (created.status !== 'created') throw new Error('Seed email already in use');
+  return { id: created.account.id, email: created.account.email };
 }
 
 function loginAs(state: MockHostState, userId: string, options: { admin?: boolean; permissions?: string[] } = {}): string {
   const token = randomUUID();
   state.actors.set(token, userId);
-  if (options.admin) state.admins.add(userId);
+  // Administrators are whoever holds an administrator role, as the host contract says.
+  if (options.admin && !(state.assignments.get(userId) ?? []).includes('mock-role-admin')) {
+    state.assignments.set(userId, [...(state.assignments.get(userId) ?? []), 'mock-role-admin']);
+  }
   if (options.permissions) state.permissions.set(userId, new Set(options.permissions));
   return `${token}`;
 }
@@ -385,7 +388,7 @@ describe('users host requirements with an alternative provider', () => {
     const userId = (created.payload as { data: { user: { id: string; roles: string[] } } }).data.user.id;
     expect((created.payload as { data: { user: { roles: string[] } } }).data.user.roles).toEqual(['user']);
 
-    expect(state.accounts.get(userId)?.passwordHash).toBe('mock-hash:correct horse battery staple');
+    expect(state.accounts.get(userId)?.passwordHash).toBe(mockHash('correct horse battery staple'));
     expect(state.assignments.get(userId)).toEqual(['mock-role-user']);
 
     const listed = await jsonRequest(app, '/api/users', { cookie });
@@ -422,7 +425,7 @@ describe('users host requirements with an alternative provider', () => {
     expect(state.assignments.get(targetId)).toEqual(before);
   });
 
-  it('maps duplicate emails through host unique violations', async () => {
+  it('answers duplicate emails the host reports', async () => {
     const { host, state } = createMockHost();
     const app = buildApp(host);
     const email = `${randomUUID()}@example.com`;
@@ -535,7 +538,7 @@ describe('users host requirements with an alternative provider', () => {
       body: { password: 'explicit reset password' },
     });
     expect(reset.status).toBe(200);
-    expect(state.accounts.get(targetId)?.passwordHash).toBe('mock-hash:explicit reset password');
+    expect(state.accounts.get(targetId)?.passwordHash).toBe(mockHash('explicit reset password'));
     expect(state.actors.has(targetToken)).toBe(false);
   });
 
@@ -798,4 +801,19 @@ describe('users host requirements with an alternative provider', () => {
     expect((await jsonRequest(app, `/api/users/${adminId}/editing`, { method: 'PUT', cookie: viewerCookie })).status).toBe(403);
     expect((await jsonRequest(app, '/api/users/editing', { cookie: bystanderCookie })).status).toBe(403);
   });
+});
+
+describeUsersHost('an unrelated provider', () => {
+  const { host, state } = createMockHost();
+  return {
+    host,
+    signIn: async (email, password) => {
+      const account = [...state.accounts.values()].find((candidate) => candidate.email === email);
+      if (!account || account.passwordHash !== mockHash(password)) throw new Error('Sign-in refused');
+      return loginAs(state, account.id);
+    },
+    grantPermission: (userId, permission) => {
+      state.permissions.set(userId, new Set([...(state.permissions.get(userId) ?? []), permission]));
+    },
+  };
 });

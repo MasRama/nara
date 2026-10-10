@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 import { ProfilePage, usersAccess, UsersPage, type UsersWebHost } from '../../features/users/web';
 import {
+  ADMIN_ROLE_SLUG,
   createAccessClient,
   createAuthClient,
   csrfHeaders,
@@ -40,6 +41,8 @@ export const usersWebHost: UsersWebHost = {
   access,
 
   allows: (rule) => authSession.allows(rule),
+
+  isAdministratorRole: (slug) => slug === ADMIN_ROLE_SLUG,
 
   refreshSession: () => authSession.refresh(),
 

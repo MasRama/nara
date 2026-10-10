@@ -1,4 +1,4 @@
-export { AUTH_ACCOUNT_CHANGED_EVENT, changePasswordInputSchema, rolesAccess } from '../contract';
+export { ADMIN_ROLE_SLUG, AUTH_ACCOUNT_CHANGED_EVENT, changePasswordInputSchema, rolesAccess } from '../contract';
 export type { ChangePasswordInput } from '../contract';
 export { createAuthClient, type AuthClient } from './client';
 export { createAuthSession, SESSION_ENDED_REASON, useAuthSession } from './session';

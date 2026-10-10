@@ -53,6 +53,9 @@ export const AUTH_ACTIVITY = [
   { action: 'recovery-codes-regenerated', label: 'Recovery codes regenerated', kind: 'access' },
 ] as const satisfies readonly ActivityDeclaration[];
 
+/** Holders of this role are administrators: they meet every access rule and the role cannot be edited away. */
+export const ADMIN_ROLE_SLUG = 'admin';
+
 /** Auth gates role management itself. */
 export const ROLES_PERMISSIONS = [
   { action: 'view', name: 'View Roles' },

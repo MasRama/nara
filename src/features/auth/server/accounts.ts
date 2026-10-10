@@ -60,6 +60,19 @@ function escapeLikeLiteral(value: string): string {
   return value.replace(/[!%_]/g, (character) => `!${character}`);
 }
 
+/**
+ * Whether `error` is the refusal of an account write because another account
+ * already uses the email; creating and updating accounts throw it.
+ */
+export function isDuplicateEmailError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    error.code === 'SQLITE_CONSTRAINT_UNIQUE' &&
+    error.message.includes('users.email')
+  );
+}
+
 /** Whether any account uses the email, ignoring case. */
 export function accountEmailTaken(email: string): boolean {
   return getDatabase().prepare('SELECT 1 FROM users WHERE lower(email) = lower(?)').get(email) !== undefined;

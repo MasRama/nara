@@ -38,6 +38,8 @@ export interface UsersWebHost {
   /** The rules the server host enforces, checked for the signed-in user; the server still decides. */
   readonly access: UsersAccess;
   allows(rule: AccessRule): boolean;
+  /** Whether holding the role makes an account an administrator, as the server host's roles say. */
+  isAdministratorRole(slug: string): boolean;
   refreshSession(): Promise<boolean>;
   syncSessionUser(user: UsersWebSessionUser): void;
   listRoles(): Promise<UsersWebRole[]>;

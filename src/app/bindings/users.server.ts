@@ -1,16 +1,18 @@
 import type { Hono } from 'hono';
 import { resolve } from 'node:path';
 import {
+  ADMIN_ROLE_SLUG,
   createAccountWithRoles,
   declarePermissions,
   deleteAccounts,
   findAccountById,
+  findAdministrators,
   findAllRoles,
   getCurrentUser,
   getUserRoles,
-  getUsersWithRole,
   hashPassword,
   isAllowed,
+  isDuplicateEmailError,
   listAccounts,
   resetAccountPassword,
   SESSION_COOKIE_NAME,
@@ -53,9 +55,24 @@ function createUsersServerHost(recordActivity?: UsersServerHost['recordActivity'
 
     listAccounts: (page, limit, search) => listAccounts(page, limit, search),
 
-    createAccount: (input, roleIds) => createAccountWithRoles(input, roleIds),
+    // Auth refuses a taken email by throwing; Users expects it as an outcome.
+    createAccount: (input, roleIds) => {
+      try {
+        return { status: 'created', account: createAccountWithRoles(input, roleIds) };
+      } catch (error) {
+        if (isDuplicateEmailError(error)) return { status: 'duplicate-email' };
+        throw error;
+      }
+    },
 
-    updateAccount: (userId, patch, options) => updateAccountWithRoles(userId, patch, options),
+    updateAccount: (userId, patch, options) => {
+      try {
+        return updateAccountWithRoles(userId, patch, options);
+      } catch (error) {
+        if (isDuplicateEmailError(error)) return { status: 'duplicate-email' };
+        throw error;
+      }
+    },
 
     resetPassword: (userId, passwordHash) => resetAccountPassword(userId, passwordHash),
 
@@ -67,16 +84,18 @@ function createUsersServerHost(recordActivity?: UsersServerHost['recordActivity'
 
     allows: (actorId, rule) => isAllowed(actorId, rule),
 
-    availableRoles: () => findAllRoles().map((role) => ({ id: role.id, slug: role.slug })),
+    availableRoles: () =>
+      findAllRoles().map((role) => ({ id: role.id, slug: role.slug, administrator: role.slug === ADMIN_ROLE_SLUG })),
 
     rolesForUser: (userId) => getUserRoles(userId).map((role) => role.slug),
 
-    usersWithRole: (roleId) => getUsersWithRole(roleId).map((user) => ({ id: user.id })),
+    administrators: () => findAdministrators().map((user) => ({ id: user.id })),
     ...(recordActivity ? { recordActivity } : {}),
   };
 }
 
-const usersServerHost: UsersServerHost = createUsersServerHost();
+/** Also what the application's host conformance test runs `describeUsersHost` against. */
+export const usersServerHost: UsersServerHost = createUsersServerHost();
 // Users sweeps the assets of accounts deleted before their avatars were.
 declareMaintenance('users', createUsersMaintenance(usersServerHost));
 

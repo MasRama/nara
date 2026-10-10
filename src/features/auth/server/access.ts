@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { getDatabase } from '../../../shared/database';
 import type { AccessRule } from '../../../shared/security';
-import { rolesAccess } from '../contract';
+import { ADMIN_ROLE_SLUG, rolesAccess } from '../contract';
 import { accountsChanged, rolesChanged } from './live';
 
 export interface Role {
@@ -197,7 +197,7 @@ export function hasPermission(userId: string, permissionSlug: string): boolean {
 }
 
 export function isAdmin(userId: string): boolean {
-  return hasRole(userId, 'admin');
+  return hasRole(userId, ADMIN_ROLE_SLUG);
 }
 
 /** Whether the account meets the rule; `admin` meets every rule. */
@@ -259,6 +259,20 @@ export function syncUserRoles(userId: string, roleIds: string[]): void {
     }
   });
   replace();
+}
+
+/** Accounts holding the admin role, earliest first. */
+export function findAdministrators(): AccessUser[] {
+  return getDatabase()
+    .prepare(
+      `SELECT u.id, u.name, u.email
+       FROM users u
+       INNER JOIN user_roles ur ON u.id = ur.user_id
+       INNER JOIN roles r ON r.id = ur.role_id
+       WHERE r.slug = ?
+       ORDER BY u.created_at ASC`,
+    )
+    .all(ADMIN_ROLE_SLUG) as AccessUser[];
 }
 
 export function getUsersWithRole(roleId: string): AccessUser[] {

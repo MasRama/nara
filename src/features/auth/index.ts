@@ -3,6 +3,7 @@ export {
   createAccountWithRoles,
   deleteAccounts,
   findAccountById,
+  isDuplicateEmailError,
   listAccounts,
   resetAccountPassword,
   updateAccountWithRoles,
@@ -14,6 +15,7 @@ export { resetLoginThrottle } from './server/login-throttle';
 export { AUTH_MAINTENANCE } from './server/maintenance';
 export { cleanupExpiredSessions } from './server/repository';
 export {
+  ADMIN_ROLE_SLUG,
   AUTH_ACTIVITY,
   ROLES_ACTIVITY,
   changePasswordInputSchema,
@@ -45,6 +47,7 @@ export type {
 } from './contract';
 export {
   createRoleWithPermissions,
+  findAdministrators,
   findAllPermissions,
   findAllRoles,
   getUserRoles,

@@ -89,12 +89,17 @@ export function grantPermissions(userId: string, permissionSlugs: readonly strin
  */
 export async function requirePasswordChange(persona: Persona): Promise<Persona> {
   resetAccountPassword(persona.id, await hashPassword(TEST_PASSWORD));
+  return { ...persona, cookie: await signIn(persona.email, TEST_PASSWORD) };
+}
+
+/** Signs in through Auth's own endpoint and returns the session and CSRF cookies. */
+export async function signIn(email: string, password: string): Promise<string> {
   const bootstrap = await issueCsrf(app);
   const response = await app.request('/api/auth/login', {
     method: 'POST',
     headers: { ...csrfHeaders(bootstrap), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: persona.email, password: TEST_PASSWORD }),
+    body: JSON.stringify({ email, password }),
   });
-  if (response.status !== 200) throw new Error(`Sign-in after the reset failed with ${response.status}`);
-  return { ...persona, cookie: mergeResponseCookies(bootstrap.cookie, response) };
+  if (response.status !== 200) throw new Error(`Sign-in failed with ${response.status}`);
+  return mergeResponseCookies(bootstrap.cookie, response);
 }

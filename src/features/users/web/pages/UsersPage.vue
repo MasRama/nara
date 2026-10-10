@@ -63,7 +63,7 @@ const canDelete = computed(() => props.host.allows(props.host.access.manage('del
 const canAssignRoles = computed(() => props.host.allows(props.host.access.assignRoles));
 const canResetPasswords = computed(() => props.host.allows(props.host.access.resetPasswords));
 const editingSelf = computed(() => editingUser.value?.id === props.host.currentSessionUser()?.id);
-const editingAdmin = computed(() => editingUser.value?.roles.includes('admin') === true);
+const editingAdmin = computed(() => editingUser.value !== null && isAdministrator(editingUser.value));
 const canEditCurrentForm = computed(
   () => isCreating.value || (editingUser.value !== null && canEditUser(editingUser.value)),
 );
@@ -75,8 +75,12 @@ const canResetEditingPassword = computed(
     (canAssignRoles.value || !editingAdmin.value),
 );
 
+function isAdministrator(user: ManagedUser): boolean {
+  return user.roles.some((role) => props.host.isAdministratorRole(role));
+}
+
 function isProtectedAdmin(user: ManagedUser): boolean {
-  return user.roles.includes('admin') && !canAssignRoles.value;
+  return isAdministrator(user) && !canAssignRoles.value;
 }
 
 function canEditUser(user: ManagedUser): boolean {
@@ -703,7 +707,7 @@ onUnmounted(() => stopEditing?.());
                       </td>
                       <td>
                         <div class="flex flex-wrap gap-1.5">
-                          <span v-for="role in user.roles" :key="role" :class="['users-chip', { 'users-chip--admin': role === 'admin' }]">{{ roleLabel(role) }}</span>
+                          <span v-for="role in user.roles" :key="role" :class="['users-chip', { 'users-chip--admin': host.isAdministratorRole(role) }]">{{ roleLabel(role) }}</span>
                           <span v-if="user.roles.length === 0" class="text-[13px] text-muted-foreground">No roles</span>
                         </div>
                       </td>

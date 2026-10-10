@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { findAllRoles, getUsersWithRole } from './access';
+import { ADMIN_ROLE_SLUG } from '../contract';
+import { findAdministrators, findAllRoles } from './access';
 import { accountEmailTaken, createAccountWithRoles } from './accounts';
 import { hashPassword } from './service';
 
@@ -21,9 +22,9 @@ export type AdministratorResult = { status: 'created' | 'existing'; email: strin
  * account administrator rights.
  */
 export async function ensureAdministrator(input: AdministratorInput): Promise<AdministratorResult> {
-  const adminRole = findAllRoles().find((role) => role.slug === 'admin');
+  const adminRole = findAllRoles().find((role) => role.slug === ADMIN_ROLE_SLUG);
   if (!adminRole) throw new Error('No admin role exists; run the reference seed first.');
-  const [earliest] = getUsersWithRole(adminRole.id);
+  const [earliest] = findAdministrators();
   if (earliest) return { status: 'existing', email: earliest.email };
   if (accountEmailTaken(input.email)) {
     throw new Error(`A non-admin account with email "${input.email}" already exists.`);

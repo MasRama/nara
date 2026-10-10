@@ -1,5 +1,5 @@
 import { computed, readonly, ref, type ComputedRef, type Ref } from 'vue';
-import type { AuthError, AuthSuccess, CurrentUser, PublicUser } from '../contract';
+import { ADMIN_ROLE_SLUG, type AuthError, type AuthSuccess, type CurrentUser, type PublicUser } from '../contract';
 import type { AccessRule } from '../../../shared/security/access';
 import { createAuthClient, type AuthClient } from './client';
 
@@ -94,11 +94,11 @@ export function createAuthSession(client: AuthClient = createAuthClient()): Auth
 
   function can(permission: string): boolean {
     const currentUser = user.value;
-    return currentUser?.roles.includes('admin') === true || currentUser?.permissions.includes(permission) === true;
+    return currentUser?.roles.includes(ADMIN_ROLE_SLUG) === true || currentUser?.permissions.includes(permission) === true;
   }
 
   function allows(rule: AccessRule): boolean {
-    return 'permission' in rule ? can(rule.permission) : hasRole('admin');
+    return 'permission' in rule ? can(rule.permission) : hasRole(ADMIN_ROLE_SLUG);
   }
 
   function hasRole(role: string): boolean {
