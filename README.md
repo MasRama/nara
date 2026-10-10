@@ -1,15 +1,21 @@
 # Nara
 
-Nara is an architecture-aware TypeScript application kit built around
-composable, evolvable open code.
+**Types catch wrong code. Nara catches wrong access.**
 
-Build by feature, own the source, compose explicitly, and keep architecture
-machine-checkable without hiding Hono, Vue, TypeScript, or SQLite behind a
-custom runtime.
+Let AI write your features. Nara proves who can reach every route and hear
+every event, before it ships.
 
-```text
-Compose → Own → Understand → Evolve → Protect
-```
+- **Every route declares its access.** The server refuses to start while an
+  `/api` route declares none, and the authorization matrix tests every route
+  against anonymous callers, members, permission holders, and administrators.
+- **Every live event declares its audience.** The realtime matrix proves each
+  topic reaches the people it names and nobody else.
+- **Every feature keeps to its boundary.** Features meet only through their
+  public `index.ts`; `nara doctor` refuses anything else, and host contracts
+  are verified by conformance suites.
+
+TypeScript, Hono, Vue, and SQLite, without a custom runtime in between. Build by
+feature, own the source, and keep evolving official features in place.
 
 ## Start here
 
