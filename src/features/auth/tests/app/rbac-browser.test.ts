@@ -2,13 +2,13 @@
 import { randomUUID } from 'node:crypto';
 import { createApp, nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import App from '../../../app/App.vue';
-import router from '../../../app/router';
-import { app as serverApp } from '../../../app/server';
-import { getDatabase, seed } from '../../../shared/database';
-import { syncDeclaredPermissions } from '../server/permissions';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { createAccessClient, useAuthSession } from '../web';
+import App from '../../../../app/App.vue';
+import router from '../../../../app/router';
+import { app as serverApp } from '../../../../app/server';
+import { getDatabase, seed } from '../../../../shared/database';
+import { syncDeclaredPermissions } from '../../server/permissions';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../../shared/security/tests/helpers';
+import { createAccessClient, useAuthSession } from '../../web';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 

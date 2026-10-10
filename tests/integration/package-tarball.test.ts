@@ -26,6 +26,8 @@ describe('nara publishable tarball integrity', () => {
       'package/README.md',
       'package/LICENSE',
       'package/dist/index.js',
+      'package/official-features/auth/index.ts',
+      'package/official-features/auth/.nara/requirements.json',
       'package/official-features/health/index.ts',
       'package/official-features/users/index.ts',
       'package/official-features/users/.nara/assembly/server.ts',

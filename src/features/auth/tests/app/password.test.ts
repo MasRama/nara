@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { app } from '../../../app/server';
-import { getDatabase } from '../../../shared/database';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { comparePassword, hashPassword } from '../server/service';
+import { app } from '../../../../app/server';
+import { getDatabase } from '../../../../shared/database';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../../shared/security/tests/helpers';
+import { comparePassword, hashPassword } from '../../server/service';
 
 describe('auth password migration', () => {
 

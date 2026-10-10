@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { app } from '../../../app/server';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { totpCode, totpStep, verifyTotp } from '../server/totp';
+import { app } from '../../../../app/server';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../../shared/security/tests/helpers';
+import { totpCode, totpStep, verifyTotp } from '../../server/totp';
 
 const PASSWORD = 'correct horse battery staple';
 const JSON_HEADERS = { 'Content-Type': 'application/json' };

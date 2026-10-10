@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getDatabase } from '../../../shared/database';
-import { initializeApplicationRuntime, stopApplicationRuntime } from '../../../app/server';
+import { getDatabase } from '../../../../shared/database';
+import { initializeApplicationRuntime, stopApplicationRuntime } from '../../../../app/server';
 
 afterEach(stopApplicationRuntime);
 

@@ -30,6 +30,7 @@ import {
   resetLoginThrottle,
   ROLES_ACTIVITY,
   syncDeclaredPermissions,
+  syncDeclaredRoles,
 } from '../features/auth';
 import {
   declareMaintenance,
@@ -320,6 +321,9 @@ export function initializeApplicationRuntime(): RuntimeHandle {
   // Feature bindings declared their permissions while composing the app above.
   const permissions = syncDeclaredPermissions();
   Logger.info('Permissions ready', { inserted: permissions.inserted, updated: permissions.updated });
+  // Roles declared with declareRoles may name any of those permissions.
+  const roles = syncDeclaredRoles();
+  Logger.info('Roles ready', { created: roles.created });
   startApplicationMaintenance();
   return { stop: stopApplicationRuntime };
 }

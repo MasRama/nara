@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { app } from '../../../app/server';
-import { getDatabase, seed } from '../../../shared/database';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { createRoleWithPermissions, getRolePermissions, updateRoleWithPermissions } from '../server/access';
-import { syncDeclaredPermissions } from '../server/permissions';
+import { app } from '../../../../app/server';
+import { getDatabase, seed } from '../../../../shared/database';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../../shared/security/tests/helpers';
+import { createRoleWithPermissions, getRolePermissions, updateRoleWithPermissions } from '../../server/access';
+import { syncDeclaredPermissions } from '../../server/permissions';
 
 async function registerAdmin(): Promise<string> {
   const bootstrap = await issueCsrf(app);

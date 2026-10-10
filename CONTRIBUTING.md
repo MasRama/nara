@@ -67,7 +67,7 @@ The important defaults are:
 - prefer explicit TypeScript and ordinary platform primitives over hidden runtime
   frameworks, DI containers, or generated RPC layers.
 
-Official Features (Health, Users, Activity) have one copy: their
+Official Features (Auth, Health, Users, Activity) have one copy: their
 `src/features/<name>/`, marked official by its `.nara/` folder and shipped from
 there by `npm run stage:package`. Change them in place, then run
 `npm run nara -- evolve <name>` to record the change as the committed lineage

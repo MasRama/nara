@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { app, resetSecurityState } from '../../../app/server';
-import { getDatabase } from '../../../shared/database';
-import { installBrowser, type TestBrowser } from '../../../shared/security/tests/browser';
-import { authResponseSchemas } from '../contract';
-import { createAccessClient, createAuthClient } from '../web';
-import { createSecurityClient } from '../web/security-client';
-import { totpCode, totpStep } from '../server/totp';
+import { app, resetSecurityState } from '../../../../app/server';
+import { getDatabase } from '../../../../shared/database';
+import { installBrowser, type TestBrowser } from '../../../../shared/security/tests/browser';
+import { authResponseSchemas } from '../../contract';
+import { createAccessClient, createAuthClient } from '../../web';
+import { createSecurityClient } from '../../web/security-client';
+import { totpCode, totpStep } from '../../server/totp';
 
 /**
  * Every Auth web client method runs against the real server and its answer

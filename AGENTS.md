@@ -41,7 +41,7 @@ resources/app.ts          thin Vite entry mounting the app shell
 | HTTP composition, browser routes, app shell | `src/app/` (`server.ts`, `router.ts`, pages/layouts) |
 | Business-neutral infra only | `src/shared/` (config, database engine, errors, logging, security) |
 | Reusable installable feature | `src/features/<name>/` with a `.nara/` folder (assembly templates, `requirements.json`); shipped by `stage:package` |
-| Official Feature code (health, users, activity) | edit `src/features/<name>/` in place, then `npm run nara -- evolve <name>` to record lineage; tests needing the reference app go in its `tests/app/` (not shipped) |
+| Official Feature code (auth, health, users, activity) | edit `src/features/<name>/` in place, then `npm run nara -- evolve <name>` to record lineage; tests needing the reference app go in its `tests/app/` (not shipped) |
 | CLI / architecture engine | `src/cli/` with fixture-backed tests |
 
 ## Inspect before editing
@@ -79,6 +79,7 @@ Database-backed routes need migrations first: `npm run migrate` (`seed`, `db:che
 - [`README.md`](./README.md) — first run, topology, deployment
 - [`docs/cli.md`](./docs/cli.md) — CLI and JSON reference
 - [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
+- [`docs/auth.md`](./docs/auth.md) — registration policy, `declareRoles`, app-owned auth pages, limits
 - [`SECURITY.md`](./SECURITY.md) — security reporting and model notes
 
 Keep it boring where the ecosystem solves it; keep it explicit where ownership matters.

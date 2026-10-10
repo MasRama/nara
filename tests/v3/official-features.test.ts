@@ -3,6 +3,9 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { evolveFeature } from '../../src/cli/commands/evolve';
+import { readAssemblyTemplates } from '../../src/cli/composition/assembly';
+import { readFeatureRequirements, validateRequirementsAgainstSource } from '../../src/cli/composition/requirements';
+import { checkSharedSubstrate, sharedModuleUses } from '../../src/cli/composition/substrate';
 import { digestFeatureFiles, readFeatureLineage, readOfficialFeatureFiles } from '../../src/cli/evolution/lineage';
 
 /**
@@ -21,7 +24,7 @@ const official = readdirSync(featuresRoot, { withFileTypes: true })
   .sort();
 
 it('ships the official Features from the reference app', () => {
-  expect(official).toEqual(expect.arrayContaining(['activity', 'health', 'users']));
+  expect(official).toEqual(expect.arrayContaining(['activity', 'auth', 'health', 'users']));
   expect(existsSync(path.join(root, 'official-features'))).toBe(false);
 });
 
@@ -41,6 +44,17 @@ describe.each(official)('official %s', (feature) => {
     const outcome = evolveFeature({ feature, cwd: root, dryRun: true });
     expect(outcome.ok && outcome.plan.status).toBe('up-to-date');
     expect(outcome.ok && outcome.plan.conflicts).toEqual([]);
+  });
+
+  it('declares exactly the npm packages it imports and reaches only the guaranteed substrate', () => {
+    const files = readOfficialFeatureFiles(directory);
+    const templates = readAssemblyTemplates(directory);
+    const read = readFeatureRequirements(directory);
+    if (!read.ok) throw new Error(read.error);
+    // Without a requirements file a Feature may import no package beyond the stack.
+    const requirements = read.requirements ?? { schemaVersion: 1 as const, providers: [], packages: {} };
+    expect(validateRequirementsAgainstSource(requirements, files, templates)).toBeUndefined();
+    expect(checkSharedSubstrate(root, feature, sharedModuleUses(feature, files, templates), 'add')).toBeUndefined();
   });
 
   // Bindings are application-owned, so lineage never touches them; the

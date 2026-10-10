@@ -55,10 +55,10 @@ describe('shared substrate an official Feature reaches', () => {
     const present = sharedModuleUses('billing', new Map([['index.ts', "import '../../shared/security';\nimport '../../shared/realtime';\n"]]), {});
     expect(checkSharedSubstrate(root, 'billing', present, 'add')).toBeUndefined();
 
-    const logging = sharedModuleUses('billing', new Map([['server/log.ts', "import { logger } from '../../../shared/logging';\n"]]), {});
-    expect(checkSharedSubstrate(root, 'billing', logging, 'add')).toBe(
-      'Cannot add "billing": the official source imports src/shared modules Nara does not guarantee (server/log.ts → src/shared/logging). '
-      + 'Official Features may rely only on src/shared/{config,database,realtime,security,storage}; nothing was installed.',
+    const tuning = sharedModuleUses('billing', new Map([['server/tune.ts', "import { limits } from '../../../shared/tuning';\n"]]), {});
+    expect(checkSharedSubstrate(root, 'billing', tuning, 'add')).toBe(
+      'Cannot add "billing": the official source imports src/shared modules Nara does not guarantee (server/tune.ts → src/shared/tuning). '
+      + 'Official Features may rely only on src/shared/{config,database,logging,realtime,security,storage}; nothing was installed.',
     );
 
     const browser = sharedModuleUses('billing', new Map([['web/page.ts', "import '../../../shared/realtime/browser';\n"]]), {});

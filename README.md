@@ -125,7 +125,7 @@ src/
 ├── cli/                 CLI and architecture engine
 ├── features/
 │   ├── activity/        official (has .nara/)
-│   ├── auth/
+│   ├── auth/            official (has .nara/)
 │   ├── health/          official (has .nara/)
 │   └── users/           official (has .nara/)
 └── shared/              business-neutral infrastructure
@@ -225,6 +225,7 @@ server-only infrastructure.
 The current installable catalog is intentionally small:
 
 ```text
+auth
 health
 users
 activity
@@ -262,6 +263,7 @@ used by release validation.
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — current architecture authority
 - [`docs/feature-model.md`](./docs/feature-model.md) — Feature ownership and boundaries
 - [`docs/feature-format.md`](./docs/feature-format.md) — installable Feature format
+- [`docs/auth.md`](./docs/auth.md) — registration, roles, your own sign-in pages, limits
 - [`docs/cli.md`](./docs/cli.md) — CLI reference
 - [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
 - [`SECURITY.md`](./SECURITY.md) — security model and reporting

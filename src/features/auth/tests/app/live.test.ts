@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { app } from '../../../app/server';
-import { getDatabase, seed } from '../../../shared/database';
-import { closeEventStreams, EVENTS_PATH } from '../../../shared/realtime';
-import { readEvents, type EventReader } from '../../../shared/realtime/tests/helpers';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
+import { app } from '../../../../app/server';
+import { getDatabase, seed } from '../../../../shared/database';
+import { closeEventStreams, EVENTS_PATH } from '../../../../shared/realtime';
+import { readEvents, type EventReader } from '../../../../shared/realtime/tests/helpers';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../../shared/security/tests/helpers';
 
 /**
  * Live updates through the real application: Auth ends the streams of

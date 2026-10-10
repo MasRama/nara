@@ -1,15 +1,15 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-import { createApp, nextTick } from 'vue';
+import { createApp, defineComponent, h, nextTick, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import App from '../../../app/App.vue';
-import router from '../../../app/router';
-import { app as serverApp } from '../../../app/server';
-import { getDatabase } from '../../../shared/database';
-import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../shared/security/tests/helpers';
-import { createAuthSession, useAuthSession, type AuthClient, type CurrentUser } from '../web';
-import { createSecurityClient } from '../web/security-client';
-import { totpCode, totpStep } from '../server/totp';
+import App from '../../../../app/App.vue';
+import router from '../../../../app/router';
+import { app as serverApp } from '../../../../app/server';
+import { getDatabase } from '../../../../shared/database';
+import { csrfHeaders, issueCsrf, mergeResponseCookies } from '../../../../shared/security/tests/helpers';
+import { createAuthClient, createAuthSession, useAuthSession, type AuthClient, type CurrentUser } from '../../web';
+import { createSecurityClient } from '../../web/security-client';
+import { totpCode, totpStep } from '../../server/totp';
 
 const TEST_PASSWORD = 'correct horse battery staple';
 
@@ -489,5 +489,54 @@ describe('browser authentication lifecycle', () => {
     await router.push('/dashboard');
     await router.isReady();
     expect(router.currentRoute.value.name).toBe('login');
+  });
+});
+
+// An application may replace Auth's pages with its own: everything a sign-in
+// page needs comes from the Auth web boundary, so the replacement imports
+// nothing private and Auth stays evolvable underneath it.
+describe('application-owned auth pages', () => {
+  it('signs in through a page built only on createAuthClient and useAuthSession', async () => {
+    const email = `own-page-${Date.now()}@example.com`;
+    await registerDirect(email);
+    await useAuthSession().logout();
+
+    const OwnSignIn = defineComponent(() => {
+      const client = createAuthClient();
+      const session = useAuthSession();
+      const message = ref('');
+      async function submit(event: Event) {
+        event.preventDefault();
+        const result = await client.login({ email, password: TEST_PASSWORD });
+        if (!result.success) message.value = result.message;
+        else await session.refresh();
+      }
+      return () =>
+        h('form', { onSubmit: submit }, [
+          h('p', { role: 'status' }, session.isAuthenticated.value ? `Signed in as ${session.user.value?.email}` : message.value),
+          h('button', { type: 'submit' }, 'Sign in'),
+        ]);
+    });
+    const mounted = createApp(OwnSignIn);
+    mounted.mount(container);
+    application = mounted;
+
+    submitForm();
+    await settle();
+
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(`Signed in as ${email}`);
+    expect(useAuthSession().isAuthenticated.value).toBe(true);
+  });
+
+  it('offers no registration link when the application routes no register page', async () => {
+    const register = router.getRoutes().find((route) => route.name === 'register')!;
+    router.removeRoute('register');
+    try {
+      await mountAt('/login');
+      expect(container.querySelector('a[href="/register"]')).toBeNull();
+      expect(container.querySelector('form')).not.toBeNull();
+    } finally {
+      router.addRoute(register);
+    }
   });
 });

@@ -5,14 +5,15 @@ import type { AssemblyTemplates } from './assembly';
 
 /**
  * The `src/shared/` modules every Nara application carries, so official
- * Features and their assembly templates may import them. Everything else
- * under `src/shared/` (logging, app tuning) belongs to the reference app.
+ * Features and their assembly templates may import them. Anything else an
+ * application adds under `src/shared/` is its own.
  * The set is checked against what a package actually imports, never
  * declared per package.
  */
 export const GUARANTEED_SHARED_MODULES: ReadonlySet<string> = new Set([
   'config',
   'database',
+  'logging',
   'realtime',
   'security',
   'storage',

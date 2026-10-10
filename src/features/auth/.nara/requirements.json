@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "providers": [],
+  "packages": {
+    "better-sqlite3": "^12.4.1",
+    "zod": "^4.4.3"
+  }
+}

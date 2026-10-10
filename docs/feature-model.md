@@ -250,7 +250,7 @@ application binding:
 - A requirement says everything the Feature relies on; nothing about the provider leaks through untyped. Outcomes are values, not provider errors: Users' `createAccount` and `updateAccount` answer `duplicate-email` rather than letting a database constraint error reach its routes, and Users asks whether an account is an administrator with `allows(id, ADMINISTRATOR)`, `administrators()`, and a role's `administrator` flag instead of knowing the provider calls that role `admin`. The binding translates (Auth throws on a taken email; the binding catches it with Auth's `isDuplicateEmailError`).
 - The behaviour behind a requirement is tested, not just its types. A Feature ships a conformance suite with its host contract (`describeUsersHost(provider, setup)` in Users' `tests/host-conformance.ts`): the application runs it against its own binding (`src/features/users/tests/binding-conformance.test.ts`, Auth behind it), and the Feature's tests run it against an unrelated in-memory provider, so the suite cannot describe one provider's habits. The setup supplies only what the Feature never does itself, signing in and granting a permission. A provider that passes runs the Feature.
 - Evolution never touches application bindings; an incompatible requirement change surfaces through TypeScript, tests, and architecture evidence — there is no automatic binding migration.
-- Only the guaranteed application substrate may be imported from `src/shared/` (`config`, `database`, `realtime`, `security`, `storage`; see below). Reference-only modules (logging, app tuning) must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
+- Only the guaranteed application substrate may be imported from `src/shared/` (`config`, `database`, `logging`, `realtime`, `security`, `storage`; see below). Anything else must be feature-owned or host-provided instead. Host requirements are for application/business integration seams, not for every utility.
 - Permissions belong to the Feature that gates them. A Feature exports its actions as `PermissionDeclaration`s (`USERS_PERMISSIONS`, `ACTIVITY_PERMISSIONS`); its binding hands them to Auth with `declarePermissions(resource, actions)` while the app is composed, and startup writes the `<resource>.<action>` rows right after migrations, matched by slug so ids and role grants survive. The admin role holds every declared permission. A stored slug no Feature declares is kept and reported in a startup warning, never deleted.
 - Table upkeep belongs to the Feature that owns the table. A Feature exports `MaintenanceTask`s (`AUTH_MAINTENANCE`, `ACTIVITY_MAINTENANCE`); its composition declares them with `declareMaintenance(feature, tasks)`, and the application runtime runs them once after migrations and then on each task's interval, logging failures without stopping the server. In-process timers only: no queue, persistence, or retries.
 - Reported activity belongs to the Feature it happened in. A Feature exports the actions it reports as `ActivityDeclaration`s from `src/shared/security` (`AUTH_ACTIVITY`, `ROLES_ACTIVITY`, `USERS_ACTIVITY`): the action, the English label a feed shows, and its kind (`create`, `update`, `delete`, `access`). The application's activity reporter turns them into a sink with `activity.declare(resource, actions)`, called where the reporting Feature is composed, and that sink's type is `ReportedActivity<resource, actions>`, so reporting an undeclared `<resource>.<action>` fails to compile. Activity serves the declarations with its feed (`data.actions`) and labels and filters from them; it lists no other Feature's actions, and a stored action nobody declares still shows with a plain label.
@@ -349,6 +349,7 @@ installable Features can rely on it:
 - the Feature structure itself (`src/features/<feature>/`),
 - `src/shared/database/` (SQLite persistence engine),
 - `src/shared/config/` (environment and constants it reads),
+- `src/shared/logging/` (the structured `Logger`),
 - `src/shared/realtime/` (Server-Sent Events `liveTopic` and `publish`, editing presence, and the browser's `onServerEvent`, `mergeEdit`, and `keepEditing`),
 - `src/shared/security/` (route guards, `jsonInput`/`queryInput`, and the generic person and email input schemas),
 - `src/shared/storage/` (provider-neutral `AssetStorage` contract plus the local filesystem adapter).
@@ -356,9 +357,8 @@ installable Features can rely on it:
 Only these `src/shared/` modules are guaranteed. `AssetStorage` keys are
 provider-neutral logical object identifiers; Features own asset metadata and
 delivery URLs while the application binding chooses the storage provider.
-Everything else under
-`src/shared/` (logging, error taxonomy, app tuning constants) is
-reference-only: official Features must own such behavior themselves or
+Anything else an
+application adds under `src/shared/` is its own: official Features must own such behavior themselves or
 receive it through a typed host requirement. `nara add` never copies
 `src/shared/` during installation; it reads which modules the package
 imports and refuses one outside this list, or one the application no longer
