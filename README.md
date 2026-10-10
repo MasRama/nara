@@ -31,7 +31,8 @@ npm run nara -- context auth --json
 npm run nara -- inspect users --json
 ```
 
-`npm run nara --` runs the CLI from this checkout. Do not use `npx nara`
+`npm run nara --` runs the CLI from this checkout, and keeps working after you
+rename the package in `package.json`. Do not use `npx nara`
 before `@nara-web/cli` is published: it resolves an unrelated npm package.
 Nara's architecture analysis is deterministic and does not require an AI
 provider.

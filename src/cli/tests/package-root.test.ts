@@ -49,6 +49,17 @@ describe('Nara package root discovery', () => {
     expect(resolveNaraPackageRoot(nested)).toBe(inner);
   });
 
+  it('recognizes an application started from the reference app under its own name', () => {
+    const root = writeManifest(mkdtempSync(path.join(os.tmpdir(), 'nara-renamed-')), 'drip-send', '1.0.0');
+    fixtures.push(root);
+    const cli = path.join(root, 'src', 'cli');
+    mkdirSync(cli, { recursive: true });
+    writeFileSync(path.join(cli, 'index.ts'), '');
+
+    expect(resolveNaraPackageRoot(cli)).toBe(root);
+    expect(resolveNaraPackageRoot(path.join(root, 'build', 'src', 'cli'))).toBe(root);
+  });
+
   it('rejects unrelated package names', () => {
     const root = writeManifest(mkdtempSync(path.join(os.tmpdir(), 'nara-foreign-')), 'another-nara-tool');
     fixtures.push(root);

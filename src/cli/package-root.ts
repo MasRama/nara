@@ -10,6 +10,15 @@ import path from 'node:path';
 const NARA_PACKAGE_NAMES: ReadonlySet<string> = new Set(['nara', '@nara-web/cli']);
 
 /**
+ * An application started from the reference app keeps the CLI source in
+ * `src/cli/` and usually renames its package, so the CLI it carries
+ * identifies its root by that source instead of by name.
+ */
+function carriesCliSource(directory: string): boolean {
+  return existsSync(path.join(directory, 'src', 'cli', 'index.ts'));
+}
+
+/**
  * Resolve the nearest enclosing Nara package root by walking upward from
  * the executing CLI file. Used by both CLI version discovery and
  * official-feature discovery so staged (`packages/nara/dist`), built
@@ -29,6 +38,7 @@ export function resolveNaraPackageRoot(startDirectory: string = __dirname): stri
         if (typeof manifest.name === 'string' && NARA_PACKAGE_NAMES.has(manifest.name)) {
           return current;
         }
+        if (carriesCliSource(current)) return current;
       } catch {
         // Malformed manifest cannot identify a package root; keep walking.
       }
@@ -40,7 +50,7 @@ export function resolveNaraPackageRoot(startDirectory: string = __dirname): stri
     current = parent;
   }
   throw new Error(
-    `Nara package root not found: walked upward from ${origin} without finding a package.json with a canonical Nara package name (${[...NARA_PACKAGE_NAMES].join(', ')}).`,
+    `Nara package root not found: walked upward from ${origin} without finding a package.json with a canonical Nara package name (${[...NARA_PACKAGE_NAMES].join(', ')}) or beside the Nara CLI source (src/cli/index.ts).`,
   );
 }
 
