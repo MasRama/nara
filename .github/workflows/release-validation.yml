@@ -5,6 +5,17 @@ on:
   push:
     tags:
       - 'v*'
+  # The Release workflow calls this for the tag it creates: a tag pushed by a
+  # workflow does not start other workflows by itself.
+  workflow_call:
+    inputs:
+      ref:
+        description: Tag or commit to validate
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 env:
   NODE_VERSION: '22'
@@ -15,10 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
@@ -30,7 +43,7 @@ jobs:
 
       - name: Restore npm cache
         id: npm-cache-restore
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: npm-${{ runner.os }}-${{ runner.arch }}-node-${{ env.NODE_VERSION }}-${{ hashFiles('package-lock.json') }}
@@ -40,7 +53,7 @@ jobs:
 
       - name: Save npm cache
         if: steps.npm-cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ steps.npm-cache.outputs.dir }}
           key: ${{ steps.npm-cache-restore.outputs.cache-primary-key }}

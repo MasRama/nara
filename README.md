@@ -280,6 +280,7 @@ used by release validation.
 - [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
 - [`docs/deployment.md`](./docs/deployment.md) — production behind Caddy or nginx, backups, updates
 - [`SECURITY.md`](./SECURITY.md) — security model and reporting
+- [`CHANGELOG.md`](./CHANGELOG.md) — what changed in each release
 - [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community participation
 
 ## License
