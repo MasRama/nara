@@ -158,6 +158,21 @@ app.use('*', requestLifecycleLog());
 app.use('*', securityHeaders({ isProduction: isProductionServer }));
 app.use('*', compress());
 
+// A reverse proxy makes every request arrive from the proxy's own address.
+// Until the operator says the proxy can be trusted, all visitors then spend
+// one rate limit and trip one sign-in lockout, which is easy to miss: say so
+// the first time a forwarded request shows up.
+let warnedOfUntrustedProxy = false;
+app.use('*', async (context, next) => {
+  if (!warnedOfUntrustedProxy && env.TRUST_PROXY !== 'true' && context.req.header('x-forwarded-for')) {
+    warnedOfUntrustedProxy = true;
+    Logger.warn(
+      'Requests arrive through a reverse proxy, but TRUST_PROXY is not "true": every visitor shares one rate limit and one sign-in lockout. If the application is reachable only through the proxy, set TRUST_PROXY=true.',
+    );
+  }
+  await next();
+});
+
 app.use('*', globalRateLimiter.middleware);
 app.use('*', sensitiveRateLimiter.middleware);
 app.use('*', csrfProtection({ isProduction: isProductionServer }));
@@ -342,7 +357,7 @@ export function initializeApplicationRuntime(): RuntimeHandle {
   return { stop: stopApplicationRuntime };
 }
 
-export function startServer(port = env.PORT) {
+export function startServer(port = env.PORT, hostname = env.HOST) {
   try {
     ensureProductionFrontend();
     initializeApplicationRuntime();
@@ -350,6 +365,8 @@ export function startServer(port = env.PORT) {
       {
         fetch: app.fetch,
         port,
+        // Without a hostname Node listens on every address of the machine.
+        ...(hostname ? { hostname } : {}),
       },
       (info) => {
         Logger.info(`Browser/API: ${env.APP_URL}`, {

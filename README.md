@@ -187,6 +187,12 @@ npm run build
 npm start
 ```
 
+The application speaks plain HTTP and has no certificate setting: a reverse
+proxy such as Caddy holds the TLS certificate. Behind one, set
+`HOST=127.0.0.1` and `TRUST_PROXY=true`, or every visitor shares one rate
+limit. [`docs/deployment.md`](./docs/deployment.md) walks through a deployment
+with Caddy, backups and updates.
+
 Production serves the built Vue SPA and Hono APIs from the same Node process.
 SQLite files, WAL files, and backups must live on storage local to the
 application host; the default architecture is not intended for shared
@@ -272,6 +278,7 @@ used by release validation.
 - [`docs/auth.md`](./docs/auth.md) — registration, roles, your own sign-in pages, limits
 - [`docs/cli.md`](./docs/cli.md) — CLI reference
 - [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
+- [`docs/deployment.md`](./docs/deployment.md) — production behind Caddy or nginx, backups, updates
 - [`SECURITY.md`](./SECURITY.md) — security model and reporting
 - [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community participation
 

@@ -78,7 +78,8 @@ Database-backed routes need migrations first: `npm run migrate` (`seed`, `db:che
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — current architecture authority
 - [`README.md`](./README.md) — first run, topology, deployment
 - [`docs/cli.md`](./docs/cli.md) — CLI and JSON reference
-- [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
+- [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle, scheduled backups, restore
+- [`docs/deployment.md`](./docs/deployment.md) — production behind a reverse proxy
 - [`docs/auth.md`](./docs/auth.md) — registration policy, `declareRoles`, app-owned auth pages, limits
 - [`SECURITY.md`](./SECURITY.md) — security reporting and model notes
 

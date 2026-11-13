@@ -8,6 +8,7 @@ import { DATABASE, LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(SERVER.DEFAULT_PORT),
+  HOST: z.string().optional(),
   APP_URL: z.string().optional(),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('debug'),
   DB_FILE: z.string().min(1).optional(),
@@ -58,6 +59,7 @@ export function parseEnv(input: NodeJS.ProcessEnv): Env {
 
   return {
     ...parsed.data,
+    HOST: parsed.data.HOST?.trim() || undefined,
     LOG_LEVEL: logLevel,
     DB_BACKUP_INTERVAL_HOURS: backupIntervalHours,
     APP_URL: parsed.data.APP_URL?.trim() || `http://localhost:${parsed.data.PORT}`,

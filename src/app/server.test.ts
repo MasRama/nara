@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
-import { app, databaseReady } from './server';
+import type { AddressInfo } from 'node:net';
+import { app, databaseReady, startServer } from './server';
 import { discoverMigrations, migrate } from '../shared/database';
 import { Logger } from '../shared/logging';
 
@@ -66,6 +67,37 @@ describe('application health', () => {
       expect(databaseReady(empty)).toBe(false);
     } finally {
       empty.close();
+    }
+  });
+});
+
+describe('behind a reverse proxy', () => {
+  it('listens only on the address it is given', async () => {
+    const server = startServer(0, '127.0.0.1');
+    try {
+      await new Promise<void>((resolve) => server.once('listening', () => resolve()));
+      expect((server.address() as AddressInfo).address).toBe('127.0.0.1');
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it('warns once that visitors share one rate limit while the proxy is not trusted', async () => {
+    const warnings: unknown[][] = [];
+    vi.spyOn(Logger, 'warn').mockImplementation(((...args: unknown[]) => {
+      warnings.push(args);
+    }) as typeof Logger.warn);
+    try {
+      await app.request('/health');
+      expect(warnings).toEqual([]);
+
+      await app.request('/health', { headers: { 'X-Forwarded-For': '203.0.113.9' } });
+      await app.request('/health', { headers: { 'X-Forwarded-For': '203.0.113.10' } });
+
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]![0]).toContain('TRUST_PROXY');
+    } finally {
+      vi.restoreAllMocks();
     }
   });
 });

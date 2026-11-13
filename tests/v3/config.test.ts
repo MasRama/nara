@@ -55,6 +55,12 @@ describe('v3 configuration', () => {
     expect(() => parseEnv({ ...production, DB_BACKUP_KEEP: '0' })).toThrow(/DB_BACKUP_KEEP/);
   });
 
+  it('listens on every address unless HOST names one', () => {
+    expect(parseEnv({ NODE_ENV: 'development' }).HOST).toBeUndefined();
+    expect(parseEnv({ NODE_ENV: 'development', HOST: '127.0.0.1' }).HOST).toBe('127.0.0.1');
+    expect(parseEnv({ NODE_ENV: 'development', HOST: ' ' }).HOST).toBeUndefined();
+  });
+
   it('reports malformed values with their field names', () => {
     expect(() => parseEnv({ PORT: 'not-a-port' })).toThrow(/PORT/);
   });
