@@ -29,7 +29,15 @@ Security vulnerabilities must not be reported in public issues. Follow
 Nara requires:
 
 - Node.js 22 or newer;
-- npm 10.9.8.
+- npm 10.9.8, the one Node.js 22 ships with.
+
+`npm ci` works with that npm. Changing a dependency does not: npm 10.9.8 stops
+with `Cannot read properties of null (reading 'edgesOut')` while resolving
+this dependency tree. Run that one step with npm 11, for example
+`npx npm@11 install <package>`, and check that the lockfile still lists the
+native builds for every platform (`@rolldown/binding-darwin-arm64`,
+`@img/sharp-win32-x64`); CI installs and builds on macOS and Windows to catch
+a lockfile that lost them.
 
 Install dependencies from the repository root:
 
@@ -90,9 +98,13 @@ docs/contribution-workflow
 chore/release-prep
 ```
 
-Keep commits understandable and scoped. Nara commonly uses Conventional
-Commit-style prefixes such as `feat:`, `fix:`, `docs:`, `refactor:`,
-`test:`, and `chore:`.
+Keep commits understandable and scoped, and start each message with a
+[Conventional Commits](https://www.conventionalcommits.org/) prefix: `feat:`,
+`fix:`, `docs:`, `refactor:`, `test:`, or `chore:`. The prefix decides the
+next version and what the changelog says: `feat:` and `fix:` commits are
+listed in `CHANGELOG.md` word for word, so write the subject for someone who
+uses Nara. Mark a breaking change with `!` (`feat!:`) or a
+`BREAKING CHANGE:` footer.
 
 Do not mix unrelated cleanup into a feature or bug-fix pull request.
 
@@ -186,6 +198,16 @@ A pull request should:
 
 Maintainers may merge their own pull requests. CI is still expected to be green
 before merge; self-maintained does not mean bypassing the repository gates.
+
+## Releases
+
+Releases are prepared by [release-please](https://github.com/googleapis/release-please).
+Every push to `main` updates a release pull request that bumps the version in
+`package.json`, `package-lock.json` and `packages/nara/package.json`, and
+writes the new section of `CHANGELOG.md` from the commits since the last
+release. Merging that pull request tags the release, publishes it on GitHub,
+and runs `npm run validate:release` against the tag. Do not edit the version
+or the changelog by hand.
 
 ## Reviews and compatibility
 
