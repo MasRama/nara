@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import pino from 'pino';
 import { env, LOGGING } from '../config';
@@ -6,6 +7,11 @@ import { errorOriginFeature, featureFromStack } from './feature-origin';
 
 type LogData = Record<string, unknown>;
 type LogError = Error | LogData;
+
+// pino finds a transport named by package from the file that called it, and
+// under Vite's module runner that file has no name (pino 10.4 fails to start
+// there). Naming the transport by path leaves nothing to find.
+const resolveTransport = createRequire(path.join(process.cwd(), 'package.json')).resolve;
 
 function createLogger() {
   if (env.NODE_ENV === 'test') return pino({ enabled: false });
@@ -23,7 +29,7 @@ function createLogger() {
     targets: [
       prettyConsole
         ? {
-            target: 'pino-pretty',
+            target: resolveTransport('pino-pretty'),
             level: env.LOG_LEVEL,
             options: {
               colorize: true,
@@ -38,7 +44,7 @@ function createLogger() {
             options: { destination: 1 },
           },
       {
-        target: 'pino-roll',
+        target: resolveTransport('pino-roll'),
         level: env.LOG_LEVEL,
         options: {
           file: path.join(logsDirectory, 'app.log'),
@@ -50,7 +56,7 @@ function createLogger() {
         },
       },
       {
-        target: 'pino-roll',
+        target: resolveTransport('pino-roll'),
         level: 'error',
         options: {
           file: path.join(logsDirectory, 'error.log'),
