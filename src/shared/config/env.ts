@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-import { LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
+import { DATABASE, LOGGING, RATE_LIMIT, SECURITY, SERVER } from './constants';
 
 const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -11,6 +11,9 @@ const EnvSchema = z.object({
   APP_URL: z.string().optional(),
   LOG_LEVEL: z.enum(LOGGING.LEVELS).default('debug'),
   DB_FILE: z.string().min(1).optional(),
+  DB_BACKUP_INTERVAL_HOURS: z.coerce.number().int().min(0).optional(),
+  DB_BACKUP_KEEP: z.coerce.number().int().positive().default(DATABASE.BACKUP_KEEP),
+  DB_BACKUP_DIR: z.string().min(1).default(DATABASE.BACKUP_DIRECTORY),
   LOG_PRETTY: z.enum(['true', 'false']).optional(),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(RATE_LIMIT.MAX_REQUESTS),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(RATE_LIMIT.WINDOW_MS),
@@ -22,7 +25,7 @@ const EnvSchema = z.object({
 });
 
 type ParsedEnv = z.infer<typeof EnvSchema>;
-type Env = Omit<ParsedEnv, 'APP_URL'> & { APP_URL: string };
+type Env = Omit<ParsedEnv, 'APP_URL' | 'DB_BACKUP_INTERVAL_HOURS'> & { APP_URL: string; DB_BACKUP_INTERVAL_HOURS: number };
 
 function formatIssues(error: z.ZodError): string {
   return error.issues
@@ -47,9 +50,16 @@ export function parseEnv(input: NodeJS.ProcessEnv): Env {
   const logLevel =
     explicitLogLevel ? parsed.data.LOG_LEVEL : parsed.data.NODE_ENV === 'production' ? 'info' : parsed.data.LOG_LEVEL;
 
+  // Production data is backed up unless the operator turns it off; a
+  // development database is not worth a daily copy unless asked for.
+  const backupIntervalHours =
+    parsed.data.DB_BACKUP_INTERVAL_HOURS ??
+    (parsed.data.NODE_ENV === 'production' ? DATABASE.BACKUP_INTERVAL_HOURS : 0);
+
   return {
     ...parsed.data,
     LOG_LEVEL: logLevel,
+    DB_BACKUP_INTERVAL_HOURS: backupIntervalHours,
     APP_URL: parsed.data.APP_URL?.trim() || `http://localhost:${parsed.data.PORT}`,
   };
 }

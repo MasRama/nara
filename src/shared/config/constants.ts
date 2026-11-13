@@ -2,6 +2,12 @@ export const SERVER = {
   DEFAULT_PORT: 5555,
 } as const;
 
+export const DATABASE = {
+  BACKUP_INTERVAL_HOURS: 24,
+  BACKUP_KEEP: 7,
+  BACKUP_DIRECTORY: 'database/backups',
+} as const;
+
 export const MAINTENANCE = {
   INTERVAL_MS: 24 * 60 * 60 * 1000,
 } as const;

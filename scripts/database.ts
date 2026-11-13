@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import { env } from '../src/shared/config';
@@ -20,26 +20,6 @@ function printFiles(label: string, files: string[]): void {
     return;
   }
   for (const file of files) process.stdout.write(`  - ${file}\n`);
-}
-
-function backupFilename(): string {
-  const timestamp = new Date().toISOString().replaceAll(/[-:.]/g, '');
-  return `nara-${timestamp}.sqlite3`;
-}
-
-function nextBackupPath(directory: string): string {
-  const base = path.join(directory, backupFilename());
-  if (!existsSync(base)) return base;
-
-  const extension = path.extname(base);
-  const stem = base.slice(0, -extension.length);
-  let suffix = 1;
-  let candidate = `${stem}-${suffix}${extension}`;
-  while (existsSync(candidate)) {
-    suffix += 1;
-    candidate = `${stem}-${suffix}${extension}`;
-  }
-  return candidate;
 }
 
 function requireExistingDatabase(file: string, operation: string): void {
@@ -91,10 +71,8 @@ async function run(command: string | undefined): Promise<void> {
         throw new Error('Cannot create a persistent backup from an in-memory database. Set DB_FILE first.');
       }
       requireExistingDatabase(sourcePath, 'Database backup');
-      const backupDirectory = path.resolve(process.cwd(), 'database', 'backups');
-      mkdirSync(backupDirectory, { recursive: true });
-      const destination = nextBackupPath(backupDirectory);
-      await database.getDatabase().backup(destination);
+      const backupDirectory = path.resolve(process.cwd(), env.DB_BACKUP_DIR);
+      const destination = await database.writeBackup(database.getDatabase(), backupDirectory, 'nara');
       process.stdout.write(`Database backup created: ${destination}\n`);
       return;
     }

@@ -204,6 +204,11 @@ sessions hourly, Activity prunes events older than `ACTIVITY_RETENTION_DAYS`
 accounts, and the app optimizes SQLite planner statistics. Set the retention to `0` only when indefinite Activity retention
 is intentional.
 
+In production the app also backs the database up every 24 hours into
+`database/backups/` and keeps the newest 7 (`DB_BACKUP_INTERVAL_HOURS`,
+`DB_BACKUP_KEEP`, `DB_BACKUP_DIR`). Copy that directory off the host: a backup
+on the same disk does not survive losing the disk.
+
 Database ownership, migrations, seeds, backup, and integrity behavior are
 documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
 

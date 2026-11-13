@@ -98,6 +98,40 @@ describe('Feature-declared maintenance', () => {
     expect(onFailure).toHaveBeenCalledWith({ feature: 'activity', task: 'broken', error: failure });
   });
 
+  it('waits for a task that works in the background before reporting it', async () => {
+    const registry = createMaintenanceRegistry();
+    const onResult = vi.fn();
+    const onFailure = vi.fn();
+    const failure = new Error('disk full');
+    registry.declare('database', [
+      { name: 'backup', everyMs: 1_000, run: async () => ({ file: 'auto.sqlite3' }) },
+      { name: 'broken', everyMs: 1_000, run: () => Promise.reject(failure) },
+    ]);
+
+    start(registry, { onResult, onFailure });
+    expect(onResult).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(onFailure).toHaveBeenCalled());
+
+    expect(onResult).toHaveBeenCalledWith({ feature: 'database', task: 'backup', details: { file: 'auto.sqlite3' } });
+    expect(onFailure).toHaveBeenCalledWith({ feature: 'database', task: 'broken', error: failure });
+  });
+
+  it('does not start a task again while its last run is still working', async () => {
+    vi.useFakeTimers();
+    const registry = createMaintenanceRegistry();
+    const finish: Array<() => void> = [];
+    const run = vi.fn(() => new Promise<void>((resolve) => finish.push(resolve)));
+    registry.declare('database', [{ name: 'backup', everyMs: 1_000, run }]);
+
+    start(registry);
+    vi.advanceTimersByTime(3_000);
+    expect(run).toHaveBeenCalledTimes(1);
+
+    finish[0]!();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
   // The dev server re-evaluates bindings while this module stays loaded.
   it('replaces a Feature declared again instead of running its tasks twice', () => {
     const registry = createMaintenanceRegistry();

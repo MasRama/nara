@@ -138,7 +138,42 @@ the target must choose a new password after the next login.
 
 ## Backup and integrity
 
-`npm run db:backup` uses the `better-sqlite3` online backup API, which snapshots a live WAL database safely into a timestamped, non-overwriting file under `database/backups/`. It does not copy only the main `.sqlite3` file.
+`npm run db:backup` uses the `better-sqlite3` online backup API, which snapshots a live WAL database safely into a timestamped, non-overwriting file under `database/backups/` (`DB_BACKUP_DIR`). It does not copy only the main `.sqlite3` file.
+
+The running application takes the same snapshot on a schedule. In production
+it writes one backup every 24 hours and keeps the newest 7; elsewhere the
+schedule is off until `DB_BACKUP_INTERVAL_HOURS` is set.
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `DB_BACKUP_INTERVAL_HOURS` | `24` in production, `0` elsewhere | Hours between scheduled backups. `0` turns them off. |
+| `DB_BACKUP_KEEP` | `7` | Scheduled backups kept; older ones are deleted after each new one. |
+| `DB_BACKUP_DIR` | `database/backups` | Where scheduled and manual backups are written. |
+
+Scheduled backups are named `auto-<UTC time>.sqlite3` and manual ones
+`nara-<UTC time>.sqlite3`. Only scheduled backups are ever deleted. Whether a
+backup is due is read from the newest `auto-` file, so restarting the
+application neither writes an extra backup nor postpones the next one. A
+backup takes its `.sqlite3` name only when it is complete; a `.partial` file
+is an interrupted one and is removed on the next run. A failed backup is
+logged as `Maintenance failed` and tried again within the hour.
+
+A backup beside the database protects against a bad migration or a mistaken
+delete, not against losing the disk. Point `DB_BACKUP_DIR` at other storage,
+or copy the directory off the host on a schedule of your own.
+
+To restore, stop the application, then put the backup in place of the
+database and remove the old write-ahead files, which belong to the database
+being replaced:
+
+```bash
+cp database/backups/auto-20261113T080000000Z.sqlite3 database/production.sqlite3
+rm -f database/production.sqlite3-wal database/production.sqlite3-shm
+npm run db:check
+```
+
+Start the application again once the check passes; startup applies any
+migration newer than the backup.
 
 `npm run db:check` reports failure and exits non-zero if `PRAGMA quick_check` returns anything other than `ok` or `PRAGMA foreign_key_check` returns rows. A healthy database reports both checks passed.
 Both operational commands require an existing persistent database file and fail before opening SQLite when it is absent. They never initialize an empty database; run `npm run migrate` for intentional database creation.
@@ -152,9 +187,10 @@ migrations the application runtime runs every declared task once, then on its
 own interval, and stops them all during graceful shutdown. A task that throws
 is logged as `Maintenance failed` with its Feature and task name and runs again
 on its next interval; it never stops the server. A task that removed something
-returns the details, logged as `Maintenance ran`.
+returns the details, logged as `Maintenance ran`. A task may return a promise
+instead; it is then not started again until that promise settles.
 
-The reference application declares four tasks:
+The reference application declares five tasks:
 
 1. `auth/expired-sessions`, hourly: deletes expired sessions.
 2. `activity/retention`, every 24 hours: deletes Activity events older than
@@ -168,6 +204,10 @@ The reference application declares four tasks:
 4. `database/optimize`, every 24 hours, owned by the application: `PRAGMA
    optimize` lets SQLite update planner statistics only when SQLite determines
    that doing so is useful.
+5. `database/backup`, checked hourly, owned by the application: writes a
+   scheduled backup when the newest one is older than
+   `DB_BACKUP_INTERVAL_HOURS`. It is declared only when that interval is above
+   zero and the database is a file. See [Backup and integrity](#backup-and-integrity).
 
 The default retention is 365 days. Set `ACTIVITY_RETENTION_DAYS=0` to disable
 automatic Activity pruning. Values above zero are interpreted as whole days

@@ -7,9 +7,15 @@
 export interface MaintenanceTask {
   name: string;
   everyMs: number;
-  /** Return details worth logging; nothing when there was nothing to do. */
-  run(now: number): Record<string, unknown> | void;
+  /**
+   * Return details worth logging; nothing when there was nothing to do. A
+   * task that works in the background returns a promise of the same, and is
+   * not started again until that promise settles.
+   */
+  run(now: number): MaintenanceOutcome | Promise<MaintenanceOutcome>;
 }
+
+export type MaintenanceOutcome = Record<string, unknown> | void;
 
 export interface MaintenanceResult {
   feature: string;
@@ -65,12 +71,24 @@ export function createMaintenanceRegistry() {
 
     for (const [feature, tasks] of declared) {
       for (const task of tasks) {
+        const report = (details: MaintenanceOutcome) => {
+          if (details && Object.keys(details).length > 0) options.onResult?.({ feature, task: task.name, details });
+        };
+        const fail = (error: unknown) => {
+          options.onFailure?.({ feature, task: task.name, error: error instanceof Error ? error : new Error(String(error)) });
+        };
+        let working = false;
         const runOnce = (now: number) => {
+          if (working) return;
           try {
-            const details = task.run(now);
-            if (details && Object.keys(details).length > 0) options.onResult?.({ feature, task: task.name, details });
+            const outcome = task.run(now);
+            if (!(outcome instanceof Promise)) return report(outcome);
+            working = true;
+            void outcome.then(report, fail).finally(() => {
+              working = false;
+            });
           } catch (error) {
-            options.onFailure?.({ feature, task: task.name, error: error instanceof Error ? error : new Error(String(error)) });
+            fail(error);
           }
         };
         runOnce(options.now ?? Date.now());

@@ -36,9 +36,11 @@ import {
   declareMaintenance,
   discoverMigrations,
   getDatabase,
+  getDatabasePath,
   migrate,
   optimizeDatabase,
   outstandingMigrations,
+  scheduledBackupTask,
   startMaintenance,
   type MaintenanceHandle,
   type MigrationFile,
@@ -271,7 +273,9 @@ export interface RuntimeHandle {
   stop: () => void;
 }
 
-// The application's own upkeep: SQLite refreshes its query planner statistics.
+// The application's own upkeep: SQLite refreshes its query planner statistics,
+// and a database kept in a file is backed up on the configured interval.
+const backsUpDatabase = env.DB_BACKUP_INTERVAL_HOURS > 0 && getDatabasePath() !== ':memory:';
 declareMaintenance('database', [
   {
     name: 'optimize',
@@ -280,6 +284,16 @@ declareMaintenance('database', [
       optimizeDatabase();
     },
   },
+  ...(backsUpDatabase
+    ? [
+        scheduledBackupTask({
+          connection: getDatabase,
+          directory: resolve(process.cwd(), env.DB_BACKUP_DIR),
+          everyMs: env.DB_BACKUP_INTERVAL_HOURS * 60 * 60 * 1000,
+          keep: env.DB_BACKUP_KEEP,
+        }),
+      ]
+    : []),
 ]);
 
 let maintenance: MaintenanceHandle | undefined;

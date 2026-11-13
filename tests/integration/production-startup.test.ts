@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
-import { cpSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -193,6 +193,29 @@ describe('production startup failures', () => {
     expect(code, output()).not.toBeNull();
     expect(output()).toMatch(/frontend build is (missing|unavailable)/i);
     expect(output()).toMatch(/npm run build/);
+    await expect(isPortFree(port)).resolves.toBe(true);
+  });
+});
+
+describe('production database backups', () => {
+  it('writes the first scheduled backup of a file database soon after starting', async () => {
+    const data = path.join(isolationRoot, 'scheduled-backup');
+    const backups = path.join(data, 'backups');
+    const port = await findFreePort();
+    const { child, output } = spawnProduction(
+      process.execPath,
+      [path.join('build', 'server.js')],
+      projectRoot,
+      productionEnv(port, { DB_FILE: path.join(data, 'production.sqlite3'), DB_BACKUP_DIR: backups }),
+    );
+    try {
+      const scheduled = () => (existsSync(backups) ? readdirSync(backups).filter((name) => /^auto-.*\.sqlite3$/.test(name)) : []);
+      await expect.poll(scheduled, { timeout: 30_000, interval: 100 }).toHaveLength(1);
+    } finally {
+      child.kill('SIGTERM');
+      const code = await waitForExit(child, 15_000);
+      expect(code, output()).toBe(0);
+    }
     await expect(isPortFree(port)).resolves.toBe(true);
   });
 });

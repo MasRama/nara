@@ -39,6 +39,22 @@ describe('v3 configuration', () => {
     expect(() => parseEnv({ ...base, AUTH_RATE_LIMIT_MAX: '0' })).toThrow(/AUTH_RATE_LIMIT_MAX/);
   });
 
+  it('backs the database up daily in production and not elsewhere, unless told otherwise', () => {
+    const production = { NODE_ENV: 'production', APP_URL: 'https://app.example.com' };
+    expect(parseEnv(production)).toMatchObject({
+      DB_BACKUP_INTERVAL_HOURS: 24,
+      DB_BACKUP_KEEP: 7,
+      DB_BACKUP_DIR: 'database/backups',
+    });
+    expect(parseEnv({ NODE_ENV: 'development' }).DB_BACKUP_INTERVAL_HOURS).toBe(0);
+    expect(parseEnv({ ...production, DB_BACKUP_INTERVAL_HOURS: '0' }).DB_BACKUP_INTERVAL_HOURS).toBe(0);
+    expect(
+      parseEnv({ NODE_ENV: 'development', DB_BACKUP_INTERVAL_HOURS: '6', DB_BACKUP_KEEP: '30', DB_BACKUP_DIR: '/mnt/backups' }),
+    ).toMatchObject({ DB_BACKUP_INTERVAL_HOURS: 6, DB_BACKUP_KEEP: 30, DB_BACKUP_DIR: '/mnt/backups' });
+    expect(() => parseEnv({ ...production, DB_BACKUP_INTERVAL_HOURS: '-1' })).toThrow(/DB_BACKUP_INTERVAL_HOURS/);
+    expect(() => parseEnv({ ...production, DB_BACKUP_KEEP: '0' })).toThrow(/DB_BACKUP_KEEP/);
+  });
+
   it('reports malformed values with their field names', () => {
     expect(() => parseEnv({ PORT: 'not-a-port' })).toThrow(/PORT/);
   });
