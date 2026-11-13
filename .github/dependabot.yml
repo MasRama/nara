@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    ignore:
+      # Types must match the Node version the application runs on (22).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      # A new TypeScript major waits for vue-tsc and ts-node to support it.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm:
+        patterns: ["*"]
