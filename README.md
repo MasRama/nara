@@ -1,9 +1,26 @@
+<div align="center">
+
+<img src="public/nara.png" width="84" alt="">
+
 # Nara
 
 **Types catch wrong code. Nara catches wrong access.**
 
-Let AI write your features. Nara proves who can reach every route and hear
-every event, before it ships.
+A full-stack TypeScript application you own as source: Hono, Vue and SQLite,
+with sign-in, roles, users and an activity trail already built. Let AI write
+your features. Nara proves who can reach every route and hear every event,
+before it ships.
+
+[Quick start](#quick-start) · [What's new](#whats-new-in-35) · [What you get](#what-you-get) · [Production](#production) · [Documentation](#documentation)
+
+</div>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/users-dark.webp">
+  <img src="docs/screenshots/users-light.webp" alt="The Users page of a Nara application: a search bar and a table of accounts with their roles and Edit and Delete buttons">
+</picture>
+
+## Why Nara
 
 - **Every route declares its access.** The server refuses to start while an
   `/api` route declares none, and the authorization matrix tests every route
@@ -17,12 +34,59 @@ every event, before it ships.
 TypeScript, Hono, Vue, and SQLite, without a custom runtime in between. Build by
 feature, own the source, and keep evolving official features in place.
 
-## Start here
+## What's new in 3.5
+
+- **Scheduled backups.** In production the application backs its database up
+  every 24 hours into `database/backups/` and keeps the newest 7. A restart
+  neither writes an extra backup nor postpones the next one.
+- **Made for a reverse proxy.** `HOST=127.0.0.1` keeps the port off the
+  network, and the application warns when it sees proxied requests while
+  `TRUST_PROXY` is off, the setting that otherwise makes every visitor share
+  one rate limit. [`docs/deployment.md`](./docs/deployment.md) is a new guide
+  to production behind Caddy or nginx.
+- **Room to use the app.** Each client gets 600 API requests per 15 minutes
+  instead of 100, which a few busy pages could spend.
+- **Installs on macOS and Windows.** The lockfile carries the native packages
+  of every platform, and CI installs, builds and sets up on both.
+- The menu stays inside a phone-wide screen, the dev server starts on pino
+  10.4, and dependency updates close 12 security advisories.
+
+Every release is listed in [`CHANGELOG.md`](./CHANGELOG.md).
+
+## Quick start
+
+Nara needs Node.js 22 or newer.
+
+```bash
+git clone https://github.com/MasRama/nara.git my-app
+cd my-app
+npm ci
+cp .env.example .env
+npm run setup
+npm run dev
+```
+
+Open <http://localhost:5555> and sign in:
+
+```text
+admin@nara.local / admin12345
+```
+
+`npm run setup` applies pending migrations and reference seeds, and creates
+that first administrator. The password is temporary: the application requires
+it to be changed before normal use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`,
+and `NARA_ADMIN_PASSWORD` before setup to provide your own credential instead.
+
+Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves
+the Vue app and HMR while Hono handles `/api`, `/health`, and `/ready` on the
+same origin.
+
+### Start your own product
 
 The repository root is the canonical Nara application baseline. Start a new
-product from a source checkout/copy of this reference app, then remove its Git
-history if you want an independent repository. Nara intentionally does not
-generate a second, smaller starter shape.
+product from a checkout or copy of it, remove its Git history if you want an
+independent repository, and rename the package in `package.json`. Nara
+intentionally does not generate a second, smaller starter shape.
 
 ```bash
 npm run check
@@ -32,45 +96,63 @@ npm run nara -- inspect users --json
 ```
 
 `npm run nara --` runs the CLI from this checkout, and keeps working after you
-rename the package in `package.json`. Do not use `npx nara`
-before `@nara-web/cli` is published: it resolves an unrelated npm package.
-Nara's architecture analysis is deterministic and does not require an AI
-provider.
+rename the package. Do not use `npx nara` before `@nara-web/cli` is published:
+it resolves an unrelated npm package. Nara's architecture analysis is
+deterministic and does not require an AI provider.
 
-## Work on Nara itself
+## What you get
 
-```bash
-git clone https://github.com/MasRama/nara.git
-cd nara
-npm install
-cp .env.example .env
-npm run setup
-npm run dev
-```
+<table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/editing-dark.webp">
+        <img src="docs/screenshots/editing-light.webp" alt="An open Edit user form with the notice: Bima Santoso is also editing this account">
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/activity-dark.webp">
+        <img src="docs/screenshots/activity-light.webp" alt="The Activity page: an event log with a role update, a password reset, a user update and a sign-in">
+      </picture>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/roles-dark.webp">
+        <img src="docs/screenshots/roles-light.webp" alt="The Roles page: each role with the permissions it carries and how many users hold it">
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/security-dark.webp">
+        <img src="docs/screenshots/security-light.webp" alt="The Security page: two-factor authentication and the devices signed in to the account">
+      </picture>
+    </td>
+  </tr>
+</table>
 
-`npm run setup` applies pending migrations, reference seeds, and bootstraps the
-first administrator if needed. Without admin environment overrides it creates
-a temporary development credential:
+The repository root is a working application, not a template to fill in:
 
-```text
-admin@nara.local / admin12345
-```
+- **Sign-in and accounts.** Registration, sign-in, a session per device that
+  you can end from `/security`, and TOTP two-factor sign-in with recovery
+  codes.
+- **Roles and permissions.** Each Feature declares the permissions it gates;
+  roles combine them, and the pages hide what the server would refuse.
+- **Users.** Search, create, edit, reset a password, delete, and avatars.
+- **Activity.** A trail of sign-ins and administration changes. Each Feature
+  declares the actions it reports and can report only those.
+- **Live updates.** Without a reload, the app signs a tab out, applies
+  permission changes, and refreshes Activity, sessions, roles, and users.
+- **Safe concurrent editing.** An open form shows who else is editing, takes
+  other people's saves into the fields you have not touched, and asks only
+  about fields you both changed.
+- **The ground under them.** The SQLite lifecycle (migrations, seeds, backups,
+  integrity checks), asset storage, CSRF protection, rate limits, security
+  headers, structured logs, and a light and a dark theme.
 
-The application requires that temporary password to be changed before normal
-authenticated use. Set `NARA_ADMIN_NAME`, `NARA_ADMIN_EMAIL`, and
-`NARA_ADMIN_PASSWORD` before setup to provide your own initial credential.
-
-The repository root proves Auth/RBAC (including per-device sessions and TOTP
-two-factor sign-in at `/security`), Users, Activity, assets, storage, the
-SQLite lifecycle, and live updates that sign a tab out, apply permission changes,
-and refresh Activity, sessions, roles, and users without a reload, plus safe
-concurrent editing: an open form shows who else is editing, takes other people's
-saves into the fields you have not touched, and asks only about fields you both changed. Additional official capabilities are installed explicitly
-with `nara add`.
-
-Development uses one Vite HTTP server on `PORT` (default `5555`). Vite serves
-the Vue app and HMR while Hono handles `/api`, `/health`, and `/ready` on the
-same origin.
+Additional official capabilities are installed explicitly with `nara add`.
 
 ## Core model
 
@@ -117,6 +199,37 @@ nara guard --base origin/main   Fail on newly introduced architecture debt
 All architecture commands support deterministic JSON where documented.
 
 Full command and output semantics live in [`docs/cli.md`](./docs/cli.md).
+
+## Official Features
+
+The current installable catalog is intentionally small:
+
+```text
+auth
+health
+users
+activity
+```
+
+There is one copy of each: the Feature in `src/features/<name>`, marked
+official by its `.nara/` folder and shipped from there by
+`npm run stage:package`. Tests that need this reference app rather than the
+Feature alone live in its `tests/app/` and are not shipped.
+
+Activity records what other Features report. `nara add activity` mounts its
+page, API, permission and retention; the application then creates a reporter
+with `createActivityRecorder(...)` from `src/app/bindings/activity.server.ts`
+and hands it to the Features it wants recorded, as the reference app does for
+Auth and Users in `src/app/server.ts`. Each of those Features declares the
+actions it reports, with the label the feed shows, and can report only those.
+
+Installation copies visible source into the application and composes explicit
+application-owned bindings where needed. There is no runtime plugin registry or
+DI container. Users is the substantial assembly proof and can bind to the
+reference Auth capability or another compatible provider.
+
+Package shape and prerequisites are documented in
+[`docs/feature-format.md`](./docs/feature-format.md).
 
 ## Repository map
 
@@ -167,7 +280,46 @@ npm run perf:sanity   # separate machine-sensitive sanity check
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for contribution workflow and
 validation expectations.
 
-## Database and production
+## Production
+
+A Nara application in production is one Node process and one SQLite file. It
+serves the built Vue app and the Hono APIs from the same process:
+
+```bash
+cp .env.production.example .env.production
+npm run build
+npm start
+```
+
+Production requires an explicit public `APP_URL` and a local SQLite path.
+
+- **Reverse proxy.** The application speaks plain HTTP and has no certificate
+  setting: a reverse proxy such as Caddy holds the TLS certificate. Behind
+  one, set `HOST=127.0.0.1` and `TRUST_PROXY=true`, or every visitor shares
+  one rate limit and one sign-in lockout.
+- **Backups.** The application backs the database up every 24 hours into
+  `database/backups/` and keeps the newest 7 (`DB_BACKUP_INTERVAL_HOURS`,
+  `DB_BACKUP_KEEP`, `DB_BACKUP_DIR`). Copy that directory off the host: a
+  backup on the same disk does not survive losing the disk.
+- **Storage.** SQLite files, WAL files, and backups must live on storage local
+  to the application host; the default architecture is not intended for
+  shared multi-host network filesystems.
+- **Live updates.** They stream from `GET /api/events` in the same process.
+  The response sends `X-Accel-Buffering: no` for nginx; other reverse proxies
+  must not buffer `text/event-stream` responses, and their read timeout must
+  exceed the 25-second heartbeat.
+- **Upkeep.** Each Feature declares the upkeep of its own tables, and the
+  runtime runs it after migrations and then on each task's interval: Auth
+  deletes expired sessions hourly, Activity prunes events older than
+  `ACTIVITY_RETENTION_DAYS` (default `365`) in bounded batches, Users removes
+  the avatars of deleted accounts, and the app optimizes SQLite planner
+  statistics. Set the retention to `0` only when indefinite Activity retention
+  is intentional.
+
+[`docs/deployment.md`](./docs/deployment.md) walks through a deployment with
+Caddy, the first administrator, backups and updates.
+
+### Database
 
 Development starts from `.env.example`. The main lifecycle commands are:
 
@@ -179,44 +331,8 @@ npm run db:check
 npm run db:backup
 ```
 
-Production requires an explicit public `APP_URL` and a local SQLite path:
-
-```bash
-cp .env.production.example .env.production
-npm run build
-npm start
-```
-
-The application speaks plain HTTP and has no certificate setting: a reverse
-proxy such as Caddy holds the TLS certificate. Behind one, set
-`HOST=127.0.0.1` and `TRUST_PROXY=true`, or every visitor shares one rate
-limit. [`docs/deployment.md`](./docs/deployment.md) walks through a deployment
-with Caddy, backups and updates.
-
-Production serves the built Vue SPA and Hono APIs from the same Node process.
-SQLite files, WAL files, and backups must live on storage local to the
-application host; the default architecture is not intended for shared
-multi-host network filesystems.
-
-Live updates stream from `GET /api/events` in the same process. The response
-sends `X-Accel-Buffering: no` for nginx; other reverse proxies must not buffer
-`text/event-stream` responses, and their read timeout must exceed the 25-second
-heartbeat.
-
-Each Feature declares the upkeep of its own tables, and the runtime runs it
-after migrations and then on each task's interval: Auth deletes expired
-sessions hourly, Activity prunes events older than `ACTIVITY_RETENTION_DAYS`
-(default `365`) in bounded batches, Users removes the avatars of deleted
-accounts, and the app optimizes SQLite planner statistics. Set the retention to `0` only when indefinite Activity retention
-is intentional.
-
-In production the app also backs the database up every 24 hours into
-`database/backups/` and keeps the newest 7 (`DB_BACKUP_INTERVAL_HOURS`,
-`DB_BACKUP_KEEP`, `DB_BACKUP_DIR`). Copy that directory off the host: a backup
-on the same disk does not survive losing the disk.
-
-Database ownership, migrations, seeds, backup, and integrity behavior are
-documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
+Database ownership, migrations, seeds, backup, restore, and integrity behavior
+are documented in [`docs/database-lifecycle.md`](./docs/database-lifecycle.md).
 
 ### Asset storage
 
@@ -232,37 +348,6 @@ storage without changing Users-owned upload, cleanup, or delivery workflows.
 Browser Feature code may not import `shared/storage`; storage providers remain
 server-only infrastructure.
 
-## Official Features
-
-The current installable catalog is intentionally small:
-
-```text
-auth
-health
-users
-activity
-```
-
-There is one copy of each: the Feature in `src/features/<name>`, marked
-official by its `.nara/` folder and shipped from there by
-`npm run stage:package`. Tests that need this reference app rather than the
-Feature alone live in its `tests/app/` and are not shipped.
-
-Activity records what other Features report. `nara add activity` mounts its
-page, API, permission and retention; the application then creates a reporter
-with `createActivityRecorder(...)` from `src/app/bindings/activity.server.ts`
-and hands it to the Features it wants recorded, as the reference app does for
-Auth and Users in `src/app/server.ts`. Each of those Features declares the
-actions it reports, with the label the feed shows, and can report only those.
-
-Installation copies visible source into the application and composes explicit
-application-owned bindings where needed. There is no runtime plugin registry or
-DI container. Users is the substantial assembly proof and can bind to the
-reference Auth capability or another compatible provider.
-
-Package shape and prerequisites are documented in
-[`docs/feature-format.md`](./docs/feature-format.md).
-
 ## Package status
 
 The npm package is `@nara-web/cli` and exposes the `nara` executable. The first
@@ -270,7 +355,7 @@ registry publication is still pending. The staged publishable package lives at
 `packages/nara`; `npm run stage:package` and `npm pack` produce the artifact
 used by release validation.
 
-## Read next
+## Documentation
 
 - [`ARCHITECTURE.md`](./ARCHITECTURE.md) — current architecture authority
 - [`docs/feature-model.md`](./docs/feature-model.md) — Feature ownership and boundaries
@@ -280,6 +365,7 @@ used by release validation.
 - [`docs/database-lifecycle.md`](./docs/database-lifecycle.md) — SQLite lifecycle
 - [`docs/deployment.md`](./docs/deployment.md) — production behind Caddy or nginx, backups, updates
 - [`SECURITY.md`](./SECURITY.md) — security model and reporting
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — contribution workflow, commit prefixes, releases
 - [`CHANGELOG.md`](./CHANGELOG.md) — what changed in each release
 - [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) — community participation
 
