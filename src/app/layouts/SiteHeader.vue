@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
   .site-header-frame, .site-header--app .site-header-frame { grid-template-columns: 1fr auto; row-gap: 4px; padding: 8px 8px 6px 14px; }
   .site-header-nav { grid-row: 2; grid-column: 1 / -1; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--nara-line); overflow-x: auto; scrollbar-width: none; }
   .site-header-nav::-webkit-scrollbar { display: none; }
-  .site-header--app .site-header-nav { justify-content: flex-start; }
+  .site-header--app .site-header-nav { justify-self: stretch; justify-content: flex-start; }
   :slotted(.site-header-link) { padding: 0 8px; font-size: 12.5px; }
 }
 

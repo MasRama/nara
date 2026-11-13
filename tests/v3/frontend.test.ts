@@ -133,6 +133,10 @@ describe('Vue frontend shell', () => {
     const css = parse(readFileSync('src/app/layouts/SiteHeader.vue', 'utf8')).descriptor.styles[0]!.content;
     // Narrow screens move the links to their own horizontally scrollable row.
     expect(css).toMatch(/@media \(max-width: 900px\) \{[^@]*\.site-header-nav \{[^}]*grid-row: 2;[^}]*overflow-x: auto;/);
+    // The application's links start-align on wide screens, which sizes the row
+    // to its links. On a narrow screen it must fill the frame instead, or links
+    // wider than the frame push the page sideways rather than scroll.
+    expect(css).toMatch(/@media \(max-width: 900px\) \{[^@]*\.site-header--app \.site-header-nav \{[^}]*justify-self: stretch;/);
   });
 
   it('keeps the hero free of decorative artwork and badges', async () => {
