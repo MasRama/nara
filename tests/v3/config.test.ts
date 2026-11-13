@@ -55,6 +55,13 @@ describe('v3 configuration', () => {
     expect(() => parseEnv({ ...production, DB_BACKUP_KEEP: '0' })).toThrow(/DB_BACKUP_KEEP/);
   });
 
+  // One page of the app spends several API requests, and live updates refetch.
+  it('gives each client room to use the app before the API budget runs out', () => {
+    const config = parseEnv({ NODE_ENV: 'development' });
+    expect(config.RATE_LIMIT_MAX).toBe(600);
+    expect(config.RATE_LIMIT_WINDOW_MS).toBe(15 * 60 * 1000);
+  });
+
   it('listens on every address unless HOST names one', () => {
     expect(parseEnv({ NODE_ENV: 'development' }).HOST).toBeUndefined();
     expect(parseEnv({ NODE_ENV: 'development', HOST: '127.0.0.1' }).HOST).toBe('127.0.0.1');

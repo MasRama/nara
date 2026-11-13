@@ -12,7 +12,7 @@ export const MAINTENANCE = {
   INTERVAL_MS: 24 * 60 * 60 * 1000,
 } as const;
 export const RATE_LIMIT = {
-  MAX_REQUESTS: 100,
+  MAX_REQUESTS: 600,
   WINDOW_MS: 15 * 60 * 1000,
   AUTH_MAX_REQUESTS: 10,
   AUTH_WINDOW_MS: 60 * 1000,

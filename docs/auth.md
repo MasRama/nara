@@ -79,7 +79,7 @@ These are environment settings, defaults shown:
 | `AUTH_LOCKOUT_WINDOW_MS` | `900000` | How long failures count and the lockout lasts (15 min) |
 | `AUTH_RATE_LIMIT_MAX` | `10` | Requests per client, shared across every route a Feature marks sensitive (Auth's login, register, logout, password change, two-factor), per window |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | `60000` | Window for that limit (1 min) |
-| `RATE_LIMIT_MAX` | `100` | Requests per client to any `/api` route per window |
+| `RATE_LIMIT_MAX` | `600` | Requests per client to any `/api` route per window |
 | `RATE_LIMIT_WINDOW_MS` | `900000` | Window for that limit (15 min) |
 
 Sessions last 60 days (`SESSION_EXPIRY_MS` in `src/features/auth/server/config.ts`).
